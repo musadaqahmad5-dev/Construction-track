@@ -1,0 +1,25 @@
+{
+  "entities": {
+    "Construction": {
+      "title": "Construction",
+      "description": "A construction project or item.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "category": { "type": "string" },
+        "status": { "type": "string", "enum": ["Planning", "In Progress", "Completed"] },
+        "userId": { "type": "string" },
+        "strategy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "userId", "createdAt", "status"]
+    }
+  },
+  "firestore": {
+    "constructions": {
+      "schema": "Construction",
+      "description": "Collection of construction projects."
+    }
+  }
+}

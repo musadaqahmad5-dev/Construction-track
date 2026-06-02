@@ -1,0 +1,6 @@
+{
+  "name": "Construction Tracker",
+  "description": "AI-powered construction management with site vision analysis. Track progress using smart technology and professional-grade technical dashboards.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": []
+}
