@@ -1,0 +1,46 @@
+export type ClothingCategory = 'Casual' | 'Formal' | 'Sportswear' | 'Outerwear' | 'Accessories';
+
+export interface WardrobeItem {
+  id: string;
+  title: string;                                 // Name of the garment (e.g. "Wool Blazer")
+  category: ClothingCategory;                     // Closet classification
+  description: string;                           // Detailed description, fabric, fit, etc.
+  status: 'In Closet' | 'Planned' | 'Worn/Wash';  // Item's lifecycle state (available, ready, or needs laundry)
+  strategy?: string;                             // AI styling suggestions / outfit advice
+  userId: string;
+  createdAt: any;                                // Firestore Timestamp Reference
+  imageUrl?: string;                             // Photograph representation
+  season?: 'Spring' | 'Summer' | 'Autumn' | 'Winter' | 'All-Season';
+  primaryColor?: string;                         // Hex color or name
+  secondaryColor?: string;                       // Coordinating shade
+  wearCount?: number;                            // Frequency counter
+  lastUsed?: string;                             // Date string representation YYYY-MM-DD
+}
+
+export interface OutfitSuggestion {
+  id: string;
+  itemId: string;
+  styleAdvice: string;
+  coordinates: string[];                         // Coordinating clothing suggestions
+  occasion: string;                              // Event suitability (e.g. "Workplace Dinner")
+  confidenceScore: number;
+  generatedAt: Date;
+}
+
+export interface StyleProfile {
+  userId: string;
+  preferredCategories: ClothingCategory[];
+  favoriteColors: string[];
+  styleVibe: 'minimalist' | 'classic' | 'streetwear' | 'vintage' | 'bold';
+  updatedAt: Date;
+}
+
+export interface DailyRecommendation {
+  id: string;
+  userId: string;
+  date: string;                                  // YYYY-MM-DD
+  temperatureRange: string;
+  weatherCondition: string;
+  suggestedItems: string[];                       // IDs of WardrobeItems proposed
+  styleNotes: string;
+}

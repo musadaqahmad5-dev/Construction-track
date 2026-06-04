@@ -1,63 +1,49 @@
 import React, { useState, useEffect } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { collection, query, where, onSnapshot, addDoc, deleteDoc, doc, getDocs, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, deleteDoc, doc, getDocs, updateDoc } from 'firebase/firestore';
 import { 
-  LayoutGrid, 
-  Plus, 
-  Trash2, 
+  Shirt, 
+  Sparkles, 
+  CalendarDays, 
+  Palette, 
+  Home, 
   LogOut, 
-  Hammer, 
-  CheckCircle2, 
-  Clock, 
   RefreshCcw, 
-  ChevronRight,
-  HardHat,
-  Construction as ConstructionIcon,
-  AlertCircle,
-  Search,
-  Filter,
-  Camera,
-  Scan,
-  Zap,
-  Info,
-  Navigation
+  ChevronRight, 
+  CheckCircle2, 
+  Heart,
+  HelpCircle,
+  FolderMinus,
+  Camera
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { auth, db, signInWithGoogle, logout, OperationType, handleFirestoreError } from './firebase';
-import { analyzeSiteImage, generateProjectStrategy } from './lib/gemini';
-import { KiaTelemetry } from './components/KiaTelemetry';
+import { WardrobeItem, ClothingCategory } from './types';
+import { WardrobeService } from './features/wardrobe/wardrobeService';
+import { FashionEngine } from './features/fashion/fashionEngine';
 
-interface Construction {
-  id: string;
-  title: string;
-  description: string;
-  status: 'Planning' | 'In Progress' | 'Completed';
-  createdAt: any;
-  userId: string;
-  category?: string;
-  strategy?: string;
-}
-
-const CATEGORIES = ['Residential', 'Commercial', 'Infrastructure', 'Renovation', 'Other'];
+// Component Imports
+import { FashionHome } from './components/FashionHome';
+import { WardrobeGrid } from './components/WardrobeGrid';
+import { TodaySuggestionCard } from './components/TodaySuggestionCard';
+import { TomorrowPlanner } from './components/TomorrowPlanner';
+import { StyleAssistantPanel } from './components/StyleAssistantPanel';
+import { VisualAnalysisPanel } from './components/VisualAnalysisPanel';
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
-  const [constructions, setConstructions] = useState<Construction[]>([]);
+  const [constructions, setConstructions] = useState<WardrobeItem[]>([]);
+  const [wardrobe, setWardrobe] = useState<WardrobeItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [newTitle, setNewTitle] = useState('');
-  const [newDesc, setNewDesc] = useState('');
-  const [newCategory, setNewCategory] = useState(CATEGORIES[0]);
   const [isResetting, setIsResetting] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filterStatus, setFilterStatus] = useState<string>('All');
   const [resetMessage, setResetMessage] = useState<string | null>(null);
-  const [analyzing, setAnalyzing] = useState(false);
-  const [visionResult, setVisionResult] = useState<string | null>(null);
-  const [generatingStrategy, setGeneratingStrategy] = useState<string | null>(null);
-  const [activeView, setActiveView] = useState<'projects' | 'fleet'>('projects');
+
+  // Active Tab Navigator
+  const [activeTab, setActiveTab] = useState<'home' | 'wardrobe' | 'today' | 'tomorrow' | 'assistant' | 'vision'>('home');
+  const [styleVibe, setStyleVibe] = useState<'minimalist' | 'classic' | 'streetwear' | 'vintage' | 'bold'>('minimalist');
+  const [generatingStrategyId, setGeneratingStrategyId] = useState<string | null>(null);
 
   useEffect(() => {
-// ... existing onAuthStateChanged logic remains same
     const unsubscribe = onAuthStateChanged(auth, (u) => {
       setUser(u);
       setLoading(false);
@@ -65,6 +51,34 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
+  // Listen to the wardrobe database collection
+  useEffect(() => {
+    if (!user) {
+      setWardrobe([]);
+      return;
+    }
+
+    const q = query(
+      collection(db, 'wardrobe'),
+      where('userId', '==', user.uid)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const docs = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...(doc.data() as Omit<WardrobeItem, 'id'>)
+      })) as WardrobeItem[];
+      
+      docs.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+      setWardrobe(docs);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'wardrobe');
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  // Backward Compatibility: Listen to legacy constructions and map to wardrobe items dynamically
   useEffect(() => {
     if (!user) {
       setConstructions([]);
@@ -77,10 +91,38 @@ export default function App() {
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const docs = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...(doc.data() as Omit<Construction, 'id'>)
-      })) as Construction[];
+      const docs = snapshot.docs.map(doc => {
+        const raw = doc.data();
+        
+        // Map legacy states to equivalent fashion model states
+        const statusMap: Record<string, WardrobeItem['status']> = {
+          'Planning': 'In Closet',
+          'In Progress': 'Planned',
+          'Completed': 'Worn/Wash'
+        };
+        const categoryMap: Record<string, ClothingCategory> = {
+          'Residential': 'Casual',
+          'Commercial': 'Formal',
+          'Infrastructure': 'Sportswear',
+          'Renovation': 'Outerwear',
+          'Other': 'Accessories'
+        };
+
+        const mappedCategory = (categoryMap[raw.category || ''] || raw.category || 'Casual') as ClothingCategory;
+        const mappedStatus = (statusMap[raw.status || ''] || raw.status || 'In Closet') as WardrobeItem['status'];
+
+        return {
+          id: doc.id,
+          title: raw.title || 'Untitled Apparel',
+          description: raw.description || '',
+          status: mappedStatus,
+          category: mappedCategory,
+          userId: raw.userId,
+          createdAt: raw.createdAt,
+          strategy: raw.strategy,
+          collectionSource: 'constructions' // Metadata to track original collection
+        } as WardrobeItem & { collectionSource: 'constructions' | 'wardrobe' };
+      });
       
       docs.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
       setConstructions(docs);
@@ -91,105 +133,168 @@ export default function App() {
     return () => unsubscribe();
   }, [user]);
 
-  const handleAdd = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user || !newTitle.trim()) return;
+  // Combined wardrobe streams safely for active displays
+  const allItems = [...wardrobe, ...constructions].sort((a, b) => {
+    return (b.createdAt?.seconds || 0) * 1000 + (b.createdAt?.nanoseconds || 0) / 1000000 - 
+           ((a.createdAt?.seconds || 0) * 1000 + (a.createdAt?.nanoseconds || 0) / 1000000);
+  });
 
+  const handleAddGarment = async (
+    title: string, 
+    description: string, 
+    category: ClothingCategory, 
+    extraOptions?: {
+      season?: WardrobeItem['season'];
+      primaryColor?: string;
+      secondaryColor?: string;
+    }
+  ) => {
+    if (!user) return;
     try {
-      await addDoc(collection(db, 'constructions'), {
-        title: newTitle,
-        description: newDesc,
-        status: 'Planning',
-        category: newCategory,
-        userId: user.uid,
-        createdAt: serverTimestamp()
+      await WardrobeService.addGarment(user.uid, title, description, category, {
+        season: extraOptions?.season,
+        primaryColor: extraOptions?.primaryColor,
+        secondaryColor: extraOptions?.secondaryColor,
+        wearCount: 0,
+        lastUsed: ''
       });
-      setNewTitle('');
-      setNewDesc('');
-      setNewCategory(CATEGORIES[0]);
     } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'constructions');
+      console.error("Failed to store garment:", error);
     }
   };
 
-  const handleReset = async () => {
+  const handleAddSampleWardrobe = async () => {
     if (!user) return;
-    const confirmMessage = constructions.length > 0 
-      ? `This will PERMANENTLY delete all ${constructions.length} construction projects. This action cannot be undone. Proceed?`
-      : 'This will attempt to clear all construction projects associated with your account. Proceed?';
-    
-    if (!confirm(confirmMessage)) return;
-
     setIsResetting(true);
+
+    const sampleItems = [
+      { title: 'Oversized Shearling Trench', description: 'Heavy insulation wool exterior, double-breasted shape, waterproof coating.', category: 'Outerwear' as ClothingCategory, season: 'Winter' as any, primaryColor: 'Pitch Black', secondaryColor: 'Warm Rust', wearCount: 0 },
+      { title: 'Tailored Single-Breasted Blazer', description: 'Thin lightweight tailored Italian blazer, breathable fit for workplace dinners.', category: 'Formal' as ClothingCategory, season: 'Summer' as any, primaryColor: 'Oatmeal Beige', secondaryColor: 'Minimalist White', wearCount: 1 },
+      { title: 'Loopback Heavy Cotton Hoodie', description: '100% organic heavy loopback French terry cotton, wide drop shoulder comfort fit.', category: 'Casual' as ClothingCategory, season: 'Spring' as any, primaryColor: 'Minimalist White', secondaryColor: 'Oatmeal Beige', wearCount: 5 },
+      { title: 'Technical GoreTex Weather Jacket', description: 'Taped seams, windproof ventilation flaps, tailored high hood boundary.', category: 'Sportswear' as ClothingCategory, season: 'Winter' as any, primaryColor: 'Navy Blue', secondaryColor: 'Pitch Black', wearCount: 8 },
+      { title: 'Chunky Acetate Classic Sunglasses', description: 'Deep UV protection lens, dark olive green frame, premium gold accents.', category: 'Accessories' as ClothingCategory, season: 'Summer' as any, primaryColor: 'Olive Drab', secondaryColor: 'Dry Sage', wearCount: 3 },
+      { title: 'Sage Cotton Ribbed Beanie', description: 'High-stretch waffle weave organic cotton blend beanie.', category: 'Accessories' as ClothingCategory, season: 'Autumn' as any, primaryColor: 'Dry Sage', secondaryColor: 'Minimalist White', wearCount: 0 }
+    ];
+
     try {
-      const q = query(collection(db, 'constructions'), where('userId', '==', user.uid));
-      const snapshot = await getDocs(q);
-      
-      if (snapshot.empty) {
-        setResetMessage('No data found to clear.');
-      } else {
-        const deletePromises = snapshot.docs.map(d => deleteDoc(doc(db, 'constructions', d.id)));
-        await Promise.all(deletePromises);
-        setResetMessage(`Successfully cleared ${snapshot.size} projects.`);
+      for (const item of sampleItems) {
+        await WardrobeService.addGarment(user.uid, item.title, item.description, item.category, {
+          season: item.season,
+          primaryColor: item.primaryColor,
+          secondaryColor: item.secondaryColor,
+          wearCount: item.wearCount,
+          lastUsed: new Date().toISOString().split('T')[0]
+        });
       }
-      
+      setResetMessage("Successfully loaded 6 sample outfits!");
       setTimeout(() => setResetMessage(null), 3000);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, 'constructions');
+    } catch (err) {
+      console.error("Failed to inject samples:", err);
     } finally {
       setIsResetting(false);
     }
   };
 
-  const toggleStatus = async (id: string, currentStatus: Construction['status']) => {
-    const nextStatusMap: Record<Construction['status'], Construction['status']> = {
-      'Planning': 'In Progress',
-      'In Progress': 'Completed',
-      'Completed': 'Planning'
-    };
+  const handleDeleteItem = async (item: WardrobeItem) => {
+    const sourceCollection = (item as any).collectionSource || 'wardrobe';
     try {
-      await updateDoc(doc(db, 'constructions', id), {
-        status: nextStatusMap[currentStatus]
-      });
+      await WardrobeService.removeGarment(item.id, sourceCollection);
     } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, 'constructions');
+      console.error("Failed to delete garment:", error);
     }
   };
 
-  const handleGenerateStrategy = async (item: Construction) => {
-    setGeneratingStrategy(item.id);
+  const handleToggleStatus = async (item: WardrobeItem) => {
+    const sourceCollection = (item as any).collectionSource || 'wardrobe';
     try {
-      const strategy = await generateProjectStrategy(item.title, item.category || 'General', item.description);
-      await updateDoc(doc(db, 'constructions', item.id), { strategy });
+      await WardrobeService.cycleGarmentStatus(item.id, item.status, sourceCollection);
     } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, 'constructions');
+      console.error("Failed to cycle status:", error);
+    }
+  };
+
+  const handleGenerateStrategy = async (item: WardrobeItem) => {
+    setGeneratingStrategyId(item.id);
+    try {
+      const sourceCollection = (item as any).collectionSource || 'wardrobe';
+      const strategy = await FashionEngine.generateStylingStrategy(item.title, item.category, item.description);
+      await updateDoc(doc(db, sourceCollection, item.id), { strategy });
+    } catch (error) {
+      console.error("Failed to generate strategy:", error);
     } finally {
-      setGeneratingStrategy(null);
+      setGeneratingStrategyId(null);
     }
   };
 
-  const filteredConstructions = constructions.filter(c => {
-    const matchesSearch = c.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          c.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesFilter = filterStatus === 'All' || c.status === filterStatus;
-    return matchesSearch && matchesFilter;
-  });
+  const handleLockOutfit = async (itemIds: string[]) => {
+    if (!user) return;
+    try {
+      // Transition matched items to Planned state to synchronize with dressing drawer
+      for (const id of itemIds) {
+        const item = allItems.find(x => x.id === id);
+        if (item) {
+          const sourceCollection = (item as any).collectionSource || 'wardrobe';
+          await updateDoc(doc(db, sourceCollection, id), { 
+            status: 'Planned',
+            wearCount: (item.wearCount || 0) + 1,
+            lastUsed: new Date().toISOString().split('T')[0]
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Failed to lock matched pieces:", err);
+    }
+  };
 
-  const handleVisionSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleStageOutfit = async (itemIds: string[]) => {
+    if (!user) return;
+    try {
+      // Stage items for tomorrow morning by updating Wear counters and setting Planned statuses
+      for (const id of itemIds) {
+        const item = allItems.find(x => x.id === id);
+        if (item) {
+          const sourceCollection = (item as any).collectionSource || 'wardrobe';
+          await updateDoc(doc(db, sourceCollection, id), {
+            status: 'Planned',
+            wearCount: (item.wearCount || 0) + 1,
+            lastUsed: new Date().toISOString().split('T')[0]
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Failed to stage tomorrow selection:", error);
+    }
+  };
 
-    setAnalyzing(true);
-    setVisionResult(null);
+  const handleReset = async () => {
+    if (!user) return;
+    const itemsCount = allItems.length;
+    const confirmMessage = itemsCount > 0 
+      ? `This will PERMANENTLY erase all ${itemsCount} items in your smart wardrobe. This action is irreversible. Proceed?`
+      : 'This will attempt to reset your personal wardrobe workspace. Proceed?';
+    
+    if (!confirm(confirmMessage)) return;
 
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      const base64String = (reader.result as string).split(',')[1];
-      const result = await analyzeSiteImage(base64String);
-      setVisionResult(result);
-      setAnalyzing(false);
-    };
-    reader.readAsDataURL(file);
+    setIsResetting(true);
+    try {
+      // 1. Clear wardrobe entries
+      const qWardrobe = query(collection(db, 'wardrobe'), where('userId', '==', user.uid));
+      const snapsWardrobe = await getDocs(qWardrobe);
+      const pr1 = snapsWardrobe.docs.map(d => deleteDoc(doc(db, 'wardrobe', d.id)));
+
+      // 2. Clear legacy construction entries
+      const qConst = query(collection(db, 'constructions'), where('userId', '==', user.uid));
+      const snapsConst = await getDocs(qConst);
+      const pr2 = snapsConst.docs.map(d => deleteDoc(doc(db, 'constructions', d.id)));
+
+      await Promise.all([...pr1, ...pr2]);
+      setResetMessage(`Successfully cleared ${snapsWardrobe.size + snapsConst.size} closet items.`);
+      setTimeout(() => setResetMessage(null), 3000);
+    } catch (error) {
+      console.error("Failed to reset wardrobe workspace:", error);
+    } finally {
+      setIsResetting(false);
+    }
   };
 
   if (loading) {
@@ -205,67 +310,67 @@ export default function App() {
     );
   }
 
+  // Auth Protection Splash Screen (Visually Stunning, High Contrast Light Theme)
   if (!user) {
     return (
-      <div className="min-h-screen bg-white text-slate-900 selection:bg-blue-100 selection:text-blue-900">
-        <div className="max-w-6xl mx-auto px-6 py-24 md:py-40 flex flex-col items-center text-center">
+      <div className="min-h-screen bg-white text-slate-900 selection:bg-blue-100 selection:text-blue-900 flex items-center justify-center">
+        <div className="max-w-6xl mx-auto px-6 py-16 flex flex-col items-center text-center">
           <motion.div 
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="w-20 h-20 bg-blue-600 rounded-3xl flex items-center justify-center mb-8 shadow-2xl shadow-blue-200 rotate-6"
+            className="w-20 h-20 bg-blue-600 rounded-3xl flex items-center justify-center mb-8 shadow-2xl shadow-blue-250 rotate-3"
           >
-            <HardHat className="text-white w-10 h-10" />
+            <Shirt className="text-white w-10 h-10" />
           </motion.div>
           
           <motion.h1 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-5xl md:text-7xl font-black tracking-tight mb-6"
+            className="text-5xl md:text-7xl font-black tracking-tight mb-6 leading-tight text-slate-900"
           >
-            Track Your <br /> 
-            <span className="text-blue-600">Constructions.</span>
+            Curate Your <br /> 
+            <span className="text-blue-600 font-serif italic font-normal tracking-wide">Outfits.</span>
           </motion.h1>
           
           <motion.p 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="text-lg md:text-xl text-slate-500 max-w-2xl mb-12 leading-relaxed"
+            className="text-base md:text-lg text-slate-500 max-w-xl mb-12 leading-relaxed font-light"
           >
-            Professional-grade construction project management. From planning to completion. 
-            Easily reset your workspace when starting fresh.
+            An elegant smart closet companion and styling assistant. Intelligently organize your outfits, balance garment rotation, and plan matching looks.
           </motion.p>
           
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="flex flex-col sm:flex-row gap-4 w-full max-w-md"
+            className="w-full max-w-sm"
           >
             <button 
               onClick={signInWithGoogle}
-              className="flex-1 bg-slate-900 text-white px-8 py-4 rounded-2xl font-bold text-lg hover:bg-slate-800 transition-all flex items-center justify-center gap-3 shadow-xl"
+              className="w-full bg-slate-900 hover:bg-slate-800 text-white px-8 py-4 rounded-2xl font-bold text-sm tracking-widest uppercase transition-all flex items-center justify-center gap-3 shadow-xl hover:shadow-slate-300 cursor-pointer"
             >
-              Sign In with Google <ChevronRight size={20} />
+              Sign In with Google <ChevronRight size={16} />
             </button>
           </motion.div>
-
-          <div className="mt-24 grid grid-cols-1 md:grid-cols-3 gap-8 w-full">
+          
+          <div className="mt-24 grid grid-cols-1 md:grid-cols-3 gap-8 w-full border-t border-slate-100 pt-16">
             {[
-              { icon: <Clock className="text-amber-500" />, title: "Progress Tracking", desc: "Monitor every phase from ground-breaking to handover." },
-              { icon: <CheckCircle2 className="text-green-500" />, title: "Milestones", desc: "Mark completed projects and celebrate your builds." },
-              { icon: <RefreshCcw className="text-blue-500" />, title: "Quick Reset", desc: "Clean your workspace instantly for new mobile projects." }
+              { icon: <CheckCircle2 className="text-blue-500" size={24} />, title: "Digital Closet", desc: "Log active winter coats, summer t-shirts, blazers, and accessory assets." },
+              { icon: <Sparkles className="text-emerald-500" size={24} />, title: "Palette Auditor", desc: "Examine wardrobe metrics to construct balanced neutral and accent colors." },
+              { icon: <CalendarDays className="text-amber-500" size={24} />, title: "Agendas Planner", desc: "Sync matching lookbooks for formal meetings, loungewears, and workouts." }
             ].map((feature, i) => (
               <motion.div 
                 key={i}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 + (i * 0.1) }}
-                className="bg-slate-50 p-8 rounded-3xl text-left border border-slate-100"
+                className="bg-slate-50/50 p-6 rounded-2xl text-left border border-slate-100"
               >
-                <div className="mb-4">{feature.icon}</div>
-                <h3 className="font-bold text-xl mb-2">{feature.title}</h3>
-                <p className="text-slate-500">{feature.desc}</p>
+                <div className="mb-3">{feature.icon}</div>
+                <h3 className="font-bold text-slate-900 text-base mb-1.5">{feature.title}</h3>
+                <p className="text-slate-500 text-xs leading-relaxed font-light">{feature.desc}</p>
               </motion.div>
             ))}
           </div>
@@ -275,329 +380,162 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
-      <header className="bg-white/80 backdrop-blur-md border-b sticky top-0 z-40">
+    <div className="min-h-screen bg-[#FBFBFC] text-slate-800 selection:bg-blue-100 selection:text-blue-900">
+      {/* Top sticky responsive Header */}
+      <header className="bg-white/80 backdrop-blur-md border-b border-slate-150 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          
+          {/* Logo Gate */}
+          <div className="flex items-center gap-3 select-none cursor-pointer" onClick={() => setActiveTab('home')}>
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-              <HardHat className="text-white w-5 h-5" />
+              <Shirt className="text-white w-4 h-4" />
             </div>
-            <span className="font-black text-xl tracking-tight hidden sm:block">CONSTRUCT</span>
+            <span className="font-serif font-black text-lg tracking-wide">
+              Wardrobe Companion
+            </span>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-6">
+          {/* Quick Header status notifications */}
+          <div className="flex items-center gap-2 sm:gap-4">
             <AnimatePresence>
               {resetMessage && (
                 <motion.div 
-                  initial={{ opacity: 0, scale: 0.9 }}
+                  initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  className="hidden md:flex items-center gap-2 text-green-600 text-xs font-bold bg-green-50 px-3 py-1.5 rounded-lg border border-green-100"
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="hidden md:flex items-center gap-1.5 text-emerald-600 text-[10px] font-bold bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100"
                 >
                   <CheckCircle2 size={12} /> {resetMessage}
                 </motion.div>
               )}
             </AnimatePresence>
+
             <button 
               onClick={handleReset} 
               disabled={isResetting}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-bold text-red-600 hover:bg-red-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-              title="Permanently delete all your projects"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold text-red-600 hover:bg-rose-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
+              title="Permanently remove all your clothes"
             >
-              <RefreshCcw className={isResetting ? 'animate-spin' : ''} size={14} /> 
-              <span className="text-[11px] uppercase tracking-wider">Quick Reset</span>
+              <RefreshCcw className={isResetting ? 'animate-spin' : ''} size={13} /> 
+              <span className="text-[10px] uppercase font-mono tracking-wider hidden sm:inline">Reset Closet</span>
             </button>
-            <div className="h-6 w-px bg-slate-200 hidden sm:block" />
-            <div className="flex items-center gap-3">
+
+            <div className="h-5 w-px bg-slate-200" />
+
+            <div className="flex items-center gap-2">
               <div className="hidden sm:block text-right">
-                <p className="text-xs font-bold">{user.displayName}</p>
-                <p className="text-[10px] text-slate-400 font-mono uppercase">Contractor</p>
+                <p className="text-xs font-bold leading-tight">{user.displayName || 'Sartorialist'}</p>
+                <p className="text-[9px] text-slate-400 font-mono tracking-wider uppercase">Closet Member</p>
               </div>
-              <button onClick={logout} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
-                <LogOut size={18} className="text-slate-400" />
+              <button 
+                onClick={logout} 
+                className="p-1.5 hover:bg-slate-100 rounded-full transition-colors cursor-pointer text-slate-400 hover:text-slate-600"
+                title="Logs out of profile"
+              >
+                <LogOut size={16} />
               </button>
             </div>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Sidebar - Add Section */}
-          <aside className="lg:col-span-4 space-y-6">
-            {/* AI Vision Tool */}
-            <motion.div 
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="bg-slate-900 text-white rounded-3xl border border-slate-800 shadow-2xl p-6 overflow-hidden relative"
-            >
-              <div className="absolute top-0 right-0 p-4 opacity-10">
-                <Scan size={80} />
-              </div>
-              
-              <h2 className="text-lg font-bold mb-4 flex items-center gap-2 relative z-10">
-                <Camera className="text-blue-400" size={20} /> Site Vision AI
-              </h2>
-              
-              <p className="text-xs text-slate-400 mb-6 relative z-10">
-                Upload a site photo to analyze technical progress and detect milestones automatically.
-              </p>
-
-              {!visionResult && !analyzing && (
-                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-700 rounded-2xl cursor-pointer hover:border-blue-500 hover:bg-slate-800 transition-all group">
-                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                    <Scan className="w-8 h-8 mb-3 text-slate-500 group-hover:text-blue-400 transition-colors" />
-                    <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">Select Site Photo</p>
-                  </div>
-                  <input type="file" className="hidden" accept="image/*" onChange={handleVisionSelect} />
-                </label>
-              )}
-
-              {analyzing && (
-                <div className="flex flex-col items-center justify-center py-8">
-                  <motion.div 
-                    animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
-                    transition={{ repeat: Infinity, duration: 1.5 }}
-                    className="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center mb-4"
-                  >
-                    <Zap className="text-blue-400 animate-pulse" />
-                  </motion.div>
-                  <p className="text-xs font-mono text-blue-400 animate-pulse uppercase tracking-[0.2em]">Analyzing Data Streams...</p>
-                </div>
-              )}
-
-              {visionResult && (
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="bg-slate-800/50 rounded-2xl p-4 border border-slate-700 max-h-60 overflow-y-auto"
-                >
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-[10px] font-black uppercase text-blue-400 tracking-wider flex items-center gap-1">
-                      <Info size={10} /> Intelligence Report
-                    </span>
-                    <button 
-                      onClick={() => setVisionResult(null)}
-                      className="text-slate-500 hover:text-white text-[10px] font-bold"
-                    >
-                      CLEAR
-                    </button>
-                  </div>
-                  <pre className="text-[11px] font-mono whitespace-pre-wrap text-slate-300 leading-relaxed">
-                    {visionResult}
-                  </pre>
-                </motion.div>
-              )}
-            </motion.div>
-
-            <motion.div 
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.1 }}
-              className="bg-white rounded-3xl border shadow-sm p-6"
-            >
-              <h2 className="text-lg font-bold mb-6 flex items-center gap-2">
-                <Plus className="text-blue-600" size={20} /> New Project
-              </h2>
-              <form onSubmit={handleAdd} className="space-y-4">
-                <div>
-                  <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Project Title</label>
-                  <input 
-                    value={newTitle} 
-                    onChange={e => setNewTitle(e.target.value)} 
-                    placeholder="E.g., Riverside Mall" 
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all" 
-                    required 
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Category</label>
-                  <select 
-                    value={newCategory} 
-                    onChange={e => setNewCategory(e.target.value)}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                  >
-                    {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Description</label>
-                  <textarea 
-                    value={newDesc} 
-                    onChange={e => setNewDesc(e.target.value)} 
-                    placeholder="Details about construction site..." 
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all h-24 resize-none" 
-                  />
-                </div>
-                <button 
-                  type="submit" 
-                  className="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold hover:bg-blue-700 active:scale-[0.98] transition-all shadow-lg shadow-blue-100"
-                >
-                  Confirm Project
-                </button>
-              </form>
-            </motion.div>
-          </aside>
-
-          {/* Main Content - List Section */}
-          <section className="lg:col-span-8">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-              <div className="flex items-center gap-4">
-                <button 
-                  onClick={() => setActiveView('projects')}
-                  className={`text-2xl font-black tracking-tight flex items-center gap-3 transition-colors ${activeView === 'projects' ? 'text-slate-900' : 'text-slate-300 hover:text-slate-400'}`}
-                >
-                  <ConstructionIcon className={activeView === 'projects' ? 'text-blue-600' : 'text-slate-300'} size={24} /> 
-                  Active Base
-                </button>
-                <div className="h-4 w-px bg-slate-200" />
-                <button 
-                  onClick={() => setActiveView('fleet')}
-                  className={`text-2xl font-black tracking-tight flex items-center gap-3 transition-colors ${activeView === 'fleet' ? 'text-slate-900' : 'text-slate-300 hover:text-slate-400'}`}
-                >
-                  <Navigation className={activeView === 'fleet' ? 'text-blue-600' : 'text-slate-300'} size={24} /> 
-                  Tactical Fleet
-                </button>
-              </div>
-              
-              {activeView === 'projects' && (
-                <div className="flex items-center gap-2">
-                <div className="relative group">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={16} />
-                  <input 
-                    type="search"
-                    placeholder="Search sites..."
-                    value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                    className="pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none w-full sm:w-48 transition-all"
-                  />
-                </div>
-                <select 
-                  value={filterStatus}
-                  onChange={e => setFilterStatus(e.target.value)}
-                  className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium"
-                >
-                  <option value="All">All Status</option>
-                  <option value="Planning">Planning</option>
-                  <option value="In Progress">In Progress</option>
-                  <option value="Completed">Completed</option>
-                </select>
-              </div>
-            )}
-          </div>
-
-            <AnimatePresence mode="wait">
-              {activeView === 'projects' ? (
-                <motion.div 
-                  key="projects-view"
-                  initial={{ opacity: 0, scale: 0.98 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.98 }}
-                  className="grid grid-cols-1 sm:grid-cols-2 gap-4"
-                >
-                  <AnimatePresence mode="popLayout">
-                {filteredConstructions.map((item, index) => (
-                  <motion.div 
-                    key={item.id} 
-                    layout
-                    initial={{ opacity: 0, y: 10 }} 
-                    animate={{ opacity: 1, y: 0 }} 
-                    exit={{ opacity: 0, scale: 0.9 }}
-                    transition={{ delay: index * 0.05 }}
-                    className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative group hover:shadow-xl hover:border-blue-200 transition-all duration-500"
-                  >
-                    <motion.div 
-                      layout
-                      className="absolute top-0 right-0 p-2 opacity-5 pointer-events-none"
-                    >
-                      <LayoutGrid size={60} />
-                    </motion.div>
-
-                    <div className="flex justify-between items-start mb-4 relative z-10">
-                      <div className={`px-2 py-1 rounded text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 ${
-                        item.status === 'Completed' ? 'bg-green-50 text-green-700' :
-                        item.status === 'In Progress' ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-700'
-                      }`}>
-                        {item.status === 'Planning' && <Clock size={10} />}
-                        {item.status === 'In Progress' && <Hammer size={10} />}
-                        {item.status === 'Completed' && <CheckCircle2 size={10} />}
-                        {item.status}
-                      </div>
-                      <button 
-                        onClick={() => deleteDoc(doc(db, 'constructions', item.id))} 
-                        className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-
-                    <h3 className="font-bold text-slate-900 mb-1 group-hover:text-blue-600 transition-colors tracking-tight">{item.title}</h3>
-                    <p className="text-xs font-mono text-slate-400 mb-3 uppercase tracking-tighter">{item.category || 'General'}</p>
-                    <p className="text-sm text-slate-500 mb-4 line-clamp-2 leading-relaxed">{item.description || 'No additional site details recorded.'}</p>
-                    
-                    {item.strategy ? (
-                      <motion.div 
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="mb-6 p-3 bg-blue-50/50 rounded-xl border border-blue-100 text-[11px] text-blue-900 leading-normal"
-                      >
-                        <div className="flex items-center gap-1.5 mb-1.5 text-blue-600 font-black uppercase tracking-widest text-[9px]">
-                          <Zap size={10} /> Tactical Strategy
-                        </div>
-                        <div className="whitespace-pre-wrap opacity-80">{item.strategy}</div>
-                      </motion.div>
-                    ) : (
-                      <button
-                        onClick={() => handleGenerateStrategy(item)}
-                        disabled={generatingStrategy === item.id}
-                        className="mb-6 w-full py-2 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 hover:bg-slate-800 disabled:opacity-50 transition-all shadow-lg shadow-slate-100"
-                      >
-                        {generatingStrategy === item.id ? (
-                          <RefreshCcw className="animate-spin" size={12} />
-                        ) : (
-                          <Zap size={12} />
-                        )}
-                        Initialize Hunt List
-                      </button>
-                    )}
-                    
-                    <button 
-                      onClick={() => toggleStatus(item.id, item.status)}
-                      className="w-full py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition-all flex items-center justify-center gap-2 shadow-sm"
-                    >
-                      Cycle Status <ChevronRight size={12} />
-                    </button>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-              
-              {filteredConstructions.length === 0 && (
-                <div className="col-span-full py-20 bg-white border-2 border-dashed border-slate-200 rounded-3xl flex flex-col items-center justify-center text-center">
-                  <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4 text-slate-300">
-                    <ConstructionIcon size={32} />
-                  </div>
-                  <h3 className="font-bold text-slate-900 mb-1">No sites found</h3>
-                  <p className="text-sm text-slate-400 max-w-[200px]">Try adjusting your search or add a new project.</p>
-                </div>
-              )}
-            </motion.div>
-          ) : (
-            <motion.div 
-              key="fleet-view"
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.98 }}
-            >
-              <KiaTelemetry />
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </section>
+      {/* Tabs Layout Navigation */}
+      <div className="bg-white border-b border-slate-150 sticky top-16 z-30 shadow-xs">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <nav className="flex space-x-1 sm:space-x-4 overflow-x-auto py-1 scrollbar-none" aria-label="Tabs navigation">
+            {[
+              { id: 'home', label: 'Style Hub', icon: <Home size={14} /> },
+              { id: 'wardrobe', label: 'My Wardrobe', icon: <Shirt size={14} /> },
+              { id: 'today', label: "Today's Outfit", icon: <Sparkles size={14} /> },
+              { id: 'tomorrow', label: 'Tomorrow Planner', icon: <CalendarDays size={14} /> },
+              { id: 'assistant', label: 'Style Assistant', icon: <Palette size={14} /> },
+              { id: 'vision', label: 'Visual Scan', icon: <Camera size={14} /> }
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`py-3 px-3 border-b-2 font-mono text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5 cursor-pointer whitespace-nowrap transition-all ${
+                  activeTab === tab.id 
+                    ? 'border-blue-600 text-blue-600' 
+                    : 'border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300'
+                }`}
+              >
+                {tab.icon}
+                <span>{tab.label}</span>
+              </button>
+            ))}
+          </nav>
         </div>
+      </div>
+
+      {/* Primary Display viewport */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            transition={{ duration: 0.25 }}
+          >
+            {activeTab === 'home' && (
+              <FashionHome 
+                wardrobe={allItems} 
+                onNavigate={setActiveTab} 
+                onAddSampleWardrobe={handleAddSampleWardrobe}
+              />
+            )}
+
+            {activeTab === 'wardrobe' && (
+              <WardrobeGrid 
+                wardrobe={allItems}
+                onAddGarment={handleAddGarment}
+                onDeleteItem={handleDeleteItem}
+                onToggleStatus={handleToggleStatus}
+                onGenerateStrategy={handleGenerateStrategy}
+                generatingStrategyId={generatingStrategyId}
+              />
+            )}
+
+            {activeTab === 'today' && (
+              <TodaySuggestionCard 
+                wardrobe={allItems} 
+                onLockOutfit={handleLockOutfit}
+                styleVibe={styleVibe}
+              />
+            )}
+
+            {activeTab === 'tomorrow' && (
+              <TomorrowPlanner 
+                wardrobe={allItems} 
+                onStageOutfit={handleStageOutfit}
+              />
+            )}
+
+            {activeTab === 'assistant' && (
+              <StyleAssistantPanel 
+                wardrobe={allItems}
+                styleVibe={styleVibe}
+                onUpdateVibe={(v) => setStyleVibe(v)}
+              />
+            )}
+
+            {activeTab === 'vision' && (
+              <VisualAnalysisPanel 
+                wardrobe={allItems}
+                onAddGarment={async (title, desc, category, extra) => {
+                  await handleAddGarment(title, desc, category, extra);
+                  setActiveTab('wardrobe'); // Redirect to overview to see newly mapped garment
+                }}
+              />
+            )}
+          </motion.div>
+        </AnimatePresence>
       </main>
 
-      <footer className="max-w-7xl mx-auto px-4 sm:px-6 py-12 text-center text-slate-400">
-        <p className="text-[10px] font-bold uppercase tracking-[0.2em]">Construction Site Management System v1.2</p>
+      {/* Humble Elegant footer element */}
+      <footer className="max-w-7xl mx-auto px-4 sm:px-6 py-16 text-center border-t border-slate-100 mt-20">
+        <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-slate-400">Intelligent Personal Style Hub & Closet Auditor</p>
       </footer>
     </div>
   );

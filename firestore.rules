@@ -30,6 +30,18 @@ service cloud.firestore {
         && (data.get('strategy', null) == null || (data.strategy is string && data.strategy.size() <= 4000));
     }
 
+    function isValidWardrobeItem(data) {
+      let requiredFields = ['title', 'userId', 'createdAt', 'status', 'category'];
+      return data.keys().hasAll(requiredFields)
+        && data.keys().size() <= 10
+        && data.title is string && data.title.size() <= 200
+        && data.userId == request.auth.uid
+        && data.status in ['In Closet', 'Planned', 'Worn/Wash']
+        && data.category in ['Casual', 'Formal', 'Sportswear', 'Outerwear', 'Accessories']
+        && (data.get('description', null) == null || (data.description is string && data.description.size() <= 2000))
+        && (data.get('strategy', null) == null || (data.strategy is string && data.strategy.size() <= 4000));
+    }
+
     match /constructions/{constructionId} {
       allow create: if isSignedIn() 
         && isValidId(constructionId)
@@ -51,6 +63,29 @@ service cloud.firestore {
         && request.resource.data.createdAt == resource.data.createdAt;
         
       allow delete: if isOwner(resource.data.userId) && isValidId(constructionId);
+    }
+
+    match /wardrobe/{itemId} {
+      allow create: if isSignedIn() 
+        && isValidId(itemId)
+        && isValidWardrobeItem(request.resource.data)
+        && request.resource.data.createdAt == request.time;
+      
+      allow list: if isSignedIn() 
+        && resource.data.userId == request.auth.uid;
+
+      allow get: if isSignedIn()
+        && isValidId(itemId)
+        && resource.data.userId == request.auth.uid;
+      
+      allow update: if isSignedIn()
+        && isValidId(itemId)
+        && isOwner(resource.data.userId)
+        && isValidWardrobeItem(request.resource.data)
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.createdAt == resource.data.createdAt;
+        
+      allow delete: if isOwner(resource.data.userId) && isValidId(itemId);
     }
   }
 }

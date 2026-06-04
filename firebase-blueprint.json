@@ -14,12 +14,31 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["title", "userId", "createdAt", "status"]
+    },
+    "WardrobeItem": {
+      "title": "WardrobeItem",
+      "description": "A garment or accessory item stored in the personal closet.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "category": { "type": "string", "enum": ["Casual", "Formal", "Sportswear", "Outerwear", "Accessories"] },
+        "status": { "type": "string", "enum": ["In Closet", "Planned", "Worn/Wash"] },
+        "userId": { "type": "string" },
+        "strategy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "userId", "createdAt", "status", "category"]
     }
   },
   "firestore": {
     "constructions": {
       "schema": "Construction",
       "description": "Collection of construction projects."
+    },
+    "wardrobe": {
+      "schema": "WardrobeItem",
+      "description": "Collection of wardrobe items."
     }
   }
 }

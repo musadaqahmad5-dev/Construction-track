@@ -1,6 +1,6 @@
 {
-  "name": "Construction Tracker",
-  "description": "AI-powered construction management with site vision analysis. Track progress using smart technology and professional-grade technical dashboards.",
+  "name": "Fashion Assistant & Closet Planner",
+  "description": "AI-powered Fashion Assistant and smart closet planner. Track your wardrobe items, generate style strategies, and plan your outfits with our aesthetic platform.",
   "requestFramePermissions": ["camera"],
-  "majorCapabilities": []
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
