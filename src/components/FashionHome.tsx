@@ -1,11 +1,11 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { Shirt, Sparkles, Calendar, Heart, ArrowRight, Zap, RefreshCw, Layers, Camera } from 'lucide-react';
+import { Shirt, Sparkles, Calendar, Heart, ArrowRight, Zap, RefreshCw, Layers, Camera, Cpu } from 'lucide-react';
 import { WardrobeItem } from '../types';
 
 interface FashionHomeProps {
   wardrobe: WardrobeItem[];
-  onNavigate: (tab: 'home' | 'wardrobe' | 'today' | 'tomorrow' | 'assistant' | 'vision') => void;
+  onNavigate: (tab: 'home' | 'wardrobe' | 'today' | 'tomorrow' | 'assistant' | 'vision' | 'aihub') => void;
   onAddSampleWardrobe: () => void;
 }
 
@@ -96,14 +96,24 @@ export const FashionHome: React.FC<FashionHomeProps> = ({ wardrobe, onNavigate, 
       {/* Navigation Quick Gates */}
       <div className="space-y-4" id="home-quick-navigation">
         <h2 className="text-xs uppercase font-bold tracking-widest text-slate-400">Outfit Navigation Hub</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
           {[
+            {
+              id: 'aihub',
+              title: "AI Operating Layer",
+              desc: "Learn your style DNA, generate custom coordinates organically, predict weekly lookbooks, and build designs with Pro tools.",
+              act: "Boot Fashion OS",
+              color: "hover:border-blue-500 bg-slate-950 text-white hover:shadow-xl hover:shadow-blue-950/20",
+              icon: <Cpu className="text-blue-400 animate-pulse" size={24} />,
+              customTextClass: "text-slate-300",
+              customTitleClass: "text-white"
+            },
             {
               id: 'today',
               title: "Today's Suggested Vibe",
               desc: "Generate styling recommendations from available garments using AI coordination matching.",
               act: "Suggest Now",
-              color: "hover:border-blue-300",
+              color: "hover:border-blue-300 bg-white",
               icon: <Sparkles className="text-blue-600" size={24} />
             },
             {
@@ -111,7 +121,7 @@ export const FashionHome: React.FC<FashionHomeProps> = ({ wardrobe, onNavigate, 
               title: "Tomorrow's Planner",
               desc: "Preview forecasted matching sets to optimize morning routines & stage upcoming wardrobes.",
               act: "Plan Tomorrow",
-              color: "hover:border-amber-300",
+              color: "hover:border-amber-300 bg-white",
               icon: <Calendar className="text-amber-500" size={24} />
             },
             {
@@ -119,7 +129,7 @@ export const FashionHome: React.FC<FashionHomeProps> = ({ wardrobe, onNavigate, 
               title: "AI Visual Scan Tracker",
               desc: "Snap silhouettes or upload files to extract fabric coefficients, materials, & season tags using Gemini.",
               act: "Initiate Scan",
-              color: "hover:border-indigo-300",
+              color: "hover:border-indigo-300 bg-white",
               icon: <Camera className="text-indigo-600" size={24} />
             },
             {
@@ -127,23 +137,23 @@ export const FashionHome: React.FC<FashionHomeProps> = ({ wardrobe, onNavigate, 
               title: "Style & Color Auditor",
               desc: "Inspect color harmony ratios, density void parameters, and aesthetic fatigue profiles.",
               act: "Analyze Palette",
-              color: "hover:border-emerald-300",
+              color: "hover:border-emerald-300 bg-white",
               icon: <Layers className="text-emerald-500" size={24} />
             }
           ].map((gate) => (
             <div 
               key={gate.id}
               onClick={() => onNavigate(gate.id as any)}
-              className={`bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md cursor-pointer transition-all flex flex-col justify-between ${gate.color} group`}
+              className={`p-6 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md cursor-pointer transition-all flex flex-col justify-between ${gate.color} group`}
             >
               <div className="space-y-3">
-                <div className="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center mb-2">
+                <div className="w-12 h-12 rounded-xl bg-slate-50/10 flex items-center justify-center mb-2">
                   {gate.icon}
                 </div>
-                <h3 className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors tracking-tight text-lg">{gate.title}</h3>
-                <p className="text-sm text-slate-500 font-light leading-relaxed">{gate.desc}</p>
+                <h3 className={`font-bold transition-colors tracking-tight text-base group-hover:text-blue-500 ${gate.customTitleClass || 'text-slate-900'}`}>{gate.title}</h3>
+                <p className={`text-xs font-light leading-relaxed ${gate.customTextClass || 'text-slate-500'}`}>{gate.desc}</p>
               </div>
-              <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-400 group-hover:text-blue-600 transition-colors">
+              <div className="mt-5 pt-4 border-t border-slate-100/10 flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-400 group-hover:text-blue-500 transition-colors">
                 <span>{gate.act}</span>
                 <ArrowRight size={14} className="transform group-hover:translate-x-1 transition-transform" />
               </div>

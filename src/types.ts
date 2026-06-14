@@ -15,6 +15,9 @@ export interface WardrobeItem {
   secondaryColor?: string;                       // Coordinating shade
   wearCount?: number;                            // Frequency counter
   lastUsed?: string;                             // Date string representation YYYY-MM-DD
+  formality?: 'Formal' | 'Semi-formal' | 'Casual' | 'Sportswear'; // Matching TS usage in orchestrator
+  size?: string;                                 // Matching TS usage in fit estimator
+  name?: string;                                 // Matching TS usage in tryon and overlays
 }
 
 export interface OutfitSuggestion {

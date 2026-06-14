@@ -14,7 +14,9 @@ import {
   Heart,
   HelpCircle,
   FolderMinus,
-  Camera
+  Camera,
+  Cpu,
+  Settings
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { auth, db, signInWithGoogle, logout, OperationType, handleFirestoreError } from './firebase';
@@ -29,6 +31,9 @@ import { TodaySuggestionCard } from './components/TodaySuggestionCard';
 import { TomorrowPlanner } from './components/TomorrowPlanner';
 import { StyleAssistantPanel } from './components/StyleAssistantPanel';
 import { VisualAnalysisPanel } from './components/VisualAnalysisPanel';
+import { AIStyleHub } from './components/AIStyleHub';
+import { FashionCommandCenter } from './components/FashionCommandCenter';
+import { PlatformControlCenter } from './components/PlatformControlCenter';
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -39,7 +44,7 @@ export default function App() {
   const [resetMessage, setResetMessage] = useState<string | null>(null);
 
   // Active Tab Navigator
-  const [activeTab, setActiveTab] = useState<'home' | 'wardrobe' | 'today' | 'tomorrow' | 'assistant' | 'vision'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'command' | 'platform' | 'wardrobe' | 'today' | 'tomorrow' | 'assistant' | 'vision' | 'aihub'>('command');
   const [styleVibe, setStyleVibe] = useState<'minimalist' | 'classic' | 'streetwear' | 'vintage' | 'bold'>('minimalist');
   const [generatingStrategyId, setGeneratingStrategyId] = useState<string | null>(null);
 
@@ -444,7 +449,10 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <nav className="flex space-x-1 sm:space-x-4 overflow-x-auto py-1 scrollbar-none" aria-label="Tabs navigation">
             {[
-              { id: 'home', label: 'Style Hub', icon: <Home size={14} /> },
+              { id: 'home', label: 'Home', icon: <Home size={14} /> },
+              { id: 'command', label: 'Style Companion', icon: <Cpu size={14} className="text-indigo-600 animate-pulse" /> },
+              { id: 'platform', label: 'Control Plane', icon: <Settings size={14} className="text-amber-500 animate-spin-slow" /> },
+              { id: 'aihub', label: 'AI Operating Layer', icon: <Cpu size={14} className="text-blue-500" /> },
               { id: 'wardrobe', label: 'My Wardrobe', icon: <Shirt size={14} /> },
               { id: 'today', label: "Today's Outfit", icon: <Sparkles size={14} /> },
               { id: 'tomorrow', label: 'Tomorrow Planner', icon: <CalendarDays size={14} /> },
@@ -486,6 +494,25 @@ export default function App() {
               />
             )}
 
+            {activeTab === 'command' && (
+              <FashionCommandCenter 
+                wardrobe={allItems}
+                onAddGarment={async (title, desc, cat, extra) => {
+                  try {
+                    await handleAddGarment(title, desc, cat, extra);
+                  } finally {}
+                }}
+              />
+            )}
+
+            {activeTab === 'platform' && (
+              <PlatformControlCenter 
+                wardrobe={allItems}
+                currentVibe={styleVibe}
+                onSetVibe={(v) => setStyleVibe(v)}
+              />
+            )}
+
             {activeTab === 'wardrobe' && (
               <WardrobeGrid 
                 wardrobe={allItems}
@@ -502,6 +529,7 @@ export default function App() {
                 wardrobe={allItems} 
                 onLockOutfit={handleLockOutfit}
                 styleVibe={styleVibe}
+                userId={user?.uid}
               />
             )}
 
@@ -526,6 +554,15 @@ export default function App() {
                 onAddGarment={async (title, desc, category, extra) => {
                   await handleAddGarment(title, desc, category, extra);
                   setActiveTab('wardrobe'); // Redirect to overview to see newly mapped garment
+                }}
+              />
+            )}
+
+            {activeTab === 'aihub' && (
+              <AIStyleHub 
+                wardrobe={allItems}
+                onAddGarment={async (title, desc, category, extra) => {
+                  await handleAddGarment(title, desc, category, extra);
                 }}
               />
             )}

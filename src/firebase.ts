@@ -20,7 +20,7 @@ export enum OperationType {
   WRITE = 'write',
 }
 
-export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null): never {
   const errInfo = {
     error: error instanceof Error ? error.message : String(error),
     authInfo: {

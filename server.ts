@@ -2,6 +2,13 @@ import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import { FashionAI } from "./src/features/ai/fashionAI";
+import { FashionOrchestrator } from "./src/core/FashionOrchestrator";
+import { ImageGenerationRegistry } from "./src/features/image-generation/imageGenerationProvider";
+import { FashionPromptBuilder } from "./src/features/image-generation/promptBuilder";
+import { ImageStorage } from "./src/features/image-generation/imageStorage";
+import { TrendAggregator } from "./src/features/live-trends/trendAggregator";
+import { CatalogSync } from "./src/features/catalog/catalogSync";
+import { RealityAudit } from "./src/features/reality/realityAudit";
 
 async function startServer() {
   const app = express();
@@ -18,8 +25,15 @@ async function startServer() {
   // Outfit Recommendation Endpoint
   app.post("/api/ai/recommend", async (req, res) => {
     try {
-      const { wardrobe, condition, tempRange, vibe, agenda } = req.body;
-      const result = await FashionAI.recommendOutfit(wardrobe, condition, tempRange, vibe, agenda);
+      const { wardrobe, condition, tempRange, vibe, agenda, userId } = req.body;
+      const result = await FashionOrchestrator.recommend({
+        userId: userId || 'active_user',
+        wardrobe,
+        weatherCondition: condition,
+        tempRange,
+        vibe,
+        agenda
+      });
       res.json(result);
     } catch (err: any) {
       console.error("[API ERROR] Recommendation failed:", err);
@@ -48,6 +62,69 @@ async function startServer() {
     } catch (err: any) {
       console.error("[API ERROR] Visual analysis failed:", err);
       res.status(500).json({ error: "Failed to analyze garment image: " + err.message });
+    }
+  });
+
+  // Real Image Generation API Route
+  app.post("/api/image-generation/generate", async (req, res) => {
+    try {
+      const { theme, vibe, garments, gender, formality, season, setting, provider } = req.body;
+      
+      const prompt = FashionPromptBuilder.buildOutfitPrompt({
+        theme, vibe, garments, gender, formality, season, setting
+      });
+
+      const result = await ImageGenerationRegistry.generate(prompt, { aspectRatio: '3:4' }, provider);
+      
+      if (result.success && result.imageUrl) {
+        // Save look to database history
+        await ImageStorage.persistLook(result.imageUrl, {
+          prompt,
+          provider: result.provider,
+          vibe,
+          season,
+          userId: 'anonymous-designer'
+        });
+      }
+
+      res.json({ success: result.success, imageUrl: result.imageUrl, provider: result.provider, error: result.error });
+    } catch (err: any) {
+      console.error("[API ERROR] Image generation failed:", err);
+      res.status(500).json({ error: "Failed to generate fashion image: " + err.message });
+    }
+  });
+
+  // Real Live Trends Aggregation API Route
+  app.get("/api/trends/live", async (req, res) => {
+    try {
+      const region = (req.query.region as string) || "US";
+      const trends = await TrendAggregator.getLiveTrends(region);
+      res.json({ trends });
+    } catch (err: any) {
+      console.error("[API ERROR] Trend gathering failed:", err);
+      res.status(500).json({ error: "Failed to retrieve live fashion trends: " + err.message });
+    }
+  });
+
+  // Real Merchant Catalog Sync API Route
+  app.post("/api/catalog/sync", async (req, res) => {
+    try {
+      const syncedProducts = await CatalogSync.syncAllProviders();
+      res.json({ success: true, count: syncedProducts.length, catalog: syncedProducts });
+    } catch (err: any) {
+      console.error("[API ERROR] Merchant catalog sync failed:", err);
+      res.status(500).json({ error: "Failed to sync merchant catalogs: " + err.message });
+    }
+  });
+
+  // Reality Audit System API Route
+  app.get("/api/system/reality-audit", async (req, res) => {
+    try {
+      const report = RealityAudit.runAudit();
+      res.json({ success: true, report });
+    } catch (err: any) {
+      console.error("[API ERROR] Reality audit execution failed:", err);
+      res.status(500).json({ error: "Failed to compile reality audit: " + err.message });
     }
   });
 

@@ -1,6 +1,6 @@
 {
   "name": "Fashion Assistant & Closet Planner",
-  "description": "AI-powered Fashion Assistant and smart closet planner. Track your wardrobe items, generate style strategies, and plan your outfits with our aesthetic platform.",
+  "description": "Enterprise-grade AI Fashion OS featuring interactive Try-On previews, lookbook scene composition, style metrics, closed-loop feedback trackers, and commerce completeness.",
   "requestFramePermissions": ["camera"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
