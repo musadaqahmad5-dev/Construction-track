@@ -566,7 +566,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
       else if (path === '/signature') mappedTab = 'SIGNATURE';
       else if (path === '/dashboard' || path === '/presence') mappedTab = 'PRESENCE';
       
-      if (mappedTab && activeSubTab !== mappedTab) {
+      if (mappedTab) {
         setActiveSubTab(mappedTab);
       }
     };
@@ -577,7 +577,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
     return () => {
       window.removeEventListener('popstate', handleLocationChange);
     };
-  }, [activeSubTab]);
+  }, []);
 
   useEffect(() => {
     let targetPath = '';
