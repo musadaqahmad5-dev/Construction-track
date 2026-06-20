@@ -554,16 +554,17 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
     }
   })();
 
-  // URL Router & Synchronization
+  // URL Router & Synchronization - Merged for ultimate stability
   useEffect(() => {
     const handleLocationChange = () => {
       const path = window.location.pathname;
-      if (path === '/home' && activeSubTab !== 'HOME') {
-        setActiveSubTab('HOME');
-      } else if (path === '/wardrobe' && activeSubTab !== 'WARDROBE') {
-        setActiveSubTab('WARDROBE');
-      } else if (path === '/dashboard' && activeSubTab !== 'PRESENCE') {
-        setActiveSubTab('PRESENCE');
+      let mappedTab: 'HOME' | 'WARDROBE' | 'PRESENCE' | null = null;
+      if (path === '/home') mappedTab = 'HOME';
+      else if (path === '/wardrobe') mappedTab = 'WARDROBE';
+      else if (path === '/dashboard') mappedTab = 'PRESENCE';
+      
+      if (mappedTab && activeSubTab !== mappedTab) {
+        setActiveSubTab(mappedTab);
       }
     };
 
@@ -576,13 +577,12 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
   }, [activeSubTab]);
 
   useEffect(() => {
-    let targetPath = '/home';
+    let targetPath = '';
     if (activeSubTab === 'HOME') targetPath = '/home';
     else if (activeSubTab === 'WARDROBE') targetPath = '/wardrobe';
     else if (activeSubTab === 'PRESENCE') targetPath = '/dashboard';
-    else return;
 
-    if (window.location.pathname !== targetPath) {
+    if (targetPath && window.location.pathname !== targetPath) {
       window.history.pushState(null, '', targetPath);
     }
   }, [activeSubTab]);
@@ -702,13 +702,16 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
   useEffect(() => {
     if (tomorrowFrozen && tomorrowOutfit && activeSubTab === 'HOME') {
       const currentActive = state.activeSuggestion;
-      const isAlreadyLoaded = currentActive && 
+      const isAlreadyLoaded = !!(currentActive && 
+        currentActive.items && 
+        tomorrowOutfit.items &&
         currentActive.items.length === tomorrowOutfit.items.length && 
-        currentActive.items.every((it, idx) => it.id === tomorrowOutfit.items[idx].id);
+        currentActive.items.every((it, idx) => it && tomorrowOutfit.items[idx] && it.id === tomorrowOutfit.items[idx].id));
 
       if (!isAlreadyLoaded) {
+        const stableId = `out-frozen-${tomorrowOutfit.items.map(x => x.id).join('-')}`;
         UnifiedFashionOS.getState().activeSuggestion = {
-          id: `out-frozen-${Date.now()}`,
+          id: stableId,
           name: tomorrowOutfit.items.map(i => i.title).join(" & "),
           items: tomorrowOutfit.items,
           suitabilityScore: 100,
