@@ -36,33 +36,55 @@ export const WardrobeGrid: React.FC<WardrobeGridProps> = ({
   return (
     <div id={id || "wardrobe-grid-container"} className="space-y-6">
       {/* Search and Filter panel */}
-      <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center bg-white/[0.01] border border-white/5 p-4 rounded-xl">
-        <div className="relative w-full md:w-72">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white/30" />
-          <input
-            id="wardrobe-search"
-            type="text"
-            placeholder="Search closet items..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-white/[0.02] border border-white/5 pl-9 pr-4 py-2 text-xs font-mono text-white/80 placeholder-white/30 rounded-lg focus:outline-none focus:border-white/15 transition-all"
-          />
+      <div className="flex flex-col gap-4 bg-white/[0.01] border border-white/5 p-4 rounded-xl">
+        <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center w-full">
+          <div className="relative w-full md:w-72">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white/30" />
+            <input
+              id="wardrobe-search"
+              type="text"
+              placeholder="Search closet items..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full bg-white/[0.02] border border-white/5 pl-9 pr-4 py-2 text-xs font-mono text-white/80 placeholder-white/30 rounded-lg focus:outline-none focus:border-white/15 transition-all"
+            />
+          </div>
+
+          {/* Categories filters */}
+          <div className="flex flex-wrap gap-2 w-full md:w-auto">
+            <span className="text-[9px] font-mono text-white/30 self-center uppercase mr-1">Category:</span>
+            {['ALL', ...categories].map((cat) => (
+              <button
+                key={cat}
+                id={`filter-cat-${cat.toLowerCase()}`}
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-3 py-1.5 text-[9.5px] font-mono tracking-wider uppercase rounded-md border transition-all cursor-pointer ${
+                  selectedCategory === cat
+                    ? 'bg-white text-black border-white'
+                    : 'bg-white/[0.01] text-white/50 border-white/5 hover:border-white/10 hover:text-white/80'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Categories filters */}
-        <div className="flex flex-wrap gap-2 w-full md:w-auto">
-          {['ALL', ...categories].map((cat) => (
+        {/* Season filters */}
+        <div className="flex flex-wrap gap-2 items-center border-t border-white/[0.03] pt-3">
+          <span className="text-[9px] font-mono text-white/30 uppercase mr-1">Season Filter:</span>
+          {['ALL', 'Spring', 'Summer', 'Autumn', 'Winter'].map((sea) => (
             <button
-              key={cat}
-              id={`filter-cat-${cat.toLowerCase()}`}
-              onClick={() => setSelectedCategory(cat)}
-              className={`px-3 py-1.5 text-[9.5px] font-mono tracking-wider uppercase rounded-md border transition-all cursor-pointer ${
-                selectedCategory === cat
-                  ? 'bg-white text-black border-white'
-                  : 'bg-white/[0.01] text-white/50 border-white/5 hover:border-white/10 hover:text-white/80'
+              key={sea}
+              id={`filter-season-${sea.toLowerCase()}`}
+              onClick={() => setSelectedSeason(sea)}
+              className={`px-3 py-1 text-[9px] font-mono tracking-wider uppercase rounded-md border transition-all cursor-pointer ${
+                selectedSeason === sea
+                  ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                  : 'bg-white/[0.01] text-white/40 border-white/5 hover:border-white/10 hover:text-white/70'
               }`}
             >
-              {cat}
+              {sea}
             </button>
           ))}
         </div>

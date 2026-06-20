@@ -558,10 +558,13 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
   useEffect(() => {
     const handleLocationChange = () => {
       const path = window.location.pathname;
-      let mappedTab: 'HOME' | 'WARDROBE' | 'PRESENCE' | null = null;
-      if (path === '/home') mappedTab = 'HOME';
+      let mappedTab: 'HOME' | 'WARDROBE' | 'PLANNER' | 'LEARN' | 'SIGNATURE' | 'PRESENCE' | null = null;
+      if (path === '/home' || path === '/' || path === '') mappedTab = 'HOME';
       else if (path === '/wardrobe') mappedTab = 'WARDROBE';
-      else if (path === '/dashboard') mappedTab = 'PRESENCE';
+      else if (path === '/planner') mappedTab = 'PLANNER';
+      else if (path === '/learn') mappedTab = 'LEARN';
+      else if (path === '/signature') mappedTab = 'SIGNATURE';
+      else if (path === '/dashboard' || path === '/presence') mappedTab = 'PRESENCE';
       
       if (mappedTab && activeSubTab !== mappedTab) {
         setActiveSubTab(mappedTab);
@@ -580,6 +583,9 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
     let targetPath = '';
     if (activeSubTab === 'HOME') targetPath = '/home';
     else if (activeSubTab === 'WARDROBE') targetPath = '/wardrobe';
+    else if (activeSubTab === 'PLANNER') targetPath = '/planner';
+    else if (activeSubTab === 'LEARN') targetPath = '/learn';
+    else if (activeSubTab === 'SIGNATURE') targetPath = '/signature';
     else if (activeSubTab === 'PRESENCE') targetPath = '/dashboard';
 
     if (targetPath && window.location.pathname !== targetPath) {
@@ -1356,7 +1362,16 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
             )}
           </div>
 
-          <div className="pt-4">
+          <div 
+            onClick={(e) => {
+              e.stopPropagation();
+              triggerQuietPause(() => {
+                setSelectedGarment(null);
+                setActiveSubTab('HOME');
+              });
+            }}
+            className="pt-4 cursor-pointer select-none"
+          >
             <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-white/30 hover:text-white/60 transition-colors">
               [ return ]
             </span>
@@ -2318,21 +2333,33 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
                       Seen again.
                     </span>
                   </div>
-                  <div className="grid grid-cols-2 gap-8 opacity-20 pointer-events-none pb-8">
+                  <div className="grid grid-cols-2 gap-8 pb-8">
                     {activeWardrobeList.filter(item => item.placedElsewhere).map((item) => (
-                      <div key={item.id} className="space-y-3">
-                        <div className="w-full aspect-[4/5] overflow-hidden bg-white/[0.02]">
+                      <div 
+                        key={item.id} 
+                        onClick={() => {
+                          triggerQuietPause(() => {
+                            setSelectedGarment(item);
+                          });
+                        }}
+                        className="space-y-3 cursor-pointer group opacity-60 hover:opacity-100 transition-opacity duration-150 animate-fade-in"
+                        id={`seen-again-item-${item.id}`}
+                      >
+                        <div className="w-full aspect-[4/5] overflow-hidden bg-white/[0.02] border border-white/5 group-hover:border-white/10 transition-colors">
                           <img 
                             src={item.imageUrl || getGarmentImage(item.title)} 
                             alt={item.title}
-                            className="w-full h-full object-cover grayscale"
+                            className="w-full h-full object-cover grayscale opacity-80 group-hover:opacity-100 transition-opacity"
                             referrerPolicy="no-referrer"
                           />
                         </div>
-                        <div className="text-center">
-                          <h4 className="font-serif font-light text-sm text-white/80 truncate px-1">
+                        <div className="text-center min-w-0">
+                          <h4 className="font-serif font-light text-sm text-white/50 group-hover:text-white/95 truncate px-1 transition-colors">
                             {item.title}
                           </h4>
+                          <span className="text-[8px] font-mono uppercase tracking-[0.1em] text-white/30 block mt-0.5 group-hover:text-white/50 transition-colors">
+                            [ put away ]
+                          </span>
                         </div>
                       </div>
                     ))}
