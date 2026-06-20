@@ -55,7 +55,7 @@ export default function App() {
   const [loaderStage, setLoaderStage] = useState(0);
   const [isSilent, setIsSilent] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
-  const [showCover, setShowCover] = useState(true);
+  const [showCover, setShowCover] = useState(false);
   
   // Rotating footer index
   const [footerIndex, setFooterIndex] = useState(0);

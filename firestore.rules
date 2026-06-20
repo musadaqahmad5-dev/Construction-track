@@ -33,13 +33,26 @@ service cloud.firestore {
     function isValidWardrobeItem(data) {
       let requiredFields = ['title', 'userId', 'createdAt', 'status', 'category'];
       return data.keys().hasAll(requiredFields)
-        && data.keys().size() <= 10
+        && data.keys().size() <= 25
         && data.title is string && data.title.size() <= 200
         && data.userId == request.auth.uid
         && data.status in ['In Closet', 'Planned', 'Worn/Wash']
         && data.category in ['Casual', 'Formal', 'Sportswear', 'Outerwear', 'Accessories']
         && (data.get('description', null) == null || (data.description is string && data.description.size() <= 2000))
-        && (data.get('strategy', null) == null || (data.strategy is string && data.strategy.size() <= 4000));
+        && (data.get('strategy', null) == null || (data.strategy is string && data.strategy.size() <= 4000))
+        && (data.get('season', null) == null || (data.season is string && data.season.size() <= 100))
+        && (data.get('primaryColor', null) == null || (data.primaryColor is string && data.primaryColor.size() <= 100))
+        && (data.get('secondaryColor', null) == null || (data.secondaryColor is string && data.secondaryColor.size() <= 100))
+        && (data.get('wearCount', null) == null || (data.wearCount is int || data.wearCount is float))
+        && (data.get('lastUsed', null) == null || (data.lastUsed is string && data.lastUsed.size() <= 100))
+        && (data.get('imageUrl', null) == null || (data.imageUrl is string && data.imageUrl.size() <= 1000))
+        && (data.get('schema_version', null) == null || (data.schema_version is string && data.schema_version.size() <= 50))
+        && (data.get('careNote', null) == null || (data.careNote is string && data.careNote.size() <= 1000))
+        && (data.get('location', null) == null || (data.location is string && data.location.size() <= 1000))
+        && (data.get('privateNote', null) == null || (data.privateNote is string && data.privateNote.size() <= 1000))
+        && (data.get('placedElsewhere', null) == null || (data.placedElsewhere is bool))
+        && (data.get('lastWornMoment', null) == null || (data.lastWornMoment is string && data.lastWornMoment.size() <= 100))
+        && (data.get('worksWith', null) == null || (data.worksWith is string && data.worksWith.size() <= 1000));
     }
 
     match /constructions/{constructionId} {
@@ -69,7 +82,9 @@ service cloud.firestore {
       allow create: if isSignedIn() 
         && isValidId(itemId)
         && isValidWardrobeItem(request.resource.data)
-        && request.resource.data.createdAt == request.time;
+        && (request.resource.data.createdAt == request.time 
+            || request.resource.data.createdAt is timestamp
+            || (request.resource.data.createdAt is map && request.resource.data.createdAt.get('seconds', null) != null));
       
       allow list: if isSignedIn() 
         && resource.data.userId == request.auth.uid;
@@ -83,7 +98,10 @@ service cloud.firestore {
         && isOwner(resource.data.userId)
         && isValidWardrobeItem(request.resource.data)
         && request.resource.data.userId == resource.data.userId
-        && request.resource.data.createdAt == resource.data.createdAt;
+        && (request.resource.data.createdAt == resource.data.createdAt 
+            || request.resource.data.createdAt is timestamp
+            || (request.resource.data.createdAt is map && request.resource.data.createdAt.get('seconds', null) != null)
+            || request.resource.data.createdAt != null);
         
       allow delete: if isOwner(resource.data.userId) && isValidId(itemId);
     }
@@ -99,6 +117,18 @@ service cloud.firestore {
         && resource.data.userId == request.auth.uid;
       allow delete: if isSignedIn()
         && resource.data.userId == request.auth.uid;
+    }
+
+    match /sellers/{sellerId} {
+      allow read, get, list: if true;
+      allow create, update: if isSignedIn() && request.auth.uid == sellerId;
+      allow delete: if isSignedIn() && request.auth.uid == sellerId;
+    }
+
+    match /products/{productId} {
+      allow read, get, list: if true;
+      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow update, delete: if isSignedIn() && resource.data.ownerId == request.auth.uid;
     }
   }
 }

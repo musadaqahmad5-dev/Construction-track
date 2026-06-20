@@ -11,6 +11,7 @@ import {
 import { db } from '../firebase';
 import { OutfitCard } from './OutfitCard';
 import { WardrobeGrid } from './WardrobeGrid';
+import { HomeFeed } from './HomeFeed';
 import { StyleBadge } from './StyleBadge';
 import { SystemHealthPanel } from './SystemHealthPanel';
 import { FeedbackButtons } from './FeedbackButtons';
@@ -1425,8 +1426,18 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
           </div>
         )}
 
-        {/* Navigation line: crisp, text-only, generous spacing */}
-        <div className={temporalVals.containerSpace}>
+        {/* Unified HomeFeed Engine Implementation */}
+        <HomeFeed 
+          wardrobe={activeWardrobeList}
+          onAddGarment={onAddGarment}
+          onDeleteGarment={onDeleteGarment}
+          user={user}
+          onLogout={onLogout}
+          onReset={onReset}
+          onLoadSamples={onLoadSamples}
+        />
+
+        <div className="hidden pointer-events-none opacity-0 h-0 overflow-hidden select-none">
           <div className="flex justify-center gap-8 md:gap-12 border-b border-white/5 pb-6 overflow-x-auto select-none">
             {[
               { id: 'HOME', label: 'Morning table' },

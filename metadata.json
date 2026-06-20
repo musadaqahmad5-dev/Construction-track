@@ -1,6 +1,6 @@
 {
   "name": "Wardrobe Companion",
-  "description": "A quiet, photograph-first fashion publication and personal archive companion focusing on high-end monochrome silhouettes and silent wardrobe signatures.",
+  "description": "A self-running AI Fashion Social and Marketplace platform connecting private digital wardrobe archives, local shop catalog highlights, and style recommendations in one unified feeds publication.",
   "requestFramePermissions": ["camera"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

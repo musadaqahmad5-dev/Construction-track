@@ -53,3 +53,29 @@ export interface DailyRecommendation {
   suggestedItems: string[];                       // IDs of WardrobeItems proposed
   styleNotes: string;
 }
+
+export interface Seller {
+  id: string; // Seller/Shop identifier (typically matching userId of creator)
+  name: string;
+  location: string;
+  category: string; // specialty e.g. "Minimalist Tweed", "Streetwear", "Accessories"
+  ownerId: string;
+  createdAt: any;
+  avatarUrl?: string;
+}
+
+export interface Product {
+  id: string;
+  shopId: string; // ownerId / sellerId
+  shopName: string;
+  title: string;
+  description: string;
+  price: number;
+  category: 'Casual' | 'Formal' | 'Sportswear' | 'Outerwear' | 'Accessories';
+  availability: 'In Stock' | 'Limited' | 'Out of Stock';
+  imageUrl: string;
+  vibeTags?: string[];
+  createdAt: any;
+  ownerId: string;
+}
+
