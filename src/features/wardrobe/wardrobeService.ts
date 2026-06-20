@@ -21,6 +21,7 @@ export class WardrobeService {
       secondaryColor?: string;
       wearCount?: number;
       lastUsed?: string;
+      imageUrl?: string;
     }
   ): Promise<string> {
     try {
@@ -36,7 +37,8 @@ export class WardrobeService {
         primaryColor: extraOptions?.primaryColor || 'Neutral shade',
         secondaryColor: extraOptions?.secondaryColor || 'Contrast hue',
         wearCount: extraOptions?.wearCount || 0,
-        lastUsed: extraOptions?.lastUsed || ''
+        lastUsed: extraOptions?.lastUsed || '',
+        imageUrl: extraOptions?.imageUrl || ''
       });
       return docRef.id;
     } catch (error) {

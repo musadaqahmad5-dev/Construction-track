@@ -18,6 +18,12 @@ export interface WardrobeItem {
   formality?: 'Formal' | 'Semi-formal' | 'Casual' | 'Sportswear'; // Matching TS usage in orchestrator
   size?: string;                                 // Matching TS usage in fit estimator
   name?: string;                                 // Matching TS usage in tryon and overlays
+  careNote?: string;                             // Human closet care notes (e.g. "Needs ironing")
+  location?: string;                             // Where it belongs (e.g. "Top shelf")
+  privateNote?: string;                          // One optional private line
+  placedElsewhere?: boolean;                      // Placed elsewhere (put away flag)
+  lastWornMoment?: string;                       // Moment of day last worn
+  worksWith?: string;                            // Optional coordinate text (e.g. "white shoes")
 }
 
 export interface OutfitSuggestion {

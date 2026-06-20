@@ -9,6 +9,36 @@ import { ImageStorage } from "./src/features/image-generation/imageStorage";
 import { TrendAggregator } from "./src/features/live-trends/trendAggregator";
 import { CatalogSync } from "./src/features/catalog/catalogSync";
 import { RealityAudit } from "./src/features/reality/realityAudit";
+import { UnifiedFashionOS } from "./src/features/ai-core/UnifiedFashionOS";
+
+function parseTopOutfits(primary: any, alternatives: any[]): any[] {
+  const list: any[] = [];
+  if (primary) {
+    list.push({
+      id: primary.id || "primary-look",
+      name: primary.name || "Default Curated Look",
+      items: primary.items || [],
+      suitabilityScore: primary.suitabilityScore || 90,
+      explanation: primary.explanation || "Primary custom recommendations.",
+      styleIdentity: primary.styleIdentity || "Slate Minimalist",
+      gravityMatch: primary.gravityMatch || "High",
+    });
+  }
+  
+  alternatives.forEach((alt, idx) => {
+    list.push({
+      id: alt.id || `alt-look-${idx}`,
+      name: alt.name || `Alternative Silhouette ${idx + 1}`,
+      items: alt.items || [],
+      suitabilityScore: alt.suitabilityScore ?? alt.score ?? 80,
+      explanation: alt.explanation ?? alt.reason ?? "Expanded coordination options.",
+      styleIdentity: alt.styleIdentity || "Smart Casual Blend",
+      gravityMatch: alt.gravityMatch || "Medium",
+    });
+  });
+  
+  return list;
+}
 
 async function startServer() {
   const app = express();
@@ -20,6 +50,47 @@ async function startServer() {
   // API Routes (Registered FIRST)
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", time: new Date().toISOString() });
+  });
+
+  // Production AI Stylist Pipeline
+  app.post("/api/stylist/generate", (req, res) => {
+    try {
+      const { wardrobe, userProfile } = req.body;
+      const wardrobeItems = Array.isArray(wardrobe) ? wardrobe : [];
+      
+      // Seed wardrobe items to the global state (in-memory for this server request)
+      if (wardrobeItems.length > 0) {
+        UnifiedFashionOS.syncWardrobeItems(wardrobeItems);
+      }
+      
+      // Seed user preference weights vector if provided
+      if (userProfile?.user_preferences_vector) {
+        UnifiedFashionOS.getState().unifiedStyleMemory.user_preferences_vector = userProfile.user_preferences_vector;
+      }
+      
+      // Execute the completed 3-core engine layers
+      UnifiedFashionOS.generateOutfit(wardrobeItems, "Today's Styled Spread");
+      UnifiedFashionOS.recalculateGoLiveGate(); // triggers Governor Loop updates dynamically!
+      
+      const state = UnifiedFashionOS.getState();
+      const currentSuggestion = state.activeSuggestion;
+      
+      // Gather top 10 suggestions (using alternativeOutfits array)
+      const parsedAlternatives = state.alternativeOutfits || [];
+      const suggestions = parseTopOutfits(currentSuggestion, parsedAlternatives);
+      
+      res.json({
+        success: true,
+        outfits: suggestions.slice(0, 10),
+        styleIdentity: 'Balanced Slate Aesthetic',
+        gravityMatch: 'High',
+        stylistNotes: (currentSuggestion as any)?.explanation || 'A curated selection adapted for your temporal rhythm.',
+        governorReport: state.systemGovernorReport
+      });
+    } catch (err: any) {
+      console.error("[API ERROR] Stylist generation pipeline failed:", err);
+      res.status(500).json({ error: "SaaS generation failed: " + err.message });
+    }
   });
 
   // Outfit Recommendation Endpoint

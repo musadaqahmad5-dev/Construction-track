@@ -1,402 +1,177 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Shirt, 
-  Trash2, 
-  Zap, 
-  ChevronRight, 
-  Plus, 
-  Search, 
-  Info,
-  SlidersHorizontal,
-  FolderHeart,
-  CalendarDays,
-  Palette,
-  Timer
-} from 'lucide-react';
+import { Search, Loader2, Trash2, Shield, PlusCircle, Wind } from 'lucide-react';
 import { WardrobeItem, ClothingCategory } from '../types';
 
 interface WardrobeGridProps {
-  wardrobe: WardrobeItem[];
-  onAddGarment: (title: string, description: string, category: ClothingCategory, extraOptions?: {
-    season?: WardrobeItem['season'];
-    primaryColor?: string;
-    secondaryColor?: string;
-  }) => Promise<void>;
-  onDeleteItem: (item: WardrobeItem) => Promise<void>;
-  onToggleStatus: (item: WardrobeItem) => Promise<void>;
-  onGenerateStrategy: (item: WardrobeItem) => Promise<void>;
-  generatingStrategyId: string | null;
+  items: WardrobeItem[];
+  onDelete: (item: WardrobeItem) => void;
+  onSelect?: (item: WardrobeItem) => void;
+  onAddTrigger?: () => void;
+  categories: ClothingCategory[];
+  id?: string;
 }
 
-const CATEGORIES: ClothingCategory[] = ['Casual', 'Formal', 'Sportswear', 'Outerwear', 'Accessories'];
-const SEASONS = ['Spring', 'Summer', 'Autumn', 'Winter', 'All-Season'] as const;
-const COLOR_OPTIONS = [
-  { name: 'Pitch Black', value: '#0f172a' },
-  { name: 'Oatmeal Beige', value: '#f5f5f4' },
-  { name: 'Minimalist White', value: '#ffffff' },
-  { name: 'Olive Drab', value: '#3f6212' },
-  { name: 'Navy Blue', value: '#1e3a8a' },
-  { name: 'Warm Rust', value: '#7c2d12' },
-  { name: 'Dry Sage', value: '#065f46' }
-];
-
 export const WardrobeGrid: React.FC<WardrobeGridProps> = ({
-  wardrobe,
-  onAddGarment,
-  onDeleteItem,
-  onToggleStatus,
-  onGenerateStrategy,
-  generatingStrategyId
+  items,
+  onDelete,
+  onSelect,
+  onAddTrigger,
+  categories,
+  id
 }) => {
-  const [title, setTitle] = useState('');
-  const [desc, setDesc] = useState('');
-  const [category, setCategory] = useState<ClothingCategory>('Casual');
-  const [season, setSeason] = useState<WardrobeItem['season']>('All-Season');
-  const [primaryColor, setPrimaryColor] = useState(COLOR_OPTIONS[0].name);
-  const [secondaryColor, setSecondaryColor] = useState(COLOR_OPTIONS[1].name);
+  const [search, setSearch] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
+  const [selectedSeason, setSelectedSeason] = useState<string>('ALL');
 
-  // Filters
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selCategory, setSelCategory] = useState<string>('All');
-  const [selSeason, setSelSeason] = useState<string>('All');
-  const [selStatus, setSelStatus] = useState<string>('All');
-
-  const [addingItem, setAddingItem] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title.trim()) return;
-
-    await onAddGarment(title, desc, category, {
-      season,
-      primaryColor,
-      secondaryColor
-    });
-
-    setTitle('');
-    setDesc('');
-    setCategory('Casual');
-    setSeason('All-Season');
-    setPrimaryColor(COLOR_OPTIONS[0].name);
-    setSecondaryColor(COLOR_OPTIONS[1].name);
-    setAddingItem(false);
-  };
-
-  const filteredItems = wardrobe.filter(item => {
-    const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase()));
-    const matchesCategory = selCategory === 'All' || item.category === selCategory;
-    const matchesSeason = selSeason === 'All' || item.season === selSeason;
-    const matchesStatus = selStatus === 'All' || item.status === selStatus;
-    return matchesSearch && matchesCategory && matchesSeason && matchesStatus;
+  const filtered = items.filter(item => {
+    const isCategoryMatch = selectedCategory === 'ALL' || item.category === selectedCategory;
+    const isSeasonMatch = selectedSeason === 'ALL' || item.season === selectedSeason;
+    const matchesSearch = 
+      (item.title || '').toLowerCase().includes(search.toLowerCase()) ||
+      (item.description || '').toLowerCase().includes(search.toLowerCase());
+    return isCategoryMatch && isSeasonMatch && matchesSearch;
   });
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 font-sans" id="wardrobe-grid-view">
-      {/* Sidebar: Creation & Filters */}
-      <aside className="lg:col-span-4 space-y-6">
-        
-        {/* Creation Box */}
-        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6" id="creation-form-box">
-          <button 
-            type="button"
-            onClick={() => setAddingItem(!addingItem)}
-            className="w-full flex items-center justify-between text-sm font-black uppercase tracking-wider text-slate-500 hover:text-slate-900 transition-colors cursor-pointer"
+    <div id={id || "wardrobe-grid-container"} className="space-y-6">
+      {/* Search and Filter panel */}
+      <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center bg-white/[0.01] border border-white/5 p-4 rounded-xl">
+        <div className="relative w-full md:w-72">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white/30" />
+          <input
+            id="wardrobe-search"
+            type="text"
+            placeholder="Search closet items..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full bg-white/[0.02] border border-white/5 pl-9 pr-4 py-2 text-xs font-mono text-white/80 placeholder-white/30 rounded-lg focus:outline-none focus:border-white/15 transition-all"
+          />
+        </div>
+
+        {/* Categories filters */}
+        <div className="flex flex-wrap gap-2 w-full md:w-auto">
+          {['ALL', ...categories].map((cat) => (
+            <button
+              key={cat}
+              id={`filter-cat-${cat.toLowerCase()}`}
+              onClick={() => setSelectedCategory(cat)}
+              className={`px-3 py-1.5 text-[9.5px] font-mono tracking-wider uppercase rounded-md border transition-all cursor-pointer ${
+                selectedCategory === cat
+                  ? 'bg-white text-black border-white'
+                  : 'bg-white/[0.01] text-white/50 border-white/5 hover:border-white/10 hover:text-white/80'
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Grid items layout */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+        {onAddTrigger && (
+          <motion.div
+            whileHover={{ scale: 1.01 }}
+            className="border border-dashed border-white/10 hover:border-white/20 rounded-xl flex flex-col items-center justify-center p-6 text-center h-52 cursor-pointer bg-white/[0.005]/[0.1] hover:bg-white/[0.01] transition-all"
+            onClick={onAddTrigger}
           >
-            <span className="flex items-center gap-2">
-              <Plus size={16} className="text-blue-600" /> Add Outfit Item
+            <PlusCircle className="w-8 h-8 text-white/20 mb-3" />
+            <span className="text-xs font-mono text-white/45 tracking-wider uppercase">
+              Add New Garment
             </span>
-            <span className="text-xs text-blue-500">{addingItem ? 'Hide' : 'Expand'}</span>
-          </button>
-
-          <AnimatePresence initial={false}>
-            {(addingItem || wardrobe.length === 0) && (
-              <motion.form 
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.3 }}
-                onSubmit={handleSubmit} 
-                className="space-y-4 mt-6 overflow-hidden"
-              >
-                <div>
-                  <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Garment Descriptor</label>
-                  <input 
-                    value={title} 
-                    onChange={e => setTitle(e.target.value)} 
-                    placeholder="E.g., Flannel Checked Overshirt" 
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm" 
-                    required 
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Style Class</label>
-                    <select 
-                      value={category} 
-                      onChange={e => setCategory(e.target.value as ClothingCategory)}
-                      className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-xs font-semibold"
-                    >
-                      {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Season Cycle</label>
-                    <select 
-                      value={season} 
-                      onChange={e => setSeason(e.target.value as any)}
-                      className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-xs font-semibold"
-                    >
-                      {SEASONS.map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Fabric Color</label>
-                    <select 
-                      value={primaryColor} 
-                      onChange={e => setPrimaryColor(e.target.value)}
-                      className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-xs font-semibold"
-                    >
-                      {COLOR_OPTIONS.map(col => <option key={col.name} value={col.name}>{col.name}</option>)}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Contrast Hue</label>
-                    <select 
-                      value={secondaryColor} 
-                      onChange={e => setSecondaryColor(e.target.value)}
-                      className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-xs font-semibold"
-                    >
-                      {COLOR_OPTIONS.map(col => <option key={col.name} value={col.name}>{col.name}</option>)}
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Fabric, Fit & Texture Details</label>
-                  <textarea 
-                    value={desc} 
-                    onChange={e => setDesc(e.target.value)} 
-                    placeholder="E.g., 100% thick wool blend, cream checkered patterns, heavy fit." 
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none h-20 resize-none text-xs placeholder:text-slate-400 leading-relaxed" 
-                  />
-                </div>
-
-                <button 
-                  type="submit" 
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-2xl font-bold transition-all shadow-lg shadow-blue-150 text-xs cursor-pointer uppercase tracking-wider"
-                >
-                  Verify and Store Garment
-                </button>
-              </motion.form>
-            )}
-          </AnimatePresence>
-        </div>
-
-        {/* Tactical Search Filter Dashboard */}
-        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 space-y-5" id="refinement-filters-box">
-          <div className="flex items-center gap-2 mb-2">
-            <SlidersHorizontal className="text-slate-400" size={16} />
-            <h3 className="text-xs uppercase font-black tracking-wider text-slate-500">Refine View</h3>
-          </div>
-
-          <div className="space-y-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-              <input 
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Search items, fabrics..."
-                className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="text-[9px] uppercase font-bold text-slate-400 mb-1 block">Apparel Class</label>
-              <select
-                value={selCategory}
-                onChange={e => setSelCategory(e.target.value)}
-                className="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none font-medium"
-              >
-                <option value="All">All Categories</option>
-                {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-              </select>
-            </div>
-
-            <div>
-              <label className="text-[9px] uppercase font-bold text-slate-400 mb-1 block">Seasonal Preference</label>
-              <select
-                value={selSeason}
-                onChange={e => setSelSeason(e.target.value)}
-                className="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none font-medium"
-              >
-                <option value="All">All Seasons</option>
-                {SEASONS.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </div>
-
-            <div>
-              <label className="text-[9px] uppercase font-bold text-slate-400 mb-1 block">Rotation State</label>
-              <select
-                value={selStatus}
-                onChange={e => setSelStatus(e.target.value)}
-                className="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none font-medium"
-              >
-                <option value="All">All Statuses</option>
-                <option value="In Closet">In Closet</option>
-                <option value="Planned">Planned</option>
-                <option value="Worn/Wash">Worn/Wash</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      </aside>
-
-      {/* Main Grid View */}
-      <section className="lg:col-span-8 space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="text-xl font-serif font-black tracking-tight text-slate-900">
-              Personal Catalog
+            <span className="text-[10px] font-serif text-white/25 italic mt-1">
+              "Enlist look slowly."
             </span>
-            <span className="text-xs font-mono font-bold bg-slate-200/60 text-slate-600 px-2 py-0.5 rounded-full">
-              {filteredItems.length} items
-            </span>
-          </div>
-        </div>
+          </motion.div>
+        )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4" id="closet-items-bento">
-          <AnimatePresence mode="popLayout">
-            {filteredItems.map((item, index) => {
-              const currentImgColor = COLOR_OPTIONS.find(c => c.name === item.primaryColor)?.value || '#94a3b8';
-              return (
-                <motion.div 
-                  key={item.id}
-                  layout
-                  initial={{ opacity: 0, y: 15 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ delay: index * 0.04 }}
-                  className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm relative group hover:shadow-md hover:border-slate-300 transition-all duration-300 flex flex-col justify-between"
-                >
-                  <div>
-                    {/* Visual Mock Representation */}
-                    <div className="h-32 mb-4 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-center p-4 relative overflow-hidden group-hover:bg-slate-100/50 transition-colors">
-                      {/* Interactive clothes color overlay */}
-                      <div 
-                        style={{ backgroundColor: currentImgColor }} 
-                        className="w-14 h-14 rounded-xl flex items-center justify-center shadow-sm opacity-90 transition-transform duration-300 group-hover:scale-105"
-                      >
-                        <Shirt className={item.primaryColor === 'Minimalist White' ? 'text-slate-800' : 'text-white'} size={28} />
-                      </div>
-                      
-                      {/* Floating Category tag */}
-                      <div className="absolute bottom-2 left-2 bg-white/90 backdrop-blur-[2px] px-2 py-0.5 rounded-md text-[9px] font-mono leading-tight border border-slate-100 uppercase tracking-tighter">
-                        {item.category}
-                      </div>
+        <AnimatePresence mode="popLayout">
+          {filtered.map((item) => {
+            return (
+              <motion.div
+                key={item.id}
+                layout
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.2 }}
+                onClick={() => onSelect?.(item)}
+                className="group relative bg-zinc-950/20 border border-white/5 hover:border-white/10 rounded-xl p-4 flex flex-col justify-between h-52 overflow-hidden transition-all duration-300 cursor-pointer"
+              >
+                {/* Clean soft drop shimmer */}
+                <div className="absolute inset-0 bg-white/[0.002] group-hover:bg-white/[0.01] transition-all duration-300" />
+                
+                <div className="space-y-2 relative z-10 min-w-0">
+                  <div className="flex justify-between items-start">
+                    <span className="text-[9px] font-mono text-white/30 uppercase tracking-[0.1em] block font-light">
+                      {item.category}
+                    </span>
+                    
+                    {/* Clothing Lifecyle Status Badge */}
+                    <span className={`px-1.5 py-0.5 rounded text-[8.5px] font-mono font-medium tracking-wide leading-none border ${
+                      item.status === 'In Closet' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/10' :
+                      item.status === 'Planned' ? 'bg-amber-500/10 text-amber-400 border-amber-500/10' :
+                      'bg-zinc-800 text-zinc-400 border-zinc-700/50'
+                    }`}>
+                      {item.status.toUpperCase()}
+                    </span>
+                  </div>
 
-                      {/* Floating Season Tag */}
-                      <div className="absolute top-2 right-2 bg-slate-900/10 text-slate-700 px-1.5 py-0.5 rounded-md text-[9px] font-mono leading-tight tracking-tighter">
-                        {item.season || 'All-Season'}
-                      </div>
-                    </div>
+                  <h4 className="text-sm font-mono font-medium text-white truncate block">
+                    {item.title}
+                  </h4>
 
-                    <div className="flex justify-between items-start mb-2">
-                      <span className={`px-2 py-0.5 rounded font-mono text-[9px] uppercase tracking-wider ${
-                        item.status === 'Worn/Wash' ? 'bg-rose-50 text-rose-600 border border-rose-100' :
-                        item.status === 'Planned' ? 'bg-amber-50 text-amber-600 border border-amber-100' : 
-                        'bg-blue-50 text-blue-600 border border-blue-100'
-                      }`}>
-                        {item.status}
-                      </span>
-                      
-                      <button 
-                        onClick={() => onDeleteItem(item)}
-                        title="Delete wardrobe garment"
-                        className="p-1 px-1.5 rounded-md text-slate-300 hover:text-rose-500 hover:bg-slate-50 transition-all cursor-pointer"
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
-
-                    <h4 className="font-bold text-slate-900 tracking-tight text-base mb-1 group-hover:text-blue-600 transition-colors line-clamp-1">{item.title}</h4>
-                    <p className="text-xs text-slate-500 leading-relaxed font-light mb-4 line-clamp-2">
-                      {item.description || "Simple elegant garment."}
+                  {item.description && (
+                    <p className="text-[10px] font-serif italic text-white/45 leading-relaxed line-clamp-3">
+                      {item.description}
                     </p>
+                  )}
+                </div>
 
-                    {/* Meta Palette Row */}
-                    <div className="flex items-center gap-4 mb-4 text-[10px] font-mono text-slate-400">
-                      <div className="flex items-center gap-1.5">
-                        <FolderHeart size={11} />
-                        <span>{item.primaryColor || 'Neutral'}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <Timer size={11} />
-                        <span>Worn: {item.wearCount || 0}x</span>
-                      </div>
-                    </div>
-
-                    {/* Dynamic offline style suggestion blocks */}
-                    {item.strategy ? (
-                      <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="p-3 bg-blue-50/40 rounded-xl border border-blue-100 text-[11px] text-slate-700 leading-relaxed font-light mb-4"
-                      >
-                        <div className="flex items-center gap-1 font-bold uppercase tracking-wider text-[9px] text-blue-600 mb-1">
-                          <Zap size={10} /> Style Insight
-                        </div>
-                        <div className="whitespace-pre-wrap">{item.strategy}</div>
-                      </motion.div>
-                    ) : null}
-                  </div>
-
-                  <div className="space-y-2 mt-auto">
-                    {!item.strategy && (
-                      <button
-                        onClick={() => onGenerateStrategy(item)}
-                        disabled={generatingStrategyId === item.id}
-                        className="w-full py-1.5 bg-slate-950 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-1.5 hover:bg-slate-800 transition-all cursor-pointer"
-                      >
-                        {generatingStrategyId === item.id ? (
-                          <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        ) : (
-                          <Zap size={11} />
-                        )}
-                        Formulate Styling Strategy
-                      </button>
+                {/* Foot/Actions */}
+                <div className="relative z-10 flex items-center justify-between border-t border-white/5 pt-3">
+                  <div className="space-y-0.5">
+                    {item.season && (
+                      <span className="text-[9px] font-mono text-white/30 block">
+                        SEASON: <span className="text-white/60 font-light">{item.season}</span>
+                      </span>
                     )}
-
-                    <button 
-                      onClick={() => onToggleStatus(item)}
-                      className="w-full py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer border border-slate-150"
-                    >
-                      Cycle Rotation <ChevronRight size={12} />
-                    </button>
+                    {item.primaryColor && (
+                      <span className="text-[9px] font-mono text-white/30 block truncate max-w-[120px]">
+                        COLOR: <span className="text-white/60 font-light">{item.primaryColor}</span>
+                      </span>
+                    )}
                   </div>
-                </motion.div>
-              );
-            })}
-          </AnimatePresence>
 
-          {filteredItems.length === 0 && (
-            <div className="col-span-full py-16 bg-white rounded-3xl border border-dashed border-slate-200 flex flex-col items-center justify-center text-center">
-              <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-4">
-                <Shirt size={22} />
-              </div>
-              <h4 className="font-bold text-slate-900 mb-1 text-sm">No matched clothing found</h4>
-              <p className="text-xs text-slate-400 max-w-[200px]">Alter your sidebar refinement filters or add some new styled pieces above.</p>
-            </div>
-          )}
+                  <button
+                    id={`btn-delete-${item.id}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete(item);
+                    }}
+                    className="p-1.5 bg-white/[0.02] border border-white/5 rounded-md hover:bg-red-950/30 text-white/30 hover:text-red-400 hover:border-red-900/20 cursor-pointer transition-colors relative z-20"
+                    title="Remove item"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </motion.div>
+            );
+          })}
+        </AnimatePresence>
+      </div>
+
+      {filtered.length === 0 && (
+        <div className="py-20 text-center space-y-2 bg-white/[0.005] border border-white/5 rounded-2xl select-none">
+          <p className="text-sm font-serif italic text-white/35">
+            "Your closet is empty or filtered to stillness."
+          </p>
+          <span className="text-[10px] font-mono text-white/20 uppercase tracking-widest block font-light">
+            nil matched results
+          </span>
         </div>
-      </section>
+      )}
     </div>
   );
 };

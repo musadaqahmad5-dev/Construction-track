@@ -1,6 +1,6 @@
 {
-  "name": "Fashion Assistant & Closet Planner",
-  "description": "Enterprise-grade AI Fashion OS featuring interactive Try-On previews, lookbook scene composition, style metrics, closed-loop feedback trackers, and commerce completeness.",
+  "name": "Wardrobe Companion",
+  "description": "A quiet, photograph-first fashion publication and personal archive companion focusing on high-end monochrome silhouettes and silent wardrobe signatures.",
   "requestFramePermissions": ["camera"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
