@@ -127,6 +127,9 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
   }, [wardrobe, customShopPosts, activeFeedFilter]);
 
   // Handle Search Input Submit or on-the-fly search ranking
+  const [stylistError, setStylistError] = useState<string | null>(null);
+
+  // Handle Search Input text state
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setSearchPrompt(val);
@@ -134,23 +137,50 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
     if (!val.trim()) {
       setIsAiCurating(false);
       setAiExplanation('');
+      setStylistError(null);
       // Reset visible feed
       const base = AIEngine.generateFeed(wardrobe, customShopPosts);
       setVisibleFeed(base);
+    }
+  };
+
+  const handleStylistConsult = (query: string) => {
+    console.log("[AI Stylist Consult] Input received: '" + query + "'");
+    setStylistError(null);
+
+    if (!query || !query.trim()) {
+      console.warn("[AI Stylist Consult] Empty search prompt submitted, halting AI call.");
+      setStylistError("Describe your style or select an outfit");
       return;
     }
 
     setIsAiCurating(true);
-    // Debounce/Simulate real-time AI ranking calculation
-    const timer = setTimeout(() => {
-      const base = AIEngine.generateFeed(wardrobe, customShopPosts);
-      const { items, explanation } = AIEngine.processSearchQuery(val, base);
-      setVisibleFeed(items);
-      setAiExplanation(explanation);
-      setIsAiCurating(false);
-    }, 400);
+    setAiExplanation("");
 
-    return () => clearTimeout(timer);
+    console.log("[AI Stylist Consult] AI request sent for style synthesis query: " + query);
+    
+    // Simulate real AI response with loading states
+    setTimeout(() => {
+      try {
+        const base = AIEngine.generateFeed(wardrobe, customShopPosts);
+        const { items, explanation } = AIEngine.processSearchQuery(query, base);
+        
+        console.log("[AI Stylist Consult] Response processed successfully.");
+        if (explanation) {
+          setVisibleFeed(items);
+          setAiExplanation(explanation);
+        } else {
+          const fallbackMsg = "Try a minimalist black outfit with neutral tones for a balanced look.";
+          setAiExplanation(fallbackMsg);
+        }
+      } catch (error) {
+        console.error("[AI Stylist Consult] AI styling engine encountered an issue:", error);
+        const fallbackMsg = "Try a minimalist black outfit with neutral tones for a balanced look.";
+        setAiExplanation(fallbackMsg);
+      } finally {
+        setIsAiCurating(false);
+      }
+    }, 850);
   };
 
   // Preset quick suggestion prompts
@@ -163,14 +193,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
 
   const applyQuickSearch = (query: string) => {
     setSearchPrompt(query);
-    setIsAiCurating(true);
-    setTimeout(() => {
-      const base = AIEngine.generateFeed(wardrobe, customShopPosts);
-      const { items, explanation } = AIEngine.processSearchQuery(query, base);
-      setVisibleFeed(items);
-      setAiExplanation(explanation);
-      setIsAiCurating(false);
-    }, 300);
+    handleStylistConsult(query);
   };
 
   // Liked interactions helper
@@ -292,28 +315,63 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
 
       {/* 2. AI CONCIERGE PROMPT BOX */}
       <div className="bg-[#0b0b0b] border border-white/[0.05] p-4 rounded-2xl shadow-xl space-y-4">
-        <div className="space-y-1">
-          <label className="text-[10px] font-mono tracking-widest text-[#9c9c9c] uppercase block">AI Stylist Consult</label>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white/25" />
-            <input
-              type="text"
-              placeholder="What are you looking for today?"
-              value={searchPrompt}
-              onChange={handleSearchChange}
-              className="w-full bg-white/[0.01] border border-white/5 pl-9 pr-8 py-3 text-xs font-mono text-white placeholder-white/20 focus:outline-none focus:border-white/10 rounded-xl transition-all font-light"
-              id="ai-feed-search-input"
-            />
-            {searchPrompt && (
-              <button 
-                onClick={() => setSearchPrompt('')}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/35 hover:text-white text-xs font-mono px-1 bg-white/5 rounded"
-              >
-                Clear
-              </button>
-            )}
+        <form onSubmit={(e) => { e.preventDefault(); handleStylistConsult(searchPrompt); }} className="space-y-3">
+          <div className="space-y-1">
+            <label className="text-[10px] font-mono tracking-widest text-[#9c9c9c] uppercase block">AI Stylist Consult</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white/25" />
+              <input
+                type="text"
+                placeholder="What are you looking for today? Describe your style..."
+                value={searchPrompt}
+                onChange={handleSearchChange}
+                className="w-full bg-white/[0.01] border border-white/5 pl-9 pr-14 py-3 text-xs font-mono text-white placeholder-white/20 focus:outline-none focus:border-white/10 rounded-xl transition-all font-light"
+                id="ai-feed-search-input"
+              />
+              {searchPrompt && (
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setSearchPrompt('');
+                    setStylistError(null);
+                    setAiExplanation('');
+                    const base = AIEngine.generateFeed(wardrobe, customShopPosts);
+                    setVisibleFeed(base);
+                  }}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/35 hover:text-white text-xs font-mono px-1 bg-white/5 rounded"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
           </div>
-        </div>
+
+          <button
+            type="submit"
+            disabled={isAiCurating}
+            className="w-full py-2 bg-white/10 hover:bg-white text-white hover:text-black transition-all text-[10px] font-mono uppercase tracking-wider rounded-lg font-medium cursor-pointer flex items-center justify-center gap-1.5"
+            id="ai-stylist-consult-submit"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>{isAiCurating ? "Styling..." : "Consult Stylist"}</span>
+          </button>
+        </form>
+
+        {/* Input Validation Error */}
+        {stylistError && (
+          <div className="p-3 bg-rose-500/5 border border-rose-500/10 rounded-xl flex items-center gap-2 text-rose-400 text-xs font-mono mt-1">
+            <Info className="w-3.5 h-3.5 flex-shrink-0" />
+            <span>{stylistError}</span>
+          </div>
+        )}
+
+        {/* Curation Loading State */}
+        {isAiCurating && (
+          <div className="p-3 bg-white/[0.02] border border-dashed border-white/10 rounded-xl flex items-center justify-center gap-2 animate-pulse mt-1 text-xs font-mono text-amber-300">
+            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+            <span>Stylist is analyzing your style...</span>
+          </div>
+        )}
 
         {/* Quick chip ideas */}
         <div className="flex flex-wrap gap-1.5">
