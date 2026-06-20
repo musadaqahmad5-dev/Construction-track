@@ -310,7 +310,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({ user, onClose,
               <span className="text-[9px] font-mono tracking-[0.25em] text-white/30 uppercase block">Atelier Portal Induction</span>
               <h2 className="font-serif text-3xl font-light text-white">Onboard as Local Seller</h2>
               <p className="text-xs text-white/40 leading-relaxed font-serif italic max-w-xl">
-                Create a distinct designer registry. Registered shops broadcast products directly into user feeds, support try-on fittings, and engage coordinates discovery.
+                "Upload your fashion items and appear in the AI feed instantly." Create a distinct designer registry to broadcast products directly to premium style feeds.
               </p>
             </div>
 

@@ -253,13 +253,13 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
       </AnimatePresence>
 
       {/* 1. PRIMARY APP BRANDING HEADER */}
-      <div className="text-center space-y-2 pt-6">
+      <div className="text-center space-y-3 pt-6 pb-2">
         <span className="text-[9px] font-mono uppercase tracking-[0.3em] text-white/30 block">
           AI-Curated Style & Atelier Feed
         </span>
         <h1 className="font-serif font-light tracking-[-0.03em] text-4xl text-white">Sartorial Feed</h1>
-        <p className="text-xs text-white/40 font-serif italic max-w-xs mx-auto">
-          "A self-running fashion social & marketplace curated by intelligence."
+        <p className="text-xs text-[#dfd7c2]/80 font-serif italic max-w-sm mx-auto leading-relaxed">
+          "Discover and shop real fashion from local boutiques, powered by AI."
         </p>
       </div>
 
