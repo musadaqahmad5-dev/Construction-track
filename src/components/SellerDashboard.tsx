@@ -57,6 +57,8 @@ const PRESET_MERC_IMAGES = [
 export const SellerDashboard: React.FC<SellerDashboardProps> = ({ user, onClose, onProductAddedOrChanged }) => {
   const [sellerProfile, setSellerProfile] = useState<Seller | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
+  const [userRole, setUserRole] = useState<'user' | 'seller' | null>(null);
+  const [loadingRole, setLoadingRole] = useState(true);
   const [myProducts, setMyProducts] = useState<Product[]>([]);
 
   // Onboarding Form States
@@ -83,7 +85,31 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({ user, onClose,
   // Authenticated State Guard
   const isGuest = !user || user.isAnonymous || user.uid.startsWith('guest-');
 
-  // 1. Fetch/Listen Seller Profile
+  // 1. Fetch/Listen User Role State
+  useEffect(() => {
+    if (isGuest) {
+      setUserRole('user');
+      setLoadingRole(false);
+      return;
+    }
+
+    const unsubUser = onSnapshot(doc(db, 'users', user.uid), (docSnap) => {
+      if (docSnap.exists()) {
+        setUserRole(docSnap.data().role || 'user');
+      } else {
+        setUserRole('user');
+      }
+      setLoadingRole(false);
+    }, (error) => {
+      console.warn("User role fetch error:", error);
+      setUserRole('user');
+      setLoadingRole(false);
+    });
+
+    return () => unsubUser();
+  }, [user, isGuest]);
+
+  // 2. Fetch/Listen Seller Profile
   useEffect(() => {
     if (isGuest) {
       setLoadingProfile(false);
@@ -147,6 +173,16 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({ user, onClose,
       };
 
       await setDoc(doc(db, 'sellers', user.uid), sellerData);
+
+      // Also set/update user role to 'seller' synchronously in users collection
+      await setDoc(doc(db, 'users', user.uid), {
+        uid: user.uid,
+        displayName: user.displayName || 'Sartorialist',
+        email: user.email || '',
+        role: 'seller',
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+
     } catch (err) {
       console.error("Seller Onboarding Failed:", err);
     } finally {
@@ -297,13 +333,13 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({ user, onClose,
               Back to Browsing Feed
             </button>
           </div>
-        ) : loadingProfile ? (
+        ) : (loadingProfile || loadingRole) ? (
           /* Profile Loading spinner */
           <div className="py-24 text-center space-y-2">
             <div className="w-6 h-6 border-2 border-white/10 border-t-white rounded-full animate-spin mx-auto" />
             <p className="text-[10px] font-mono text-white/30 uppercase tracking-widest">Querying Merchant Ledgers...</p>
           </div>
-        ) : !sellerProfile ? (
+        ) : (!sellerProfile || userRole !== 'seller') ? (
           /* UNBOARDED SELLER CHANNELS */
           <div className="space-y-6">
             <div className="space-y-2">

@@ -57,12 +57,8 @@ export const ImageWithFade: React.FC<{ src: string; alt: string }> = ({ src, alt
 
   return (
     <div className="w-full bg-[#0a0a0a] overflow-hidden aspect-[4/5] relative select-none rounded-none border border-white/[0.02]">
-      {/* Film grain noise using an SVG filter overlay for print realism */}
-      <div className="absolute inset-0 z-20 pointer-events-none opacity-[0.14] mix-blend-overlay" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
-      {/* Matte paper wash overlay */}
-      <div className="absolute inset-0 z-10 pointer-events-none bg-[#111111]/15 mix-blend-multiply" />
-      {/* Thin satin sheen matte overlay */}
-      <div className="absolute inset-0 z-10 pointer-events-none bg-white/[0.015] mix-blend-screen" />
+      {/* Film grain noise using an SVG filter overlay of extremely low impact for subtle texturing */}
+      <div className="absolute inset-0 z-20 pointer-events-none opacity-[0.06] mix-blend-overlay" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
       
       {/* Previous Image kept visible while next loads */}
       {prevSrc && (
@@ -70,8 +66,8 @@ export const ImageWithFade: React.FC<{ src: string; alt: string }> = ({ src, alt
           src={prevSrc}
           alt={alt}
           referrerPolicy="no-referrer"
-          className={`absolute inset-0 w-full h-full object-cover grayscale sepia-[0.04] brightness-[0.89] contrast-[0.84] blur-[0.25px] transition-opacity duration-[420ms] ease-out ${
-            isNewLoaded ? 'opacity-0 z-0' : 'opacity-[0.82] z-10'
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-[420ms] ease-out ${
+            isNewLoaded ? 'opacity-0 z-0' : 'opacity-100 z-10'
           }`}
         />
       )}
@@ -88,8 +84,8 @@ export const ImageWithFade: React.FC<{ src: string; alt: string }> = ({ src, alt
           }, 450);
         }}
         referrerPolicy="no-referrer"
-        className={`absolute inset-0 w-full h-full object-cover grayscale sepia-[0.04] brightness-[0.89] contrast-[0.84] blur-[0.25px] transition-opacity duration-[420ms] ease-out ${
-          isNewLoaded ? 'opacity-[0.82] z-10' : 'opacity-0 z-0'
+        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-[420ms] ease-out ${
+          isNewLoaded ? 'opacity-100 z-10' : 'opacity-0 z-0'
         }`}
       />
     </div>

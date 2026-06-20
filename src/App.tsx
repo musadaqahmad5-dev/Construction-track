@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { collection, query, where, onSnapshot, deleteDoc, doc, getDocs } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, deleteDoc, doc, getDocs, setDoc } from 'firebase/firestore';
 import { auth, db, logout, OperationType, handleFirestoreError } from './firebase';
 import { WardrobeItem, ClothingCategory } from './types';
 import { WardrobeService } from './features/wardrobe/wardrobeService';
@@ -124,6 +124,35 @@ export default function App() {
 
     return () => unsubscribe();
   }, []);
+
+  // Sync core user identity and role to Firestore upon successful authentication
+  useEffect(() => {
+    if (!user || user.isAnonymous || user.uid.startsWith('guest-')) {
+      return;
+    }
+
+    const { uid, displayName, email } = user;
+    const userDocRef = doc(db, 'users', uid);
+
+    const unsubUser = onSnapshot(userDocRef, (snap) => {
+      if (!snap.exists()) {
+        const defaultProfile = {
+          uid,
+          displayName: displayName || 'Sartorialist',
+          email: email || '',
+          role: 'user',
+          createdAt: new Date().toISOString()
+        };
+        setDoc(userDocRef, defaultProfile).catch((err) => {
+          console.error("Failed to bootstrap user role tracking document in Firestore:", err);
+        });
+      }
+    }, (error) => {
+      console.warn("User profile sync stream paused (offline fallback active):", error.message || error);
+    });
+
+    return () => unsubUser();
+  }, [user]);
 
   // Listen to the wardrobe database collection
   useEffect(() => {

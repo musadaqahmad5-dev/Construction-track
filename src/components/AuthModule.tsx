@@ -74,7 +74,19 @@ export const AuthModule: React.FC<AuthModuleProps> = ({ onGuestMode }) => {
       await signInWithGoogle();
     } catch (err: any) {
       console.error("Google sign in error:", err);
-      setError(err.message || "Failed to authenticate.");
+      let friendlyMessage = "Failed to authenticate with your Google Identity.";
+      if (err.code === 'auth/popup-closed-by-user') {
+        friendlyMessage = "Google sign-in window was closed. Please try again.";
+      } else if (err.code === 'auth/cancelled-popup-request') {
+        friendlyMessage = "Only one identity request can be handled at a time. Please wait or refresh.";
+      } else if (err.code === 'auth/popup-blocked') {
+        friendlyMessage = "A popup blocker stopped Google Sign-In. Please allow popups for this boutique domain.";
+      } else if (err.code === 'auth/unauthorized-domain') {
+        friendlyMessage = "Unauthorized Netlify / Production domain. Please authorize this URL in Firebase Console -> Auth -> Authorized Domains.";
+      } else if (err.message) {
+        friendlyMessage = err.message;
+      }
+      setError(friendlyMessage);
     } finally {
       setLoading(false);
     }

@@ -255,7 +255,7 @@ export const FeedCard: React.FC<FeedCardProps> = ({
         {item.type === 'shop_product' || item.type === 'budget_pick' ? (
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded-full overflow-hidden border border-white/15 bg-neutral-900 flex-shrink-0">
-              <img src={item.shopAvatarUrl} alt={item.shopName} className="w-full h-full object-cover grayscale" />
+              <img src={item.shopAvatarUrl} alt={item.shopName} className="w-full h-full object-cover" />
             </div>
             <div>
               <p className="font-sans text-white/90 font-medium tracking-wide leading-none">{item.shopName}</p>

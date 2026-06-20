@@ -21,6 +21,9 @@ if (typeof window !== 'undefined') {
 }
 
 export const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({
+  prompt: 'select_account'
+});
 
 export const signInWithGoogle = () => signInWithPopup(auth, googleProvider);
 export const logout = () => signOut(auth);

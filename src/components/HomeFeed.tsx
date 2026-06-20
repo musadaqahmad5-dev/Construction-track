@@ -69,27 +69,33 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
   useEffect(() => {
     const q = collection(db, 'products');
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const livePosts = snapshot.docs.map(docSnap => {
-        const data = docSnap.data();
-        return {
-          id: docSnap.id,
-          type: 'shop_product',
-          title: data.title,
-          description: data.description,
-          price: data.price,
-          location: data.location || "Bespoke Atelier",
-          category: data.category,
-          availability: data.availability === 'Out of Stock' ? 'Sold Out' : data.availability,
-          shopName: data.shopName,
-          shopAvatarUrl: data.shopAvatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100&auto=format&fit=crop",
-          imageUrl: data.imageUrl,
-          vibeTags: data.vibeTags || [data.category.toLowerCase(), 'boutique'],
-          statsLabel: "Live Artisan upload",
-          likesCount: data.likesCount || 1,
-          bookmarksCount: data.bookmarksCount || 0,
-          createdAt: data.createdAt?.seconds ? new Date(data.createdAt.seconds * 1000).toISOString() : new Date().toISOString()
-        } as FeedItem;
-      });
+      const livePosts = snapshot.docs
+        .filter(docSnap => {
+          const data = docSnap.data();
+          // Filter out unlinked, missing titles/prices, or incomplete records
+          return data && data.title && data.price && data.shopId;
+        })
+        .map(docSnap => {
+          const data = docSnap.data();
+          return {
+            id: docSnap.id,
+            type: 'shop_product',
+            title: data.title,
+            description: data.description,
+            price: data.price,
+            location: data.location || "Bespoke Atelier",
+            category: data.category,
+            availability: data.availability === 'Out of Stock' ? 'Sold Out' : data.availability,
+            shopName: data.shopName,
+            shopAvatarUrl: data.shopAvatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100&auto=format&fit=crop",
+            imageUrl: data.imageUrl,
+            vibeTags: data.vibeTags || [data.category.toLowerCase(), 'boutique'],
+            statsLabel: "Live Artisan upload",
+            likesCount: data.likesCount || 1,
+            bookmarksCount: data.bookmarksCount || 0,
+            createdAt: data.createdAt?.seconds ? new Date(data.createdAt.seconds * 1000).toISOString() : new Date().toISOString()
+          } as FeedItem;
+        });
       setCustomShopPosts(livePosts);
     }, (error) => {
       console.warn("Products stream offline fallback active:", error);
