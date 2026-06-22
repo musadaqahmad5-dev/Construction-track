@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { collection, query, where, onSnapshot, deleteDoc, doc, getDocs, setDoc } from 'firebase/firestore';
 import { auth, db, logout, OperationType, handleFirestoreError } from './firebase';
@@ -8,7 +8,7 @@ import { AuthModule } from './components/AuthModule';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { WifiOff } from 'lucide-react';
 import { motion } from 'motion/react';
-import { AIStyleHub } from './components/AIStyleHub';
+const AIStyleHub = React.lazy(() => import('./components/AIStyleHub').then(m => ({ default: m.AIStyleHub })));
 import { UnifiedFashionOS } from './features/ai-core/UnifiedFashionOS';
 
 // Temporal light rules mapper
@@ -47,8 +47,33 @@ export function getTemporalTheme() {
   }
 }
 
+const initialUser = (() => {
+  try {
+    const stored = localStorage.getItem('firebase_user_session');
+    if (stored) {
+      return JSON.parse(stored) as User;
+    }
+  } catch (e) {
+    console.warn("Stored user session fallback parsing halted:", e);
+  }
+  try {
+    const wasGuestActive = localStorage.getItem('auth_guest_active') === 'true';
+    if (wasGuestActive) {
+      return {
+        uid: 'guest-sartorialist-user-100',
+        displayName: 'Guest Sartorialist',
+        email: 'guest@companion.com',
+        isAnonymous: true
+      } as User;
+    }
+  } catch (e) {
+    console.warn("Guest presence verification failed:", e);
+  }
+  return null;
+})();
+
 export default function App() {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(initialUser);
   const [constructions, setConstructions] = useState<WardrobeItem[]>([]);
   const [wardrobe, setWardrobe] = useState<WardrobeItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -102,9 +127,17 @@ export default function App() {
     const unsubscribe = onAuthStateChanged(auth, async (u) => {
       const minDelay = new Promise(resolve => setTimeout(resolve, 2600));
       if (u) {
+        const uSession = {
+          uid: u.uid,
+          displayName: u.displayName || 'Sartorialist',
+          email: u.email || '',
+          isAnonymous: u.isAnonymous
+        };
+        localStorage.setItem('firebase_user_session', JSON.stringify(uSession));
         setUser(u);
         UnifiedFashionOS.trackEvent('login', { type: 'firebase' });
       } else {
+        localStorage.removeItem('firebase_user_session');
         // 2. Check if Guest mode was previously activated
         const wasGuestActive = localStorage.getItem('auth_guest_active') === 'true';
         if (wasGuestActive) {
@@ -296,11 +329,13 @@ export default function App() {
   }, [user]);
 
   // Combined wardrobe streams safely for active displays
-  const allItems = [...wardrobe, ...constructions].sort((a, b) => {
-    const timeA = a.createdAt?.seconds ? a.createdAt.seconds * 1000 + (a.createdAt.nanoseconds || 0) / 1000000 : 0;
-    const timeB = b.createdAt?.seconds ? b.createdAt.seconds * 1000 + (b.createdAt.nanoseconds || 0) / 1000000 : 0;
-    return timeB - timeA;
-  });
+  const allItems = useMemo(() => {
+    return [...wardrobe, ...constructions].sort((a, b) => {
+      const timeA = a.createdAt?.seconds ? a.createdAt.seconds * 1000 + (a.createdAt.nanoseconds || 0) / 1000000 : 0;
+      const timeB = b.createdAt?.seconds ? b.createdAt.seconds * 1000 + (b.createdAt.nanoseconds || 0) / 1000000 : 0;
+      return timeB - timeA;
+    });
+  }, [wardrobe, constructions]);
 
   const handleAddGarment = async (
     title: string, 
@@ -497,6 +532,7 @@ export default function App() {
 
   const handleLogout = async () => {
     localStorage.removeItem('auth_guest_active');
+    localStorage.removeItem('firebase_user_session');
     setWardrobe([]);
     setUser(null);
     await logout();
@@ -525,7 +561,7 @@ export default function App() {
             transition={{ duration: 0.8 }}
             className="text-[11px] font-mono uppercase tracking-[0.25em] block font-light"
           >
-            Returning slowly
+            AI Fashion
           </motion.span>
 
           {/* Settle: Step 2 */}
@@ -535,7 +571,7 @@ export default function App() {
             transition={{ duration: 1.0, ease: "easeOut" }}
             className="font-serif font-light text-5xl tracking-[-0.03em] text-white"
           >
-            Grounded stillness
+            Marketplace
           </motion.h1>
 
           <motion.div 
@@ -621,19 +657,26 @@ export default function App() {
           
           {/* Primary Display viewport - physically spaced breathing transitions */}
           <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-16 pb-24 lg:pt-28 lg:pb-36 animate-fade-in">
-            <AIStyleHub 
-              wardrobe={allItems}
-              onAddGarment={async (title, desc, category, extra) => {
-                await handleAddGarment(title, desc, category, extra);
-              }}
-              onDeleteGarment={handleDeleteGarment}
-              user={user}
-              onLogout={handleLogout}
-              onReset={handleReset}
-              onLoadSamples={handleAddSampleWardrobe}
-              isResetting={isResetting}
-              onEnterSilence={() => setIsSilent(true)}
-            />
+            <React.Suspense fallback={
+              <div className="flex flex-col items-center justify-center min-h-[400px] text-center space-y-4">
+                <div className="w-10 h-10 border-2 border-white/10 border-t-white rounded-full animate-spin" />
+                <p className="font-mono text-[10px] uppercase tracking-widest text-white/40">Initializing Fashion OS...</p>
+              </div>
+            }>
+              <AIStyleHub 
+                wardrobe={allItems}
+                onAddGarment={async (title, desc, category, extra) => {
+                  await handleAddGarment(title, desc, category, extra);
+                }}
+                onDeleteGarment={handleDeleteGarment}
+                user={user}
+                onLogout={handleLogout}
+                onReset={handleReset}
+                onLoadSamples={handleAddSampleWardrobe}
+                isResetting={isResetting}
+                onEnterSilence={() => setIsSilent(true)}
+              />
+            </React.Suspense>
           </main>
 
           {/* Physical Footer Section */}

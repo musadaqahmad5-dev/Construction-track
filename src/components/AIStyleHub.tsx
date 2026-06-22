@@ -46,12 +46,14 @@ export const ImageWithFade: React.FC<{ src: string; alt: string }> = ({ src, alt
   const [currentSrc, setCurrentSrc] = useState(src);
   const [prevSrc, setPrevSrc] = useState<string | null>(null);
   const [isNewLoaded, setIsNewLoaded] = useState(true);
+  const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
     if (src !== currentSrc) {
       setPrevSrc(currentSrc);
       setCurrentSrc(src);
       setIsNewLoaded(false);
+      setHasError(false);
     }
   }, [src, currentSrc]);
 
@@ -60,34 +62,55 @@ export const ImageWithFade: React.FC<{ src: string; alt: string }> = ({ src, alt
       {/* Film grain noise using an SVG filter overlay of extremely low impact for subtle texturing */}
       <div className="absolute inset-0 z-20 pointer-events-none opacity-[0.06] mix-blend-overlay" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
       
-      {/* Previous Image kept visible while next loads */}
-      {prevSrc && (
-        <img
-          src={prevSrc}
-          alt={alt}
-          referrerPolicy="no-referrer"
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-[420ms] ease-out ${
-            isNewLoaded ? 'opacity-0 z-0' : 'opacity-100 z-10'
-          }`}
-        />
-      )}
+      {hasError ? (
+        <div className="absolute inset-0 bg-[#070707] flex flex-col items-center justify-center p-6 text-center select-none border border-white/[0.03] space-y-3">
+          <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/30 animate-pulse">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <div className="space-y-1">
+            <span className="text-[9px] font-mono uppercase tracking-[0.2em] text-white/40 block">Artisan Asset Unavailable</span>
+            <span className="text-[8px] text-white/20 font-mono italic block">Image offline or network interrupted</span>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Previous Image kept visible while next loads */}
+          {prevSrc && (
+            <img
+              src={prevSrc}
+              alt={alt}
+              referrerPolicy="no-referrer"
+              loading="lazy"
+              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-[420ms] ease-out ${
+                isNewLoaded ? 'opacity-0 z-0' : 'opacity-100 z-10'
+              }`}
+            />
+          )}
 
-      {/* New Image fading in once loaded */}
-      <img
-        key={currentSrc}
-        src={currentSrc}
-        alt={alt}
-        onLoad={() => {
-          setIsNewLoaded(true);
-          setTimeout(() => {
-            setPrevSrc(null);
-          }, 450);
-        }}
-        referrerPolicy="no-referrer"
-        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-[420ms] ease-out ${
-          isNewLoaded ? 'opacity-100 z-10' : 'opacity-0 z-0'
-        }`}
-      />
+          {/* New Image fading in once loaded */}
+          <img
+            key={currentSrc}
+            src={currentSrc}
+            alt={alt}
+            onLoad={() => {
+              setIsNewLoaded(true);
+              setTimeout(() => {
+                setPrevSrc(null);
+              }, 450);
+            }}
+            onError={() => {
+              setHasError(true);
+            }}
+            referrerPolicy="no-referrer"
+            loading="lazy"
+            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-[420ms] ease-out ${
+              isNewLoaded ? 'opacity-100 z-10' : 'opacity-0 z-0'
+            }`}
+          />
+        </>
+      )}
     </div>
   );
 };

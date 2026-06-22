@@ -144,7 +144,7 @@ export class AIEngine {
           id: outfitId,
           type: 'outfit',
           title: "Your Personal Signature Layering",
-          description: `AI Synthesis: We curated an exquisite combination using your "${outer.title}" over your favorite "${top.title}". Perfect for current weather forecasts.`,
+          description: `Personalized Curation: We curated an exquisite combination using your "${outer.title}" over your favorite "${top.title}". Perfect for current weather forecasts.`,
           imageUrl: outer.imageUrl || getGarmentImage(outer.title),
           outfitItems: [outer, top],
           suitabilityScore: 96,
@@ -166,7 +166,7 @@ export class AIEngine {
           id: outfitId,
           type: 'outfit',
           title: "Artistic Tailor Arrangement",
-          description: `AI Synthesis: Combine your "${primary.title}"${acc ? ` with the touch of "${acc.title}"` : ''} to strike an elegant balance between leisure and discipline.`,
+          description: `Personalized Curation: Combine your "${primary.title}"${acc ? ` with the touch of "${acc.title}"` : ''} to strike an elegant balance between leisure and discipline.`,
           imageUrl: primary.imageUrl || getGarmentImage(primary.title),
           outfitItems: acc ? [primary, acc] : [primary],
           suitabilityScore: 92,
@@ -184,7 +184,7 @@ export class AIEngine {
         id: "outfit-fallback-1",
         type: 'outfit',
         title: "The Autumn Monochrome Silhouette",
-        description: "AI curated look combining structured grey trench coats with clean linen bases to evoke serene confidence during overcast mornings.",
+        description: "Curated look combining structured grey trench coats with clean linen bases to evoke serene confidence during overcast mornings.",
         imageUrl: "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?q=80&w=600&auto=format&fit=crop",
         outfitItems: [],
         suitabilityScore: 95,
@@ -230,12 +230,12 @@ export class AIEngine {
         feed.push({
           id: `style-tip-${index}`,
           type: 'ai_style_tip',
-          title: "Sartorial AI Advice Note",
+          title: "Sartorial Curation Tip",
           description: advice,
           imageUrl: index === 0 
             ? "https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=600&auto=format&fit=crop"
             : "https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=600&auto=format&fit=crop",
-          statsLabel: "AI Style Guard System",
+          statsLabel: "Sartorial Recommendation",
           likesCount: 120 + index * 4,
           bookmarksCount: 44,
           createdAt: new Date(Date.now() - (index + 4) * 8500000).toISOString()
@@ -289,6 +289,9 @@ export class AIEngine {
       // 2. Proximity & Location Weighting
       if (item.location) {
         rankingScore += 15; // Local atelier boost
+      }
+      if (item.storeType === 'ONLINE_STORE' || item.storeType === 'HYBRID_BRAND') {
+        rankingScore += 18; // Extra global accessibility online boost for national & hybrid sellers!
       }
 
       // 3. Budget Match score factor
@@ -415,9 +418,9 @@ export class AIEngine {
     if (sorted.length > 0) {
       const topItem = sorted[0];
       const matchType = topItem.type === 'outfit' ? 'curated from your private garments' : 'sourced from nearby bespoke ateliers';
-      explanation = `AI Search Synthesis: I located ${sorted.length} fashion item(s) aligning with your query "${query}". Leading the curation is "${topItem.title}" (${matchType}) which perfectly maps into your fashion direction.`;
+      explanation = `Sartorial Advisory: I located ${sorted.length} fashion item(s) aligning with your query "${query}". Recommended first is "${topItem.title}" (${matchType}), which aligns with your active style preferences.`;
     } else {
-      explanation = `AI Search Synthesis: No local items directly matched "${query}". However, our AI recommendation loop has auto-adjusted constraints to present alternative style signatures for inspiration.`;
+      explanation = `Sartorial Advisory: No local items directly matched "${query}". Presenting alternative recommendations based on your style preferences for inspiration.`;
     }
 
     return {

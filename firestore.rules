@@ -1,11 +1,12 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Default deny
+    // Default deny catch-all
     match /{document=**} {
       allow read, write: if false;
     }
 
+    // --- REUSABLE SECURITY GATES & HELPERS ---
     function isSignedIn() {
       return request.auth != null;
     }
@@ -17,6 +18,8 @@ service cloud.firestore {
     function isValidId(id) {
       return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
+
+    // --- VALIDATION SCHEMAS AND ENTITIES ---
 
     function isValidConstruction(data) {
       let requiredFields = ['title', 'userId', 'createdAt', 'status'];
@@ -45,7 +48,7 @@ service cloud.firestore {
         && (data.get('secondaryColor', null) == null || (data.secondaryColor is string && data.secondaryColor.size() <= 100))
         && (data.get('wearCount', null) == null || (data.wearCount is int || data.wearCount is float))
         && (data.get('lastUsed', null) == null || (data.lastUsed is string && data.lastUsed.size() <= 100))
-        && (data.get('imageUrl', null) == null || (data.imageUrl is string && data.imageUrl.size() <= 1000))
+        && (data.get('imageUrl', null) == null || (data.imageUrl is string && data.imageUrl.size() <= 2000))
         && (data.get('schema_version', null) == null || (data.schema_version is string && data.schema_version.size() <= 50))
         && (data.get('careNote', null) == null || (data.careNote is string && data.careNote.size() <= 1000))
         && (data.get('location', null) == null || (data.location is string && data.location.size() <= 1000))
@@ -55,11 +58,123 @@ service cloud.firestore {
         && (data.get('worksWith', null) == null || (data.worksWith is string && data.worksWith.size() <= 1000));
     }
 
+    function isValidOrder(data) {
+      let requiredFields = ['userId', 'productId', 'productTitle', 'productPrice', 'productImageUrl', 'shopName', 'status'];
+      return data.keys().hasAll(requiredFields)
+        && data.keys().size() <= 15
+        && data.userId == request.auth.uid
+        && data.status == 'confirmed'
+        && data.productId is string && data.productId.size() <= 200
+        && data.productTitle is string && data.productTitle.size() <= 500
+        && (data.productPrice is int || data.productPrice is float)
+        && data.productPrice >= 0
+        && data.productImageUrl is string && data.productImageUrl.size() <= 2000
+        && data.shopName is string && data.shopName.size() <= 500;
+    }
+
+    function isValidUser(data) {
+      let requiredFields = ['uid', 'displayName', 'email', 'role'];
+      return data.keys().hasAll(requiredFields)
+        && data.keys().size() <= 8
+        && data.uid == request.auth.uid
+        && data.displayName is string && data.displayName.size() <= 200
+        && data.email is string && data.email.size() <= 200
+        && data.role in ['client', 'seller'];
+    }
+
+    function isValidSeller(data) {
+      let requiredFields = ['name', 'ownerId', 'storeType'];
+      return data.keys().hasAll(requiredFields)
+        && data.keys().size() <= 20
+        && data.name is string && data.name.size() <= 200
+        && data.ownerId == request.auth.uid
+        && data.storeType is string && data.storeType.size() <= 100
+        && (data.get('location', null) == null || (data.location is string && data.location.size() <= 500))
+        && (data.get('category', null) == null || (data.category is string && data.category.size() <= 100))
+        && (data.get('avatarUrl', null) == null || (data.avatarUrl is string && data.avatarUrl.size() <= 2000))
+        && (data.get('instagramUrl', null) == null || (data.instagramUrl is string && data.instagramUrl.size() <= 1000))
+        && (data.get('whatsAppNumber', null) == null || (data.whatsAppNumber is string && data.whatsAppNumber.size() <= 100))
+        && (data.get('websiteLink', null) == null || (data.websiteLink is string && data.websiteLink.size() <= 1000))
+        && (data.get('shippingMode', null) == null || (data.shippingMode is string && data.shippingMode.size() <= 100))
+        && (data.get('verified', null) == null || (data.verified is bool))
+        && (data.get('deliveryEstimate', null) == null || (data.deliveryEstimate is string && data.deliveryEstimate.size() <= 500));
+    }
+
+    function isValidProduct(data) {
+      let requiredFields = ['shopId', 'shopName', 'title', 'price', 'ownerId'];
+      return data.keys().hasAll(requiredFields)
+        && data.keys().size() <= 15
+        && data.shopId is string && data.shopId.size() <= 128
+        && data.ownerId == request.auth.uid
+        && data.shopName is string && data.shopName.size() <= 200
+        && data.title is string && data.title.size() <= 200
+        && (data.price is int || data.price is float)
+        && data.price >= 0
+        && (data.get('description', null) == null || (data.description is string && data.description.size() <= 2000))
+        && (data.get('category', null) == null || (data.category is string && data.category.size() <= 100))
+        && (data.get('availability', null) == null || (data.availability is string && data.availability.size() <= 100))
+        && (data.get('imageUrl', null) == null || (data.imageUrl is string && data.imageUrl.size() <= 2000))
+        && (data.get('vibeTags', null) == null || (data.vibeTags is list));
+    }
+
+    function isValidAnalytics(data) {
+      let requiredFields = ['eventType', 'timestamp', 'schema_version'];
+      return data.keys().hasAll(requiredFields)
+        && data.eventType is string && data.eventType.size() <= 100
+        && data.schema_version is string && data.schema_version.size() <= 50
+        && (data.get('userId', null) == null || data.userId is string && data.userId.size() <= 128)
+        && (data.get('params', null) == null || data.params is map);
+    }
+
+    function isValidGeneratedLook(data) {
+      let requiredFields = ['imageUrl', 'prompt', 'provider', 'userId'];
+      return data.keys().hasAll(requiredFields)
+        && data.imageUrl is string && data.imageUrl.size() <= 2000
+        && data.prompt is string && data.prompt.size() <= 4000
+        && data.provider is string && data.provider.size() <= 200
+        && data.userId is string && data.userId.size() <= 128
+        && (data.get('vibe', null) == null || (data.vibe is string && data.vibe.size() <= 200))
+        && (data.get('season', null) == null || (data.season is string && data.season.size() <= 200));
+    }
+
+    function isValidOutfitHistoryRecord(data) {
+      let requiredFields = ['userId', 'items', 'action', 'timestamp'];
+      return data.keys().hasAll(requiredFields)
+        && data.userId == request.auth.uid
+        && data.action in ['suggested', 'accept', 'reject', 'wear']
+        && data.items is list
+        && (data.get('weatherCondition', null) == null || (data.weatherCondition is string && data.weatherCondition.size() <= 200))
+        && (data.get('agenda', null) == null || (data.agenda is string && data.agenda.size() <= 200))
+        && (data.get('vibe', null) == null || (data.vibe is string && data.vibe.size() <= 200));
+    }
+
+    function isValidVisualInteractionRecord(data) {
+      let requiredFields = ['userId', 'eventType', 'timestamp'];
+      return data.keys().hasAll(requiredFields)
+        && data.userId == request.auth.uid
+        && data.eventType in ['preview_open', 'compare_looks', 'complete_outfit_click', 'visual_accept', 'bundle_purchase_simulate']
+        && (data.get('itemId', null) == null || (data.itemId is string && data.itemId.size() <= 128))
+        && (data.get('metaData', null) == null || data.metaData is map);
+    }
+
+    function isValidDecisionOutcomeRecord(data) {
+      let requiredFields = ['userId', 'recommendationId', 'items', 'action', 'timestamp'];
+      return data.keys().hasAll(requiredFields)
+        && data.userId == request.auth.uid
+        && data.recommendationId is string && data.recommendationId.size() <= 128
+        && data.items is list
+        && data.action in ['viewed', 'accepted', 'rejected', 'saved', 'worn', 'shared', 'abandoned']
+        && (data.get('timeToDecisionMs', null) == null || (data.timeToDecisionMs is int || data.timeToDecisionMs is float))
+        && (data.get('variantId', null) == null || (data.variantId is string && data.variantId.size() <= 128));
+    }
+
+    // --- COLLECTION ENDPOINTS & ROUTING PATTERNS ---
+
     match /constructions/{constructionId} {
       allow create: if isSignedIn() 
         && isValidId(constructionId)
         && isValidConstruction(request.resource.data)
-        && request.resource.data.createdAt == request.time;
+        && (request.resource.data.createdAt == request.time || request.resource.data.createdAt is timestamp);
       
       allow list: if isSignedIn() 
         && resource.data.userId == request.auth.uid;
@@ -72,8 +187,7 @@ service cloud.firestore {
         && isValidId(constructionId)
         && isOwner(resource.data.userId)
         && isValidConstruction(request.resource.data)
-        && request.resource.data.userId == resource.data.userId
-        && request.resource.data.createdAt == resource.data.createdAt;
+        && request.resource.data.userId == resource.data.userId;
         
       allow delete: if isOwner(resource.data.userId) && isValidId(constructionId);
     }
@@ -81,10 +195,7 @@ service cloud.firestore {
     match /wardrobe/{itemId} {
       allow create: if isSignedIn() 
         && isValidId(itemId)
-        && isValidWardrobeItem(request.resource.data)
-        && (request.resource.data.createdAt == request.time 
-            || request.resource.data.createdAt is timestamp
-            || (request.resource.data.createdAt is map && request.resource.data.createdAt.get('seconds', null) != null));
+        && isValidWardrobeItem(request.resource.data);
       
       allow list: if isSignedIn() 
         && resource.data.userId == request.auth.uid;
@@ -97,11 +208,7 @@ service cloud.firestore {
         && isValidId(itemId)
         && isOwner(resource.data.userId)
         && isValidWardrobeItem(request.resource.data)
-        && request.resource.data.userId == resource.data.userId
-        && (request.resource.data.createdAt == resource.data.createdAt 
-            || request.resource.data.createdAt is timestamp
-            || (request.resource.data.createdAt is map && request.resource.data.createdAt.get('seconds', null) != null)
-            || request.resource.data.createdAt != null);
+        && request.resource.data.userId == resource.data.userId;
         
       allow delete: if isOwner(resource.data.userId) && isValidId(itemId);
     }
@@ -113,7 +220,7 @@ service cloud.firestore {
     match /history/{historyId} {
       allow create: if isSignedIn()
         && request.resource.data.userId == request.auth.uid;
-      allow read, list: if isSignedIn()
+      allow read, get, list: if isSignedIn()
         && resource.data.userId == request.auth.uid;
       allow delete: if isSignedIn()
         && resource.data.userId == request.auth.uid;
@@ -121,14 +228,67 @@ service cloud.firestore {
 
     match /sellers/{sellerId} {
       allow read, get, list: if true;
-      allow create, update: if isSignedIn() && request.auth.uid == sellerId;
+      allow create, update: if isSignedIn() && request.auth.uid == sellerId && isValidSeller(request.resource.data);
       allow delete: if isSignedIn() && request.auth.uid == sellerId;
     }
 
     match /products/{productId} {
       allow read, get, list: if true;
-      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
-      allow update, delete: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid && isValidProduct(request.resource.data);
+      allow update: if isSignedIn() && resource.data.ownerId == request.auth.uid && isValidProduct(request.resource.data);
+      allow delete: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+    }
+
+    match /orders/{orderId} {
+      allow create: if isSignedIn()
+        && isValidId(orderId)
+        && isValidOrder(request.resource.data);
+      
+      allow read, get, list: if isSignedIn()
+        && resource.data.userId == request.auth.uid;
+      
+      // Strict Transaction Lock - NO updates or deletions permitted after logging!
+      allow update, delete: if false;
+    }
+
+    match /users/{userId} {
+      allow read, get: if isSignedIn() && request.auth.uid == userId;
+      allow create, update: if isSignedIn() && request.auth.uid == userId && isValidUser(request.resource.data);
+      allow delete: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    match /analytics/{analyticsId} {
+      // Allow analytics logs creation from guests/users, with validation
+      allow create: if isValidAnalytics(request.resource.data);
+      
+      // No reads or edits allowed from client SDK to prevent leaking behavioral telemetry
+      allow read, get, list, update, delete: if false;
+    }
+
+    match /generatedLooks/{lookId} {
+      // Allows saving of generated visual looks with owner matches or as anonymous-designer profiles
+      allow create: if isValidGeneratedLook(request.resource.data);
+      
+      allow read, get, list: if isSignedIn() && (resource.data.userId == request.auth.uid || resource.data.userId == 'anonymous-designer');
+      allow update, delete: if false;
+    }
+
+    match /outfitHistory/{historyId} {
+      allow create: if isSignedIn() && isValidOutfitHistoryRecord(request.resource.data);
+      allow read, get, list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    match /visualInteractions/{interactionId} {
+      allow create: if isSignedIn() && isValidVisualInteractionRecord(request.resource.data);
+      allow read, get, list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    match /decisionOutcomes/{outcomeId} {
+      allow create: if isSignedIn() && isValidDecisionOutcomeRecord(request.resource.data);
+      allow read, get, list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow update, delete: if false;
     }
   }
 }

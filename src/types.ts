@@ -57,11 +57,18 @@ export interface DailyRecommendation {
 export interface Seller {
   id: string; // Seller/Shop identifier (typically matching userId of creator)
   name: string;
-  location: string;
+  location?: string;
   category: string; // specialty e.g. "Minimalist Tweed", "Streetwear", "Accessories"
   ownerId: string;
   createdAt: any;
   avatarUrl?: string;
+  storeType?: 'LOCAL_BOUTIQUE' | 'ONLINE_STORE' | 'HYBRID_BRAND';
+  instagramUrl?: string;
+  whatsAppNumber?: string;
+  websiteLink?: string;
+  shippingMode?: 'pickup' | 'nationwide' | 'international';
+  verified?: boolean;
+  deliveryEstimate?: string;
 }
 
 export interface Product {

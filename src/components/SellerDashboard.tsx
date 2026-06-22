@@ -13,9 +13,13 @@ import {
   AlertCircle, 
   ArrowLeft,
   X,
-  Sparkle
+  Sparkle,
+  Globe,
+  Phone,
+  Instagram
 } from 'lucide-react';
-import { db } from '../firebase';
+import { db, auth, handleFirestoreError, OperationType } from '../firebase';
+import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { 
   collection, 
   doc, 
@@ -28,6 +32,7 @@ import {
   updateDoc,
   serverTimestamp 
 } from 'firebase/firestore';
+import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { Seller, Product } from '../types';
 
 interface SellerDashboardProps {
@@ -55,6 +60,7 @@ const PRESET_MERC_IMAGES = [
 ];
 
 export const SellerDashboard: React.FC<SellerDashboardProps> = ({ user, onClose, onProductAddedOrChanged }) => {
+  const isOnline = useOnlineStatus();
   const [sellerProfile, setSellerProfile] = useState<Seller | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [userRole, setUserRole] = useState<'user' | 'seller' | null>(null);
@@ -67,6 +73,15 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({ user, onClose,
   const [shopCategory, setShopCategory] = useState(SELLER_CATEGORIES[0]);
   const [isOnboardingFormActive, setIsOnboardingFormActive] = useState(false);
   const [isSubmittingOnboard, setIsSubmittingOnboard] = useState(false);
+
+  const [storeType, setStoreType] = useState<'LOCAL_BOUTIQUE' | 'ONLINE_STORE' | 'HYBRID_BRAND'>('LOCAL_BOUTIQUE');
+  const [instagramUrl, setInstagramUrl] = useState('');
+  const [whatsAppNumber, setWhatsAppNumber] = useState('');
+  const [websiteLink, setWebsiteLink] = useState('');
+  const [shippingMode, setShippingMode] = useState<'pickup' | 'nationwide' | 'international'>('pickup');
+  const [verified, setVerified] = useState(true);
+  const [deliveryEstimate, setDeliveryEstimate] = useState('2-4 business days');
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
 
   // Product Creator/Editor Form States
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -81,6 +96,39 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({ user, onClose,
   const [customImageUrlInput, setCustomImageUrlInput] = useState('');
   const [isSavingProduct, setIsSavingProduct] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [onboardError, setOnboardError] = useState<string | null>(null);
+
+  // Merchant Native Sign-In flow
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
+
+  const handleMerchantSignIn = async () => {
+    setIsAuthenticating(true);
+    setAuthError(null);
+    try {
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({
+        prompt: 'select_account'
+      });
+      await signInWithPopup(auth, provider);
+      // Success will trigger the onAuthStateChanged in App.tsx and cascade user state down.
+    } catch (err: any) {
+      console.error("Merchant Google Sign-In Failed:", err);
+      let friendlyMessage = "Failed to authenticate with your Google Identity.";
+      if (err.code === 'auth/popup-closed-by-user') {
+        friendlyMessage = "Google sign-in window was closed. Please try again.";
+      } else if (err.code === 'auth/cancelled-popup-request') {
+        friendlyMessage = "Only one identity request can be handled at a time. Please wait or refresh.";
+      } else if (err.code === 'auth/popup-blocked') {
+        friendlyMessage = "Enable popups for login";
+      } else if (err.message) {
+        friendlyMessage = err.message;
+      }
+      setAuthError(friendlyMessage);
+    } finally {
+      setIsAuthenticating(false);
+    }
+  };
 
   // Authenticated State Guard
   const isGuest = !user || user.isAnonymous || user.uid.startsWith('guest-');
@@ -131,6 +179,22 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({ user, onClose,
     return () => unsubSeller();
   }, [user, isGuest]);
 
+  // Populate form states when profile loads or is edited
+  useEffect(() => {
+    if (sellerProfile) {
+      setShopName(sellerProfile.name || '');
+      setShopLocation(sellerProfile.location || '');
+      setShopCategory(sellerProfile.category || SELLER_CATEGORIES[0]);
+      setStoreType(sellerProfile.storeType || 'LOCAL_BOUTIQUE');
+      setInstagramUrl(sellerProfile.instagramUrl || '');
+      setWhatsAppNumber(sellerProfile.whatsAppNumber || '');
+      setWebsiteLink(sellerProfile.websiteLink || '');
+      setShippingMode(sellerProfile.shippingMode || 'pickup');
+      setVerified(sellerProfile.verified !== undefined ? sellerProfile.verified : true);
+      setDeliveryEstimate(sellerProfile.deliveryEstimate || '2-4 business days');
+    }
+  }, [sellerProfile, isEditingProfile]);
+
   // 2. Fetch/Listen Seller Products
   useEffect(() => {
     if (isGuest || !sellerProfile) {
@@ -159,17 +223,32 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({ user, onClose,
   // Onboard Shop Handler
   const handleOnboardShop = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!shopName.trim() || !shopLocation.trim()) return;
+    setOnboardError(null);
+
+    if (!isOnline) {
+      setOnboardError("Platform is offline. Please restore network connection to edit your brand contract.");
+      return;
+    }
+
+    if (!shopName.trim()) return;
+    if (storeType !== 'ONLINE_STORE' && !shopLocation.trim()) return;
 
     setIsSubmittingOnboard(true);
     try {
       const sellerData: Omit<Seller, 'id'> = {
         name: shopName.trim(),
-        location: shopLocation.trim(),
+        location: storeType === 'ONLINE_STORE' ? '' : shopLocation.trim(),
         category: shopCategory,
         ownerId: user.uid,
-        createdAt: serverTimestamp(),
-        avatarUrl: `https://images.unsplash.com/photo-${1534528741775 + Math.floor(Math.random() * 5000)}-53994a69daeb?q=80&w=100&auto=format&fit=crop`
+        createdAt: sellerProfile?.createdAt || serverTimestamp(),
+        avatarUrl: sellerProfile?.avatarUrl || `https://images.unsplash.com/photo-${1534528741775 + Math.floor(Math.random() * 5000)}-53994a69daeb?q=80&w=100&auto=format&fit=crop`,
+        storeType,
+        instagramUrl: storeType !== 'LOCAL_BOUTIQUE' ? instagramUrl.trim() : '',
+        whatsAppNumber: storeType !== 'LOCAL_BOUTIQUE' ? whatsAppNumber.trim() : '',
+        websiteLink: storeType !== 'LOCAL_BOUTIQUE' ? websiteLink.trim() : '',
+        shippingMode,
+        verified,
+        deliveryEstimate: deliveryEstimate.trim() || '2-4 business days'
       };
 
       await setDoc(doc(db, 'sellers', user.uid), sellerData);
@@ -183,8 +262,9 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({ user, onClose,
         updatedAt: serverTimestamp()
       }, { merge: true });
 
+      setIsEditingProfile(false);
     } catch (err) {
-      console.error("Seller Onboarding Failed:", err);
+      console.error("Seller Onboarding/Update Failed:", err);
     } finally {
       setIsSubmittingOnboard(false);
     }
@@ -225,6 +305,11 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({ user, onClose,
     e.preventDefault();
     setFormError(null);
 
+    if (!isOnline) {
+      setFormError("Platform is offline. Please restore your network link to list new products.");
+      return;
+    }
+
     if (!prodTitle.trim() || !prodPrice || !sellerProfile) {
       setFormError("Product title and price elements are required parameters.");
       return;
@@ -246,12 +331,12 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({ user, onClose,
         shopId: user.uid,
         shopName: sellerProfile.name,
         title: prodTitle.trim(),
-        description: prodDesc.trim() || `Hand-curated piece from the ateliers of ${sellerProfile.name}.`,
+        description: prodDesc.trim() || `Hand-curated piece from ${sellerProfile.name}.`,
         price: numericPrice,
         category: prodCategory,
         availability: prodAvailability,
         imageUrl: finalImg,
-        vibeTags: [prodCategory.toLowerCase(), sellerProfile.category.toLowerCase().split(' ')[0], 'atelier'],
+        vibeTags: [prodCategory.toLowerCase(), sellerProfile.category.toLowerCase().split(' ')[0], 'curated'],
         ownerId: user.uid,
         createdAt: editingProduct ? editingProduct.createdAt : serverTimestamp()
       };
@@ -279,6 +364,11 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({ user, onClose,
 
   // Handle Delete Product
   const handleDeleteProduct = async (prodId: string) => {
+    if (!isOnline) {
+      alert("Retiring listings is disabled while operating in offline mode.");
+      return;
+    }
+
     if (!window.confirm("Are you sure you want to retire this product listing from the active fashion feed?")) {
       return;
     }
@@ -313,25 +403,45 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({ user, onClose,
               <Store className="w-8 h-8" />
             </div>
             <div className="space-y-2">
-              <h2 className="font-serif text-2xl font-light text-white">Merchant Atelier Access</h2>
+              <h2 className="font-serif text-2xl font-light text-white">Seller Hub Access</h2>
               <p className="text-xs text-white/50 leading-relaxed font-serif italic">
                 "Establish your shop registry, list craftsmanship designs, publish directly to user lifestyle feeds, and manage catalog editions."
               </p>
             </div>
             <div className="p-4 bg-white/[0.01] border border-white/5 rounded-xl text-center">
-              <p className="text-xs text-amber-400 font-mono">
+              <p className="text-xs text-amber-400 font-mono font-medium">
                 [ SIGN IN REQUIRED ]
               </p>
               <p className="text-[10px] text-white/55 font-mono uppercase tracking-wider mt-1.5 leading-normal">
                 Please register or sign in with a verified account in order to register an active boutique shop profile.
               </p>
             </div>
-            <button
-              onClick={onClose}
-              className="px-6 py-2 bg-white text-black text-[10px] uppercase font-mono tracking-widest font-semibold rounded-lg hover:bg-neutral-200 transition-all cursor-pointer"
-            >
-              Back to Browsing Feed
-            </button>
+
+            {/* Error notifications */}
+            {authError && (
+              <div className="p-3.5 bg-red-500/10 border border-red-500/20 text-stone-300 rounded-xl text-center">
+                <p className="text-[10px] font-mono leading-normal">
+                   Error: <span className="text-red-400">{authError}</span>
+                </p>
+              </div>
+            )}
+
+            <div className="flex flex-col gap-3 max-w-xs mx-auto">
+              <button
+                onClick={handleMerchantSignIn}
+                disabled={isAuthenticating}
+                className="w-full px-6 py-3 bg-white text-black text-[10px] uppercase font-mono tracking-widest font-semibold rounded-lg hover:bg-neutral-200 transition-all cursor-pointer disabled:opacity-50"
+              >
+                {isAuthenticating ? 'Connecting Identity...' : 'Sign in with Merchant account'}
+              </button>
+              
+              <button
+                onClick={onClose}
+                className="w-full px-6 py-2 border border-white/15 hover:border-white/30 text-white/60 hover:text-white text-[10px] uppercase font-mono tracking-widest font-semibold rounded-lg transition-all cursor-pointer"
+              >
+                Back to Browsing Feed
+              </button>
+            </div>
           </div>
         ) : (loadingProfile || loadingRole) ? (
           /* Profile Loading spinner */
@@ -339,32 +449,72 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({ user, onClose,
             <div className="w-6 h-6 border-2 border-white/10 border-t-white rounded-full animate-spin mx-auto" />
             <p className="text-[10px] font-mono text-white/30 uppercase tracking-widest">Querying Merchant Ledgers...</p>
           </div>
-        ) : (!sellerProfile || userRole !== 'seller') ? (
-          /* UNBOARDED SELLER CHANNELS */
+        ) : (!sellerProfile || userRole !== 'seller' || isEditingProfile) ? (
+          /* UNBOARDED SELLER CHANNELS OR EDIT PROFILE FORM */
           <div className="space-y-6">
-            <div className="space-y-2">
-              <span className="text-[9px] font-mono tracking-[0.25em] text-white/30 uppercase block">Atelier Portal Induction</span>
-              <h2 className="font-serif text-3xl font-light text-white">Onboard as Local Seller</h2>
-              <p className="text-xs text-white/40 leading-relaxed font-serif italic max-w-xl">
-                "Upload your fashion items and appear in the AI feed instantly." Create a distinct designer registry to broadcast products directly to premium style feeds.
-              </p>
+            <div className="space-y-2 flex justify-between items-start">
+              <div>
+                <span className="text-[9px] font-mono tracking-[0.25em] text-white/30 uppercase block">
+                  {isEditingProfile ? 'Modify Shop Registry' : 'Seller Hub Onboarding'}
+                </span>
+                <h2 className="font-serif text-3xl font-light text-white">
+                  {isEditingProfile ? 'Configure Shop Settings' : 'Onboard as Fashion Seller'}
+                </h2>
+                <p className="text-xs text-white/40 leading-relaxed font-serif italic max-w-xl">
+                  {isEditingProfile
+                    ? '"Adjust your store types, online brand coordinates, shipping modes, and delivery estimates for the global/local buyer base."'
+                    : '"Upload your fashion items and appear in the AI feeds instantly. Support physical stores, Instagram brands, and online-only labels."'}
+                </p>
+              </div>
+              {isEditingProfile && (
+                <button
+                  type="button"
+                  onClick={() => setIsEditingProfile(false)}
+                  className="text-white/40 hover:text-white font-mono text-[10px] uppercase font-bold cursor-pointer bg-white/5 px-2.5 py-1.5 rounded-lg border border-white/5"
+                >
+                  [ Cancel ]
+                </button>
+              )}
             </div>
 
             <form onSubmit={handleOnboardShop} className="space-y-5 pt-4">
+              {onboardError && (
+                <div className="bg-rose-500/10 border border-rose-500/20 p-3 rounded-xl text-rose-300 text-[10px] font-mono flex items-center gap-2">
+                  <AlertCircle className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                  <span>{onboardError}</span>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-[9px] font-mono uppercase tracking-widest text-[#a3a3a3] block pb-1.5">Shop / Atelier Name *</label>
+                  <label className="text-[9px] font-mono uppercase tracking-widest text-[#a3a3a3] block pb-1.5">Shop / Store Name *</label>
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Atelier Noir"
+                    placeholder="e.g. Noir Boutique"
                     value={shopName}
                     onChange={e => setShopName(e.target.value)}
                     className="w-full bg-[#111] border border-white/10 px-3 py-2 text-xs font-mono text-white placeholder-white/20 focus:outline-none focus:border-white/30 rounded-xl transition-colors"
                   />
                 </div>
+
                 <div>
-                  <label className="text-[9px] font-mono uppercase tracking-widest text-[#a3a3a3] block pb-1.5">Physical Atelier Location/City *</label>
+                  <label className="text-[9px] font-mono uppercase tracking-widest text-[#a3a3a3] block pb-1.5">Store Type *</label>
+                  <select
+                    value={storeType}
+                    onChange={e => setStoreType(e.target.value as any)}
+                    className="w-full bg-[#111] border border-white/10 px-3 py-2 text-xs font-mono text-white rounded-xl focus:outline-none focus:border-white/30"
+                  >
+                    <option value="LOCAL_BOUTIQUE">Local Boutique (with physical showroom)</option>
+                    <option value="ONLINE_STORE">Online-Only Store (Instagram, TikTok, Web)</option>
+                    <option value="HYBRID_BRAND">Hybrid Brand (both physical + online presence)</option>
+                  </select>
+                </div>
+              </div>
+
+              {storeType !== 'ONLINE_STORE' && (
+                <div>
+                  <label className="text-[9px] font-mono uppercase tracking-widest text-[#a3a3a3] block pb-1.5">Physical Shop Location/City *</label>
                   <input
                     type="text"
                     required
@@ -373,6 +523,86 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({ user, onClose,
                     onChange={e => setShopLocation(e.target.value)}
                     className="w-full bg-[#111] border border-white/10 px-3 py-2 text-xs font-mono text-white placeholder-white/20 focus:outline-none focus:border-white/30 rounded-xl transition-colors"
                   />
+                </div>
+              )}
+
+              {storeType !== 'LOCAL_BOUTIQUE' && (
+                <div className="border border-white/5 bg-white/[0.01] p-4 rounded-2xl space-y-4">
+                  <span className="text-[9px] font-mono text-white/40 uppercase tracking-widest block font-bold border-b border-white/5 pb-1">
+                    [ Online Brand Coordinates ]
+                  </span>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="text-[9px] font-mono uppercase tracking-widest text-[#a3a3a3] block pb-1.5">Instagram Link / User *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. @noir_boutique"
+                        value={instagramUrl}
+                        onChange={e => setInstagramUrl(e.target.value)}
+                        className="w-full bg-[#111] border border-white/10 px-3 py-2 text-xs font-mono text-white placeholder-white/20 focus:outline-none focus:border-white/30 rounded-xl transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[9px] font-mono uppercase tracking-widest text-[#a3a3a3] block pb-1.5">WhatsApp Link (optional)</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. +39 333 123456"
+                        value={whatsAppNumber}
+                        onChange={e => setWhatsAppNumber(e.target.value)}
+                        className="w-full bg-[#111] border border-white/10 px-3 py-2 text-xs font-mono text-white placeholder-white/20 focus:outline-none focus:border-white/30 rounded-xl transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[9px] font-mono uppercase tracking-widest text-[#a3a3a3] block pb-1.5">Website URL (optional)</label>
+                      <input
+                        type="url"
+                        placeholder="e.g. https://brand.com"
+                        value={websiteLink}
+                        onChange={e => setWebsiteLink(e.target.value)}
+                        className="w-full bg-[#111] border border-white/10 px-3 py-2 text-xs font-mono text-white placeholder-white/20 focus:outline-none focus:border-white/30 rounded-xl transition-colors"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="text-[9px] font-mono uppercase tracking-widest text-[#a3a3a3] block pb-1.5">Shipping Mode Offered</label>
+                  <select
+                    value={shippingMode}
+                    onChange={e => setShippingMode(e.target.value as any)}
+                    className="w-full bg-[#111] border border-white/10 px-3 py-2 text-xs font-mono text-white rounded-xl focus:outline-none focus:border-white/30"
+                  >
+                    <option value="pickup">Local Boutique Pickup Only</option>
+                    <option value="nationwide">Ships Nationwide (Standard/Express)</option>
+                    <option value="international">Ships Globally / International</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[9px] font-mono uppercase tracking-widest text-[#a3a3a3] block pb-1.5">Delivery Time Estimate *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. 2-4 business days"
+                    value={deliveryEstimate}
+                    onChange={e => setDeliveryEstimate(e.target.value)}
+                    className="w-full bg-[#111] border border-white/10 px-3 py-2 text-xs font-mono text-white placeholder-white/20 focus:outline-none focus:border-white/30 rounded-xl transition-colors"
+                  />
+                </div>
+
+                <div className="flex items-center pt-4">
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={verified}
+                      onChange={e => setVerified(e.target.checked)}
+                      className="w-4 h-4 rounded border-white/10 bg-[#111] text-amber-500 focus:ring-0 focus:ring-offset-0 cursor-pointer"
+                    />
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-amber-300">Verified Seller Status</span>
+                  </label>
                 </div>
               </div>
 
@@ -402,7 +632,11 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({ user, onClose,
                   disabled={isSubmittingOnboard}
                   className="flex-1 bg-white hover:bg-neutral-200 text-black py-3 rounded-xl text-[10px] font-mono uppercase tracking-widest font-semibold transition-colors cursor-pointer"
                 >
-                  {isSubmittingOnboard ? 'Establishing Registry...' : 'Register Atelier & Open Dashboard'}
+                  {isSubmittingOnboard 
+                    ? 'Updating Registry...'
+                    : isEditingProfile 
+                      ? 'Save Shop Settings' 
+                      : 'Register Shop & Open Dashboard'}
                 </button>
               </div>
             </form>
@@ -412,27 +646,77 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({ user, onClose,
           <div className="space-y-6">
             {/* Header info */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-white/10 pb-6 gap-4">
-              <div className="space-y-1">
+              <div className="space-y-1.5 flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                   <span className="text-[8.5px] font-mono text-[#a3a3a3] uppercase tracking-[0.2em]">Authorized Merchant Terminal</span>
+                  {sellerProfile.verified && (
+                    <span className="text-[8.5px] font-mono bg-amber-400/10 text-amber-300 px-2 py-0.5 rounded border border-amber-500/20 uppercase font-bold">Verified Seller</span>
+                  )}
                 </div>
-                <h2 className="font-serif text-3xl font-light text-white">{sellerProfile.name}</h2>
-                <div className="flex items-center gap-1.5 text-[9.5px] font-mono text-white/45">
-                  <MapPin className="w-3 h-3 text-white/30" />
-                  <span>{sellerProfile.location}</span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="font-serif text-3xl font-light text-white leading-none">{sellerProfile.name}</h2>
+                  <span className={`text-[9px] font-mono uppercase tracking-wider px-2 py-0.5 rounded border ${
+                    sellerProfile.storeType === 'ONLINE_STORE' 
+                      ? 'bg-amber-400/5 text-amber-300 border-amber-400/20'
+                      : sellerProfile.storeType === 'HYBRID_BRAND'
+                        ? 'bg-purple-400/5 text-purple-300 border-purple-400/20'
+                        : 'bg-emerald-400/5 text-emerald-300 border-emerald-400/20'
+                  }`}>
+                    {sellerProfile.storeType === 'ONLINE_STORE' ? 'Online Brand' : sellerProfile.storeType === 'HYBRID_BRAND' ? 'Hybrid Brand' : 'Local Boutique'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap text-[9.5px] font-mono text-white/45">
+                  {sellerProfile.storeType !== 'ONLINE_STORE' && sellerProfile.location ? (
+                    <div className="flex items-center gap-1.5">
+                      <MapPin className="w-3 h-3 text-white/30" />
+                      <span>{sellerProfile.location}</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5">
+                      <Globe className="w-3 h-3 text-white/30" />
+                      <span>ships nationwide</span>
+                    </div>
+                  )}
                   <span className="text-white/10">|</span>
-                  <Tag className="w-3 h-3 text-white/30" />
-                  <span>{sellerProfile.category}</span>
+                  <div className="flex items-center gap-1.5">
+                    <Tag className="w-3 h-3 text-white/30" />
+                    <span>{sellerProfile.category}</span>
+                  </div>
+                  {sellerProfile.shippingMode && (
+                    <>
+                      <span className="text-white/10">|</span>
+                      <span>Delivery: {sellerProfile.shippingMode === 'pickup' ? 'Store Pickup Only' : sellerProfile.shippingMode === 'international' ? 'Worldwide' : 'Nationwide'} ({sellerProfile.deliveryEstimate || '2-4 days'})</span>
+                    </>
+                  )}
+                  
+                  {/* Social Handles */}
+                  {sellerProfile.instagramUrl && (
+                    <>
+                      <span className="text-white/10">|</span>
+                      <a href={`https://instagram.com/${sellerProfile.instagramUrl.replace('@','')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:text-white transition-colors">
+                        <Instagram className="w-3 h-3 text-white/40" />
+                        <span>{sellerProfile.instagramUrl}</span>
+                      </a>
+                    </>
+                  )}
                 </div>
               </div>
 
-              <button
-                onClick={handleOpenCreateForm}
-                className="w-full sm:w-auto px-5 py-2.5 bg-white text-black hover:bg-neutral-200 rounded-xl text-[10px] font-mono uppercase tracking-widest font-semibold transition-all flex items-center justify-center gap-1.5 shadow-md cursor-pointer"
-              >
-                <Plus className="w-4 h-4" /> Add Craft product
-              </button>
+              <div className="flex gap-2 w-full sm:w-auto">
+                <button
+                  onClick={() => setIsEditingProfile(true)}
+                  className="flex-1 sm:flex-initial px-4 py-2.5 bg-white/5 border border-white/10 hover:border-white/20 text-white hover:bg-white/[0.08] rounded-xl text-[10px] font-mono uppercase tracking-widest font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <Edit2 className="w-3.5 h-3.5 opacity-60" /> Profile
+                </button>
+                <button
+                  onClick={handleOpenCreateForm}
+                  className="flex-1 sm:flex-initial px-5 py-2.5 bg-white text-black hover:bg-neutral-200 rounded-xl text-[10px] font-mono uppercase tracking-widest font-semibold transition-all flex items-center justify-center gap-1.5 shadow-md cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" /> Add Craft product
+                </button>
+              </div>
             </div>
 
             {/* Editing/Creation Inline Panel Overlord */}
@@ -581,7 +865,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({ user, onClose,
             {/* Active Inventory Registry */}
             <div className="space-y-4">
               <h3 className="font-serif text-lg text-white font-light flex items-center gap-2">
-                <Package className="w-4 h-4 text-white/50" /> Live Atelier Collection ({myProducts.length})
+                <Package className="w-4 h-4 text-white/50" /> Live Shop Collection ({myProducts.length})
               </h3>
 
               {myProducts.length === 0 ? (

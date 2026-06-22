@@ -17,6 +17,15 @@ export interface FeedItem {
   shopName?: string;
   shopAvatarUrl?: string;
   
+  // Expanded Hybrid Seller details
+  storeType?: 'LOCAL_BOUTIQUE' | 'ONLINE_STORE' | 'HYBRID_BRAND';
+  instagramUrl?: string;
+  whatsAppNumber?: string;
+  websiteLink?: string;
+  shippingMode?: 'pickup' | 'nationwide' | 'international';
+  verified?: boolean;
+  deliveryEstimate?: string;
+  
   // Custom Outfit details
   outfitItems?: WardrobeItem[];
   suitabilityScore?: number; // AI match score (0-100%)

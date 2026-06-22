@@ -2,7 +2,7 @@
   "entities": {
     "Construction": {
       "title": "Construction",
-      "description": "A construction project or item.",
+      "description": "A construction project or item in the boutique workflow.",
       "type": "object",
       "properties": {
         "title": { "type": "string" },
@@ -26,19 +26,208 @@
         "status": { "type": "string", "enum": ["In Closet", "Planned", "Worn/Wash"] },
         "userId": { "type": "string" },
         "strategy": { "type": "string" },
+        "season": { "type": "string" },
+        "primaryColor": { "type": "string" },
+        "secondaryColor": { "type": "string" },
+        "wearCount": { "type": "number" },
+        "lastUsed": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "careNote": { "type": "string" },
+        "location": { "type": "string" },
+        "privateNote": { "type": "string" },
+        "placedElsewhere": { "type": "boolean" },
+        "lastWornMoment": { "type": "string" },
+        "worksWith": { "type": "string" },
+        "schema_version": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["title", "userId", "createdAt", "status", "category"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "An order logged upon a confirmed secure boutique purchase.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "productId": { "type": "string" },
+        "productTitle": { "type": "string" },
+        "productPrice": { "type": "number" },
+        "productImageUrl": { "type": "string" },
+        "shopName": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["confirmed"] }
+      },
+      "required": ["userId", "productId", "productTitle", "productPrice", "status"]
+    },
+    "User": {
+      "title": "User",
+      "description": "A registered user profile representation.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["client", "seller"] },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "displayName", "email", "role"]
+    },
+    "Seller": {
+      "title": "Seller",
+      "description": "Brand and contract parameters for matching boutique merchants.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "location": { "type": "string" },
+        "category": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "avatarUrl": { "type": "string" },
+        "storeType": { "type": "string" },
+        "instagramUrl": { "type": "string" },
+        "whatsAppNumber": { "type": "string" },
+        "websiteLink": { "type": "string" },
+        "shippingMode": { "type": "string" },
+        "verified": { "type": "boolean" },
+        "deliveryEstimate": { "type": "string" }
+      },
+      "required": ["name", "ownerId", "storeType"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "An individual artisan product or listing on the fashion feed.",
+      "type": "object",
+      "properties": {
+        "shopId": { "type": "string" },
+        "shopName": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "price": { "type": "number" },
+        "category": { "type": "string" },
+        "availability": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "vibeTags": { "type": "array" },
+        "ownerId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["shopId", "shopName", "title", "price", "ownerId"]
+    },
+    "Analytics": {
+      "title": "Analytics",
+      "description": "Queue-buffered metrics logged on startup or major interactions.",
+      "type": "object",
+      "properties": {
+        "eventType": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "userId": { "type": ["string", "null"] },
+        "params": { "type": "object" },
+        "schema_version": { "type": "string" }
+      },
+      "required": ["eventType", "timestamp", "schema_version"]
+    },
+    "GeneratedLook": {
+      "title": "GeneratedLook",
+      "description": "Metadata corresponding to visual design generations.",
+      "type": "object",
+      "properties": {
+        "imageUrl": { "type": "string" },
+        "prompt": { "type": "string" },
+        "provider": { "type": "string" },
+        "vibe": { "type": "string" },
+        "season": { "type": "string" },
+        "userId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["imageUrl", "prompt", "provider", "userId"]
+    },
+    "OutfitHistoryRecord": {
+      "title": "OutfitHistoryRecord",
+      "description": "Curation and styling activity matching continuous wear/acceptance cycles.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "items": { "type": "array" },
+        "action": { "type": "string", "enum": ["suggested", "accept", "reject", "wear"] },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "weatherCondition": { "type": "string" },
+        "agenda": { "type": "string" },
+        "vibe": { "type": "string" }
+      },
+      "required": ["userId", "items", "action", "timestamp"]
+    },
+    "VisualInteractionRecord": {
+      "title": "VisualInteractionRecord",
+      "description": "UX interaction analytics logging comparison and click workflows.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "eventType": { "type": "string", "enum": ["preview_open", "compare_looks", "complete_outfit_click", "visual_accept", "bundle_purchase_simulate"] },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "itemId": { "type": "string" },
+        "metaData": { "type": "object" }
+      },
+      "required": ["userId", "eventType", "timestamp"]
+    },
+    "DecisionOutcomeRecord": {
+      "title": "DecisionOutcomeRecord",
+      "description": "Styling validation and decision log outcomes.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "recommendationId": { "type": "string" },
+        "items": { "type": "array" },
+        "action": { "type": "string", "enum": ["viewed", "accepted", "rejected", "saved", "worn", "shared", "abandoned"] },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "timeToDecisionMs": { "type": "number" },
+        "variantId": { "type": "string" }
+      },
+      "required": ["userId", "recommendationId", "items", "action", "timestamp"]
     }
   },
   "firestore": {
     "constructions": {
       "schema": "Construction",
-      "description": "Collection of construction projects."
+      "description": "Collection of bespoke construction projects."
     },
     "wardrobe": {
       "schema": "WardrobeItem",
       "description": "Collection of wardrobe items."
+    },
+    "orders": {
+      "schema": "Order",
+      "description": "Collection of locked customer fashion orders."
+    },
+    "users": {
+      "schema": "User",
+      "description": "Collection of user registrations and configurations."
+    },
+    "sellers": {
+      "schema": "Seller",
+      "description": "Collection of authorized boutique sellers."
+    },
+    "products": {
+      "schema": "Product",
+      "description": "Collection of market product offerings."
+    },
+    "analytics": {
+      "schema": "Analytics",
+      "description": "Collection of metrics events."
+    },
+    "generatedLooks": {
+      "schema": "GeneratedLook",
+      "description": "Collection of generated outfits and looks."
+    },
+    "outfitHistory": {
+      "schema": "OutfitHistoryRecord",
+      "description": "Collection of user's outfit recommendations interaction history."
+    },
+    "visualInteractions": {
+      "schema": "VisualInteractionRecord",
+      "description": "Collection of logged visual comparison logs."
+    },
+    "decisionOutcomes": {
+      "schema": "DecisionOutcomeRecord",
+      "description": "Collection of styling decision outcomes."
     }
   }
 }
