@@ -38,17 +38,19 @@ export class AnalyticsEngine {
 
   static {
     // Load offline events on startup
-    try {
-      const stored = localStorage.getItem(this.STORAGE_KEY);
-      if (stored) {
-        this.eventQueue = JSON.parse(stored);
+    if (typeof localStorage !== 'undefined') {
+      try {
+        const stored = localStorage.getItem(this.STORAGE_KEY);
+        if (stored) {
+          this.eventQueue = JSON.parse(stored);
+        }
+        const trackedCount = localStorage.getItem('total_events_tracked_count');
+        if (trackedCount) {
+          this.totalEventsTracked = parseInt(trackedCount, 10);
+        }
+      } catch (e) {
+        console.error('Failed to load offline analytics queue:', e);
       }
-      const trackedCount = localStorage.getItem('total_events_tracked_count');
-      if (trackedCount) {
-        this.totalEventsTracked = parseInt(trackedCount, 10);
-      }
-    } catch (e) {
-      console.error('Failed to load offline analytics queue:', e);
     }
   }
 
@@ -66,9 +68,11 @@ export class AnalyticsEngine {
     };
 
     this.totalEventsTracked++;
-    try {
-      localStorage.setItem('total_events_tracked_count', this.totalEventsTracked.toString());
-    } catch (_) {}
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.setItem('total_events_tracked_count', this.totalEventsTracked.toString());
+      } catch (_) {}
+    }
 
     console.log(`[Analytics Tracked] ${eventType}`, event);
 
@@ -128,6 +132,7 @@ export class AnalyticsEngine {
   }
 
   private static saveQueueToStorage() {
+    if (typeof localStorage === 'undefined') return;
     try {
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.eventQueue));
     } catch (e) {
@@ -161,9 +166,11 @@ export class AnalyticsEngine {
     this.totalEventsTracked = 0;
     this.errorCount = 0;
     this.lastSyncTime = null;
-    try {
-      localStorage.removeItem(this.STORAGE_KEY);
-      localStorage.removeItem('total_events_tracked_count');
-    } catch (_) {}
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.removeItem(this.STORAGE_KEY);
+        localStorage.removeItem('total_events_tracked_count');
+      } catch (_) {}
+    }
   }
 }
