@@ -53,7 +53,7 @@ export const AIFashionMVPSuite: React.FC = () => {
     }, 900);
 
     try {
-      const response = await fetch('/api/ai/recommend-mvp', {
+      const response = await fetch('/.netlify/functions/recommend-mvp', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -90,7 +90,7 @@ export class GeminiGroundingAdapter implements TrendSourceAdapter {
 
       // Query Gemini with Search Grounding enabled to extract live search terms
       const response = await ai.models.generateContent({
-        model: 'gemini-3.5-flash',
+        model: 'gemini-2.5-flash',
         contents: `What are exactly 5 highly-specific, active avant-garde, streetwear, or high-fashion clothing trends, pieces, cuts, or style micro-trends trending right now in ${region} for June 2026? 
           Return ONLY a JSON list matching this structure:
           [

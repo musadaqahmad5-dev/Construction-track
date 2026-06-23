@@ -114,7 +114,7 @@ async function startServer() {
   });
 
   // --- CORE SYSTEM (Phase 1 & 2 FINAL MVP) ---
-  app.post("/api/ai/recommend-mvp", async (req, res) => {
+  app.post(["/api/ai/recommend-mvp", "/.netlify/functions/recommend-mvp"], async (req, res) => {
     try {
       const userInput = req.body.userInput || req.body.prompt || "casual chic look";
       
@@ -251,7 +251,7 @@ Make sure to produce 3 detailed, creative, fashion-forward suggestions on how to
 - An occasion of use (e.g. Summer Garden Party, Gala Event)`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3.5-flash',
+        model: 'gemini-2.5-flash',
         contents: userPrompt,
         config: {
           systemInstruction,
