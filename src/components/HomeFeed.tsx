@@ -29,6 +29,7 @@ import { FeedItem } from '../features/feed/feedTypes';
 import { AIEngine } from '../features/feed/AIEngine';
 import { LazyFeedCard } from './LazyFeedCard';
 import { MarketplaceModule } from './MarketplaceModule';
+import { AIFashionMVPSuite } from './AIFashionMVPSuite';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useStyleProfile } from '../hooks/useStyleProfile';
 import { WardrobeItem, Seller } from '../types';
@@ -725,6 +726,9 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
           "Discover fashion. Try styles. Shop from real and online stores."
         </p>
       </div>
+
+      {/* 1.1 AI STYLIST CORE MVP SUITE (PHASE 2) */}
+      <AIFashionMVPSuite />
 
       {/* Visual Quick Onboarding Entry Grid */}
       <div className="grid grid-cols-2 gap-3 pb-2 pt-1">
