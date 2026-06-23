@@ -69,6 +69,10 @@ export const AIFashionMVPSuite: React.FC = () => {
 
       const data = await response.json();
       
+      if (data && data.mode === "CONFIG_ERROR") {
+        throw new Error(data.error || "GEMINI_API_KEY missing in Netlify environment");
+      }
+      
       // Strict layout parsed verification with fallback options logic
       if (data && Array.isArray(data.outfits)) {
         setOutfits(data.outfits);

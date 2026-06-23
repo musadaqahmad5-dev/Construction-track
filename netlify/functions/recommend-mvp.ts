@@ -155,12 +155,17 @@ export async function handler(event: any, context: any) {
     }
 
     // Log CORS Pre-flight Options requests
-    const apiKey = process.env.GEMINI_API_KEY;
-    const isKeyDetected = !!apiKey;
-    console.log(`[Netlify-MVPPipeline] API key detected: ${isKeyDetected ? "yes" : "no"}`);
+    const rawApiKey = process.env.GEMINI_API_KEY;
+    const apiKey = rawApiKey ? rawApiKey.trim() : "";
+    const isKeyDetected = apiKey.length > 0;
 
-    if (!apiKey) {
-      console.log("[Netlify-MVPPipeline] fallback activated reason: GEMINI_API_KEY environment variable is missing");
+    const hasEnvKeys = Object.keys(process.env).length > 0;
+    console.log(`ENV KEYS LOADED: ${hasEnvKeys ? "true" : "false"}`);
+    console.log(`FUNCTION RUNTIME ENV READY: ${isKeyDetected ? "true" : "false"}`);
+    console.log(`API key detected: ${isKeyDetected ? "true" : "false"}`);
+
+    if (!isKeyDetected) {
+      console.log("fallback activated reason: GEMINI_API_KEY environment variable is missing");
       return {
         statusCode: 200,
         headers: {
@@ -168,17 +173,13 @@ export async function handler(event: any, context: any) {
           "Access-Control-Allow-Origin": "*",
         },
         body: JSON.stringify({
-          outfits: fallbackSuggestions,
-          style_type: fallbackType,
-          season: fallbackSeason,
-          _mode: "offline-fallback",
-          is_key_missing: true,
-          warning: "GEMINI_API_KEY environment variable is missing in Netlify settings. Please specify the GEMINI_API_KEY in Site configuration > Environment variables to activate live cognitive styling."
+          mode: "CONFIG_ERROR",
+          error: "GEMINI_API_KEY missing in Netlify environment"
         }),
       };
     }
 
-    console.log("[Netlify-MVPPipeline] Gemini request started");
+    console.log("Gemini request started");
     const ai = new GoogleGenAI({ apiKey });
     const systemInstruction = `You are a world-class AI Fashion Stylist and Haute Couture Designer.
 Your task is to analyze user prompts and create exactly 3 beautiful, highly coordinated, production-ready outfit suggestions.
@@ -224,7 +225,7 @@ Make sure to produce 3 detailed, creative, fashion-forward suggestions on how to
       }
     });
 
-    console.log("[Netlify-MVPPipeline] Gemini response received");
+    console.log("Gemini response received");
     const responseText = response.text?.trim();
     if (!responseText) {
       throw new Error("Empty representation response received from backend");
