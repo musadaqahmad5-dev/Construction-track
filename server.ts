@@ -251,7 +251,7 @@ Make sure to produce 3 detailed, creative, fashion-forward suggestions on how to
 - An occasion of use (e.g. Summer Garden Party, Gala Event)`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3.5-flash',
         contents: userPrompt,
         config: {
           systemInstruction,

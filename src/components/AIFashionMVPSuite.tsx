@@ -18,6 +18,7 @@ export const AIFashionMVPSuite: React.FC = () => {
   const [styleType, setStyleType] = useState('');
   const [season, setSeason] = useState('');
   const [mode, setMode] = useState<'live-ai' | 'offline-fallback' | 'fallback-error' | ''>('');
+  const [warning, setWarning] = useState<string | null>(null);
   
   // Immersive micro-steps during generation to give an exquisite SaaS experience
   const [loadingStep, setLoadingStep] = useState('Consulting sartorial ledger...');
@@ -34,6 +35,7 @@ export const AIFashionMVPSuite: React.FC = () => {
 
     setLoading(true);
     setError(null);
+    setWarning(null);
     setOutfits([]);
     setMode('');
 
@@ -73,6 +75,7 @@ export const AIFashionMVPSuite: React.FC = () => {
         setStyleType(data.style_type || 'Bespoke combination');
         setSeason(data.season || 'All-season');
         setMode(data._mode || 'live-ai');
+        setWarning(data.warning || null);
       } else {
         throw new Error('The styling response is improperly formatted.');
       }
@@ -218,6 +221,20 @@ export const AIFashionMVPSuite: React.FC = () => {
             className="space-y-5 pt-2 animate-fade-in"
             id="ai-stylist-success-view"
           >
+            {warning && (
+              <div className="bg-amber-500/10 border border-amber-500/15 p-4 rounded-xl flex items-start gap-3.5 text-left" id="ai-stylist-warning-banner">
+                <div className="p-2 bg-amber-500/10 text-amber-400 rounded-lg shrink-0">
+                  <AlertTriangle className="w-4 h-4 animate-bounce" />
+                </div>
+                <div className="space-y-1">
+                  <h4 className="text-[10px] font-mono uppercase tracking-wider text-amber-400 font-extrabold">API Configuration Notice</h4>
+                  <p className="text-xs text-amber-200/80 leading-relaxed font-sans">
+                    {warning}
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Meta tags */}
             <div className="flex flex-wrap items-center justify-between gap-3 bg-black/30 border border-white/5 py-3 px-4 rounded-xl text-xs text-left">
               <div className="flex items-center gap-4">

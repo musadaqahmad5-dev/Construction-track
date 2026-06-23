@@ -14,7 +14,7 @@ export async function handler(event: any, context: any) {
     return {
       statusCode: 200,
       headers: {
-        "Access-[#dfd7c2]": "true",
+        "Access-Control-Allow-Credentials": "true",
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Headers": "Content-Type, Authorization",
         "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -154,9 +154,13 @@ export async function handler(event: any, context: any) {
       ];
     }
 
+    // Log CORS Pre-flight Options requests
     const apiKey = process.env.GEMINI_API_KEY;
+    const isKeyDetected = !!apiKey;
+    console.log(`[Netlify-MVPPipeline] API key detected: ${isKeyDetected ? "yes" : "no"}`);
+
     if (!apiKey) {
-      console.log("[Netlify-MVPPipeline] No GEMINI_API_KEY. Applying deterministic fallback matching query:", userInput);
+      console.log("[Netlify-MVPPipeline] fallback activated reason: GEMINI_API_KEY environment variable is missing");
       return {
         statusCode: 200,
         headers: {
@@ -167,12 +171,14 @@ export async function handler(event: any, context: any) {
           outfits: fallbackSuggestions,
           style_type: fallbackType,
           season: fallbackSeason,
-          _mode: "offline-fallback"
+          _mode: "offline-fallback",
+          is_key_missing: true,
+          warning: "GEMINI_API_KEY environment variable is missing in Netlify settings. Please specify the GEMINI_API_KEY in Site configuration > Environment variables to activate live cognitive styling."
         }),
       };
     }
 
-    console.log("[Netlify-MVPPipeline] Querying Gemini 2.5 Active Core for:", userInput);
+    console.log("[Netlify-MVPPipeline] Gemini request started");
     const ai = new GoogleGenAI({ apiKey });
     const systemInstruction = `You are a world-class AI Fashion Stylist and Haute Couture Designer.
 Your task is to analyze user prompts and create exactly 3 beautiful, highly coordinated, production-ready outfit suggestions.
@@ -187,7 +193,7 @@ Make sure to produce 3 detailed, creative, fashion-forward suggestions on how to
 - An occasion of use (e.g. Summer Garden Party, Gala Event)`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.5-flash',
       contents: userPrompt,
       config: {
         systemInstruction,
@@ -218,6 +224,7 @@ Make sure to produce 3 detailed, creative, fashion-forward suggestions on how to
       }
     });
 
+    console.log("[Netlify-MVPPipeline] Gemini response received");
     const responseText = response.text?.trim();
     if (!responseText) {
       throw new Error("Empty representation response received from backend");
@@ -250,7 +257,7 @@ Make sure to produce 3 detailed, creative, fashion-forward suggestions on how to
     };
 
   } catch (err: any) {
-    console.error("[Netlify-MVPPipeline Exception] Reverting to error boundary fallback:", err);
+    console.log(`[Netlify-MVPPipeline] fallback activated reason: ${err?.message || err}`);
     return {
       statusCode: 200,
       headers: {
