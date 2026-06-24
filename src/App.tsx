@@ -8,7 +8,7 @@ import { AuthModule } from './components/AuthModule';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { WifiOff } from 'lucide-react';
 import { motion } from 'motion/react';
-const AIStyleHub = React.lazy(() => import('./components/AIStyleHub').then(m => ({ default: m.AIStyleHub })));
+import { AIStyleHub } from './components/AIStyleHub';
 import { UnifiedFashionOS } from './features/ai-core/UnifiedFashionOS';
 
 // Temporal light rules mapper

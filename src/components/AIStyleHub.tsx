@@ -9,6 +9,7 @@ import {
   UnifiedOutfit
 } from '../features/ai-core/UnifiedFashionOS';
 import { db } from '../firebase';
+import { updateDoc, doc } from 'firebase/firestore';
 import { OutfitCard } from './OutfitCard';
 import { WardrobeGrid } from './WardrobeGrid';
 import { HomeFeed } from './HomeFeed';
@@ -546,7 +547,6 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
       }
     } else {
       try {
-        const { updateDoc, doc } = await import('firebase/firestore');
         const item = activeWardrobeList.find(x => x.id === itemId);
         const col = (item as any)?.collectionSource === 'constructions' ? 'constructions' : 'wardrobe';
         await updateDoc(doc(db, col, itemId), updates);

@@ -2,9 +2,7 @@ import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { FeedItem } from '../features/feed/feedTypes';
 
 // Dynamically import FeedCard to code split major modules like try-on and checkout embedded inside it
-const FeedCard = React.lazy(() => 
-  import('./FeedCard').then(m => ({ default: m.FeedCard }))
-);
+import { FeedCard } from './FeedCard';
 
 interface LazyFeedCardProps {
   item: FeedItem;

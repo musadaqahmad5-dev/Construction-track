@@ -182,6 +182,46 @@
         "variantId": { "type": "string" }
       },
       "required": ["userId", "recommendationId", "items", "action", "timestamp"]
+    },
+    "Outfit": {
+      "title": "Outfit",
+      "description": "An outfit saved or generated in the fashion companion.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "userId": { "type": "string" },
+        "items": { "type": "array" },
+        "imageUrl": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "userId", "createdAt"]
+    },
+    "Style": {
+      "title": "Style",
+      "description": "A curated style preference or custom style family definition.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "userId": { "type": "string" },
+        "tags": { "type": "array" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "userId", "createdAt"]
+    },
+    "Recommendation": {
+      "title": "Recommendation",
+      "description": "An AI-curated clothing and outfit recommendation response.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "userId": { "type": "string" },
+        "finalRecommendation": { "type": "string" },
+        "outfits": { "type": "array" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "userId", "createdAt", "finalRecommendation"]
     }
   },
   "firestore": {
@@ -228,6 +268,18 @@
     "decisionOutcomes": {
       "schema": "DecisionOutcomeRecord",
       "description": "Collection of styling decision outcomes."
+    },
+    "outfits": {
+      "schema": "Outfit",
+      "description": "Collection of saved outfits."
+    },
+    "styles": {
+      "schema": "Style",
+      "description": "Collection of saved styles."
+    },
+    "recommendations": {
+      "schema": "Recommendation",
+      "description": "Collection of generated and saved recommendations."
     }
   }
 }

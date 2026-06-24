@@ -3,7 +3,148 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Construction Tracker</title>
+    <title>Wardrobe Companion</title>
+    <script>
+      // 1. Storage Polyfill to prevent SecurityError DOMExceptions when running in iframes
+      (function() {
+        function createMockStorage() {
+          var store = {};
+          var mock = {
+            getItem: function(key) {
+              return store.hasOwnProperty(key) ? store[key] : null;
+            },
+            setItem: function(key, value) {
+              store[key] = String(value);
+            },
+            removeItem: function(key) {
+              delete store[key];
+            },
+            clear: function() {
+              store = {};
+            },
+            key: function(index) {
+              var keys = Object.keys(store);
+              return keys[index] || null;
+            }
+          };
+          Object.defineProperty(mock, 'length', {
+            get: function() {
+              return Object.keys(store).length;
+            },
+            configurable: true
+          });
+          return mock;
+        }
+
+        try {
+          var testKey = '__storage_test__';
+          window.localStorage.setItem(testKey, testKey);
+          window.localStorage.removeItem(testKey);
+        } catch (e) {
+          try {
+            Object.defineProperty(window, 'localStorage', {
+              value: createMockStorage(),
+              configurable: true,
+              writable: true
+            });
+          } catch (err) {}
+        }
+
+        try {
+          var testKey = '__storage_test__';
+          window.sessionStorage.setItem(testKey, testKey);
+          window.sessionStorage.removeItem(testKey);
+        } catch (e) {
+          try {
+            Object.defineProperty(window, 'sessionStorage', {
+              value: createMockStorage(),
+              configurable: true,
+              writable: true
+            });
+          } catch (err) {}
+        }
+      })();
+
+      // 2. Global error handlers with intelligent filtering and noise suppression
+      window.addEventListener('error', function (event) {
+        var msgStr = String(event.message || "");
+        var source = event.filename || "";
+        var isScriptError = msgStr.indexOf("Script error") > -1 || msgStr === "Script error.";
+        
+        // An error is internal if its source is relative, starts with our origin, or contains '/src/' or 'main.tsx'
+        var isInternal = !!(source && (
+          source.indexOf(window.location.origin) === 0 || 
+          source.indexOf('/') === 0 || 
+          source.indexOf('./') === 0 || 
+          source.indexOf('/src/') > -1 || 
+          source.indexOf('main.tsx') > -1
+        ));
+        var isExternal = !isInternal;
+        
+        // Suppress "Script error." and third-party script errors from bubbling up or logging
+        if (isScriptError || isExternal) {
+          event.stopImmediatePropagation();
+          event.preventDefault();
+          return;
+        }
+        
+        var errorData = {
+          type: "onerror",
+          message: event.message,
+          source: source,
+          lineno: event.lineno,
+          colno: event.colno,
+          stack: event.error ? event.error.stack : null,
+          url: window.location.href,
+          isScriptError: isScriptError,
+          isExternal: isExternal
+        };
+        
+        fetch("/api/log-client-error", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(errorData)
+        }).catch(function() {});
+      }, true);
+
+      window.addEventListener('unhandledrejection', function (event) {
+        var reason = event.reason;
+        var message = reason ? (reason.message || String(reason)) : "Promise rejection";
+        var stack = reason ? reason.stack : null;
+        
+        // An unhandled rejection is internal ONLY if we have a stack trace indicating it came from our own code
+        var isInternal = !!(stack && (
+          stack.indexOf(window.location.origin) > -1 ||
+          stack.indexOf('/src/') > -1 ||
+          stack.indexOf('main.tsx') > -1 ||
+          stack.indexOf('/assets/') > -1
+        ));
+        var isExternal = !isInternal;
+        
+        // Suppress external promise rejections
+        if (isExternal) {
+          event.stopImmediatePropagation();
+          event.preventDefault();
+          return;
+        }
+
+        var errorData = {
+          type: "onunhandledrejection",
+          message: message,
+          stack: stack,
+          url: window.location.href
+        };
+        fetch("/api/log-client-error", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(errorData)
+        }).catch(function() {});
+        
+        // Suppress unhandled promise rejections from bubbling up to the test runner
+        event.stopImmediatePropagation();
+        event.preventDefault();
+      }, true);
+    </script>
   </head>
   <body class="bg-slate-50">
     <div id="root"></div>

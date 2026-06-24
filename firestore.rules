@@ -73,13 +73,18 @@ service cloud.firestore {
     }
 
     function isValidUser(data) {
-      let requiredFields = ['uid', 'displayName', 'email', 'role'];
+      let requiredFields = ['uid', 'displayName', 'email'];
       return data.keys().hasAll(requiredFields)
-        && data.keys().size() <= 8
+        && data.keys().size() <= 16
         && data.uid == request.auth.uid
         && data.displayName is string && data.displayName.size() <= 200
         && data.email is string && data.email.size() <= 200
-        && data.role in ['client', 'seller'];
+        && (data.get('role', null) == null || data.role is string)
+        && (data.get('stylePreference', null) == null || data.stylePreference is string)
+        && (data.get('occasionPreference', null) == null || data.occasionPreference is string)
+        && (data.get('fashionMaturityScore', null) == null || data.fashionMaturityScore is int || data.fashionMaturityScore is float)
+        && (data.get('styleDriftIndex', null) == null || data.styleDriftIndex is int || data.styleDriftIndex is float)
+        && (data.get('trendAdoptionLevel', null) == null || data.trendAdoptionLevel is int || data.trendAdoptionLevel is float);
     }
 
     function isValidSeller(data) {
@@ -168,6 +173,34 @@ service cloud.firestore {
         && (data.get('variantId', null) == null || (data.variantId is string && data.variantId.size() <= 128));
     }
 
+    function isValidOutfit(data) {
+      let requiredFields = ['title', 'userId', 'createdAt'];
+      return data.keys().hasAll(requiredFields)
+        && data.title is string && data.title.size() <= 300
+        && data.userId == request.auth.uid
+        && (data.get('description', null) == null || (data.description is string && data.description.size() <= 2000))
+        && (data.get('imageUrl', null) == null || (data.imageUrl is string && data.imageUrl.size() <= 2000))
+        && (data.get('items', null) == null || data.items is list);
+    }
+
+    function isValidStyle(data) {
+      let requiredFields = ['title', 'userId', 'createdAt'];
+      return data.keys().hasAll(requiredFields)
+        && data.title is string && data.title.size() <= 300
+        && data.userId == request.auth.uid
+        && (data.get('description', null) == null || (data.description is string && data.description.size() <= 2000))
+        && (data.get('tags', null) == null || data.tags is list);
+    }
+
+    function isValidRecommendation(data) {
+      let requiredFields = ['title', 'userId', 'createdAt', 'finalRecommendation'];
+      return data.keys().hasAll(requiredFields)
+        && data.title is string && data.title.size() <= 300
+        && data.userId == request.auth.uid
+        && data.finalRecommendation is string && data.finalRecommendation.size() <= 10000
+        && (data.get('outfits', null) == null || data.outfits is list);
+    }
+
     // --- COLLECTION ENDPOINTS & ROUTING PATTERNS ---
 
     match /constructions/{constructionId} {
@@ -215,6 +248,19 @@ service cloud.firestore {
 
     match /profiles/{userId} {
       allow read, write, update: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    match /userStyleProfiles/{userId} {
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    match /styleProfiles/{userId} {
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    match /merchantProducts/{productId} {
+      allow read, list, get: if true;
+      allow create, update, delete: if isSignedIn();
     }
 
     match /history/{historyId} {
@@ -289,6 +335,42 @@ service cloud.firestore {
       allow create: if isSignedIn() && isValidDecisionOutcomeRecord(request.resource.data);
       allow read, get, list: if isSignedIn() && resource.data.userId == request.auth.uid;
       allow update, delete: if false;
+    }
+
+    match /outfits/{outfitId} {
+      allow create: if isSignedIn() 
+        && isValidId(outfitId)
+        && isValidOutfit(request.resource.data);
+      allow read, get, list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow update: if isSignedIn() 
+        && isValidId(outfitId)
+        && resource.data.userId == request.auth.uid
+        && isValidOutfit(request.resource.data);
+      allow delete: if isSignedIn() && isValidId(outfitId) && resource.data.userId == request.auth.uid;
+    }
+
+    match /styles/{styleId} {
+      allow create: if isSignedIn() 
+        && isValidId(styleId)
+        && isValidStyle(request.resource.data);
+      allow read, get, list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow update: if isSignedIn() 
+        && isValidId(styleId)
+        && resource.data.userId == request.auth.uid
+        && isValidStyle(request.resource.data);
+      allow delete: if isSignedIn() && isValidId(styleId) && resource.data.userId == request.auth.uid;
+    }
+
+    match /recommendations/{recommendationId} {
+      allow create: if isSignedIn() 
+        && isValidId(recommendationId)
+        && isValidRecommendation(request.resource.data);
+      allow read, get, list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow update: if isSignedIn() 
+        && isValidId(recommendationId)
+        && resource.data.userId == request.auth.uid
+        && isValidRecommendation(request.resource.data);
+      allow delete: if isSignedIn() && isValidId(recommendationId) && resource.data.userId == request.auth.uid;
     }
   }
 }

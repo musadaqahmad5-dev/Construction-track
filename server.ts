@@ -54,6 +54,16 @@ async function startServer() {
     res.json({ status: "ok", time: new Date().toISOString() });
   });
 
+  app.post("/api/log-client-error", (req, res) => {
+    const errorData = req.body || {};
+    if (errorData.isScriptError || errorData.isExternal) {
+      console.log("[CLIENT EXTERNAL/SCRIPT WARNING (IGNORED)]:", JSON.stringify(errorData));
+    } else {
+      console.log("[CLIENT TELEMETRY WARN]:", JSON.stringify(errorData, null, 2));
+    }
+    res.json({ status: "logged" });
+  });
+
   // Production AI Stylist Pipeline
   app.post("/api/stylist/generate", (req, res) => {
     try {

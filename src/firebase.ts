@@ -20,21 +20,8 @@ import firebaseConfig from '../firebase-applet-config.json';
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 
-// Initialize Firestore with robust multi-tab local cache settings recommended for modern environments,
-// falling back safely to the standard getFirestore if iframe restrictions or platform state locks prevent it.
-let dbInstance;
-try {
-  dbInstance = initializeFirestore(app, {
-    localCache: persistentLocalCache({
-      tabManager: persistentMultipleTabManager()
-    })
-  }, firebaseConfig.firestoreDatabaseId);
-} catch (err) {
-  console.warn("Modern Firestore persistence initialization failed, falling back to default:", err);
-  dbInstance = getFirestore(app, firebaseConfig.firestoreDatabaseId);
-}
-
-export const db = dbInstance;
+// Initialize Firestore with a robust standard configuration using the config database ID directly.
+export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({

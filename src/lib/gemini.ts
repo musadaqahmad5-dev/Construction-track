@@ -1,13 +1,20 @@
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+const ai = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY || '',
+  httpOptions: {
+    headers: {
+      'User-Agent': 'aistudio-build'
+    }
+  }
+});
 
 export async function analyzeSiteImage(imageDataBase64: string) {
   try {
     const prompt = "Analyze this construction site photo. Provide a technical summary of the progress, identify key milestones visible, and guess the current project status (Planning, In Progress, or Near Completion). Format as a concise JSON-like summary.";
     
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-3.5-flash",
       contents: {
         parts: [
           { text: prompt },
@@ -41,7 +48,7 @@ export async function generateProjectStrategy(title: string, category: string, d
     Format with bold headers and concise bullet points.`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-3.5-flash",
       contents: { parts: [{ text: prompt }] }
     });
 

@@ -37,7 +37,7 @@ import { WardrobeGrid } from './WardrobeGrid';
 import { db } from '../firebase';
 import { collection, onSnapshot, query, where, limit } from 'firebase/firestore';
 
-const SellerDashboard = React.lazy(() => import('./SellerDashboard').then(m => ({ default: m.SellerDashboard })));
+import { SellerDashboard } from './SellerDashboard';
 
 interface HomeFeedProps {
   wardrobe: WardrobeItem[];

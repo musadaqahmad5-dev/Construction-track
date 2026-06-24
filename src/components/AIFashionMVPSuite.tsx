@@ -24,8 +24,13 @@ import {
   FileText,
   Lock,
   User,
-  History
+  History,
+  Cloud,
+  Save
 } from 'lucide-react';
+import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { auth } from '../firebase';
+import { FirestoreService } from '../lib/firestoreService';
 
 interface OutfitItem {
   items: {
@@ -126,6 +131,90 @@ export const AIFashionMVPSuite: React.FC = () => {
 
   // Phase 4 - Micro Delight Notice
   const [delightNotice, setDelightNotice] = useState<string | null>(null);
+
+  // Firestore Sync & Loading States
+  const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [savingOutfit, setSavingOutfit] = useState<Record<number, boolean>>({});
+  const [savingStyle, setSavingStyle] = useState<boolean>(false);
+  const [savingRec, setSavingRec] = useState<boolean>(false);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setCurrentUser(user);
+      if (user) {
+        setIsSyncing(true);
+        try {
+          // Sync user configuration/profile to 'users' collection
+          await FirestoreService.saveUserProfile(user.uid, {
+            displayName: user.displayName || 'Fashion Analyst',
+            email: user.email || '',
+            stylePreference: 'Modern Minimalist',
+            occasionPreference: 'Office / Occasion',
+            fashionMaturityScore: 85,
+            styleDriftIndex: 0.15,
+            trendAdoptionLevel: 3
+          });
+
+          // Preload recent saved outfits
+          const dbOutfits = await FirestoreService.getOutfits();
+          if (dbOutfits.length > 0) {
+            setRecentLooks(dbOutfits.map(o => ({
+              id: o.id || Date.now().toString(),
+              styleTitle: o.title,
+              timestamp: o.createdAt?.toDate ? o.createdAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              data: {
+                mode: "NORMAL",
+                tenant_id: selectedTenant,
+                control_plane: { decision_type: "saas", api_cost_optimization: true, response_enhanced: true },
+                user_profile: { style: o.title, occasion: "Saved", fashion_maturity_score: 85, style_drift_index: 0.15, trend_adoption_level: 3, confidence: 90 },
+                style_evolution: { style_evolution_curve: "Steady", preference_drift_forecast: "Stable" },
+                outfits: o.items.map(item => typeof item === 'string' ? { items: { top: item, bottom: '', shoes: '' }, scores: { style_match: 90, occasion_match: 90, trend_alignment: 90, comfort: 90, commercial_value: 90, revenue_priority_score: 90, total_score: 90 }, affiliate_potential: false, fashion_reason: 'Saved outfit combination.' } : item),
+                final_recommendation: o.description || "",
+                monetization_summary: { best_conversion_outfit_index: 0, high_value_picks: [] },
+                system_health: { confidence: 95, quality_score: 95 }
+              } as FiosResponse
+            })));
+          }
+
+          // Preload saved styles into styleJourney
+          const dbStyles = await FirestoreService.getStyles();
+          if (dbStyles.length > 0) {
+            setStyleJourney(dbStyles.map(s => ({
+              timestamp: s.createdAt?.toDate ? s.createdAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              style_title: s.title,
+              confidence: 95,
+              mood: s.description || 'Saved Preference',
+              style_family: s.tags.join(', ') || 'Custom Style',
+              interaction_count: 1
+            })));
+          }
+
+          // Preload recommendations
+          const dbRecs = await FirestoreService.getRecommendations();
+          if (dbRecs.length > 0 && !lastGeneratedLooks) {
+            const r = dbRecs[0];
+            setFiosData({
+              mode: "NORMAL",
+              tenant_id: selectedTenant,
+              control_plane: { decision_type: "saas", api_cost_optimization: true, response_enhanced: true },
+              user_profile: { style: r.title, occasion: "Personal Curation", fashion_maturity_score: 85, style_drift_index: 0.15, trend_adoption_level: 3, confidence: 90 },
+              style_evolution: { style_evolution_curve: "Steady", preference_drift_forecast: "Stable" },
+              outfits: r.outfits,
+              final_recommendation: r.finalRecommendation,
+              monetization_summary: { best_conversion_outfit_index: 0, high_value_picks: [] },
+              system_health: { confidence: 95, quality_score: 95 }
+            } as FiosResponse);
+          }
+        } catch (err) {
+          console.error("Failed to load user collections from Firestore:", err);
+        } finally {
+          setIsSyncing(false);
+        }
+      }
+    });
+    return () => unsubscribe();
+  }, [selectedTenant]);
 
   // Growth, Journey, & Intelligence States (PHASE 1, 2, 3)
   const [saves, setSaves] = useState(0);
@@ -322,6 +411,96 @@ export const AIFashionMVPSuite: React.FC = () => {
     setOutfitFeedback(prev => ({ ...prev, [outfitIndex]: feedback }));
     if (feedback === 'love_it') {
       setAcceptedCount(prev => prev + 1);
+    }
+  };
+
+  const handleSaveOutfit = async (index: number) => {
+    if (!auth.currentUser) {
+      setDelightNotice("Please sign in to save looks to Firestore");
+      return;
+    }
+    const outfit = fiosData?.outfits[index];
+    if (!outfit) return;
+
+    setSavingOutfit(prev => ({ ...prev, [index]: true }));
+    try {
+      const outfitId = await FirestoreService.createOutfit({
+        title: fiosData?.style_title || `Curated Look 0${index + 1}`,
+        description: outfit.fashion_reason || outfit.why_this_works || '',
+        items: [outfit.items?.top, outfit.items?.bottom, outfit.items?.shoes].filter(Boolean)
+      });
+      setSaves(prev => prev + 1);
+      setDelightNotice("✓ Saved to cloud outfits collection");
+      
+      const newLook = {
+        id: outfitId,
+        styleTitle: fiosData?.style_title || `Curated Look 0${index + 1}`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        data: fiosData!
+      };
+      setRecentLooks(prev => [newLook, ...prev].slice(0, 5));
+    } catch (err) {
+      console.error("Error saving outfit:", err);
+      setDelightNotice("Failed to save outfit to Firestore");
+    } finally {
+      setSavingOutfit(prev => ({ ...prev, [index]: false }));
+    }
+  };
+
+  const handleSaveStyle = async () => {
+    if (!auth.currentUser) {
+      setDelightNotice("Please sign in to save style configurations");
+      return;
+    }
+    if (!fiosData) return;
+
+    setSavingStyle(true);
+    try {
+      await FirestoreService.createStyle({
+        title: fiosData.style_title || "My Preferred Look",
+        description: fiosData.user_profile.style || "Minimalist Curation",
+        tags: [fiosData.user_profile.occasion || "General"]
+      });
+      setCompares(prev => prev + 1);
+      setDelightNotice("✓ Added to cloud styles collection");
+
+      const journeyItem = {
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        style_title: fiosData.style_title || "My Preferred Look",
+        confidence: fiosData.system_health?.confidence || 95,
+        mood: fiosData.user_profile.style || 'Minimalist',
+        style_family: fiosData.user_profile.occasion || 'Daily Casual',
+        interaction_count: totalInteractions + 1
+      };
+      setStyleJourney(prev => [journeyItem, ...prev]);
+    } catch (err) {
+      console.error("Error saving style:", err);
+      setDelightNotice("Failed to save style to Firestore");
+    } finally {
+      setSavingStyle(false);
+    }
+  };
+
+  const handleSaveRecommendation = async () => {
+    if (!auth.currentUser) {
+      setDelightNotice("Please sign in to save curation recommendations");
+      return;
+    }
+    if (!fiosData) return;
+
+    setSavingRec(true);
+    try {
+      await FirestoreService.createRecommendation({
+        title: fiosData.style_title || "Curation Recommendation",
+        finalRecommendation: fiosData.final_recommendation,
+        outfits: fiosData.outfits
+      });
+      setDelightNotice("✓ Added to cloud recommendations collection");
+    } catch (err) {
+      console.error("Error saving recommendation:", err);
+      setDelightNotice("Failed to save recommendation to Firestore");
+    } finally {
+      setSavingRec(false);
     }
   };
 
@@ -1250,6 +1429,28 @@ ${shoes}`;
                           )}
                         </button>
                       </div>
+
+                      {/* Firestore Saving Loop */}
+                      <div className="pt-2 border-t border-white/5 mt-2">
+                        <button
+                          onClick={() => handleSaveOutfit(index)}
+                          disabled={savingOutfit[index]}
+                          className="w-full text-[9.5px] font-mono py-1.5 rounded transition-all border border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/25 text-indigo-300 hover:text-white flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                        >
+                          {savingOutfit[index] ? (
+                            <>
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              <span>Saving to Firestore...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Cloud className="w-3.5 h-3.5" />
+                              <span>Save Outfit to Firestore</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+
                     </div>
                   </motion.div>
                 );
@@ -1346,6 +1547,43 @@ ${shoes}`;
                   <p className="text-xs text-white/85 leading-relaxed font-serif italic pt-2">
                     "{fiosData.final_recommendation}"
                   </p>
+
+                  <div className="flex flex-wrap gap-2 pt-3 border-t border-white/5 mt-3">
+                    <button
+                      onClick={handleSaveStyle}
+                      disabled={savingStyle}
+                      className="cursor-pointer text-[9.5px] font-mono py-1 px-2.5 rounded border border-purple-500/30 bg-purple-500/10 hover:bg-purple-500/25 text-purple-300 hover:text-white flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      {savingStyle ? (
+                        <>
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          <span>Saving...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-3 h-3" />
+                          <span>Save Style Preset</span>
+                        </>
+                      )}
+                    </button>
+                    <button
+                      onClick={handleSaveRecommendation}
+                      disabled={savingRec}
+                      className="cursor-pointer text-[9.5px] font-mono py-1 px-2.5 rounded border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/25 text-emerald-300 hover:text-white flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      {savingRec ? (
+                        <>
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          <span>Saving Brief...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Cloud className="w-3 h-3" />
+                          <span>Save Recommendation Brief</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
                 
                 <div className="text-[8px] font-mono text-white/30 pt-3 border-t border-white/5 uppercase">
