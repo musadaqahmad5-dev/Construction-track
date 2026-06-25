@@ -31,6 +31,7 @@ import {
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { auth } from '../firebase';
 import { FirestoreService } from '../lib/firestoreService';
+import { UnifiedFashionOS } from '../features/ai-core/UnifiedFashionOS';
 
 interface OutfitItem {
   items: {
@@ -365,6 +366,16 @@ export const AIFashionMVPSuite: React.FC = () => {
         setGeneratedCount(nextGenCount);
         setSystemState('READY');
         setDelightNotice("✓ Looks prepared");
+
+        // Fire analytics events
+        UnifiedFashionOS.trackEvent('recommendation_generated', {
+          style_title: data.style_title || data.quick_summary,
+          occasion: data.user_profile?.occasion,
+          style: data.user_profile?.style,
+        });
+        UnifiedFashionOS.trackEvent('image_generated', {
+          count: data.outfits?.length || 1,
+        });
 
         // Add to Recent Looks (PHASE 1)
         const lookTitle = data.style_title || data.quick_summary || trimmed || "Curated Look";

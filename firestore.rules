@@ -312,8 +312,16 @@ service cloud.firestore {
       // Allow analytics logs creation from guests/users, with validation
       allow create: if isValidAnalytics(request.resource.data);
       
-      // No reads or edits allowed from client SDK to prevent leaking behavioral telemetry
-      allow read, get, list, update, delete: if false;
+      // Permit read access to authorized administrators/founders or specifically designated emails
+      allow read, list, get: if isSignedIn() && (
+        request.auth.token.email == 'musadaqahmad5@gmail.com' ||
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) && (
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', null) == 'founder' ||
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', null) == 'admin'
+        )
+      );
+      
+      allow update, delete: if false;
     }
 
     match /generatedLooks/{lookId} {

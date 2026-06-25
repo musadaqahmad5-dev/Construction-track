@@ -17,6 +17,7 @@ import { StyleBadge } from './StyleBadge';
 import { SystemHealthPanel } from './SystemHealthPanel';
 import { FeedbackButtons } from './FeedbackButtons';
 import { ProfileService, StyleProfile, StylistHistoryEntry } from '../features/wardrobe/profileService';
+import { FounderDashboard } from './FounderDashboard';
 
 // Get current theme class specifically for details overlays & backdrops
 function getTemporalThemeBackground() {
@@ -411,6 +412,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
     }
     return 'HOME';
   });
+  const [showFounderConsole, setShowFounderConsole] = useState(false);
   
   // Ceremony of Addition Form Steps States (Restore draft silently)
   const [addStep, setAddStep] = useState<'CLOSED' | 'IMAGE' | 'NAME' | 'NOTE'>(() => {
@@ -2792,18 +2794,43 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
 
               {/* ROOM 6: PRESENCE */}
               {activeSubTab === 'PRESENCE' && (
-                <div className="space-y-16 max-w-md mx-auto py-8 text-center animate-fade-in select-none">
-                  <div className="space-y-3">
-                    <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-white/30 block font-light">
-                      ROOM ATMOSPHERE
-                    </span>
-                    <h2 className="font-serif font-light tracking-[-0.03em] text-4xl text-white">Quiet control space</h2>
-                    <p className="text-sm text-white/40 max-w-xs mx-auto leading-relaxed font-serif italic italic">
-                      "Maintain the quiet space of your monochrome room."
-                    </p>
-                  </div>
+                <div className={`${showFounderConsole ? 'max-w-4xl' : 'max-w-md'} mx-auto py-8 text-center animate-fade-in select-none`}>
+                  {showFounderConsole ? (
+                    <div className="space-y-6 text-left">
+                      <div className="flex justify-between items-center pb-2">
+                        <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-white/30 block font-light">ADMINISTRATIVE CONTROL BOUNDARY</span>
+                        <button 
+                          onClick={() => setShowFounderConsole(false)}
+                          className="text-[10px] font-mono text-white/40 hover:text-white uppercase tracking-[0.15em] cursor-pointer"
+                        >
+                          [ Back to Quiet Space ]
+                        </button>
+                      </div>
+                      <FounderDashboard />
+                    </div>
+                  ) : (
+                    <div className="space-y-16">
+                      <div className="space-y-3">
+                        <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-white/30 block font-light">
+                          ROOM ATMOSPHERE
+                        </span>
+                        <h2 className="font-serif font-light tracking-[-0.03em] text-4xl text-white">Quiet control space</h2>
+                        <p className="text-sm text-white/40 max-w-xs mx-auto leading-relaxed font-serif italic italic">
+                          "Maintain the quiet space of your monochrome room."
+                        </p>
+                      </div>
 
-                  <div className="space-y-8 pt-6 border-t border-[#1a1a1a]/5 border-white/5">
+                      {/* Founder Dashboard Gateway */}
+                      <div className="pt-2">
+                        <button
+                          onClick={() => setShowFounderConsole(true)}
+                          className="w-full bg-white/5 border border-white/10 hover:bg-white/15 text-white/80 py-4 font-mono text-[10px] uppercase tracking-[0.25em] transition-all cursor-pointer font-semibold"
+                        >
+                          [ Open Founder Dashboard ]
+                        </button>
+                      </div>
+
+                      <div className="space-y-8 pt-6 border-t border-[#1a1a1a]/5 border-white/5">
                     
                     <div className="space-y-3">
                       <span className="text-[10px] font-mono text-white/30 uppercase tracking-[0.15em] block font-light">
@@ -2911,8 +2938,10 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
                       );
                     })()}
                   </div>
-                </div>
-              )}
+                  </div>
+                )}
+              </div>
+            )}
 
             </motion.div>
           </AnimatePresence>

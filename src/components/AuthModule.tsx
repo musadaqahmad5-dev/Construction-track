@@ -6,6 +6,7 @@ import {
 } from 'firebase/auth';
 import { auth, signInWithGoogle } from '../firebase';
 import { motion } from 'motion/react';
+import { UnifiedFashionOS } from '../features/ai-core/UnifiedFashionOS';
 
 // Help get our temporal theme class name
 function getTemporalTheme() {
@@ -40,10 +41,12 @@ export const AuthModule: React.FC<AuthModuleProps> = ({ onGuestMode }) => {
 
     try {
       if (isSignUp) {
+        UnifiedFashionOS.trackEvent('signup_started', { email, name });
         const credential = await createUserWithEmailAndPassword(auth, email, password);
         await updateProfile(credential.user, {
           displayName: name || 'Sartorialist'
         });
+        UnifiedFashionOS.trackEvent('signup_completed', { email, uid: credential.user.uid });
       } else {
         await signInWithEmailAndPassword(auth, email, password);
       }

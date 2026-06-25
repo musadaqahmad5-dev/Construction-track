@@ -10,7 +10,14 @@ export type AnalyticsEventType =
   | 'outfit_skipped'
   | 'feedback_submitted'
   | 'subscription_clicked'
-  | 'planner_used';
+  | 'planner_used'
+  | 'signup_started'
+  | 'signup_completed'
+  | 'recommendation_generated'
+  | 'image_generated'
+  | 'checkout_started'
+  | 'checkout_completed'
+  | 'subscription_canceled';
 
 export interface AnalyticsEvent {
   id: string;

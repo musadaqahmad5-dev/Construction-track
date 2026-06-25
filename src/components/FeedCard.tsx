@@ -32,6 +32,7 @@ import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useStyleProfile } from '../hooks/useStyleProfile';
 import { auth, db, signInWithGoogle, handleFirestoreError, OperationType } from '../firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { UnifiedFashionOS } from '../features/ai-core/UnifiedFashionOS';
 
 interface FeedCardProps {
   item: FeedItem;
@@ -260,6 +261,7 @@ export const FeedCard: React.FC<FeedCardProps> = ({
       setCheckoutStep('login');
     }
     setShowCheckout(true);
+    UnifiedFashionOS.trackEvent('checkout_started', { productId: item.id, productTitle: item.title, price: item.price });
   };
 
   const handleCheckoutLogin = async () => {
@@ -348,6 +350,7 @@ export const FeedCard: React.FC<FeedCardProps> = ({
         setOrderId(docRef.id);
         setCheckoutComplete(true);
         setCheckoutStep('success');
+        UnifiedFashionOS.trackEvent('checkout_completed', { orderId: docRef.id, productId: item.id, productTitle: item.title, price: item.price });
       } catch (err: any) {
         console.error("[Checkout Engine] Order save error:", err);
         try {

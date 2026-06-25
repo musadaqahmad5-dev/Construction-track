@@ -2590,19 +2590,43 @@ export class UnifiedFashionOS {
 
   // EVENT TRACKING SYSTEM
   public static trackEvent(
-    eventType: 'signup' | 'login' | 'wardrobe_added' | 'outfit_generated' | 'outfit_saved' | 'feedback_logged' | 'planner_used',
+    eventType: 
+      | 'signup' 
+      | 'login' 
+      | 'wardrobe_added' 
+      | 'outfit_generated' 
+      | 'outfit_saved' 
+      | 'feedback_logged' 
+      | 'planner_used'
+      | 'signup_started'
+      | 'signup_completed'
+      | 'recommendation_generated'
+      | 'image_generated'
+      | 'checkout_started'
+      | 'checkout_completed'
+      | 'subscription_canceled',
     params?: Record<string, any>
   ) {
     // Route to lightweight actual AnalyticsEngine adapter
     try {
-      if (eventType === 'signup') {
-        AnalyticsEngine.track('auth_signup', params, this.state.productMode);
+      if (eventType === 'signup' || eventType === 'signup_completed') {
+        AnalyticsEngine.track('signup_completed', params, this.state.productMode);
+      } else if (eventType === 'signup_started') {
+        AnalyticsEngine.track('signup_started', params, this.state.productMode);
       } else if (eventType === 'login') {
         AnalyticsEngine.track('guest_start', params, this.state.productMode);
       } else if (eventType === 'wardrobe_added') {
         AnalyticsEngine.track('wardrobe_item_added', params, this.state.productMode);
-      } else if (eventType === 'outfit_generated') {
-        AnalyticsEngine.track('outfit_generated', params, this.state.productMode);
+      } else if (eventType === 'outfit_generated' || eventType === 'recommendation_generated') {
+        AnalyticsEngine.track('recommendation_generated', params, this.state.productMode);
+      } else if (eventType === 'image_generated') {
+        AnalyticsEngine.track('image_generated', params, this.state.productMode);
+      } else if (eventType === 'checkout_started') {
+        AnalyticsEngine.track('checkout_started', params, this.state.productMode);
+      } else if (eventType === 'checkout_completed') {
+        AnalyticsEngine.track('checkout_completed', params, this.state.productMode);
+      } else if (eventType === 'subscription_canceled') {
+        AnalyticsEngine.track('subscription_canceled', params, this.state.productMode);
       } else if (eventType === 'feedback_logged') {
         AnalyticsEngine.track('feedback_submitted', params, this.state.productMode);
         if (params?.signal === 'WORN_CONFIRMED') {
@@ -2738,9 +2762,16 @@ export class UnifiedFashionOS {
   }
 
   public static setSubscriptionTier(tier: SubscriptionTier) {
+    const prevTier = this.state.subscriptionTier;
     this.state.subscriptionTier = tier;
     try {
       AnalyticsEngine.track('subscription_clicked', { tier }, this.state.productMode);
+      if (tier !== 'Free' && prevTier === 'Free') {
+        this.trackEvent('checkout_started', { tier, action: 'upgrade' });
+        this.trackEvent('checkout_completed', { tier, action: 'upgrade' });
+      } else if (tier === 'Free' && prevTier !== 'Free') {
+        this.trackEvent('subscription_canceled', { prevTier, action: 'downgrade' });
+      }
     } catch (e) {
       console.error(e);
     }
