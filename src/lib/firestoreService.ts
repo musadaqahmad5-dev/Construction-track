@@ -60,6 +60,17 @@ export interface FirestoreRecommendation {
   createdAt: any;
 }
 
+// --- HELPERS ---
+function getTimestampMillis(field: any): number {
+  if (!field) return 0;
+  if (typeof field.toMillis === 'function') return field.toMillis();
+  if (typeof field.seconds === 'number') return field.seconds * 1000;
+  if (field instanceof Date) return field.getTime();
+  if (typeof field === 'string') return new Date(field).getTime();
+  if (typeof field === 'number') return field;
+  return 0;
+}
+
 export class FirestoreService {
   // --- USER PROFILE CRUD ---
   static async saveUserProfile(uid: string, profile: Partial<FirestoreUser>): Promise<void> {
@@ -110,14 +121,16 @@ export class FirestoreService {
     try {
       const q = query(
         collection(db, 'outfits'),
-        where('userId', '==', userId),
-        orderBy('createdAt', 'desc')
+        where('userId', '==', userId)
       );
       const snap = await getDocs(q);
-      return snap.docs.map(doc => ({
+      const list = snap.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as FirestoreOutfit[];
+
+      list.sort((a, b) => getTimestampMillis(b.createdAt) - getTimestampMillis(a.createdAt));
+      return list;
     } catch (error) {
       return handleFirestoreError(error, OperationType.LIST, 'outfits');
     }
@@ -153,14 +166,16 @@ export class FirestoreService {
     try {
       const q = query(
         collection(db, 'styles'),
-        where('userId', '==', userId),
-        orderBy('createdAt', 'desc')
+        where('userId', '==', userId)
       );
       const snap = await getDocs(q);
-      return snap.docs.map(doc => ({
+      const list = snap.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as FirestoreStyle[];
+
+      list.sort((a, b) => getTimestampMillis(b.createdAt) - getTimestampMillis(a.createdAt));
+      return list;
     } catch (error) {
       return handleFirestoreError(error, OperationType.LIST, 'styles');
     }
@@ -196,15 +211,16 @@ export class FirestoreService {
     try {
       const q = query(
         collection(db, 'recommendations'),
-        where('userId', '==', userId),
-        orderBy('createdAt', 'desc'),
-        limit(10)
+        where('userId', '==', userId)
       );
       const snap = await getDocs(q);
-      return snap.docs.map(doc => ({
+      const list = snap.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as FirestoreRecommendation[];
+
+      list.sort((a, b) => getTimestampMillis(b.createdAt) - getTimestampMillis(a.createdAt));
+      return list.slice(0, 10);
     } catch (error) {
       return handleFirestoreError(error, OperationType.LIST, 'recommendations');
     }

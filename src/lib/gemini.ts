@@ -14,7 +14,8 @@ export async function analyzeSiteImage(imageDataBase64: string) {
     const prompt = "Analyze this construction site photo. Provide a technical summary of the progress, identify key milestones visible, and guess the current project status (Planning, In Progress, or Near Completion). Format as a concise JSON-like summary.";
     
     const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
+      model: "gemini-2.5-flash",
+      config: { maxOutputTokens: 4096 },
       contents: {
         parts: [
           { text: prompt },
@@ -48,7 +49,8 @@ export async function generateProjectStrategy(title: string, category: string, d
     Format with bold headers and concise bullet points.`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
+      model: "gemini-2.5-flash",
+      config: { maxOutputTokens: 4096 },
       contents: { parts: [{ text: prompt }] }
     });
 

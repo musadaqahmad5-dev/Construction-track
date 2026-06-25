@@ -82,7 +82,7 @@ export const AuthModule: React.FC<AuthModuleProps> = ({ onGuestMode }) => {
       } else if (err.code === 'auth/popup-blocked') {
         friendlyMessage = "A popup blocker stopped Google Sign-In. Please allow popups for this boutique domain.";
       } else if (err.code === 'auth/unauthorized-domain') {
-        friendlyMessage = "Unauthorized Netlify / Production domain. Please authorize this URL in Firebase Console -> Auth -> Authorized Domains.";
+        friendlyMessage = "auth/unauthorized-domain";
       } else if (err.message) {
         friendlyMessage = err.message;
       }
@@ -115,8 +115,28 @@ export const AuthModule: React.FC<AuthModuleProps> = ({ onGuestMode }) => {
 
         {/* Error Messages (Clean list, no colored badges/glows) */}
         {error && (
-          <div className="text-center text-xs text-white/60 font-mono tracking-wide px-4 border-l border-white/20">
-            {error}
+          <div className="text-center text-xs text-white/60 font-mono tracking-wide px-4 border-l border-white/20 space-y-4">
+            {error === 'auth/unauthorized-domain' ? (
+              <div className="text-left space-y-3 bg-neutral-900/60 p-4 rounded border border-white/10 text-neutral-300 select-text">
+                <p className="text-white font-semibold text-xs uppercase tracking-wider text-center flex items-center justify-center gap-1">
+                  ⚠️ Domain Authorization Required
+                </p>
+                <p className="text-[11px] leading-relaxed">
+                  Your custom Firebase project <strong className="text-white">fashion-ai-56bd2</strong> has not authorized this preview domain yet.
+                </p>
+                <p className="text-[11px] leading-relaxed">
+                  Please go to your <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" className="text-indigo-400 underline hover:text-indigo-300 font-bold">Firebase Console</a> &gt; <strong>Authentication</strong> &gt; <strong>Settings</strong> &gt; <strong>Authorized domains</strong>, and add:
+                </p>
+                <div className="bg-black/50 p-2 rounded text-[10px] text-white font-mono select-all border border-white/5 break-all">
+                  {window.location.hostname}
+                </div>
+                <p className="text-[11px] text-neutral-400">
+                  After adding this domain, please refresh this page and try again!
+                </p>
+              </div>
+            ) : (
+              <div>{error}</div>
+            )}
           </div>
         )}
 

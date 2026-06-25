@@ -278,18 +278,18 @@ export async function handler(event: any, context: any) {
   const responseEnhanced = runtimeState === "STABLE" && isHighValue && inputLengthClass !== "SHORT";
 
   let directivePrompt = "";
-  let maxOutputTokens = 1000;
+  let maxOutputTokens = 8192;
   if (inputLengthClass === "SHORT") {
     directivePrompt = "Input is brief. Deliver swift, highly compact luxury capsule pairings. Keep explanations concise. Maximize outfit score normalization.";
-    maxOutputTokens = 600;
+    maxOutputTokens = 4096;
   } else if (inputLengthClass === "LONG") {
     directivePrompt = "Input is long. Focus on core aspects, compress style instructions, keep explanations short (under 100 characters per explanation field), and prevent repeated garment descriptions across outfit options.";
-    maxOutputTokens = 800;
+    maxOutputTokens = 8192;
   } else {
     directivePrompt = apiCostOptimization
       ? "Return swift, simplified luxury capsule pairings. Keep descriptions elegant but concise. Maximize outfit score normalization."
       : "Deliver multi-tenant elite retail analytics, calculating robust trend trajectories, style evolution indexes, and monetization options.";
-    maxOutputTokens = 1000;
+    maxOutputTokens = 8192;
   }
 
   const systemInstructionText = `You are the core intelligence processor of the Fashion Intelligence Operating System (FIOS) APCC.
@@ -414,7 +414,7 @@ Ensure no clashing seasonal styles or duplications under strict governance check
     }
   };
 
-  const modelName = "gemini-3.5-flash";
+  const modelName = "gemini-2.5-flash";
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
   let response;

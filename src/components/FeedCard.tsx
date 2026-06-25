@@ -269,7 +269,11 @@ export const FeedCard: React.FC<FeedCardProps> = ({
       setCheckoutStep('cart');
     } catch (e: any) {
       console.error("[Checkout Login] Error:", e);
-      setFormErrors({ login: e.message || "Failed to authenticate account via Google popup." });
+      if (e.code === 'auth/unauthorized-domain') {
+        setFormErrors({ login: 'auth/unauthorized-domain' });
+      } else {
+        setFormErrors({ login: e.message || "Failed to authenticate account via Google popup." });
+      }
     }
   };
 
@@ -1161,8 +1165,25 @@ export const FeedCard: React.FC<FeedCardProps> = ({
                   </div>
                   
                   {formErrors.login && (
-                    <div className="bg-rose-500/10 border border-rose-500/20 p-2.5 rounded-lg text-rose-400 text-[10px] font-mono text-left">
-                      {formErrors.login}
+                    <div className="bg-rose-500/10 border border-rose-500/20 p-3 rounded-lg text-rose-400 text-[10px] font-mono text-left">
+                      {formErrors.login === 'auth/unauthorized-domain' ? (
+                        <div className="space-y-2 text-neutral-300">
+                          <p className="text-rose-400 font-semibold uppercase text-center flex items-center justify-center gap-1">
+                            ⚠️ Domain Authorization Required
+                          </p>
+                          <p className="leading-relaxed">
+                            Your custom Firebase project <strong>fashion-ai-56bd2</strong> has not authorized this preview domain yet.
+                          </p>
+                          <p className="leading-relaxed">
+                            Please go to your <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" className="text-indigo-400 underline hover:text-indigo-300 font-bold">Firebase Console</a> &gt; <strong>Authentication</strong> &gt; <strong>Settings</strong> &gt; <strong>Authorized domains</strong>, and add:
+                          </p>
+                          <div className="bg-black/50 p-2 rounded text-[9px] text-white font-mono select-all border border-white/5 break-all">
+                            {window.location.hostname}
+                          </div>
+                        </div>
+                      ) : (
+                        formErrors.login
+                      )}
                     </div>
                   )}
 
