@@ -89,12 +89,18 @@ class WorkflowRuntimeManager {
       while (!success && step.retryCount <= 2) {
         try {
           // Timeout mock protection
+          let timeoutId: any;
           const stageExecutionPromise = executeStageMock(step.stage, currentWf.inputPayload);
-          const timeoutPromise = new Promise<{ quality: number; payload: any }>((_, reject) =>
-            setTimeout(() => reject(new Error('Stage Timeout Executing Out of bounds')), 3000)
-          );
+          const timeoutPromise = new Promise<{ quality: number; payload: any }>((_, reject) => {
+            timeoutId = setTimeout(() => reject(new Error('Stage Timeout Executing Out of bounds')), 3000);
+          });
 
-          const result = await Promise.race([stageExecutionPromise, timeoutPromise]);
+          let result;
+          try {
+            result = await Promise.race([stageExecutionPromise, timeoutPromise]);
+          } finally {
+            clearTimeout(timeoutId);
+          }
           finalQuality = result.quality;
           outputResult = result.payload;
           success = true;

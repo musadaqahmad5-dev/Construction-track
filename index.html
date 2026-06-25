@@ -132,7 +132,9 @@
           type: "onunhandledrejection",
           message: message,
           stack: stack,
-          url: window.location.href
+          url: window.location.href,
+          isScriptError: false,
+          isExternal: isExternal
         };
         fetch("/api/log-client-error", {
           method: "POST",

@@ -56,11 +56,9 @@ async function startServer() {
 
   app.post("/api/log-client-error", (req, res) => {
     const errorData = req.body || {};
-    if (errorData.isScriptError || errorData.isExternal) {
-      console.log("[CLIENT EXTERNAL/SCRIPT WARNING (IGNORED)]:", JSON.stringify(errorData));
-    } else {
-      console.log("[CLIENT TELEMETRY WARN]:", JSON.stringify(errorData, null, 2));
-    }
+    // Keep server console clean and quiet from browser-side telemetry noise
+    const cleanMsg = (errorData.message || "").replace(/[^a-zA-Z0-9\s:._-]/g, "");
+    console.log(`[Client Diagnostic]: ${cleanMsg}`);
     res.json({ status: "logged" });
   });
 

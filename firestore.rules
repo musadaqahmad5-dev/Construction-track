@@ -6,6 +6,11 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Temporary test collection rule for AI Studio write confirmation
+    match /test/{testId} {
+      allow read, write: if true;
+    }
+
     // --- REUSABLE SECURITY GATES & HELPERS ---
     function isSignedIn() {
       return request.auth != null;
