@@ -1378,20 +1378,21 @@ export const FeedCard: React.FC<FeedCardProps> = ({
                   <div className="flex gap-2">
                     <button
                       onClick={() => setCheckoutStep('address')}
-                      className="w-1/3 bg-white/[0.04] text-white hover:bg-white/10 border border-white/10 font-mono text-[9px] uppercase py-2.5 rounded-lg cursor-pointer"
+                      disabled={isCheckingOut}
+                      className="w-1/3 bg-white/[0.04] text-white hover:bg-white/10 border border-white/10 font-mono text-[9px] uppercase py-2.5 rounded-lg cursor-pointer disabled:opacity-50"
                     >
                       &larr; Back
                     </button>
                     <button
                       onClick={confirmPurchase}
-                      disabled={!isOnline}
+                      disabled={!isOnline || isCheckingOut}
                       className={`flex-1 font-mono text-xs uppercase transition-all font-semibold py-2.5 rounded-lg cursor-pointer flex items-center justify-center gap-1.5 ${
-                        isOnline 
+                        isOnline && !isCheckingOut
                           ? 'bg-white text-black hover:bg-neutral-200' 
                           : 'bg-neutral-800 text-neutral-500 cursor-not-allowed border border-neutral-700/50'
                       }`}
                     >
-                      <CreditCard className="w-3.5 h-3.5" /> {isOnline ? "Book Confirmed Order" : "Offline - Try reconnecting"}
+                      <CreditCard className="w-3.5 h-3.5" /> {isCheckingOut ? "Connecting to Stripe..." : isOnline ? "Book Confirmed Order" : "Offline - Try reconnecting"}
                     </button>
                   </div>
                 </div>
