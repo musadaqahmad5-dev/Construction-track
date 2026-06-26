@@ -1,4 +1,5 @@
 import { WardrobeItem, OutfitSuggestion, ClothingCategory } from '../../types';
+import { auth } from '../../firebase';
 
 /**
  * AI Fashion Engine - Intelligent coordination and styling recommendations.
@@ -15,9 +16,17 @@ export class FashionEngine {
   ): Promise<string> {
     try {
       console.log(`[AI] Generating styling strategy for ${title} (${category}) via server pipeline`);
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (auth.currentUser) {
+        const token = await auth.currentUser.getIdToken();
+        headers['Authorization'] = `Bearer ${token}`;
+      } else if (typeof localStorage !== 'undefined' && localStorage.getItem('auth_guest_active') === 'true') {
+        headers['Authorization'] = 'Bearer guest-token';
+      }
+
       const response = await fetch('/api/ai/strategy', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ title, category, description })
       });
 
@@ -43,9 +52,17 @@ export class FashionEngine {
   static async analyzeOutfitVisual(base64Image: string): Promise<{ dominantColors: string[]; materialGuess: string; styleTags: string[]; confidence: number }> {
     try {
       console.log(`[AI] Dispatching base64 image streams to vision analyzer API`);
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (auth.currentUser) {
+        const token = await auth.currentUser.getIdToken();
+        headers['Authorization'] = `Bearer ${token}`;
+      } else if (typeof localStorage !== 'undefined' && localStorage.getItem('auth_guest_active') === 'true') {
+        headers['Authorization'] = 'Bearer guest-token';
+      }
+
       const response = await fetch('/api/ai/analyze-visual', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ base64Image })
       });
 

@@ -82,11 +82,15 @@ export default function App() {
   const [isResetting, setIsResetting] = useState(false);
   const [showCover, setShowCover] = useState(false);
   const [stripeSuccessMessage, setStripeSuccessMessage] = useState<string | null>(null);
+  const [stripeErrorMessage, setStripeErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const sessionId = urlParams.get('session_id');
     const checkoutType = urlParams.get('checkout_type');
+    const cancelled = urlParams.get('cancelled');
+    const expired = urlParams.get('expired');
+
     if (sessionId) {
       if (checkoutType === 'subscription') {
         const tier = urlParams.get('tier') || 'Pro';
@@ -100,6 +104,14 @@ export default function App() {
       }
       
       // Clean up URL parameters beautifully
+      const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+      window.history.replaceState({ path: cleanUrl }, '', cleanUrl);
+    } else if (cancelled === 'true') {
+      setStripeErrorMessage('Checkout was cancelled. No charges were made.');
+      const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+      window.history.replaceState({ path: cleanUrl }, '', cleanUrl);
+    } else if (expired === 'true') {
+      setStripeErrorMessage('Stripe checkout session has expired. Please try again.');
       const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
       window.history.replaceState({ path: cleanUrl }, '', cleanUrl);
     }
@@ -666,6 +678,19 @@ export default function App() {
           <button 
             onClick={() => setStripeSuccessMessage(null)}
             className="text-emerald-400/60 hover:text-emerald-300 font-mono text-[10px] bg-white/5 border border-emerald-500/15 py-1 px-3 rounded uppercase tracking-widest cursor-pointer"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {/* Stripe payment error banner */}
+      {stripeErrorMessage && (
+        <div className="bg-rose-950/40 border-b border-rose-500/20 text-rose-350 text-xs font-mono py-4 px-6 z-50 flex items-center justify-between gap-4 uppercase tracking-wider animate-fade-in" id="stripe-error-banner">
+          <span>{stripeErrorMessage}</span>
+          <button 
+            onClick={() => setStripeErrorMessage(null)}
+            className="text-rose-400/60 hover:text-rose-350 font-mono text-[10px] bg-white/5 border border-rose-500/15 py-1 px-3 rounded uppercase tracking-widest cursor-pointer"
           >
             Dismiss
           </button>

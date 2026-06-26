@@ -1,6 +1,7 @@
 import { ClothingCategory } from '../../types';
 import { GarmentClassifier } from './garmentClassifier';
 import { ColorExtractor } from './colorExtractor';
+import { auth } from '../../firebase';
 
 export interface VisualGarmentAnalysis {
   name: string;
@@ -29,9 +30,17 @@ export class VisualSuggestion {
     try {
       console.log(`[VisualSuggestion] Dispatching image for vision analysis...`);
       
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (auth.currentUser) {
+        const token = await auth.currentUser.getIdToken();
+        headers['Authorization'] = `Bearer ${token}`;
+      } else if (typeof localStorage !== 'undefined' && localStorage.getItem('auth_guest_active') === 'true') {
+        headers['Authorization'] = 'Bearer guest-token';
+      }
+
       const response = await fetch('/api/ai/analyze-visual', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ base64Image: pureBase64 })
       });
 

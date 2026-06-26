@@ -12,6 +12,7 @@ export const SaaSPricingUpsell: React.FC<SaaSPricingUpsellProps> = ({ featureNam
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const handleUpgrade = async () => {
+    if (isUpgrading) return;
     setIsUpgrading(true);
     setErrorMsg(null);
     try {

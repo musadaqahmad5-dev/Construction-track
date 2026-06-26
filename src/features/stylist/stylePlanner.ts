@@ -2,6 +2,7 @@ import { WardrobeItem, DailyRecommendation, ClothingCategory } from '../../types
 import { WeatherAdapter } from '../ai/weatherAdapter';
 import { ProfileEngine } from '../ai/profileEngine';
 import { OutfitReasoner, OutfitRecommendationResult } from '../ai/outfitReasoner';
+import { auth } from '../../firebase';
 
 /**
  * Intelligent Stylist Planner - Decides what to wear today, tomorrow, and provides occasion coordination.
@@ -21,9 +22,17 @@ export class StylePlanner {
   ): Promise<OutfitRecommendationResult> {
     try {
       console.log(`[AI] Drafting AI Recommendation from backend server. Vibe: ${styleVibe}, Agenda: ${agenda}`);
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (auth.currentUser) {
+        const token = await auth.currentUser.getIdToken();
+        headers['Authorization'] = `Bearer ${token}`;
+      } else if (typeof localStorage !== 'undefined' && localStorage.getItem('auth_guest_active') === 'true') {
+        headers['Authorization'] = 'Bearer guest-token';
+      }
+
       const response = await fetch('/api/ai/recommend', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           userId,
           wardrobe: closetItems,

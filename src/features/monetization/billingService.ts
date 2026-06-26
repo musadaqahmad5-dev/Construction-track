@@ -34,7 +34,7 @@ export class BillingService {
         priceId: params.priceId,
         tier: params.tier,
         successUrl: `${window.location.origin}/?session_id={CHECKOUT_SESSION_ID}&checkout_type=subscription&tier=${params.tier}`,
-        cancelUrl: `${window.location.origin}/`
+        cancelUrl: `${window.location.origin}/?cancelled=true`
       })
     });
 
@@ -74,7 +74,7 @@ export class BillingService {
         productImageUrl: params.productImageUrl,
         shopName: params.shopName,
         successUrl: `${window.location.origin}/?session_id={CHECKOUT_SESSION_ID}&checkout_type=product&product_id=${params.productId}&product_title=${encodeURIComponent(params.productTitle)}`,
-        cancelUrl: `${window.location.origin}/`
+        cancelUrl: `${window.location.origin}/?cancelled=true`
       })
     });
 

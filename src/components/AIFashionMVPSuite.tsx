@@ -340,11 +340,23 @@ export const AIFashionMVPSuite: React.FC = () => {
     }, 550);
 
     try {
+      let token: string | null = null;
+      if (auth.currentUser) {
+        token = await auth.currentUser.getIdToken();
+      } else if (typeof localStorage !== 'undefined' && localStorage.getItem('auth_guest_active') === 'true') {
+        token = 'guest-token';
+      }
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const response = await fetch('/.netlify/functions/recommend-mvp', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({ 
           userInput: trimmed,
           tenantId: selectedTenant
