@@ -81,6 +81,29 @@ export default function App() {
   const [isSilent, setIsSilent] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [showCover, setShowCover] = useState(false);
+  const [stripeSuccessMessage, setStripeSuccessMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionId = urlParams.get('session_id');
+    const checkoutType = urlParams.get('checkout_type');
+    if (sessionId) {
+      if (checkoutType === 'subscription') {
+        const tier = urlParams.get('tier') || 'Pro';
+        setStripeSuccessMessage(`Success! Thank you for upgrading to the ${tier} tier. Your quota has been increased.`);
+        UnifiedFashionOS.setSubscriptionTier(tier as any);
+      } else if (checkoutType === 'product') {
+        const productTitle = urlParams.get('product_title') || 'your item';
+        setStripeSuccessMessage(`Success! Your purchase of "${decodeURIComponent(productTitle)}" has been successfully processed and recorded.`);
+      } else {
+        setStripeSuccessMessage('Success! Your payment was processed successfully via Stripe.');
+      }
+      
+      // Clean up URL parameters beautifully
+      const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+      window.history.replaceState({ path: cleanUrl }, '', cleanUrl);
+    }
+  }, []);
   
   // Rotating footer index
   const [footerIndex, setFooterIndex] = useState(0);
@@ -639,6 +662,19 @@ export default function App() {
   return (
     <ErrorBoundary>
       
+      {/* Stripe payment success banner */}
+      {stripeSuccessMessage && (
+        <div className="bg-emerald-950/40 border-b border-emerald-500/20 text-emerald-300 text-xs font-mono py-4 px-6 z-50 flex items-center justify-between gap-4 uppercase tracking-wider animate-fade-in" id="stripe-success-banner">
+          <span>{stripeSuccessMessage}</span>
+          <button 
+            onClick={() => setStripeSuccessMessage(null)}
+            className="text-emerald-400/60 hover:text-emerald-300 font-mono text-[10px] bg-white/5 border border-emerald-500/15 py-1 px-3 rounded uppercase tracking-widest cursor-pointer"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
       {/* Offline mode banner alert */}
       {!isOnline && (
         <div className="bg-[#111111] border-b border-dashed border-[rgba(255,255,255,0.2)] text-white text-[10px] font-mono tracking-wider text-center py-2.5 px-4 z-50 flex items-center justify-center gap-2 uppercase font-light">

@@ -283,20 +283,40 @@ async function startServer() {
             const session = event.data.object as Stripe.Checkout.Session;
             const userId = session.client_reference_id || session.metadata?.userId;
             const stripeCustomerId = session.customer as string;
-            const stripeSubscriptionId = session.subscription as string;
-            const tier = session.metadata?.tier || "pro";
 
             if (userId) {
-              await db.collection("users").doc(userId).set({
-                subscription: {
-                  tier: tier,
-                  status: "active",
-                  stripeCustomerId: stripeCustomerId || "",
-                  stripeSubscriptionId: stripeSubscriptionId || "",
-                },
-                updatedAt: new Date(),
-              }, { merge: true });
-              console.log(`[Stripe Webhook] Set active subscription for user ${userId} to tier ${tier}`);
+              const db = getFirestore();
+              if (session.metadata?.type === "product_purchase" || session.metadata?.productId) {
+                // One-time garment purchase: write order to Firestore orders collection
+                const orderPayload = {
+                  userId: userId,
+                  productId: session.metadata.productId,
+                  productTitle: session.metadata.productTitle,
+                  productPrice: Number(session.metadata.productPrice || 0),
+                  productImageUrl: session.metadata.productImageUrl || "",
+                  shopName: session.metadata.shopName || "Bespoke Atelier",
+                  status: "confirmed",
+                  timestamp: new Date(),
+                  stripeSessionId: session.id
+                };
+                await db.collection("orders").add(orderPayload);
+                console.log(`[Stripe Webhook] One-time product order created for user ${userId} / product ${session.metadata.productId}`);
+              } else {
+                // Subscription upgrade
+                const tier = session.metadata?.tier || "pro";
+                const stripeSubscriptionId = session.subscription as string;
+
+                await db.collection("users").doc(userId).set({
+                  subscription: {
+                    tier: tier,
+                    status: "active",
+                    stripeCustomerId: stripeCustomerId || "",
+                    stripeSubscriptionId: stripeSubscriptionId || "",
+                  },
+                  updatedAt: new Date(),
+                }, { merge: true });
+                console.log(`[Stripe Webhook] Set active subscription for user ${userId} to tier ${tier}`);
+              }
             } else {
               console.warn("[Stripe Webhook] Checkout completed session does not have userId / client_reference_id.");
             }
@@ -404,12 +424,7 @@ async function startServer() {
   app.post("/api/billing/create-checkout-session", verifyAuthToken, async (req, res) => {
     try {
       const user = (req as any).user;
-      const { priceId, tier, successUrl, cancelUrl } = req.body;
-
-      if (!priceId || !tier) {
-        res.status(400).json({ error: "priceId and tier are required parameters." });
-        return;
-      }
+      const { priceId, tier, successUrl, cancelUrl, productId, productTitle, productPrice, productImageUrl, shopName } = req.body;
 
       const stripe = getStripe();
 
@@ -423,31 +438,72 @@ async function startServer() {
         }
       }
 
-      const sessionParams: Stripe.Checkout.SessionCreateParams = {
-        mode: "subscription",
-        payment_method_types: ["card"],
-        client_reference_id: user.uid,
-        customer: stripeCustomerId,
-        customer_email: stripeCustomerId ? undefined : user.email,
-        line_items: [
-          {
-            price: priceId,
-            quantity: 1,
-          },
-        ],
-        success_url: successUrl || `${req.headers.origin || "http://localhost:3000"}/?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: cancelUrl || `${req.headers.origin || "http://localhost:3000"}/`,
-        metadata: {
-          userId: user.uid,
-          tier: tier,
-        },
-        subscription_data: {
+      let sessionParams: Stripe.Checkout.SessionCreateParams;
+
+      if (priceId && tier) {
+        // --- Subscription Mode ---
+        sessionParams = {
+          mode: "subscription",
+          payment_method_types: ["card"],
+          client_reference_id: user.uid,
+          customer: stripeCustomerId,
+          customer_email: stripeCustomerId ? undefined : user.email,
+          line_items: [
+            {
+              price: priceId,
+              quantity: 1,
+            },
+          ],
+          success_url: successUrl || `${req.headers.origin || "http://localhost:3000"}/?session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: cancelUrl || `${req.headers.origin || "http://localhost:3000"}/`,
           metadata: {
             userId: user.uid,
             tier: tier,
           },
-        },
-      };
+          subscription_data: {
+            metadata: {
+              userId: user.uid,
+              tier: tier,
+            },
+          },
+        };
+      } else if (productId) {
+        // --- One-Time Product Purchase Mode ---
+        sessionParams = {
+          mode: "payment",
+          payment_method_types: ["card"],
+          client_reference_id: user.uid,
+          customer: stripeCustomerId,
+          customer_email: stripeCustomerId ? undefined : user.email,
+          line_items: [
+            {
+              price_data: {
+                currency: "usd",
+                product_data: {
+                  name: productTitle || "Bespoke Garment",
+                  images: productImageUrl ? [productImageUrl] : undefined,
+                },
+                unit_amount: Math.round(Number(productPrice || 0) * 100),
+              },
+              quantity: 1,
+            },
+          ],
+          success_url: successUrl || `${req.headers.origin || "http://localhost:3000"}/?session_id={CHECKOUT_SESSION_ID}&product_id=${productId}`,
+          cancel_url: cancelUrl || `${req.headers.origin || "http://localhost:3000"}/`,
+          metadata: {
+            userId: user.uid,
+            productId: productId,
+            productTitle: productTitle || "Bespoke Garment",
+            productPrice: String(productPrice || 0),
+            productImageUrl: productImageUrl || "",
+            shopName: shopName || "Bespoke Atelier",
+            type: "product_purchase",
+          },
+        };
+      } else {
+        res.status(400).json({ error: "Either (priceId and tier) or (productId, productTitle, and productPrice) must be provided." });
+        return;
+      }
 
       const session = await stripe.checkout.sessions.create(sessionParams);
       res.json({ sessionId: session.id, url: session.url });

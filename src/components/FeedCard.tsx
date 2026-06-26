@@ -33,6 +33,7 @@ import { useStyleProfile } from '../hooks/useStyleProfile';
 import { auth, db, signInWithGoogle, handleFirestoreError, OperationType } from '../firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { UnifiedFashionOS } from '../features/ai-core/UnifiedFashionOS';
+import { BillingService } from '../features/monetization/billingService';
 
 interface FeedCardProps {
   item: FeedItem;
@@ -330,39 +331,24 @@ export const FeedCard: React.FC<FeedCardProps> = ({
     setIsCheckingOut(true);
     setCheckoutStep('processing');
 
-    setTimeout(async () => {
-      try {
-        const payload = {
-          userId: currentUser.uid,
-          productId: item.id,
-          productTitle: item.title,
-          productPrice: Number(item.price || 0),
-          productImageUrl: item.imageUrl,
-          shopName: item.shopName || 'Bespoke Atelier',
-          status: 'confirmed',
-          timestamp: serverTimestamp()
-        };
+    try {
+      styleProfile.trackInteraction('buy', item);
 
-        const docRef = await addDoc(collection(db, 'orders'), payload);
-        
-        styleProfile.trackInteraction('buy', item);
-        
-        setOrderId(docRef.id);
-        setCheckoutComplete(true);
-        setCheckoutStep('success');
-        UnifiedFashionOS.trackEvent('checkout_completed', { orderId: docRef.id, productId: item.id, productTitle: item.title, price: item.price });
-      } catch (err: any) {
-        console.error("[Checkout Engine] Order save error:", err);
-        try {
-          handleFirestoreError(err, OperationType.CREATE, 'orders');
-        } catch (formattedErr: any) {
-          setFormErrors({ submit: formattedErr.message || "Failed to commit order transaction to database." });
-          setCheckoutStep('payment');
-        }
-      } finally {
-        setIsCheckingOut(false);
-      }
-    }, 2500); // 2.5 seconds visual payment processing delay
+      // Call secure Stripe checkout redirect via BillingService
+      await BillingService.startProductCheckout({
+        productId: item.id,
+        productTitle: item.title,
+        productPrice: Number(item.price || 0),
+        productImageUrl: item.imageUrl,
+        shopName: item.shopName || 'Bespoke Atelier'
+      });
+    } catch (err: any) {
+      console.error("[Checkout Engine] Stripe checkout session initiation error:", err);
+      setFormErrors({ submit: err.message || "Failed to initiate secure Stripe checkout session." });
+      setCheckoutStep('payment');
+    } finally {
+      setIsCheckingOut(false);
+    }
   };
 
   return (
