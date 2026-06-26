@@ -26,7 +26,8 @@ import {
   User,
   History,
   Cloud,
-  Save
+  Save,
+  Trash2
 } from 'lucide-react';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { auth } from '../firebase';
@@ -458,6 +459,21 @@ export const AIFashionMVPSuite: React.FC = () => {
     }
   };
 
+  const handleDeleteOutfit = async (lookId: string) => {
+    if (!auth.currentUser) {
+      setDelightNotice("Please sign in to modify configurations");
+      return;
+    }
+    try {
+      await FirestoreService.deleteOutfit(lookId);
+      setRecentLooks(prev => prev.filter(look => look.id !== lookId));
+      setDelightNotice("✓ Deleted outfit from cloud collection");
+    } catch (err) {
+      console.error("Error deleting outfit:", err);
+      setDelightNotice("Failed to delete outfit from cloud");
+    }
+  };
+
   const handleSaveStyle = async () => {
     if (!auth.currentUser) {
       setDelightNotice("Please sign in to save style configurations");
@@ -771,16 +787,25 @@ export const AIFashionMVPSuite: React.FC = () => {
                     {look.timestamp}
                   </span>
                 </div>
-                <button
-                  onClick={() => {
-                    setFiosData(look.data);
-                    setSystemState('READY');
-                    setDelightNotice("Welcome back");
-                  }}
-                  className="w-full text-center py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 font-mono text-[9px] rounded border border-indigo-500/25 transition-colors cursor-pointer select-none"
-                >
-                  Reopen Look
-                </button>
+                <div className="flex gap-1.5 pt-1">
+                  <button
+                    onClick={() => {
+                      setFiosData(look.data);
+                      setSystemState('READY');
+                      setDelightNotice("Welcome back");
+                    }}
+                    className="flex-1 text-center py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 font-mono text-[9px] rounded border border-indigo-500/25 transition-all cursor-pointer select-none active:scale-95"
+                  >
+                    Reopen Look
+                  </button>
+                  <button
+                    onClick={() => handleDeleteOutfit(look.id)}
+                    className="p-1.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/25 text-red-400 hover:text-red-300 rounded transition-all cursor-pointer flex items-center justify-center active:scale-95 shrink-0"
+                    title="Delete look"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>

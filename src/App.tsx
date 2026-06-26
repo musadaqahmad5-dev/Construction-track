@@ -425,12 +425,9 @@ export default function App() {
     }
     try {
       await deleteDoc(doc(db, 'wardrobe', id));
-    } catch (e) {
-      try {
-        await deleteDoc(doc(db, 'constructions', id));
-      } catch (err) {
-        console.error("Failed to delete garment:", err);
-      }
+      await deleteDoc(doc(db, 'constructions', id));
+    } catch (err) {
+      console.error("Failed to delete garment:", err);
     }
   };
 
