@@ -423,7 +423,7 @@ export const AIFashionMVPSuite: React.FC = () => {
       }
     } catch (err: any) {
       console.error('[AIFashionMVPSuite] Error compiling FIOS request:', err);
-      setError("Try again in a moment");
+      setError(err?.message || "Error compiling style request. Try again in a moment.");
       setSystemState('RETRY');
     } finally {
       clearInterval(interval);
@@ -1079,13 +1079,13 @@ export const AIFashionMVPSuite: React.FC = () => {
             <div className="space-y-2">
               <h4 className="text-[10px] font-mono uppercase tracking-wider text-rose-350 font-bold">Status Alert</h4>
               <p className="text-xs text-zinc-300 leading-relaxed font-sans font-medium">
-                Try another style
+                {error || "An unexpected error occurred. Please check your connection or try a different concept."}
               </p>
               <button 
                 onClick={() => handleGenerate(userInput)}
                 className="text-xs font-mono text-indigo-400 hover:text-indigo-300 cursor-pointer block select-none font-bold"
               >
-                Try another style
+                ✦ Retry Generation
               </button>
             </div>
           </motion.div>

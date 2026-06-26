@@ -104,6 +104,20 @@ export class FirestoreService {
     const userId = auth.currentUser?.uid;
     if (!userId) throw new Error('Unauthenticated');
     try {
+      const q = query(
+        collection(db, 'outfits'),
+        where('userId', '==', userId),
+        where('title', '==', outfit.title)
+      );
+      const snap = await getDocs(q);
+      for (const docSnap of snap.docs) {
+        const data = docSnap.data();
+        if (JSON.stringify(data.items) === JSON.stringify(outfit.items)) {
+          console.log(`[FirestoreService] Outfit already exists. Returning existing ID: ${docSnap.id}`);
+          return docSnap.id;
+        }
+      }
+
       const docRef = await addDoc(collection(db, 'outfits'), {
         ...outfit,
         userId,
@@ -149,6 +163,20 @@ export class FirestoreService {
     const userId = auth.currentUser?.uid;
     if (!userId) throw new Error('Unauthenticated');
     try {
+      const q = query(
+        collection(db, 'styles'),
+        where('userId', '==', userId),
+        where('title', '==', style.title)
+      );
+      const snap = await getDocs(q);
+      for (const docSnap of snap.docs) {
+        const data = docSnap.data();
+        if (JSON.stringify(data.tags) === JSON.stringify(style.tags)) {
+          console.log(`[FirestoreService] Style already exists. Returning existing ID: ${docSnap.id}`);
+          return docSnap.id;
+        }
+      }
+
       const docRef = await addDoc(collection(db, 'styles'), {
         ...style,
         userId,
@@ -194,6 +222,20 @@ export class FirestoreService {
     const userId = auth.currentUser?.uid;
     if (!userId) throw new Error('Unauthenticated');
     try {
+      const q = query(
+        collection(db, 'recommendations'),
+        where('userId', '==', userId),
+        where('title', '==', rec.title)
+      );
+      const snap = await getDocs(q);
+      for (const docSnap of snap.docs) {
+        const data = docSnap.data();
+        if (data.finalRecommendation === rec.finalRecommendation) {
+          console.log(`[FirestoreService] Recommendation already exists. Returning existing ID: ${docSnap.id}`);
+          return docSnap.id;
+        }
+      }
+
       const docRef = await addDoc(collection(db, 'recommendations'), {
         ...rec,
         userId,

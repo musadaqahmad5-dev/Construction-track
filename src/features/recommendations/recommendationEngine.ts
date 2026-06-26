@@ -6,8 +6,6 @@ import { DailyRecommendation, WardrobeItem } from '../../types';
 export class RecommendationEngine {
   /**
    * Evaluates historical wear histories to prevent style fatigue (wearing the same thing repeatedly).
-   * 
-   * TODO: Integrate user history analytics and Gemini suggestions to suggest fresh visual coordinates.
    */
   static preventStyleFatigue(
     items: WardrobeItem[],

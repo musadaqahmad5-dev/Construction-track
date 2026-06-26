@@ -302,19 +302,25 @@ async function startServer() {
               const db = getFirestore();
               if (session.metadata?.type === "product_purchase" || session.metadata?.productId) {
                 // One-time garment purchase: write order to Firestore orders collection
-                const orderPayload = {
-                  userId: userId,
-                  productId: session.metadata.productId,
-                  productTitle: session.metadata.productTitle,
-                  productPrice: Number(session.metadata.productPrice || 0),
-                  productImageUrl: session.metadata.productImageUrl || "",
-                  shopName: session.metadata.shopName || "Bespoke Atelier",
-                  status: "confirmed",
-                  timestamp: new Date(),
-                  stripeSessionId: session.id
-                };
-                await db.collection("orders").add(orderPayload);
-                console.log(`[Stripe Webhook] One-time product order created for user ${userId} / product ${session.metadata.productId}`);
+                // Ensure duplicate prevention by checking if an order with the same stripeSessionId already exists
+                const existingOrders = await db.collection("orders").where("stripeSessionId", "==", session.id).get();
+                if (existingOrders.empty) {
+                  const orderPayload = {
+                    userId: userId,
+                    productId: session.metadata.productId,
+                    productTitle: session.metadata.productTitle,
+                    productPrice: Number(session.metadata.productPrice || 0),
+                    productImageUrl: session.metadata.productImageUrl || "",
+                    shopName: session.metadata.shopName || "Bespoke Atelier",
+                    status: "confirmed",
+                    timestamp: new Date(),
+                    stripeSessionId: session.id
+                  };
+                  await db.collection("orders").add(orderPayload);
+                  console.log(`[Stripe Webhook] One-time product order created for user ${userId} / product ${session.metadata.productId}`);
+                } else {
+                  console.log(`[Stripe Webhook] Order for session ${session.id} already exists. Skipping duplicate write.`);
+                }
               } else {
                 // Subscription upgrade
                 const tier = session.metadata?.tier || "pro";

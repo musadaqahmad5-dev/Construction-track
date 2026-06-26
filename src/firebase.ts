@@ -31,6 +31,8 @@ export const auth = getAuth(app);
 // Initialize Firestore on the project's standard database
 export const db = getFirestore(app);
 
+import { ErrorRegistry } from './features/reliability/errorRegistry';
+
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({
   prompt: 'select_account'
@@ -49,8 +51,9 @@ export enum OperationType {
 }
 
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null): never {
+  const rawMsg = error instanceof Error ? error.message : String(error);
   const errInfo = {
-    error: error instanceof Error ? error.message : String(error),
+    error: rawMsg,
     authInfo: {
       userId: auth.currentUser?.uid,
       email: auth.currentUser?.email,
@@ -59,6 +62,19 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     path
   };
   console.error('Firestore Error: ', JSON.stringify(errInfo));
+
+  try {
+    ErrorRegistry.registerError(
+      `FIRESTORE_${operationType.toUpperCase()}`,
+      `Path: ${path || 'unknown'}. Error: ${rawMsg}`,
+      'critical',
+      'Database',
+      false
+    );
+  } catch (e) {
+    console.error('Failed to log to ErrorRegistry:', e);
+  }
+
   throw new Error(JSON.stringify(errInfo));
 }
 
