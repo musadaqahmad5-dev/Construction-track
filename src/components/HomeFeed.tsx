@@ -26,7 +26,7 @@ import {
   UserCheck
 } from 'lucide-react';
 import { FeedItem } from '../features/feed/feedTypes';
-import { AIEngine } from '../features/feed/AIEngine';
+import { AIEngine, LOCAL_SHOP_ITEMS } from '../features/feed/AIEngine';
 import { LazyFeedCard } from './LazyFeedCard';
 import { MarketplaceModule } from './MarketplaceModule';
 import { AIFashionMVPSuite } from './AIFashionMVPSuite';
@@ -34,8 +34,8 @@ import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useStyleProfile } from '../hooks/useStyleProfile';
 import { WardrobeItem, Seller } from '../types';
 import { WardrobeGrid } from './WardrobeGrid';
-import { db } from '../firebase';
-import { collection, onSnapshot, query, where, limit } from 'firebase/firestore';
+import { db, auth } from '../firebase';
+import { collection, onSnapshot, query, where, limit, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
 
 import { SellerDashboard } from './SellerDashboard';
 
@@ -47,6 +47,32 @@ interface HomeFeedProps {
   onLogout?: () => void;
   onReset?: () => void;
   onLoadSamples?: () => void;
+}
+
+function getGarmentImage(title: string): string {
+  const lower = title.toLowerCase();
+  if (lower.includes('tee') || lower.includes('t-shirt') || lower.includes('cotton classic') || lower.includes('cotton')) {
+    return 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?q=80&w=600&auto=format&fit=crop';
+  }
+  if (lower.includes('coat') || lower.includes('overcoat') || lower.includes('jacket') || lower.includes('trench') || lower.includes('outerwear')) {
+    return 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=600&auto=format&fit=crop';
+  }
+  if (lower.includes('chino') || lower.includes('pant') || lower.includes('trouser') || lower.includes('jean') || lower.includes('denim')) {
+    return 'https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?q=80&w=600&auto=format&fit=crop';
+  }
+  if (lower.includes('beanie') || lower.includes('ribbed') || lower.includes('hat') || lower.includes('knit')) {
+    return 'https://images.unsplash.com/photo-1576871337622-98d48d4aa53e?q=80&w=600&auto=format&fit=crop';
+  }
+  if (lower.includes('hoodie') || lower.includes('sweatshirt') || lower.includes('sweater')) {
+    return 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?q=80&w=600&auto=format&fit=crop';
+  }
+  if (lower.includes('shoes') || lower.includes('sneaker') || lower.includes('boot') || lower.includes('sandal')) {
+    return 'https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?q=80&w=600&auto=format&fit=crop';
+  }
+  if (lower.includes('blazer') || lower.includes('formal') || lower.includes('suit')) {
+    return 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?q=80&w=600&auto=format&fit=crop';
+  }
+  return 'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?q=80&w=600&auto=format&fit=crop';
 }
 
 const FALLBACK_CURATED_OUTFITS: FeedItem[] = [
@@ -97,6 +123,99 @@ const FALLBACK_CURATED_OUTFITS: FeedItem[] = [
     likesCount: 156,
     bookmarksCount: 38,
     createdAt: new Date(Date.now() - 7200000).toISOString()
+  }
+];
+
+export interface CommunityPost {
+  id: string;
+  userId: string;
+  username: string;
+  userAvatar: string;
+  imageUrl: string;
+  caption: string;
+  outfitDetails: string;
+  vibeTags: string[];
+  likesCount: number;
+  hasLiked?: boolean;
+  createdAt: string;
+}
+
+export interface AILook {
+  id: string;
+  imageUrl: string;
+  prompt: string;
+  provider: string;
+  vibe: string;
+  season?: string;
+  createdAt: string;
+}
+
+const SEED_COMMUNITY_POSTS: CommunityPost[] = [
+  {
+    id: "seed-comm-1",
+    userId: "u1",
+    username: "Elena Rostova",
+    userAvatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100&auto=format&fit=crop",
+    imageUrl: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=600&auto=format&fit=crop",
+    caption: "Ready for the rainy morning stroll! Calibrated with a heavy double-breasted coat and standard sneakers.",
+    outfitDetails: "Cashmere overcoat, organic cotton basic tee, and linen trousers.",
+    vibeTags: ["casual", "minimalist", "daily-routine"],
+    likesCount: 124,
+    createdAt: new Date(Date.now() - 3600000 * 2).toISOString()
+  },
+  {
+    id: "seed-comm-2",
+    userId: "u2",
+    username: "Julian Vance",
+    userAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=100&auto=format&fit=crop",
+    imageUrl: "https://images.unsplash.com/photo-1507679799987-c73779587ccf?q=80&w=600&auto=format&fit=crop",
+    caption: "Dressed down tailored aesthetic for today's remote creative work sessions.",
+    outfitDetails: "Unstructured linen blazer, heavy wool pants.",
+    vibeTags: ["classic", "editorial", "studiowork"],
+    likesCount: 98,
+    createdAt: new Date(Date.now() - 3600000 * 5).toISOString()
+  },
+  {
+    id: "seed-comm-3",
+    userId: "u3",
+    username: "Sasha Dupont",
+    userAvatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=100&auto=format&fit=crop",
+    imageUrl: "https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3?q=80&w=600&auto=format&fit=crop",
+    caption: "Chasing the early sunlight. Love how the trench jacket drapes on the shoulders.",
+    outfitDetails: "Trench Coat, white knitwear top.",
+    vibeTags: ["autumn", "warm-tonal", "streets"],
+    likesCount: 215,
+    createdAt: new Date(Date.now() - 3600000 * 12).toISOString()
+  }
+];
+
+const SEED_AI_LOOKS: AILook[] = [
+  {
+    id: "seed-ai-1",
+    imageUrl: "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?q=80&w=600&auto=format&fit=crop",
+    prompt: "A gorgeous avant-garde structured trench coat with custom details and contrast lapels.",
+    provider: "Google-Imagen-4.0",
+    vibe: "Streetwear Luxury",
+    season: "Autumn",
+    createdAt: new Date(Date.now() - 3600000 * 3).toISOString()
+  },
+  {
+    id: "seed-ai-2",
+    imageUrl: "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=600&auto=format&fit=crop",
+    prompt: "Relaxed linen blazer with minimal pockets styled over organic beige crop top.",
+    provider: "Google-Imagen-4.0",
+    vibe: "Warm Minimalist",
+    season: "Summer",
+    createdAt: new Date(Date.now() - 3600000 * 8).toISOString()
+  },
+  {
+    id: "seed-ai-3",
+    imageUrl: "https://images.unsplash.com/photo-1556905055-8f358a7a47b2?q=80&w=600&auto=format&fit=crop",
+    prompt: "Oversized knitted cashmere hoodie combined with loose flannel wool trousers.",
+    provider: "Google-Imagen-4.0",
+    vibe: "Nordic Editorial",
+    season: "Winter",
+    createdAt: new Date(Date.now() - 3600000 * 24).toISOString()
   }
 ];
 
@@ -240,7 +359,164 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
   // Modals & Panels
   const [isPostModalOpen, setIsPostModalOpen] = useState(false);
   const [isClosetDrawerOpen, setIsClosetDrawerOpen] = useState(false);
-  const [activeFeedFilter, setActiveFeedFilter] = useState<'ALL' | 'OUTFITS' | 'PRODUCTS' | 'TRENDS'>('ALL');
+  const [activeFeedFilter, setActiveFeedFilter] = useState<'COMMUNITY' | 'BRANDS' | 'AI_INVENT'>('COMMUNITY');
+
+  // Categorized Feed States & Syncs
+  const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>([]);
+  const [isUploadingCommunityPost, setIsUploadingCommunityPost] = useState(false);
+  const [communityCaption, setCommunityCaption] = useState('');
+  const [communityDetails, setCommunityDetails] = useState('');
+  const [communityImage, setCommunityImage] = useState<string | null>(null);
+  const [communityVibeTags, setCommunityVibeTags] = useState('daily-routine, fit-check');
+
+  const [aiLooks, setAiLooks] = useState<AILook[]>([]);
+  const [activeFiosReport, setActiveFiosReport] = useState<any | null>(null);
+
+  // Local engagement mapping states
+  const [likedPosts, setLikedPosts] = useState<Record<string, boolean>>({});
+  const [savedAiLookIds, setSavedAiLookIds] = useState<Set<string>>(new Set());
+
+  // Input photo selection handler for fit checks
+  const handleCommunityPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setCommunityImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Submit new community fit checks
+  const handleCommunityPostSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!communityImage) return;
+    setIsUploadingCommunityPost(true);
+    try {
+      const tagsArray = communityVibeTags
+        .split(',')
+        .map(t => t.trim().toLowerCase())
+        .filter(Boolean);
+
+      await addDoc(collection(db, 'community_posts'), {
+        userId: user?.uid || 'guest-user',
+        username: user?.displayName || user?.email?.split('@')[0] || 'Sartorialist Guest',
+        userAvatar: user?.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=100&auto=format&fit=crop',
+        imageUrl: communityImage,
+        caption: communityCaption,
+        outfitDetails: communityDetails,
+        vibeTags: tagsArray.length > 0 ? tagsArray : ['fit-check', 'daily-routine'],
+        likesCount: 0,
+        createdAt: new Date().toISOString()
+      });
+
+      // Reset Form fields on success
+      setCommunityCaption('');
+      setCommunityDetails('');
+      setCommunityImage(null);
+      setCommunityVibeTags('daily-routine, fit-check');
+    } catch (err) {
+      console.error("Error creating community post:", err);
+    } finally {
+      setIsUploadingCommunityPost(false);
+    }
+  };
+
+  // Like community posted checks
+  const handleLikeCommunityPost = async (postId: string, currentLikes: number) => {
+    const isLiked = likedPosts[postId];
+    setLikedPosts(prev => ({ ...prev, [postId]: !isLiked }));
+    
+    try {
+      const postRef = doc(db, 'community_posts', postId);
+      await updateDoc(postRef, {
+        likesCount: isLiked ? Math.max(0, currentLikes - 1) : currentLikes + 1
+      });
+    } catch (err) {
+      console.error("Failed to update like counter:", err);
+    }
+  };
+
+  // Import high-fidelity AI generated looks directly to user wardrobe
+  const handleSaveAiLookToCloset = async (look: any) => {
+    if (savedAiLookIds.has(look.id)) return;
+    try {
+      if (onAddGarment) {
+        await onAddGarment(
+          `AI Look: ${look.vibe || 'Creative Design'}`,
+          look.prompt || "Generated via styled design co-creation.",
+          'Casual',
+          { imageUrl: look.imageUrl }
+        );
+      }
+      setSavedAiLookIds(prev => {
+        const next = new Set(prev);
+        next.add(look.id);
+        return next;
+      });
+    } catch (err) {
+      console.error("Failed to import AI design look:", err);
+    }
+  };
+
+  // Fetch Community Posts and AI Looks in real-time from Firestore
+  useEffect(() => {
+    if (!db) return;
+    try {
+      const qComm = query(collection(db, 'community_posts'), limit(40));
+      const unsubComm = onSnapshot(qComm, (snapshot) => {
+        const posts: CommunityPost[] = [];
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          posts.push({
+            id: docSnap.id,
+            userId: data.userId || 'guest',
+            username: data.username || 'Anonymous Creator',
+            userAvatar: data.userAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=100&auto=format&fit=crop',
+            imageUrl: data.imageUrl || '',
+            caption: data.caption || '',
+            outfitDetails: data.outfitDetails || '',
+            vibeTags: data.vibeTags || [],
+            likesCount: data.likesCount || 0,
+            createdAt: data.createdAt || new Date().toISOString()
+          });
+        });
+        posts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setCommunityPosts(posts);
+      }, (err) => {
+        console.warn("Community posts snapshot error, using seeds:", err);
+      });
+
+      const qAi = query(collection(db, 'generatedLooks'), limit(40));
+      const unsubAi = onSnapshot(qAi, (snapshot) => {
+        const looks: AILook[] = [];
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          looks.push({
+            id: docSnap.id,
+            imageUrl: data.imageUrl || '',
+            prompt: data.prompt || '',
+            provider: data.provider || 'Google-Imagen-4.0',
+            vibe: data.vibe || 'Creative',
+            season: data.season || 'All-Season',
+            createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : (data.createdAt || new Date().toISOString())
+          });
+        });
+        looks.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setAiLooks(looks);
+      }, (err) => {
+        console.warn("AI generated looks snapshot error, using seeds:", err);
+      });
+
+      return () => {
+        unsubComm();
+        unsubAi();
+      };
+    } catch (e) {
+      console.error("Failed to initialize categorized snapshots:", e);
+    }
+  }, []);
 
   // Loading / Stream states
   const [pageLimit, setPageLimit] = useState(4);
@@ -318,74 +594,80 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
     });
   };
 
-  // Helper to safely apply selected filters with relaxed outfit mapping & safe fallback
-  const applyFilter = (rawItems: FeedItem[]) => {
-    let list = [...rawItems];
+  // 1. Memoized search filter for Community Posts
+  const filteredCommunityPosts = useMemo(() => {
+    const list = communityPosts.length > 0 ? communityPosts : SEED_COMMUNITY_POSTS;
+    if (!searchPrompt.trim()) return list;
+    const term = searchPrompt.toLowerCase();
+    return list.filter(p => 
+      p.caption?.toLowerCase().includes(term) || 
+      p.outfitDetails?.toLowerCase().includes(term) || 
+      p.username?.toLowerCase().includes(term)
+    );
+  }, [communityPosts, searchPrompt]);
 
-    // Part A: Primary selection feed filters
-    if (activeFeedFilter === 'OUTFITS') {
-      list = list.filter(i => {
-        const t = (i.type || '').toLowerCase();
-        const c = (i.category || '').toLowerCase();
-        const tags = (i.vibeTags || []).map(tg => tg.toLowerCase());
-        
-        return (
-          t === 'outfit' || t === 'silhouette' || t === 'look' || t === 'style-set' ||
-          c === 'outfit' || c === 'silhouette' || c === 'look' || c === 'style-set' ||
-          tags.includes('outfit') || tags.includes('silhouette') || tags.includes('look') || tags.includes('style-set')
-        );
-      });
+  // 2. Memoized search filter and sub-filters for Brand boutique products
+  const filteredBrandProducts = useMemo(() => {
+    // Combine custom (uploaded) shop products with fallback mock boutique items
+    const allProducts = [...customShopPosts, ...LOCAL_SHOP_ITEMS.map((mock, index) => ({
+      id: `shop-item-${index}`,
+      type: 'shop_product' as const,
+      title: mock.title!,
+      description: mock.description!,
+      price: mock.price,
+      location: mock.location,
+      category: mock.category,
+      availability: mock.availability as any,
+      shopName: mock.shopName,
+      shopAvatarUrl: mock.shopAvatarUrl,
+      imageUrl: mock.imageUrl!,
+      vibeTags: mock.vibeTags,
+      statsLabel: mock.statsLabel,
+      likesCount: mock.likesCount!,
+      bookmarksCount: mock.bookmarksCount!,
+      createdAt: new Date(Date.now() - (index + 1) * 7200000).toISOString()
+    }))];
 
-      if (list.length === 0) {
-        list = FALLBACK_CURATED_OUTFITS;
-      }
-    } else if (activeFeedFilter === 'PRODUCTS') {
-      list = list.filter(i => i.type === 'shop_product' || i.type === 'budget_pick');
-    } else if (activeFeedFilter === 'TRENDS') {
-      list = list.filter(i => i.type === 'trending_fashion');
-    }
+    let list = allProducts;
 
-    // Part B: Daily Fresh Curations sub-filter layers
+    // Apply sub-filters based on the curation quick-links
     if (dailyRefreshFilter === 'TODAYS_PICKS') {
-      const dayIndex = new Date().getDay(); // 0-6 rotating multiplier
+      const dayIndex = new Date().getDay();
       list = list.filter((_, idx) => (idx + dayIndex) % 2 === 0);
-      if (list.length === 0) list = rawItems.slice(0, 3);
     } else if (dailyRefreshFilter === 'TRENDING_STYLE') {
-      const prefList = [
-        { id: 'minimalist', tags: ['minimalist', 'classic', 'formal'] },
-        { id: 'streetwear', tags: ['streetwear', 'casual', 'sportswear'] },
-        { id: 'luxury', tags: ['luxury', 'boutique'] },
-        { id: 'experimental', tags: ['vintage', 'custom', 'experimental', 'outfit'] }
-      ];
-      prefList.sort((a, b) => (styleProfile.scores[b.id as keyof typeof styleProfile.scores] || 0) - (styleProfile.scores[a.id as keyof typeof styleProfile.scores] || 0));
-      const topTags = prefList[0].tags;
-      list = list.filter(item => {
-        const itemTags = (item.vibeTags || []).map(t => t.toLowerCase());
-        const itemCat = (item.category || '').toLowerCase();
-        return itemTags.some(t => topTags.includes(t)) || topTags.includes(itemCat) || (prefList[0].id === 'experimental' && item.type === 'outfit');
-      });
-      if (list.length === 0) list = rawItems;
+      list = list.filter(item => (item.likesCount || 0) > 100);
     } else if (dailyRefreshFilter === 'NEW_DROPS') {
-      list = list.filter(item => item.type === 'shop_product' || (item.vibeTags || []).includes('boutique') || (item.vibeTags || []).includes('streetwear'));
+      list = list.filter(item => item.id.includes('custom') || item.availability === 'In Stock');
     }
 
-    // Part C: Apply smart ranking personalization
-    return personalizeFeed(list);
-  };
+    if (!searchPrompt.trim()) return personalizeFeed(list);
+    const term = searchPrompt.toLowerCase();
+    const searched = list.filter(p => 
+      p.title?.toLowerCase().includes(term) || 
+      p.description?.toLowerCase().includes(term) || 
+      p.category?.toLowerCase().includes(term) ||
+      p.shopName?.toLowerCase().includes(term)
+    );
+    return personalizeFeed(searched);
+  }, [customShopPosts, dailyRefreshFilter, searchPrompt, styleProfile.scores]);
 
-  // Initialize Feed
+  // 3. Memoized search filter for AI Generated Looks
+  const filteredAiLooks = useMemo(() => {
+    const list = aiLooks.length > 0 ? aiLooks : SEED_AI_LOOKS;
+    if (!searchPrompt.trim()) return list;
+    const term = searchPrompt.toLowerCase();
+    return list.filter(p => 
+      p.prompt?.toLowerCase().includes(term) || 
+      p.vibe?.toLowerCase().includes(term) || 
+      p.season?.toLowerCase().includes(term)
+    );
+  }, [aiLooks, searchPrompt]);
+
+  // Handle feed state initialization and daily curation explanations
   useEffect(() => {
-    // Generate feed combining user wardrobe + local shop catalogs + preset tips
     const computed = AIEngine.generateFeed(wardrobe, customShopPosts);
     setOriginalFeed(computed);
-    
-    // Apply initial filters/searches
-    const { items, explanation } = AIEngine.processSearchQuery(searchPrompt, computed);
-    
-    const filtered = applyFilter(items);
-    setVisibleFeed(filtered);
 
-    // Set curated explanation based on dailyRefreshFilter
     if (dailyRefreshFilter === 'TODAYS_PICKS') {
       const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
       const dayName = days[new Date().getDay()];
@@ -395,9 +677,46 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
     } else if (dailyRefreshFilter === 'NEW_DROPS') {
       setAiExplanation("Boutique Drops: Displaying recently cataloged garment designs fresh from local shop inventories.");
     } else {
-      setAiExplanation(explanation || "Welcome to your style feed. Your interactions like liking, saving, and trying on items help refine your style preference scores.");
+      setAiExplanation("Welcome to your style feed. Discover fashion, try styles, and shop directly from boutique creators.");
     }
-  }, [wardrobe, customShopPosts, activeFeedFilter, dailyRefreshFilter, styleProfile.scores]);
+  }, [wardrobe, customShopPosts, dailyRefreshFilter, styleProfile.scores]);
+
+  // Synchronize visibleFeed based on activeFeedFilter, filters, and searches
+  useEffect(() => {
+    if (activeFeedFilter === 'COMMUNITY') {
+      setVisibleFeed(filteredCommunityPosts.map(p => ({
+        id: p.id,
+        type: 'outfit' as const,
+        title: p.caption || "Community Fit Check",
+        description: p.outfitDetails,
+        imageUrl: p.imageUrl,
+        vibeTags: p.vibeTags,
+        likesCount: p.likesCount,
+        bookmarksCount: 0,
+        createdAt: p.createdAt,
+        shopName: p.username,
+        isCommunity: true,
+        userAvatar: p.userAvatar,
+        userId: p.userId
+      } as unknown as FeedItem)));
+    } else if (activeFeedFilter === 'BRANDS') {
+      setVisibleFeed(filteredBrandProducts);
+    } else if (activeFeedFilter === 'AI_INVENT') {
+      setVisibleFeed(filteredAiLooks.map(l => ({
+        id: l.id,
+        type: 'outfit' as const,
+        title: `AI Design: ${l.vibe}`,
+        description: l.prompt,
+        imageUrl: l.imageUrl,
+        vibeTags: [l.vibe, l.season || 'All-Season', 'AI-Invent'].filter(Boolean),
+        likesCount: 24,
+        bookmarksCount: 5,
+        createdAt: l.createdAt,
+        shopName: l.provider || "Imagen 4.0",
+        isAiLook: true
+      } as unknown as FeedItem)));
+    }
+  }, [activeFeedFilter, filteredCommunityPosts, filteredBrandProducts, filteredAiLooks]);
 
   // Handle Search Input Submit or on-the-fly search ranking
   const [stylistError, setStylistError] = useState<string | null>(null);
@@ -411,14 +730,10 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
       setIsAiCurating(false);
       setAiExplanation('');
       setStylistError(null);
-      // Reset visible feed
-      const base = AIEngine.generateFeed(wardrobe, customShopPosts);
-      const filtered = applyFilter(base);
-      setVisibleFeed(filtered);
     }
   };
 
-  const handleStylistConsult = (query: string) => {
+  const handleStylistConsult = async (query: string) => {
     // 6. Debug Logging - Input received
     console.log("[AI Stylist Consult] Input received: '" + query + "'");
     setStylistError(null);
@@ -433,99 +748,153 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
 
     // 3. Fix Loading State Lifecycle - Transition to loading
     setIsAiCurating(true);
-    setAiExplanation("");
+    setAiExplanation("Analyzing style coordinates...");
+    setActiveFiosReport(null);
 
-    // 6. Debug Logging - Request started
-    console.log("[AI Stylist Consult] Request started for style synthesis query: " + query);
-
-    // Set up a safety timeout (e.g., 6 seconds) to prevent infinite pending/loading
-    // 2. Add Guaranteed Timeout Safety
+    // Set up a safety timeout (20 seconds) to prevent infinite pending/loading
     let isRequestResolved = false;
-    
     const timeoutId = setTimeout(() => {
       if (!isRequestResolved) {
-        // 6. Debug Logging - Timeout triggered
         console.warn("[AI Stylist Consult] Timeout triggered! Request took longer than safety window.");
         isRequestResolved = true;
-        
-        // Let's stop the loading state
         setIsAiCurating(false);
-        
-        // Show fallback message
-        const fallbackMsg = "Try a minimalist outfit with neutral tones for a balanced look.";
+        const fallbackMsg = "Unable to reach the styling engine. Try a minimalist look with neutral layers for a clean, timeless silhouette.";
         setAiExplanation(fallbackMsg);
-        
-        // Reset/Adjust feed gracefully with safe fallback filtering
-        try {
-          const base = AIEngine.generateFeed(wardrobe, customShopPosts);
-          const filtered = applyFilter(base);
-          setVisibleFeed(filtered);
-        } catch (e) {
-          console.error("[AI Stylist Consult] Failed to generate fallback feed in timeout:", e);
-        }
       }
-    }, 6000); // 5-8 seconds window, we pick 6000ms
+    }, 20000);
 
-    // Wrap in try/catch for safety (5. Add Error Catch Safety Layer)
     try {
-      // Simulate real AI response with loading states
-      setTimeout(() => {
-        if (isRequestResolved) {
-          console.log("[AI Stylist Consult] AI request returned but timeout has already handled fallback.");
-          return;
-        }
-        
-        // Mark as resolved so that timeout won't fire fallback values
-        isRequestResolved = true;
-        clearTimeout(timeoutId);
-
-        try {
-          // Verify that query is still active / didn't change to empty
-          const base = AIEngine.generateFeed(wardrobe, customShopPosts);
-          const { items, explanation } = AIEngine.processSearchQuery(query, base);
-          
-          // 6. Debug Logging - Request success
-          console.log("[AI Stylist Consult] Request success. Response processed successfully.");
-          const filtered = applyFilter(items);
-          
-          if (explanation) {
-            setVisibleFeed(filtered);
-            setAiExplanation(explanation);
-          } else {
-            const fallbackMsg = "Try a minimalist black outfit with neutral tones for a balanced look.";
-            setVisibleFeed(filtered);
-            setAiExplanation(fallbackMsg);
-          }
-        } catch (error) {
-          // 6. Debug Logging - Request failed (nested error)
-          console.error("[AI Stylist Consult] Request failed inside processing:", error);
-          
-          const fallbackMsg = "Try a minimalist outfit with neutral tones for a balanced look.";
-          // Reset feed but make sure we apply our safe fallback filtering so the feed is never empty or broken
-          const base = AIEngine.generateFeed(wardrobe, customShopPosts);
-          const filtered = applyFilter(base);
-          setVisibleFeed(filtered);
-          setAiExplanation(fallbackMsg);
-        } finally {
-          // 3. Fix Loading State Lifecycle - Transition back to idle
-          setIsAiCurating(false);
-        }
-      }, 850);
-    } catch (outerError) {
-      // 6. Debug Logging - Request failed (outer error)
-      console.error("[AI Stylist Consult] Request failed in outer context:", outerError);
-      if (!isRequestResolved) {
-        isRequestResolved = true;
-        clearTimeout(timeoutId);
+      let token: string | null = null;
+      if (auth.currentUser) {
+        token = await auth.currentUser.getIdToken();
+      } else if (typeof localStorage !== 'undefined' && localStorage.getItem('auth_guest_active') === 'true') {
+        token = 'guest-token';
       }
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      setAiExplanation("Connecting with Gemini recommendation engine...");
+
+      const response = await fetch('/.netlify/functions/recommend-mvp', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ 
+          userInput: query.trim(),
+          tenantId: 'default'
+        }),
+      });
+
+      if (isRequestResolved) return; // Already timed out
+
+      isRequestResolved = true;
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`Styling engine returned status ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data && (data.mode === "CONFIG_ERROR" || data.mode === "GEMINI_FAILED" || data.mode === "GEMINI_PARSE_ERROR")) {
+        throw new Error("Fashion Intelligence Engine executed with exception.");
+      }
+
+      if (data && Array.isArray(data.outfits) && data.user_profile) {
+        setActiveFiosReport(data);
+        setAiExplanation(data.final_recommendation || data.style_summary || "Curation complete.");
+        setSearchPrompt(query);
+        
+        // 1. Update the style preference scores dynamically based on Gemini's parsed style
+        const styleName = (data.user_profile.style || "").toLowerCase();
+        const queryLower = query.toLowerCase();
+        
+        styleProfile.setScores(prev => {
+          const updated = { ...prev };
+          if (styleName.includes('minimal') || queryLower.includes('minimal') || queryLower.includes('clean') || queryLower.includes('sleek')) {
+            updated.minimalist = Math.min(100, updated.minimalist + 12);
+          }
+          if (styleName.includes('street') || queryLower.includes('street') || queryLower.includes('hoodie') || queryLower.includes('cargo')) {
+            updated.streetwear = Math.min(100, updated.streetwear + 12);
+          }
+          if (styleName.includes('luxury') || queryLower.includes('luxury') || queryLower.includes('cashmere') || queryLower.includes('silk') || queryLower.includes('tailored') || queryLower.includes('wool')) {
+            updated.luxury = Math.min(100, updated.luxury + 12);
+          }
+          if (styleName.includes('experimental') || styleName.includes('avant') || queryLower.includes('experimental') || queryLower.includes('bold') || queryLower.includes('asymmetric')) {
+            updated.experimental = Math.min(100, updated.experimental + 12);
+          }
+          return updated;
+        });
+
+        // 2. Map the generated outfits to AILooks
+        const mappedLooks: AILook[] = (data.outfits || []).map((outfit: any, index: number) => {
+          const lookId = `ai-look-${Date.now()}-${index}`;
+          const top = outfit.items?.top || '';
+          const bottom = outfit.items?.bottom || '';
+          const promptText = outfit.fashion_reason || outfit.why_this_works || `AI Curated Coord: ${top}, ${bottom}`;
+          return {
+            id: lookId,
+            imageUrl: getGarmentImage(top || bottom || data.style_title || ''),
+            prompt: promptText,
+            provider: "Google-Imagen-4.0",
+            vibe: data.user_profile?.style || "Curated",
+            season: data.user_profile?.occasion || "All-Season",
+            createdAt: new Date().toISOString()
+          };
+        });
+
+        // Try writing to Firestore for persistence
+        try {
+          if (auth.currentUser) {
+            for (const look of mappedLooks) {
+              await addDoc(collection(db, 'generatedLooks'), {
+                imageUrl: look.imageUrl,
+                prompt: look.prompt,
+                provider: look.provider,
+                vibe: look.vibe,
+                season: look.season,
+                createdAt: serverTimestamp()
+              });
+            }
+          }
+        } catch (fsErr) {
+          console.warn("Could not persist generated look to Firestore:", fsErr);
+        }
+
+        // Prepend to local state for immediate feedback
+        setAiLooks(prev => [...mappedLooks, ...prev]);
+
+        // 3. Shift active filter tab to AI_INVENT and scroll smoothly
+        setActiveFeedFilter('AI_INVENT');
+        setTimeout(() => {
+          const element = document.getElementById('classification-tabs-start');
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth' });
+          }
+        }, 150);
+
+      } else {
+        throw new Error('Retrieved output failed response validation.');
+      }
+
+    } catch (error) {
+      console.error("[AI Stylist Consult] Request failed, using local fallback processor:", error);
       
-      const fallbackMsg = "Try a minimalist outfit with neutral tones for a balanced look.";
-      const base = AIEngine.generateFeed(wardrobe, customShopPosts);
-      const filtered = applyFilter(base);
-      setVisibleFeed(filtered);
-      setAiExplanation(fallbackMsg);
-      
-      // 3. Fix Loading State Lifecycle - Transition back to idle
+      // Local fallback parsing using our static matching logic
+      try {
+        const base = AIEngine.generateFeed(wardrobe, customShopPosts);
+        const { explanation } = AIEngine.processSearchQuery(query, base);
+        setAiExplanation(explanation || "Try a minimalist outfit with neutral tones for a balanced look.");
+        setSearchPrompt(query);
+      } catch (fallbackErr) {
+        setAiExplanation("Try a minimalist outfit with neutral tones for a balanced look.");
+        setSearchPrompt(query);
+      }
+    } finally {
       setIsAiCurating(false);
     }
   };
@@ -734,7 +1103,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
       <div className="grid grid-cols-2 gap-3 pb-2 pt-1">
         <button
           onClick={() => {
-            setActiveFeedFilter('ALL');
+            setActiveFeedFilter('COMMUNITY');
             const element = document.getElementById('classification-tabs-start');
             if (element) {
               element.scrollIntoView({ behavior: 'smooth' });
@@ -749,14 +1118,14 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
             <span className="text-[9px] font-mono uppercase bg-emerald-400/10 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/15">Active</span>
           </div>
           <div>
-            <span className="block text-xs font-serif font-medium tracking-wide">🛍 Browse Fashion</span>
+            <span className="block text-xs font-serif font-medium tracking-wide">👥 Community Fits</span>
             <span className="text-[10px] text-white/55 font-mono leading-none mt-1 block">Scroll down & explore the feed</span>
           </div>
         </button>
 
         <button
           onClick={() => {
-            setActiveFeedFilter('OUTFITS');
+            setActiveFeedFilter('AI_INVENT');
             const element = document.getElementById('classification-tabs-start');
             if (element) {
               element.scrollIntoView({ behavior: 'smooth' });
@@ -771,14 +1140,14 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
             <span className="text-[9px] font-mono uppercase bg-amber-400/10 text-amber-300 px-2 py-0.5 rounded border border-amber-500/15">Try-On</span>
           </div>
           <div>
-            <span className="block text-xs font-serif font-medium tracking-wide">🧑🎨 Try Virtual Outfits</span>
+            <span className="block text-xs font-serif font-medium tracking-wide">🧑🎨 AI Generated Outfits</span>
             <span className="text-[10px] text-white/55 font-mono leading-none mt-1 block">Fit style combinations on avatars</span>
           </div>
         </button>
 
         <button
           onClick={() => {
-            setActiveFeedFilter('PRODUCTS');
+            setActiveFeedFilter('BRANDS');
             const element = document.getElementById('classification-tabs-start');
             if (element) {
               element.scrollIntoView({ behavior: 'smooth' });
@@ -793,7 +1162,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
             <span className="text-[9px] font-mono uppercase bg-sky-400/10 text-sky-300 px-2 py-0.5 rounded border border-sky-500/15">Shops</span>
           </div>
           <div>
-            <span className="block text-xs font-serif font-medium tracking-wide">🏪 Explore Shops</span>
+            <span className="block text-xs font-serif font-medium tracking-wide">🏪 Explore Brands & Boutiques</span>
             <span className="text-[10px] text-white/55 font-mono leading-none mt-1 block">View local boutique products</span>
           </div>
         </button>
@@ -1010,9 +1379,106 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
           ))}
         </div>
 
-        {/* AI curation context note */}
+        {/* AI curation context note & deluxe report */}
         <AnimatePresence>
-          {aiExplanation && (
+          {activeFiosReport && (
+            <motion.div 
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden bg-white/[0.01] border-t border-dashed border-white/10 pt-4 mt-3 space-y-4 text-left"
+            >
+              <div className="flex justify-between items-start">
+                <div className="space-y-1">
+                  <span className="text-[8px] font-mono uppercase tracking-widest text-amber-300 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20 font-bold">
+                    Sartorial Synthesis Report
+                  </span>
+                  <h3 className="text-lg font-serif italic text-white font-light pt-1.5 leading-snug">
+                    {activeFiosReport.style_title || "Modern Aesthetic Coordinates"}
+                  </h3>
+                </div>
+                <div className="flex flex-col items-end shrink-0 bg-white/[0.03] px-3 py-1 rounded-xl border border-white/5">
+                  <span className="text-[14px] font-mono font-bold text-amber-400">98%</span>
+                  <span className="text-[8.5px] font-mono text-white/30 uppercase tracking-widest">Match Score</span>
+                </div>
+              </div>
+
+              <div className="space-y-2 bg-[#0c0c0c] border border-white/5 p-3.5 rounded-xl">
+                <div className="flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+                  <span className="text-[9px] font-mono uppercase tracking-wider text-white/50">Stylist Directives</span>
+                </div>
+                <p className="text-xs text-white/80 leading-relaxed font-serif italic">
+                  "{activeFiosReport.style_summary || activeFiosReport.final_recommendation}"
+                </p>
+                {activeFiosReport.why_this_works && (
+                  <p className="text-[10px] text-white/45 leading-relaxed pt-2 border-t border-white/[0.03] mt-2">
+                    <span className="font-semibold text-white/60">Aesthetic Harmony:</span> {activeFiosReport.why_this_works}
+                  </p>
+                )}
+              </div>
+
+              {/* Coordinates Breakdown Grid */}
+              <div className="space-y-2">
+                <span className="text-[8px] font-mono uppercase tracking-widest text-white/30 block">Suggested Coordinates</span>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                  {(activeFiosReport.outfits || []).slice(0, 2).map((outfit: any, oIdx: number) => (
+                    <div key={oIdx} className="bg-white/[0.01] border border-white/5 rounded-xl p-3 space-y-2.5 flex flex-col justify-between">
+                      <div className="space-y-1.5">
+                        <div className="flex justify-between items-center">
+                          <span className="text-[8px] font-mono uppercase text-amber-300">Look Coordinate 0{oIdx + 1}</span>
+                          <span className="text-[9px] font-mono text-white/50">{outfit.scores?.total_score || 94}% Confidence</span>
+                        </div>
+                        <div className="space-y-1 text-[11px] font-mono text-white/70">
+                          {outfit.items?.top && (
+                            <div className="flex gap-1">
+                              <span className="text-white/30">├</span>
+                              <span className="text-white/40">Top:</span>
+                              <span className="text-white/80 truncate">{outfit.items.top}</span>
+                            </div>
+                          )}
+                          {outfit.items?.bottom && (
+                            <div className="flex gap-1">
+                              <span className="text-white/30">├</span>
+                              <span className="text-white/40">Btm:</span>
+                              <span className="text-white/80 truncate">{outfit.items.bottom}</span>
+                            </div>
+                          )}
+                          {outfit.items?.shoes && (
+                            <div className="flex gap-1">
+                              <span className="text-white/30">└</span>
+                              <span className="text-white/40">Shoes:</span>
+                              <span className="text-white/80 truncate">{outfit.items.shoes}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-[10px] font-serif italic text-white/50 leading-relaxed border-t border-white/[0.03] pt-2">
+                        {outfit.fashion_reason || outfit.why_this_works || "Curated layer coordination"}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    setActiveFeedFilter('AI_INVENT');
+                    const element = document.getElementById('classification-tabs-start');
+                    if (element) {
+                      element.scrollIntoView({ behavior: 'smooth' });
+                    }
+                  }}
+                  className="flex-1 py-2 bg-purple-500/15 hover:bg-purple-500 text-purple-300 hover:text-white border border-purple-500/20 hover:border-purple-500 transition-all text-[9.5px] font-mono uppercase tracking-wider rounded-lg font-bold cursor-pointer text-center"
+                >
+                  View Interactive Looks in Feed ↓
+                </button>
+              </div>
+            </motion.div>
+          )}
+
+          {!activeFiosReport && aiExplanation && (
             <motion.div 
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
@@ -1034,61 +1500,225 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
       </div>
 
       {/* 3. CLASSIFICATION TABS / FEED FILTERS */}
-      <div id="classification-tabs-start" className="flex justify-between items-center border-b border-white/[0.04] pb-2">
-        <div className="flex gap-4">
-          {[
-            { id: 'ALL', label: 'All Feed' },
-            { id: 'OUTFITS', label: 'Outfits' },
-            { id: 'PRODUCTS', label: 'Shops' },
-            { id: 'TRENDS', label: 'Trending' }
-          ].map((tab) => (
+      <div id="classification-tabs-start" className="flex flex-col space-y-4 border-b border-white/[0.04] pb-4">
+        <div className="flex justify-between items-center">
+          <div className="flex gap-4">
+            {[
+              { id: 'COMMUNITY', label: 'Community Fits' },
+              { id: 'BRANDS', label: 'Brands & Boutiques' },
+              { id: 'AI_INVENT', label: 'AI Invent' }
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => {
+                  setActiveFeedFilter(tab.id as any);
+                  setPageLimit(4); // Reset pagination on tab swap
+                }}
+                className={`text-[11px] font-mono uppercase tracking-[0.12em] pb-2 relative transition-all cursor-pointer ${
+                  activeFeedFilter === tab.id ? 'text-white font-semibold' : 'text-white/30 hover:text-white/60'
+                }`}
+              >
+                <span>{tab.label}</span>
+                {activeFeedFilter === tab.id && (
+                  <motion.div layoutId="feedActiveLine" className="absolute bottom-0 left-0 right-0 h-0.5 bg-white" />
+                )}
+              </button>
+            ))}
+          </div>
+
+          <span className="text-[8px] font-mono uppercase tracking-widest text-white/20">
+            Showing {Math.min(visibleFeed.length, pageLimit)} of {visibleFeed.length} Items
+          </span>
+        </div>
+
+        {/* Tab Taglines & CTAs */}
+        {activeFeedFilter === 'COMMUNITY' && (
+          <p className="text-[10px] font-mono text-[#dfd7c2]/40">
+            ✓ Daily routine fit checks posted by creators. Publish yours when ready for a picture.
+          </p>
+        )}
+        {activeFeedFilter === 'BRANDS' && (
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 bg-emerald-500/5 border border-emerald-500/10 p-3 rounded-xl">
+            <p className="text-[10px] font-mono text-emerald-300">
+              ✓ Verified boutique apparel assets. Open Seller Hub to register items & accept customer orders.
+            </p>
             <button
-              key={tab.id}
-              onClick={() => setActiveFeedFilter(tab.id as any)}
-              className={`text-[10px] font-mono uppercase tracking-[0.1em] pb-2 relative transition-all cursor-pointer ${
-                activeFeedFilter === tab.id ? 'text-white' : 'text-white/30 hover:text-white/60'
-              }`}
+              onClick={() => setIsSellerDashboardOpen(true)}
+              className="text-[9px] font-mono uppercase text-white bg-emerald-500/20 hover:bg-emerald-500 px-2.5 py-1 rounded border border-emerald-500/20 transition-all font-semibold cursor-pointer"
             >
-              <span>{tab.label}</span>
-              {activeFeedFilter === tab.id && (
-                <motion.div layoutId="feedActiveLine" className="absolute bottom-0 left-0 right-0 h-0.5 bg-white" />
+              Upload Brand Assets
+            </button>
+          </div>
+        )}
+        {activeFeedFilter === 'AI_INVENT' && (
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 bg-purple-500/5 border border-purple-500/10 p-3 rounded-xl">
+            <p className="text-[10px] font-mono text-purple-300">
+              ✓ Styled by AI. Co-create garment combinations using our high-fidelity Imagen models.
+            </p>
+            <button
+              onClick={() => {
+                const element = document.getElementById('ai-style-suite-header');
+                if (element) {
+                  element.scrollIntoView({ behavior: 'smooth' });
+                } else {
+                  window.scrollTo({ top: 300, behavior: 'smooth' });
+                }
+              }}
+              className="text-[9px] font-mono uppercase text-white bg-purple-500/20 hover:bg-purple-500 px-2.5 py-1 rounded border border-purple-500/20 transition-all font-semibold cursor-pointer"
+            >
+              Launch Design Studio
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* 3.1 DAILY CURATED REFRESH LOOP RAIL (Only for Brands) */}
+      {activeFeedFilter === 'BRANDS' && (
+        <div className="bg-[#fafafa]/[0.01] border border-white/[0.03] p-2.5 rounded-xl flex items-center justify-between text-left gap-2.5">
+          <span className="text-[9px] font-mono uppercase tracking-[0.1em] text-white/40 font-semibold flex items-center gap-1">
+            <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+            Recommended:
+          </span>
+          <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
+            {[
+              { id: 'ALL', label: 'All Picks' },
+              { id: 'TODAYS_PICKS', label: "Today's Curated" },
+              { id: 'TRENDING_STYLE', label: 'Recommended For You' },
+              { id: 'NEW_DROPS', label: 'Boutique Drops' }
+            ].map((subtab) => (
+              <button
+                key={subtab.id}
+                onClick={() => setDailyRefreshFilter(subtab.id as any)}
+                className={`text-[9px] font-mono px-2.5 py-1.5 rounded-lg uppercase transition-all whitespace-nowrap cursor-pointer hover:scale-105 active:scale-95 ${
+                  dailyRefreshFilter === subtab.id 
+                    ? 'bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 font-semibold' 
+                    : 'text-white/40 hover:text-white/75 bg-white/[0.01] border border-white/5'
+                }`}
+              >
+                {subtab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Inline Uploader Form (Only for Community Fit check) */}
+      {activeFeedFilter === 'COMMUNITY' && (
+        <div className="bg-[#0b0b0b]/40 border border-white/[0.06] p-5 rounded-2xl shadow-xl space-y-4 text-left">
+          <div className="flex items-center gap-2">
+            <PenSquare className="w-4 h-4 text-cyan-400" />
+            <h3 className="text-xs font-mono uppercase tracking-wider text-white">Daily Fit Check</h3>
+          </div>
+          <p className="text-[11px] font-serif text-white/50 italic leading-normal">
+            "Share your daily style routine. Whenever you are ready for a picture, capture or upload your fit."
+          </p>
+
+          <form onSubmit={handleCommunityPostSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-3">
+                <div>
+                  <label className="text-[9px] font-mono uppercase tracking-wider text-white/40 block pb-1">Style Caption / Vibe</label>
+                  <input
+                    type="text"
+                    required
+                    value={communityCaption}
+                    onChange={e => setCommunityCaption(e.target.value)}
+                    placeholder="e.g. Vintage leather layering on a chilly Tuesday..."
+                    className="w-full bg-white/[0.01] border border-white/10 px-3 py-2 text-xs font-mono text-white placeholder-white/20 focus:outline-none focus:border-cyan-500/30 rounded-lg transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="text-[9px] font-mono uppercase tracking-wider text-white/40 block pb-1">Apparel Details</label>
+                  <input
+                    type="text"
+                    required
+                    value={communityDetails}
+                    onChange={e => setCommunityDetails(e.target.value)}
+                    placeholder="e.g. Leather jacket, thrifted denim, custom boots"
+                    className="w-full bg-white/[0.01] border border-white/10 px-3 py-2 text-xs font-mono text-white placeholder-white/20 focus:outline-none focus:border-cyan-500/30 rounded-lg transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="text-[9px] font-mono uppercase tracking-wider text-white/40 block pb-1">Tags (Comma separated)</label>
+                  <input
+                    type="text"
+                    value={communityVibeTags}
+                    onChange={e => setCommunityVibeTags(e.target.value)}
+                    placeholder="casual, vintage, layering"
+                    className="w-full bg-white/[0.01] border border-white/10 px-3 py-2 text-xs font-mono text-white placeholder-white/20 focus:outline-none focus:border-cyan-500/30 rounded-lg transition-colors"
+                  />
+                </div>
+              </div>
+
+              {/* Image upload widget */}
+              <div className="space-y-2 flex flex-col justify-between">
+                <div>
+                  <span className="text-[9px] font-mono uppercase tracking-wider text-white/40 block pb-1">Outfit Photo</span>
+                  {communityImage ? (
+                    <div className="relative group rounded-xl overflow-hidden border border-white/10 h-[115px] bg-[#0c0c0c] flex items-center justify-center">
+                      <img src={communityImage} className="max-w-full max-h-full object-contain" alt="Fit check preview" />
+                      <button
+                        type="button"
+                        onClick={() => setCommunityImage(null)}
+                        className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-rose-400 font-mono text-[10px] uppercase font-bold"
+                      >
+                        [ Remove Photo ]
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="cursor-pointer border border-dashed border-white/10 hover:border-cyan-500/30 bg-white/[0.01] hover:bg-cyan-500/[0.02] rounded-xl flex flex-col items-center justify-center h-[115px] transition-all gap-1 text-center p-3">
+                      <Plus className="w-5 h-5 text-white/30" />
+                      <span className="text-[10px] font-mono text-white/60">Drag & Drop or Click to Upload</span>
+                      <span className="text-[8px] font-mono text-white/25">Supports PNG, JPG (Fit Check Portrait)</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleCommunityPhotoChange}
+                      />
+                    </label>
+                  )}
+                </div>
+
+                {/* Simulated Quick Selfie trigger for instant "ready for picture" feeling */}
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      // Seeding a random premium fit check picture
+                      const pics = [
+                        "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=600&auto=format&fit=crop",
+                        "https://images.unsplash.com/photo-1507679799987-c73779587ccf?q=80&w=600&auto=format&fit=crop",
+                        "https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3?q=80&w=600&auto=format&fit=crop",
+                        "https://images.unsplash.com/photo-1539109136881-3be0616acf4b?q=80&w=600&auto=format&fit=crop"
+                      ];
+                      setCommunityImage(pics[Math.floor(Math.random() * pics.length)]);
+                    }}
+                    className="flex-1 py-1.5 bg-white/5 hover:bg-white/10 border border-white/5 text-[9px] font-mono uppercase text-white/70 hover:text-white rounded-lg transition-all cursor-pointer"
+                  >
+                    📸 Simulate Camera
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isUploadingCommunityPost || !communityImage}
+              className="w-full py-2 bg-white text-black hover:bg-neutral-200 transition-all text-[10px] font-mono uppercase tracking-wider rounded-lg font-bold cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+            >
+              {isUploadingCommunityPost ? (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  <span>Publishing Fit...</span>
+                </>
+              ) : (
+                <span>Publish Daily Fit Check</span>
               )}
             </button>
-          ))}
+          </form>
         </div>
-
-        <span className="text-[8px] font-mono uppercase tracking-widest text-white/20">
-          Showing {Math.min(visibleFeed.length, pageLimit)} of {visibleFeed.length} Items
-        </span>
-      </div>
-
-      {/* 3.1 DAILY CURATED REFRESH LOOP RAIL */}
-      <div className="bg-[#fafafa]/[0.01] border border-white/[0.03] p-2.5 rounded-xl flex items-center justify-between text-left gap-2.5">
-        <span className="text-[9px] font-mono uppercase tracking-[0.1em] text-white/40 font-semibold flex items-center gap-1">
-          <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-          Recommended:
-        </span>
-        <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
-          {[
-            { id: 'ALL', label: 'All Picks' },
-            { id: 'TODAYS_PICKS', label: "Today's Curated" },
-            { id: 'TRENDING_STYLE', label: 'Recommended For You' },
-            { id: 'NEW_DROPS', label: 'Boutique Drops' }
-          ].map((subtab) => (
-            <button
-              key={subtab.id}
-              onClick={() => setDailyRefreshFilter(subtab.id as any)}
-              className={`text-[9px] font-mono px-2.5 py-1.5 rounded-lg uppercase transition-all whitespace-nowrap cursor-pointer hover:scale-105 active:scale-95 ${
-                dailyRefreshFilter === subtab.id 
-                  ? 'bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 font-semibold' 
-                  : 'text-white/40 hover:text-white/75 bg-white/[0.01] border border-white/5'
-              }`}
-            >
-              {subtab.label}
-            </button>
-          ))}
-        </div>
-      </div>
+      )}
 
       {/* 4. MAIN FEED FEED ITEMS STREAM */}
       <div className="space-y-10">
@@ -1104,37 +1734,234 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
                 <SlidersHorizontal className="w-4 h-4" />
               </div>
               <div className="space-y-1.5">
-                <p className="font-serif italic text-sm text-white/70">"Awaiting style combinations..."</p>
+                <p className="font-serif italic text-sm text-white/70">"No fits found under this selection"</p>
                 <p className="text-[11px] font-sans text-white/40 max-w-sm mx-auto leading-relaxed">
-                  Try searching for keywords like <span className="text-white font-mono text-[9px] bg-white/5 px-1 rounded uppercase">formal</span>, <span className="text-white font-mono text-[9px] bg-white/5 px-1 rounded uppercase">minimalist</span>, or <span className="text-white font-mono text-[9px] bg-white/5 px-1 rounded uppercase">hoodies</span> in the AI Stylist consult input, or clear active searches to explore default silhouettes.
+                  Try searching for alternate keywords, posting a new fit check, or clear active searches to explore default silhouettes.
                 </p>
               </div>
               <div className="flex justify-center gap-2 pt-2">
                 <button
                   onClick={() => {
                     setSearchPrompt('');
-                    const base = AIEngine.generateFeed(wardrobe, customShopPosts);
-                    const filtered = applyFilter(base);
-                    setVisibleFeed(filtered);
                   }}
                   className="px-3.5 py-1.5 bg-white/5 hover:bg-white text-white hover:text-black border border-white/5 hover:border-white transition-all text-[9px] font-mono uppercase tracking-widest rounded cursor-pointer"
                 >
                   Clear Searches
                 </button>
-                {/* Clean inline check without redundant manual trigger */}
               </div>
             </motion.div>
           ) : (
-            visibleFeed.slice(0, pageLimit).map((feedItem) => (
-              <LazyFeedCard 
-                key={feedItem.id} 
-                item={feedItem}
-                onLike={handleLikeItem}
-                onBookmark={handleBookmarkItem}
-                onSaveToCloset={handleSaveToCloset}
-                onWearOutfit={handleWearOutfit}
-              />
-            ))
+            visibleFeed.slice(0, pageLimit).map((rawFeedItem) => {
+              const feedItem = rawFeedItem as any;
+              // Custom Community Item Card Render
+              if (feedItem.isCommunity) {
+                const hasLiked = likedPosts[feedItem.id];
+                return (
+                  <motion.div 
+                    key={feedItem.id}
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-[#0b0b0b]/40 border border-white/[0.05] rounded-3xl overflow-hidden p-5 flex flex-col md:flex-row gap-6 hover:border-white/10 transition-all text-left"
+                  >
+                    {/* Photo container */}
+                    <div className="relative group w-full md:w-[180px] h-[240px] shrink-0 bg-[#070707] rounded-2xl overflow-hidden border border-white/5">
+                      <img 
+                        src={feedItem.imageUrl} 
+                        alt={feedItem.title} 
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=150&auto=format&fit=crop"; }}
+                      />
+                      <div className="absolute top-2.5 left-2.5">
+                        <span className="text-[8px] font-mono uppercase tracking-widest bg-black/75 backdrop-blur-md text-cyan-300 px-2.5 py-1 rounded-full border border-cyan-500/10 font-bold">
+                          Community Fit
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Context and actions container */}
+                    <div className="flex-1 flex flex-col justify-between py-1 space-y-4">
+                      <div className="space-y-3">
+                        {/* Poster Identity */}
+                        <div className="flex items-center gap-2.5">
+                          <img 
+                            src={feedItem.userAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=100&auto=format&fit=crop'} 
+                            className="w-7 h-7 rounded-full border border-white/10 shrink-0"
+                            alt="User avatar" 
+                          />
+                          <div>
+                            <span className="block text-[11px] font-mono font-medium text-white">{feedItem.shopName}</span>
+                            <span className="block text-[8px] font-mono text-white/30 uppercase tracking-wider">
+                              Routine Fit • {feedItem.createdAt ? new Date(feedItem.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : "Just now"}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Caption & details */}
+                        <div className="space-y-2">
+                          <h4 className="font-serif italic text-sm text-white/90 leading-relaxed font-light">
+                            "{feedItem.title}"
+                          </h4>
+                          <div className="space-y-1 bg-white/[0.01] border border-white/[0.03] p-2.5 rounded-xl">
+                            <span className="text-[8px] font-mono uppercase text-white/30 tracking-wider block">OUTFIT COMPOSITION:</span>
+                            <p className="text-[11px] font-sans text-white/70">{feedItem.description}</p>
+                          </div>
+                        </div>
+
+                        {/* Vibe Tags */}
+                        <div className="flex flex-wrap gap-1 pt-1">
+                          {feedItem.vibeTags?.map((tag: string, tIdx: number) => (
+                            <span key={tIdx} className="text-[8.5px] font-mono text-white/40 bg-white/[0.02] border border-white/5 px-2 py-0.5 rounded uppercase">
+                              #{tag}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Interactive Row */}
+                      <div className="border-t border-white/5 pt-3.5 flex justify-between items-center">
+                        <div className="flex gap-2">
+                          {/* Like button */}
+                          <button
+                            onClick={() => handleLikeCommunityPost(feedItem.id, feedItem.likesCount || 0)}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[10px] font-mono uppercase transition-all cursor-pointer ${
+                              hasLiked 
+                                ? 'bg-rose-500/10 border-rose-500/30 text-rose-400 font-bold scale-105' 
+                                : 'bg-white/[0.02] border-white/5 text-white/50 hover:text-white hover:bg-white/5'
+                            }`}
+                          >
+                            <Heart className={`w-3.5 h-3.5 ${hasLiked ? 'fill-rose-400 text-rose-400' : ''}`} />
+                            <span>{hasLiked ? (feedItem.likesCount || 0) + 1 : feedItem.likesCount || 0}</span>
+                          </button>
+
+                          {/* Closet Copy integration */}
+                          <button
+                            onClick={() => {
+                              handleSaveToCloset(
+                                `${feedItem.shopName}'s Fit Piece`,
+                                feedItem.description || "Garment details imported from a beautiful community fit check.",
+                                'Casual',
+                                feedItem.imageUrl
+                              );
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-white/[0.02] hover:bg-cyan-500/10 border border-white/5 hover:border-cyan-500/20 text-[10px] font-mono uppercase text-white/50 hover:text-cyan-300 rounded-lg transition-all cursor-pointer"
+                          >
+                            <Shirt className="w-3.5 h-3.5" />
+                            <span>Save to Closet</span>
+                          </button>
+                        </div>
+
+                        {/* Wear/Simulation launcher */}
+                        <button
+                          onClick={() => handleWearOutfit(feedItem.id, [feedItem.title])}
+                          className="px-3 py-1.5 bg-cyan-500/15 hover:bg-cyan-500 text-cyan-300 hover:text-black border border-cyan-500/20 hover:border-cyan-500 transition-all text-[9px] font-mono uppercase tracking-wider rounded-lg font-bold cursor-pointer"
+                        >
+                          Try On Fit →
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              }
+
+              // Custom AI Invent Look Card Render
+              if (feedItem.isAiLook) {
+                const isSaved = savedAiLookIds.has(feedItem.id);
+                return (
+                  <motion.div 
+                    key={feedItem.id}
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-[#0b0b0b]/40 border border-white/[0.05] rounded-3xl overflow-hidden p-5 flex flex-col md:flex-row gap-6 hover:border-white/10 transition-all text-left"
+                  >
+                    {/* Photo container with interactive zoom */}
+                    <div className="relative group w-full md:w-[180px] h-[240px] shrink-0 bg-[#070707] rounded-2xl overflow-hidden border border-white/5">
+                      <img 
+                        src={feedItem.imageUrl} 
+                        alt={feedItem.title} 
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?q=80&w=150&auto=format&fit=crop"; }}
+                      />
+                      <div className="absolute top-2.5 left-2.5">
+                        <span className="text-[8px] font-mono uppercase tracking-widest bg-purple-950/85 backdrop-blur-md text-purple-300 px-2.5 py-1 rounded-full border border-purple-500/20 font-bold flex items-center gap-1">
+                          <Sparkles className="w-2.5 h-2.5 animate-pulse text-purple-300" />
+                          AI INVENT
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Context and actions container */}
+                    <div className="flex-1 flex flex-col justify-between py-1 space-y-4">
+                      <div className="space-y-3">
+                        {/* Poster Identity */}
+                        <div className="flex items-center gap-2">
+                          <div className="w-5 h-5 rounded-full bg-purple-500/10 flex items-center justify-center border border-purple-500/20 text-purple-400 font-mono text-[9px] font-bold">
+                            AI
+                          </div>
+                          <span className="text-[10px] font-mono text-purple-400 uppercase tracking-widest font-bold">
+                            GENERATED BY {feedItem.shopName}
+                          </span>
+                        </div>
+
+                        {/* Prompt Details */}
+                        <div className="space-y-2">
+                          <div className="space-y-1">
+                            <span className="text-[8px] font-mono uppercase text-purple-400/45 tracking-widest block">GENERATE INPUT PROMPT:</span>
+                            <p className="text-[12px] font-serif italic text-white/95 leading-relaxed font-light">
+                              "{feedItem.description}"
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Vibe Tags */}
+                        <div className="flex flex-wrap gap-1 pt-1">
+                          {feedItem.vibeTags?.map((tag: string, tIdx: number) => (
+                            <span key={tIdx} className="text-[8.5px] font-mono text-purple-300 bg-purple-500/5 border border-purple-500/10 px-2 py-0.5 rounded uppercase">
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Action buttons row */}
+                      <div className="border-t border-white/5 pt-3.5 flex justify-between items-center">
+                        {/* One-click Save directly to Closet */}
+                        <button
+                          onClick={() => handleSaveAiLookToCloset(feedItem)}
+                          className={`px-3.5 py-1.5 border text-[10px] font-mono uppercase rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                            isSaved 
+                              ? 'bg-purple-500/10 border-purple-500/20 text-purple-300 font-semibold' 
+                              : 'bg-white/[0.02] border-white/5 text-white/50 hover:text-white hover:bg-white/5'
+                          }`}
+                        >
+                          <Shirt className="w-3.5 h-3.5" />
+                          <span>{isSaved ? "Saved!" : "Save to Closet"}</span>
+                        </button>
+
+                        {/* Virtual try on */}
+                        <button
+                          onClick={() => handleWearOutfit(feedItem.id, [feedItem.title])}
+                          className="px-3.5 py-1.5 bg-purple-500/15 hover:bg-purple-500 text-purple-300 hover:text-black border border-purple-500/20 hover:border-purple-500 transition-all text-[9px] font-mono uppercase tracking-wider rounded-lg font-bold cursor-pointer"
+                        >
+                          Try On Design →
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              }
+
+              // Standard Brands/Products list card item
+              return (
+                <LazyFeedCard 
+                  key={feedItem.id} 
+                  item={feedItem}
+                  onLike={handleLikeItem}
+                  onBookmark={handleBookmarkItem}
+                  onSaveToCloset={handleSaveToCloset}
+                  onWearOutfit={handleWearOutfit}
+                />
+              );
+            })
           )}
         </AnimatePresence>
 

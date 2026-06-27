@@ -414,7 +414,7 @@ Ensure no clashing seasonal styles or duplications under strict governance check
     }
   };
 
-  const modelName = "gemini-2.5-flash";
+  const modelName = "gemini-3.5-flash";
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
   let response;

@@ -18,7 +18,7 @@ export class FashionPromptBuilder {
       return `[ID: ${item.id}] "${item.title}" - ${item.category} | Colors: ${item.primaryColor || 'Neutral shade'}, ${item.secondaryColor || 'Contrast hue'} | Wear frequency: ${item.wearCount || 0}x | Season: ${item.season || 'All-Season'} | Body: ${item.description || 'No description provided'}`;
     }).join('\n');
 
-    const systemInstruction = `You are a professional haute-couture sartorial director and elite wardrobe auditor.
+const systemInstruction = `You are a professional haute-couture sartorial director and elite wardrobe auditor.
 Your job is to match perfect clothing items based on styling harmony, thermal levels, and personal aesthetics.
 
 ### OBJECTIVE:
@@ -30,7 +30,9 @@ Given a list of available garments, recommend a highly compatible matched outfit
 ### SYSTEM BOUNDS & GUARDRAILS:
 1. NEVER overwrite or alter the active wardrobe database files directly.
 2. NEVER prescribe item deletions or auto-washing statuses.
-3. Keep results precise. Strictly follow the requested JSON schema.`;
+3. DO NOT suggest the exact same item combinations that are listed in the user's "Saved Outfits" or "Recent Recommendation History". We want high variety, fresh recommendations, and minimal repetition.
+4. Align suggestions with user favorite brands and style preference vector weights when selecting matching garments.
+5. Keep results precise. Strictly follow the requested JSON schema.`;
 
     const prompt = `### CONTEXT:
 1. AVAILABLE WARDROBE PIECES:
@@ -46,6 +48,10 @@ ${wardrobeText}
 - Favorite colorways: ${profile.favoriteColors.join(', ')}
 - Repeat Patterns / Textures in use: ${profile.repeatPatterns.join(', ')}
 - Colors to avoid (to rest fabric fibers): ${profile.avoidHistory.join(', ') || 'None'}
+- Favorite brands / brand affinity: ${profile.favoriteBrands?.join(', ') || 'None'}
+- Saved outfits (avoid repeating these exact combinations): ${profile.savedOutfitsDetails?.join(' | ') || 'None'}
+- Recent recommendation history (avoid repeating these IDs/combinations): ${profile.recentHistoryDetails?.join(' | ') || 'None'}
+- Dynamic preference vectors: ${profile.vibeVectors || 'None'}
 
 4. MORNING AGENDA:
 - Forecasted Agenda setting: "${agenda}"

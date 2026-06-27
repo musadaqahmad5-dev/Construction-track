@@ -4,6 +4,12 @@ import { WeatherAdapter } from './weatherAdapter';
 import { ProfileEngine } from './profileEngine';
 import { FashionPromptBuilder } from './fashionPromptBuilder';
 import { OutfitReasoner, OutfitRecommendationResult } from './outfitReasoner';
+import { db } from '../../firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { StyleProfileMemory } from '../style-memory/styleProfile';
+import { VectorProfileMemory } from '../user-profile-memory/vectorProfileMemory';
+import { OutfitHistory } from '../style-memory/outfitHistory';
+import { GenerationHistory } from '../image-generation/generationHistory';
 
 // Interfaces for Visual analysis (Task 3)
 export interface GarmentVisionResult {
@@ -59,13 +65,85 @@ export class FashionAI {
     condition: string,
     tempRange: string,
     vibe: string,
-    agenda: string
+    agenda: string,
+    userId?: string
   ): Promise<OutfitRecommendationResult> {
     // 1. Adapter Layer - Weather translation
     const weatherCtx = WeatherAdapter.adapt(condition, tempRange);
 
     // 2. Profile Layer - Style patterns extraction (Favorite colors, fatigue metrics, vibes)
     const styleMemory = ProfileEngine.extractStyleMemory(wardrobe, vibe);
+
+    // Load extra persistent style info if userId is available to fulfill personalization criteria
+    if (userId && userId !== 'anonymous-user') {
+      try {
+        // Load persistent profile (preferred categories, favorite colors, style vibe, etc.)
+        const persistentProfile = await StyleProfileMemory.load(userId);
+        if (persistentProfile) {
+          if (persistentProfile.favoriteColors && persistentProfile.favoriteColors.length > 0) {
+            styleMemory.favoriteColors = Array.from(new Set([...styleMemory.favoriteColors, ...persistentProfile.favoriteColors]));
+          }
+          if (persistentProfile.styleVibe) {
+            styleMemory.styleMode = persistentProfile.styleVibe;
+          }
+        }
+
+        // Load vector profile weights (minimalist, streetwear, classic, luxury, cyberpunk, traditional)
+        const vectorProfile = await VectorProfileMemory.loadProfile(userId);
+        if (vectorProfile && vectorProfile.vector) {
+          const v = vectorProfile.vector;
+          styleMemory.vibeVectors = `Minimalist: ${v.minimalist}, Streetwear: ${v.streetwear}, Classic: ${v.classic}, Luxury: ${v.luxury}, Cyberpunk: ${v.cyberpunk}, Traditional: ${v.traditional}`;
+        }
+
+        // Load saved outfits from Firestore for deduplication and ground references
+        const outfitsRef = collection(db, 'outfits');
+        const outfitsQuery = query(outfitsRef, where('userId', '==', userId));
+        const outfitsSnap = await getDocs(outfitsQuery);
+        const savedOutfits = outfitsSnap.docs.map(doc => {
+          const d = doc.data();
+          return { id: doc.id, title: d.title, items: d.items || [] };
+        });
+
+        styleMemory.savedOutfitsCount = savedOutfits.length;
+        if (savedOutfits.length > 0) {
+          styleMemory.savedOutfitsDetails = savedOutfits.map(o => `"${o.title}" (IDs: ${o.items.join(',')})`);
+        }
+
+        // Load recent recommended/worn outfit history from Firestore to avoid repetitive selection fatigue
+        const recentHistory = await OutfitHistory.getHistory(userId, 10);
+        if (recentHistory && recentHistory.length > 0) {
+          styleMemory.recentHistoryDetails = recentHistory.map(h => `${h.action} on ${h.timestamp} (IDs: ${h.items.join(',')})`);
+        }
+
+        // Extract favorite brands based on owned garments in active wardrobe
+        const brandCounts: Record<string, number> = {};
+        const knownBrands = ['Arket', 'COS', 'A.P.C.', 'Salomon', 'Acronym', 'Arc\'teryx', 'Loro Piana', 'Orazio Luciano', 'Brunello Cucinelli', 'Jacques Marie Mage'];
+        wardrobe.forEach(item => {
+          const text = `${item.title} ${item.description || ''}`.toLowerCase();
+          knownBrands.forEach(b => {
+            if (text.includes(b.toLowerCase())) {
+              brandCounts[b] = (brandCounts[b] || 0) + 1;
+            }
+          });
+        });
+        const extractedBrands = Object.entries(brandCounts)
+          .sort((a, b) => b[1] - a[1])
+          .map(entry => entry[0]);
+        
+        styleMemory.favoriteBrands = extractedBrands.length > 0 ? extractedBrands : ['COS', 'Arket', 'A.P.C.'];
+
+        // Inject generated looks into preference hints
+        const generatedLooks = await GenerationHistory.getHistory(userId);
+        if (generatedLooks && generatedLooks.length > 0) {
+          const uniqueGeneratedVibes = Array.from(new Set(generatedLooks.map(l => l.vibe).filter(Boolean)));
+          if (uniqueGeneratedVibes.length > 0) {
+            styleMemory.repeatPatterns = Array.from(new Set([...styleMemory.repeatPatterns, ...uniqueGeneratedVibes]));
+          }
+        }
+      } catch (err) {
+        console.warn('[FashionAI] Failed to load full persistent personalization memory context:', err);
+      }
+    }
 
     // Determine fallback results first so we are always ready
     const fallbackResult = OutfitReasoner.reason(wardrobe, weatherCtx, styleMemory, agenda);
@@ -91,7 +169,7 @@ export class FashionAI {
 
       // 5. Query Gemini Flash (Highly efficient, perfect for text orchestration)
       const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3.5-flash',
         contents: prompt,
         config: {
           systemInstruction,
@@ -150,7 +228,7 @@ export class FashionAI {
       );
 
       const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3.5-flash',
         contents: prompt,
         config: { systemInstruction, maxOutputTokens: 4096 }
       });
@@ -201,7 +279,7 @@ export class FashionAI {
       };
 
       const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3.5-flash',
         contents: { parts: [imagePart, textPart] },
         config: {
           responseMimeType: "application/json",

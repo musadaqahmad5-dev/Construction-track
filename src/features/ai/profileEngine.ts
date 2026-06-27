@@ -5,6 +5,12 @@ export interface StyleMemory {
   repeatPatterns: string[];     // Textures or words indicating fabric patterns e.g., "Heavy", "Tailored", "Ribbed"
   styleMode: 'minimalist' | 'classic' | 'streetwear' | 'vintage' | 'bold';
   avoidHistory: string[];       // Colors or titles that should be rested to prevent rotation fatigue
+  favoriteBrands?: string[];
+  savedOutfitsCount?: number;
+  savedOutfitsDetails?: string[];
+  recentHistoryDetails?: string[];
+  vibeVectors?: string;
+  seasonContext?: string;
 }
 
 export class ProfileEngine {

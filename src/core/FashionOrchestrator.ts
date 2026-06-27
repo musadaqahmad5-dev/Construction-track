@@ -284,7 +284,8 @@ export class FashionOrchestrator {
         condition,
         tempRange,
         vibe,
-        agenda
+        agenda,
+        request.userId
       );
       
       reasoningText = liveAiResult.reasoning;

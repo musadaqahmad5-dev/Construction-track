@@ -27,7 +27,8 @@ import {
   History,
   Cloud,
   Save,
-  Trash2
+  Trash2,
+  Image as ImageIcon
 } from 'lucide-react';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { auth } from '../firebase';
@@ -55,6 +56,7 @@ interface OutfitItem {
   where_to_wear?: string;
   confidence?: number;
   quick_alternative?: string;
+  imageUrl?: string;
 }
 
 interface UserProfile {
@@ -114,6 +116,11 @@ export const AIFashionMVPSuite: React.FC = () => {
   const [acceptedCount, setAcceptedCount] = useState(0);
   const [outfitFeedback, setOutfitFeedback] = useState<Record<number, string>>({});
 
+  // Real Image Generation states
+  const [outfitImages, setOutfitImages] = useState<Record<number, string>>({});
+  const [generatingImage, setGeneratingImage] = useState<Record<number, boolean>>({});
+  const [imageError, setImageError] = useState<Record<number, string>>({});
+
   // Isolated multi-tenant dropdown switcher
   const [selectedTenant, setSelectedTenant] = useState('enterprise-lux-01');
 
@@ -171,7 +178,15 @@ export const AIFashionMVPSuite: React.FC = () => {
                 control_plane: { decision_type: "saas", api_cost_optimization: true, response_enhanced: true },
                 user_profile: { style: o.title, occasion: "Saved", fashion_maturity_score: 85, style_drift_index: 0.15, trend_adoption_level: 3, confidence: 90 },
                 style_evolution: { style_evolution_curve: "Steady", preference_drift_forecast: "Stable" },
-                outfits: o.items.map(item => typeof item === 'string' ? { items: { top: item, bottom: '', shoes: '' }, scores: { style_match: 90, occasion_match: 90, trend_alignment: 90, comfort: 90, commercial_value: 90, revenue_priority_score: 90, total_score: 90 }, affiliate_potential: false, fashion_reason: 'Saved outfit combination.' } : item),
+                outfits: o.items.map((item, idx) => {
+                  const base = typeof item === 'string' 
+                    ? { items: { top: item, bottom: '', shoes: '' }, scores: { style_match: 90, occasion_match: 90, trend_alignment: 90, comfort: 90, commercial_value: 90, revenue_priority_score: 90, total_score: 90 }, affiliate_potential: false, fashion_reason: 'Saved outfit combination.' } 
+                    : { ...item };
+                  if (idx === 0 && o.imageUrl) {
+                    base.imageUrl = o.imageUrl;
+                  }
+                  return base;
+                }),
                 final_recommendation: o.description || "",
                 monetization_summary: { best_conversion_outfit_index: 0, high_value_picks: [] },
                 system_health: { confidence: 95, quality_score: 95 }
@@ -321,6 +336,9 @@ export const AIFashionMVPSuite: React.FC = () => {
     setError(null);
     setSystemState('LOADING');
     setFiosData(null);
+    setOutfitImages({});
+    setGeneratingImage({});
+    setImageError({});
 
     // Simulated micro-pipeline steps using human wording
     const steps = [
@@ -431,6 +449,73 @@ export const AIFashionMVPSuite: React.FC = () => {
     }
   };
 
+  const handleGenerateOutfitImage = async (index: number) => {
+    const outfit = fiosData?.outfits[index];
+    if (!outfit) return;
+
+    if (typeof window !== 'undefined' && !window.navigator.onLine) {
+      setImageError(prev => ({ ...prev, [index]: "Device is currently offline" }));
+      return;
+    }
+
+    setGeneratingImage(prev => ({ ...prev, [index]: true }));
+    setImageError(prev => ({ ...prev, [index]: '' }));
+
+    try {
+      let token: string | null = null;
+      if (auth.currentUser) {
+        token = await auth.currentUser.getIdToken();
+      } else if (typeof localStorage !== 'undefined' && localStorage.getItem('auth_guest_active') === 'true') {
+        token = 'guest-token';
+      }
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const garmentsList = [];
+      if (outfit.items?.top) garmentsList.push({ title: outfit.items.top, category: 'Top', primaryColor: 'Selected' });
+      if (outfit.items?.bottom) garmentsList.push({ title: outfit.items.bottom, category: 'Bottom', primaryColor: 'Selected' });
+      if (outfit.items?.shoes) garmentsList.push({ title: outfit.items.shoes, category: 'Shoes', primaryColor: 'Selected' });
+
+      const response = await fetch('/api/image-generation/generate', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          theme: fiosData.user_profile?.style || 'Minimalist',
+          vibe: outfit.fashion_reason || 'highly curated editorial fashion look',
+          garments: garmentsList,
+          gender: 'unisex',
+          formality: 'Casual',
+          season: (fiosData.user_profile as any)?.season || 'All-Season',
+          setting: 'an elegant architectural studio with soft daylight and high-end concrete textures',
+          provider: 'imagen'
+        })
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || `Server returned status ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data.success && data.imageUrl) {
+        setOutfitImages(prev => ({ ...prev, [index]: data.imageUrl }));
+        setDelightNotice("✓ Lookbook Photo Generated!");
+      } else {
+        throw new Error(data.error || "No image was returned from the generator");
+      }
+    } catch (err: any) {
+      console.error("[Image Gen Error]:", err);
+      setImageError(prev => ({ ...prev, [index]: err.message || "Failed to generate visual." }));
+    } finally {
+      setGeneratingImage(prev => ({ ...prev, [index]: false }));
+    }
+  };
+
   const handleFeedback = (outfitIndex: number, feedback: string) => {
     setOutfitFeedback(prev => ({ ...prev, [outfitIndex]: feedback }));
     if (feedback === 'love_it') {
@@ -451,16 +536,24 @@ export const AIFashionMVPSuite: React.FC = () => {
       const outfitId = await FirestoreService.createOutfit({
         title: fiosData?.style_title || `Curated Look 0${index + 1}`,
         description: outfit.fashion_reason || outfit.why_this_works || '',
-        items: [outfit.items?.top, outfit.items?.bottom, outfit.items?.shoes].filter(Boolean)
+        items: [outfit.items?.top, outfit.items?.bottom, outfit.items?.shoes].filter(Boolean),
+        imageUrl: outfitImages[index] || undefined
       });
       setSaves(prev => prev + 1);
       setDelightNotice("✓ Saved to cloud outfits collection");
       
+      const savedData = {
+        ...fiosData!,
+        outfits: fiosData!.outfits.map((o, idx) => 
+          idx === index ? { ...o, imageUrl: outfitImages[index] } : o
+        )
+      };
+
       const newLook = {
         id: outfitId,
         styleTitle: fiosData?.style_title || `Curated Look 0${index + 1}`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        data: fiosData!
+        data: savedData
       };
       setRecentLooks(prev => [newLook, ...prev].slice(0, 5));
     } catch (err) {
@@ -1242,6 +1335,73 @@ export const AIFashionMVPSuite: React.FC = () => {
                             {(outfit.confidence || 92) >= 90 ? 'Exceptional Match' : 'High Quality'}
                           </span>
                         </div>
+                      </div>
+
+                      {/* Premium AI Lookbook Image Section */}
+                      <div className="relative aspect-[3/4] w-full rounded-xl overflow-hidden bg-zinc-950/80 border border-white/5 group/img">
+                        {(outfitImages[index] || outfit.imageUrl) ? (
+                          <div className="relative w-full h-full">
+                            <img 
+                              src={outfitImages[index] || outfit.imageUrl} 
+                              alt={`AI Lookbook ${index + 1}`} 
+                              referrerPolicy="no-referrer"
+                              className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover/img:scale-105"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20" />
+                            <div className="absolute bottom-2 left-2 right-2 flex justify-between items-center text-[9px] font-mono text-white/90 bg-black/60 backdrop-blur-md px-2 py-1 rounded-md border border-white/5">
+                              <span className="flex items-center gap-1">
+                                <Sparkles className="w-2.5 h-2.5 text-indigo-400" />
+                                IMAGEN 4.0 ACTIVE
+                              </span>
+                              <span className="text-zinc-400">High-Fidelity</span>
+                            </div>
+                          </div>
+                        ) : generatingImage[index] ? (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center space-y-3 bg-black/45 backdrop-blur-sm">
+                            <Loader2 className="w-6 h-6 text-indigo-400 animate-spin" />
+                            <div className="space-y-1">
+                              <span className="text-[10px] font-mono text-zinc-300 block uppercase tracking-wider animate-pulse">
+                                Synthesizing Look...
+                              </span>
+                              <span className="text-[8px] font-mono text-zinc-500 block">
+                                Curation in synthesis via cloud GPU
+                              </span>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleGenerateOutfitImage(index)}
+                            className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center space-y-2 cursor-pointer transition-all bg-[#121214]/60 hover:bg-indigo-950/20 w-full h-full border-none outline-none"
+                          >
+                            <div className="p-3 rounded-full bg-white/[0.02] border border-white/5 group-hover/img:border-indigo-500/30 group-hover/img:bg-indigo-500/5 transition-all">
+                              <ImageIcon className="w-5 h-5 text-zinc-400 group-hover/img:text-indigo-400 transition-colors" />
+                            </div>
+                            <div className="space-y-1">
+                              <span className="text-[10px] font-mono text-zinc-300 font-bold uppercase tracking-wider block group-hover/img:text-indigo-300 transition-colors">
+                                ✦ Visualize Style Photo
+                              </span>
+                              <span className="text-[8px] font-mono text-zinc-500 block max-w-[200px] mx-auto leading-relaxed">
+                                Generate a photorealistic 3:4 lookbook image for this outfit
+                              </span>
+                            </div>
+                          </button>
+                        )}
+
+                        {imageError[index] && (
+                          <div className="absolute inset-x-2 bottom-2 bg-rose-500/10 border border-rose-500/20 rounded-md p-1.5 text-center">
+                            <p className="text-[8px] font-mono text-rose-300 leading-tight">
+                              Error: {imageError[index]}
+                            </p>
+                            <button 
+                              type="button" 
+                              onClick={(e) => { e.stopPropagation(); handleGenerateOutfitImage(index); }}
+                              className="text-[8px] font-mono text-white underline mt-0.5 hover:text-rose-200"
+                            >
+                              Retry Visual Generation
+                            </button>
+                          </div>
+                        )}
                       </div>
 
                       {/* Wearable specific garments display */}

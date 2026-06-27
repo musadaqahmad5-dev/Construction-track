@@ -106,6 +106,39 @@ export class OutfitReasoner {
         reasons.push("Garment is brand new or rotated low; boosts novelty score");
       }
 
+      // Favorite brand preference boost
+      if (profile.favoriteBrands) {
+        const matchedBrand = profile.favoriteBrands.find(b => 
+          item.title.toLowerCase().includes(b.toLowerCase()) || 
+          (item.description || '').toLowerCase().includes(b.toLowerCase())
+        );
+        if (matchedBrand) {
+          score += 15;
+          reasons.push(`Matches favored brand: "${matchedBrand}"`);
+        }
+      }
+
+      // Repetition fatigue control (avoid recommending items in saved outfits or recent recommendations)
+      let isRecentlyUsed = false;
+      if (profile.savedOutfitsDetails) {
+        profile.savedOutfitsDetails.forEach(detail => {
+          if (detail.includes(item.id)) {
+            isRecentlyUsed = true;
+          }
+        });
+      }
+      if (profile.recentHistoryDetails) {
+        profile.recentHistoryDetails.forEach(detail => {
+          if (detail.includes(item.id)) {
+            isRecentlyUsed = true;
+          }
+        });
+      }
+      if (isRecentlyUsed) {
+        score -= 15;
+        reasons.push("Item rest: item was recently recommended or saved in looks");
+      }
+
       // Agenda suitability
       const agendaLower = agenda.toLowerCase();
       if (agendaLower.includes('work') || agendaLower.includes('office') || agendaLower.includes('formal')) {

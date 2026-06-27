@@ -139,7 +139,7 @@ service cloud.firestore {
     function isValidGeneratedLook(data) {
       let requiredFields = ['imageUrl', 'prompt', 'provider', 'userId'];
       return data.keys().hasAll(requiredFields)
-        && data.imageUrl is string && data.imageUrl.size() <= 2000
+        && data.imageUrl is string && data.imageUrl.size() <= 1048576
         && data.prompt is string && data.prompt.size() <= 4000
         && data.provider is string && data.provider.size() <= 200
         && data.userId is string && data.userId.size() <= 128
