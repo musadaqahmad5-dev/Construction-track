@@ -28,6 +28,7 @@ import {
   Cloud,
   Save,
   Trash2,
+  Camera,
   Image as ImageIcon
 } from 'lucide-react';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
@@ -110,6 +111,28 @@ export const AIFashionMVPSuite: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
+  // Tab states for Assistant vs Studio
+  const [activeTab, setActiveTab] = useState<'STYLIST' | 'STUDIO'>('STYLIST');
+
+  // Interactive Imagen Fashion Studio state
+  const [studioGender, setStudioGender] = useState<'male' | 'female' | 'unisex'>('unisex');
+  const [studioTheme, setStudioTheme] = useState('Streetwear');
+  const [studioFormality, setStudioFormality] = useState<'Casual' | 'Semi-formal' | 'Formal'>('Casual');
+  const [studioUpper, setStudioUpper] = useState('Bomber Jacket');
+  const [studioUpperColor, setStudioUpperColor] = useState('Beige Wool');
+  const [studioLower, setStudioLower] = useState('Tailored Trousers');
+  const [studioLowerColor, setStudioLowerColor] = useState('Slate Gray');
+  const [studioShoes, setStudioShoes] = useState('Minimalist White Sneakers');
+  const [studioShoesColor, setStudioShoesColor] = useState('Off-White');
+  const [studioHeadwear, setStudioHeadwear] = useState('Structured Baseball Cap');
+  const [studioHeadwearColor, setStudioHeadwearColor] = useState('Midnight Blue');
+  const [studioSetting, setStudioSetting] = useState('an elegant architectural studio with soft daylight and concrete textures');
+  const [studioVibe, setStudioVibe] = useState('clean, editorial, high-end fashion catalog');
+  
+  const [studioGeneratedImage, setStudioGeneratedImage] = useState<string | null>(null);
+  const [studioGenerating, setStudioGenerating] = useState(false);
+  const [studioError, setStudioError] = useState<string | null>(null);
+
   // V3 Productization states
   const [systemState, setSystemState] = useState<'READY' | 'LOADING' | 'RETRY' | 'OFFLINE'>('READY');
   const [generatedCount, setGeneratedCount] = useState(0);
@@ -147,6 +170,80 @@ export const AIFashionMVPSuite: React.FC = () => {
   const [savingOutfit, setSavingOutfit] = useState<Record<number, boolean>>({});
   const [savingStyle, setSavingStyle] = useState<boolean>(false);
   const [savingRec, setSavingRec] = useState<boolean>(false);
+
+  const handleGenerateStudioImage = async () => {
+    if (typeof window !== 'undefined' && !window.navigator.onLine) {
+      setStudioError("Device is currently offline");
+      return;
+    }
+
+    setStudioGenerating(true);
+    setStudioError(null);
+
+    try {
+      let token: string | null = null;
+      if (auth.currentUser) {
+        token = await auth.currentUser.getIdToken();
+      } else if (typeof localStorage !== 'undefined' && localStorage.getItem('auth_guest_active') === 'true') {
+        token = 'guest-token';
+      }
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const garmentsList = [];
+      if (studioUpper && studioUpper !== 'None') {
+        garmentsList.push({ title: studioUpper, category: 'Upper Garment', primaryColor: studioUpperColor });
+      }
+      if (studioLower && studioLower !== 'None') {
+        garmentsList.push({ title: studioLower, category: 'Lower Garment', primaryColor: studioLowerColor });
+      }
+      if (studioShoes && studioShoes !== 'None') {
+        garmentsList.push({ title: studioShoes, category: 'Shoes', primaryColor: studioShoesColor });
+      }
+      if (studioHeadwear && studioHeadwear !== 'None') {
+        garmentsList.push({ title: studioHeadwear, category: 'Headwear', primaryColor: studioHeadwearColor });
+      }
+
+      const response = await fetch('/api/image-generation/generate', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          theme: studioTheme,
+          vibe: studioVibe,
+          garments: garmentsList,
+          gender: studioGender,
+          formality: studioFormality,
+          season: 'All-Season',
+          setting: studioSetting,
+          provider: 'imagen'
+        })
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || `Server returned status ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data.success && data.imageUrl) {
+        setStudioGeneratedImage(data.imageUrl);
+        setDelightNotice("✓ Premium Studio Lookbook Photo Generated!");
+        setGeneratedCount(prev => prev + 1);
+      } else {
+        throw new Error(data.error || "No image was returned from the generator");
+      }
+    } catch (err: any) {
+      console.error("[Studio Image Gen Error]:", err);
+      setStudioError(err.message || "Failed to generate studio visual.");
+    } finally {
+      setStudioGenerating(false);
+    }
+  };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -755,7 +852,35 @@ export const AIFashionMVPSuite: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. PROMPT CONSOLE INPUT ZONE OR RETURN TRIGGER CAP */}
+      {/* 1.5 PREMIUM VIEW TAB SWITCHER */}
+      <div className="flex border-b border-white/10 p-1 bg-black/45 rounded-xl max-w-md mx-auto sm:mx-0">
+        <button
+          onClick={() => setActiveTab('STYLIST')}
+          className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg text-xs font-mono font-bold transition-all ${
+            activeTab === 'STYLIST'
+              ? 'bg-gradient-to-r from-indigo-500/20 to-purple-500/20 text-white border border-indigo-500/30 shadow-md shadow-indigo-500/5'
+              : 'text-zinc-400 hover:text-white border border-transparent cursor-pointer'
+          }`}
+        >
+          <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+          <span>AI Stylist Curator</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('STUDIO')}
+          className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg text-xs font-mono font-bold transition-all ${
+            activeTab === 'STUDIO'
+              ? 'bg-gradient-to-r from-purple-500/20 to-indigo-500/20 text-white border border-purple-500/30 shadow-md shadow-purple-500/5'
+              : 'text-zinc-400 hover:text-white border border-transparent cursor-pointer'
+          }`}
+        >
+          <Camera className="w-3.5 h-3.5 text-purple-400" />
+          <span>Fashion Look Studio</span>
+        </button>
+      </div>
+
+      {activeTab === 'STYLIST' ? (
+        <>
+          {/* 2. PROMPT CONSOLE INPUT ZONE OR RETURN TRIGGER CAP */}
       {generatedCount >= 3 ? (
         <motion.div 
           initial={{ opacity: 0, y: 15 }}
@@ -1833,6 +1958,344 @@ ${shoes}`;
           </motion.div>
         )}
       </AnimatePresence>
+        </>
+      ) : (
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="grid grid-cols-1 lg:grid-cols-12 gap-6 pt-2"
+        >
+          {/* Left Panel: Configuration Form (7 columns) */}
+          <div className="lg:col-span-7 bg-[#121212]/30 border border-white/5 p-6 rounded-2xl space-y-6 text-left">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <Camera className="w-4 h-4 text-purple-400" />
+                <h3 className="text-base font-serif font-semibold text-white tracking-wide">Fashion & Style Look Studio</h3>
+              </div>
+              <p className="text-xs text-zinc-400 leading-relaxed font-sans">
+                Co-create and visualize custom high-fidelity model lookbook photos. Configure clothes, shoes, and caps for both men and women with real-time prompt building.
+              </p>
+            </div>
+
+            {/* Selector: Gender representation */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider block">1. Model Gender Profile</label>
+              <div className="grid grid-cols-3 gap-2">
+                {(['female', 'male', 'unisex'] as const).map((g) => (
+                  <button
+                    key={g}
+                    type="button"
+                    onClick={() => setStudioGender(g)}
+                    className={`py-2 px-3 rounded-lg text-xs font-mono font-bold capitalize border transition-all cursor-pointer ${
+                      studioGender === g
+                        ? 'bg-purple-500/10 text-purple-300 border-purple-500/30'
+                        : 'bg-black/20 text-zinc-400 border-white/5 hover:text-white'
+                    }`}
+                  >
+                    {g === 'male' ? '👨 Men\'s Fashion' : g === 'female' ? '👩 Women\'s Fashion' : '👥 Unisex Style'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Clothing Category Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              
+              {/* UPPER CLOTHING */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider block">2. Upper Clothing / Top</label>
+                <select
+                  value={studioUpper}
+                  onChange={(e) => setStudioUpper(e.target.value)}
+                  className="w-full bg-black/40 text-xs text-white border border-white/5 rounded-xl p-3 outline-none focus:border-purple-500/30 cursor-pointer"
+                >
+                  <option value="Bomber Jacket">Casual Bomber Jacket</option>
+                  <option value="Wool Cashmere Coat">Luxury Wool Cashmere Coat</option>
+                  <option value="Silk Blend Double-Breasted Blazer">Elegant Silk Blend Blazer</option>
+                  <option value="Heavy Knit Turtleneck Sweater">Fitted Heavy Knit Turtleneck</option>
+                  <option value="Distressed Streetwear Hoodie">Distressed Streetwear Hoodie</option>
+                  <option value="Minimalist Linen Button-Down Shirt">Minimalist Linen Button-Down</option>
+                  <option value="Cropped Leather Biker Jacket">Cropped Leather Biker Jacket</option>
+                  <option value="None">None (No Upper Piece)</option>
+                </select>
+
+                <select
+                  value={studioUpperColor}
+                  onChange={(e) => setStudioUpperColor(e.target.value)}
+                  className="w-full bg-black/20 text-[11px] text-zinc-300 border border-white/5 rounded-lg p-2 outline-none focus:border-purple-500/20 cursor-pointer"
+                >
+                  <option value="Beige Wool">Beige Wool</option>
+                  <option value="Sand Beige">Sand Beige</option>
+                  <option value="Midnight Jet Black">Midnight Jet Black</option>
+                  <option value="Emerald Green Velvet">Emerald Green Velvet</option>
+                  <option value="Crimson Burgundy">Crimson Burgundy</option>
+                  <option value="Soft Cream White">Soft Cream White</option>
+                  <option value="Charcoal Gray">Charcoal Gray</option>
+                </select>
+              </div>
+
+              {/* LOWER CLOTHING */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider block">3. Lower Clothing / Pants</label>
+                <select
+                  value={studioLower}
+                  onChange={(e) => setStudioLower(e.target.value)}
+                  className="w-full bg-black/40 text-xs text-white border border-white/5 rounded-xl p-3 outline-none focus:border-purple-500/30 cursor-pointer"
+                >
+                  <option value="Tailored Trousers">Tailored Pleated Trousers</option>
+                  <option value="Wide-Leg Heavy Denim Jeans">Wide-Leg Heavy Denim Jeans</option>
+                  <option value="A-Line Silk Wrap Skirt">A-Line Silk Wrap Skirt</option>
+                  <option value="Structured Corduroy Utility Pants">Structured Corduroy Utility Pants</option>
+                  <option value="Raw Edge Linen Chino Shorts">Raw Edge Linen Chino Shorts</option>
+                  <option value="None">None (No Lower Piece)</option>
+                </select>
+
+                <select
+                  value={studioLowerColor}
+                  onChange={(e) => setStudioLowerColor(e.target.value)}
+                  className="w-full bg-black/20 text-[11px] text-zinc-300 border border-white/5 rounded-lg p-2 outline-none focus:border-purple-500/20 cursor-pointer"
+                >
+                  <option value="Slate Gray">Slate Gray</option>
+                  <option value="Classic Indigo Wash">Classic Indigo Wash</option>
+                  <option value="Off-White Cream">Off-White Cream</option>
+                  <option value="Warm Mocha Brown">Warm Mocha Brown</option>
+                  <option value="Jet Black">Jet Black</option>
+                </select>
+              </div>
+
+              {/* FOOTWEAR & SHOES */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider block">4. Footwear & Shoes</label>
+                <select
+                  value={studioShoes}
+                  onChange={(e) => setStudioShoes(e.target.value)}
+                  className="w-full bg-black/40 text-xs text-white border border-white/5 rounded-xl p-3 outline-none focus:border-purple-500/30 cursor-pointer"
+                >
+                  <option value="Minimalist White Sneakers">Minimalist White Sneakers</option>
+                  <option value="Suede Chelsea Ankle Boots">Suede Chelsea Ankle Boots</option>
+                  <option value="Patent Leather Penny Loafers">Patent Leather Penny Loafers</option>
+                  <option value="Avant-Garde Chunky High-Tops">Avant-Garde Chunky High-Tops</option>
+                  <option value="Chunky Platform Leather Sandals">Chunky Platform Leather Sandals</option>
+                  <option value="None">None (No Shoes)</option>
+                </select>
+
+                <select
+                  value={studioShoesColor}
+                  onChange={(e) => setStudioShoesColor(e.target.value)}
+                  className="w-full bg-black/20 text-[11px] text-zinc-300 border border-white/5 rounded-lg p-2 outline-none focus:border-purple-500/20 cursor-pointer"
+                >
+                  <option value="Off-White">Off-White</option>
+                  <option value="Pristine Off-White">Pristine Off-White</option>
+                  <option value="Rich Mahogany Brown">Rich Mahogany Brown</option>
+                  <option value="Matte Obsidian Black">Matte Obsidian Black</option>
+                  <option value="Polished Silver Metallic">Polished Silver Metallic</option>
+                </select>
+              </div>
+
+              {/* HEADWEAR & CAPS */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider block">5. Headwear, Caps & Accessories</label>
+                <select
+                  value={studioHeadwear}
+                  onChange={(e) => setStudioHeadwear(e.target.value)}
+                  className="w-full bg-black/40 text-xs text-white border border-white/5 rounded-xl p-3 outline-none focus:border-purple-500/30 cursor-pointer"
+                >
+                  <option value="Structured Baseball Cap">Structured Baseball Cap</option>
+                  <option value="Cozy Chunky Ribbed Beanie">Cozy Chunky Ribbed Beanie</option>
+                  <option value="Classic Wool Wide-Brim Fedora">Classic Wool Wide-Brim Fedora</option>
+                  <option value="Techwear Waterproof Bucket Hat">Techwear Waterproof Bucket Hat</option>
+                  <option value="None">None (No Headwear)</option>
+                </select>
+
+                <select
+                  value={studioHeadwearColor}
+                  onChange={(e) => setStudioHeadwearColor(e.target.value)}
+                  className="w-full bg-black/20 text-[11px] text-zinc-300 border border-white/5 rounded-lg p-2 outline-none focus:border-purple-500/20 cursor-pointer"
+                >
+                  <option value="Midnight Blue">Midnight Blue</option>
+                  <option value="Deep Navy Blue">Deep Navy Blue</option>
+                  <option value="Warm Buttercream">Warm Buttercream</option>
+                  <option value="Muted Olive Green">Muted Olive Green</option>
+                  <option value="Charcoal Black">Charcoal Black</option>
+                </select>
+              </div>
+
+            </div>
+
+            {/* Aesthetic Setting & Mood / Theme Selection */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+              <div className="space-y-2">
+                <label className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider block">6. Studio Background Setting</label>
+                <select
+                  value={studioSetting}
+                  onChange={(e) => setStudioSetting(e.target.value)}
+                  className="w-full bg-black/40 text-xs text-white border border-white/5 rounded-xl p-3 outline-none focus:border-purple-500/30 cursor-pointer"
+                >
+                  <option value="an elegant architectural studio with soft daylight and concrete textures">Brutalist Daylight Studio</option>
+                  <option value="a cozy rustic cobblestone street in Paris during golden-hour autumn">Parisian Autumn Street</option>
+                  <option value="a Tokyo urban nightscape with vibrant red and cyan neon reflections">Tokyo Cyberpunk Alley</option>
+                  <option value="a sun-drenched marble courtyard of a classic Italian stone villa">Mediterranean Italian Villa</option>
+                  <option value="an industrial raw steel art gallery warehouse space">Industrial Warehouse Gallery</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider block">7. Creative Vibe Theme</label>
+                <select
+                  value={studioTheme}
+                  onChange={(e) => setStudioTheme(e.target.value)}
+                  className="w-full bg-black/40 text-xs text-white border border-white/5 rounded-xl p-3 outline-none focus:border-purple-500/30 cursor-pointer"
+                >
+                  <option value="Streetwear">Streetwear Edge</option>
+                  <option value="Quiet Luxury">Quiet Luxury Minimalist</option>
+                  <option value="Avant-Garde Designer">Avant-Garde Designer</option>
+                  <option value="Classic Vintage Retro">Classic Vintage Retro</option>
+                  <option value="High Fashion Editorial">High Fashion Editorial</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Launch Action */}
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={handleGenerateStudioImage}
+                disabled={studioGenerating}
+                className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 disabled:from-zinc-800 disabled:to-zinc-900 text-white font-sans py-4 rounded-xl text-xs font-bold tracking-wide flex items-center justify-center gap-2 transition-all active:scale-[0.99] select-none cursor-pointer shadow-lg shadow-purple-500/10 min-h-[44px]"
+              >
+                {studioGenerating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Styling, rendering, and dressing model...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
+                    <span>Generate Lookbook Visual</span>
+                  </>
+                )}
+              </button>
+              {studioError && (
+                <p className="text-red-400 text-[10px] font-mono text-center pt-2.5">
+                  ⚠ {studioError}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Right Panel: Lookbook Visualizer (5 columns) */}
+          <div className="lg:col-span-5 bg-[#121212]/30 border border-white/5 p-6 rounded-2xl flex flex-col justify-between space-y-5 text-left">
+            <div className="space-y-4 flex-1 flex flex-col justify-between">
+              <div>
+                <span className="text-[9px] font-mono text-purple-400 uppercase tracking-widest font-bold block">Lookbook Display</span>
+                <h4 className="text-sm font-serif font-semibold text-white tracking-wide">Studio Modeling Photo</h4>
+              </div>
+
+              {/* Lookbook Screen Frame */}
+              <div className="relative aspect-[3/4] bg-black/60 rounded-xl overflow-hidden border border-white/5 flex flex-col items-center justify-center text-center p-4 shadow-inner group">
+                {studioGenerating ? (
+                  <div className="space-y-3.5 max-w-xs z-10">
+                    <div className="relative w-12 h-12 mx-auto">
+                      <div className="absolute inset-0 rounded-full border-2 border-purple-500/20" />
+                      <div className="absolute inset-0 rounded-full border-2 border-purple-400 border-t-transparent animate-spin" />
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-mono text-purple-300 uppercase block tracking-wider animate-pulse">Imagen 4.0 Render Engine Active</span>
+                      <p className="text-[10.5px] text-zinc-400 pt-1 leading-normal">
+                        Dressing model with custom clothing, footwear, and cap matching...
+                      </p>
+                    </div>
+                  </div>
+                ) : studioGeneratedImage ? (
+                  <>
+                    <img
+                      src={studioGeneratedImage}
+                      alt="Studio Generated Fashion Outfit"
+                      className="absolute inset-0 w-full h-full object-cover select-none transition-transform duration-700 group-hover:scale-105"
+                      referrerPolicy="no-referrer"
+                    />
+                    
+                    {/* Editorial Telemetry Overlays */}
+                    <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md border border-white/10 py-1 px-2.5 rounded text-[8px] font-mono text-purple-300 select-none">
+                      MODEL: {studioGender.toUpperCase()}
+                    </div>
+
+                    <div className="absolute bottom-3 left-3 right-3 bg-black/75 backdrop-blur-md border border-white/10 p-2.5 rounded-lg text-left select-none opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <p className="text-[8.5px] font-mono text-zinc-400 uppercase leading-none pb-1">Style Spec Matrix</p>
+                      <p className="text-[9.5px] text-white font-sans font-medium line-clamp-2">
+                        {studioUpper !== 'None' && `${studioUpperColor} ${studioUpper}, `}
+                        {studioLower !== 'None' && `${studioLowerColor} ${studioLower}, `}
+                        {studioShoes !== 'None' && `${studioShoesColor} ${studioShoes}`}
+                        {studioHeadwear !== 'None' && ` and ${studioHeadwearColor} ${studioHeadwear}`}
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <div className="space-y-3 p-4 max-w-xs select-none">
+                    <div className="w-12 h-12 bg-purple-500/10 rounded-full flex items-center justify-center border border-purple-500/20 mx-auto text-purple-400">
+                      <ImageIcon className="w-5 h-5 animate-pulse" />
+                    </div>
+                    <div>
+                      <span className="text-[10.5px] font-mono text-zinc-300 uppercase tracking-wider block font-bold text-center">Ready to Render</span>
+                      <p className="text-[10px] text-zinc-500 pt-1 leading-relaxed text-center">
+                        Configure customized clothes, footwear/shoes, and cap combinations, then launch your high-fidelity photorealistic look creation!
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Action buttons under image */}
+              {studioGeneratedImage && (
+                <div className="grid grid-cols-2 gap-2 pt-2">
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(studioGeneratedImage);
+                      setDelightNotice("✓ Image link copied to clipboard");
+                    }}
+                    className="cursor-pointer py-2.5 bg-black/40 hover:bg-neutral-800 border border-white/5 text-white font-mono text-[10px] font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-colors select-none"
+                  >
+                    <Copy className="w-3 h-3 text-zinc-400" />
+                    <span>Copy Link</span>
+                  </button>
+                  <a
+                    href={studioGeneratedImage}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="cursor-pointer py-2.5 bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/20 text-purple-300 hover:text-white font-mono text-[10px] font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-colors text-center select-none"
+                  >
+                    <Compass className="w-3 h-3" />
+                    <span>Open Original</span>
+                  </a>
+                </div>
+              )}
+            </div>
+
+            {/* Sarto-tech specifications */}
+            <div className="bg-black/40 border border-white/5 p-3.5 rounded-xl space-y-2 text-[10.5px]">
+              <span className="text-[8px] font-mono text-purple-400 uppercase tracking-widest font-bold block">Sartorial Specifications</span>
+              <div className="grid grid-cols-2 gap-2 text-[10px] font-mono">
+                <div className="flex justify-between border-b border-white/5 pb-1">
+                  <span className="text-zinc-500">Theme:</span>
+                  <span className="text-white font-medium">{studioTheme}</span>
+                </div>
+                <div className="flex justify-between border-b border-white/5 pb-1">
+                  <span className="text-zinc-500">Formality:</span>
+                  <span className="text-white font-medium">{studioFormality}</span>
+                </div>
+                <div className="flex justify-between border-b border-white/5 pb-1">
+                  <span className="text-zinc-500">Gender Ref:</span>
+                  <span className="text-purple-300 font-medium capitalize">{studioGender}</span>
+                </div>
+                <div className="flex justify-between border-b border-white/5 pb-1">
+                  <span className="text-zinc-500">Engine:</span>
+                  <span className="text-amber-400 font-medium">Google Imagen</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       {/* PHASE 5 — TRUST & QUALITY FOOTER */}
       <footer className="text-center pt-8 pb-2 text-[10px] font-mono text-zinc-500 border-t border-white/5 mt-10">

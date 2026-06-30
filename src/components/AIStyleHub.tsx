@@ -18,6 +18,7 @@ import { SystemHealthPanel } from './SystemHealthPanel';
 import { FeedbackButtons } from './FeedbackButtons';
 import { ProfileService, StyleProfile, StylistHistoryEntry } from '../features/wardrobe/profileService';
 import { FounderDashboard } from './FounderDashboard';
+import { FloatingAIChat } from './FloatingAIChat';
 
 // Get current theme class specifically for details overlays & backdrops
 function getTemporalThemeBackground() {
@@ -2947,6 +2948,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
           </AnimatePresence>
         </div>
       </div>
+      <FloatingAIChat wardrobe={activeWardrobeList} />
     </div>
   );
 };

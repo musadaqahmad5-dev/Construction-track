@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  api-gateway:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile
+    image: eaos/api-gateway:latest
+    ports:
+      - "8000:8000"
+    environment:
+      - NODE_ENV=development
+      - GATEWAY_PORT=8000
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - DATABASE_URL=postgres://eaos_user:eaos_password@postgres:5432/eaos_db?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - eaos-network
+
+  postgres:
+    image: ankane/pgvector:latest
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=eaos_user
+      - POSTGRES_PASSWORD=eaos_password
+      - POSTGRES_DB=eaos_db
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./packages/memory-engine/src/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U eaos_user -d eaos_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - eaos-network
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infrastructure/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - eaos-network
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - prometheus
+    networks:
+      - eaos-network
+
+volumes:
+  pgdata:
+
+networks:
+  eaos-network:
+    driver: bridge

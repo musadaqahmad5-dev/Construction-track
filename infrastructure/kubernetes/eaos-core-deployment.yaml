@@ -1,0 +1,101 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: eaos-core-config
+  namespace: eaos-production
+data:
+  NODE_ENV: "production"
+  GATEWAY_PORT: "8000"
+  DATABASE_SSL: "true"
+  REDIS_CACHE_TTL: "3600"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: eaos-core-deployment
+  namespace: eaos-production
+  labels:
+    app: eaos-core
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: eaos-core
+  template:
+    metadata:
+      labels:
+        app: eaos-core
+    spec:
+      containers:
+      - name: eaos-runtime-container
+        image: gcr.io/eaos-platform/core-runtime:v1.0.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 3000
+        envFrom:
+        - configMapRef:
+            name: eaos-core-config
+        env:
+        - name: GEMINI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: eaos-platform-secrets
+              key: gemini-api-key
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: eaos-platform-secrets
+              key: pgvector-database-url
+        resources:
+          limits:
+            cpu: "2"
+            memory: 4Gi
+          requests:
+            cpu: "500m"
+            memory: 1Gi
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 15
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 20
+          periodSeconds: 15
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: eaos-core-service
+  namespace: eaos-production
+spec:
+  type: ClusterIP
+  selector:
+    app: eaos-core
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 3000
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: eaos-core-hpa
+  namespace: eaos-production
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: eaos-core-deployment
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 75

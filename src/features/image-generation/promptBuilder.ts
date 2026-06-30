@@ -25,19 +25,31 @@ export class FashionPromptBuilder {
       setting = 'an elegant architectural studio with soft daylight and high-end concrete textures'
     } = options;
 
-    let garmentDesc = 'a complete styled outfit';
-    if (garments.length > 0) {
-      garmentDesc = garments
-        .map(g => `${g.title} (${g.primaryColor} ${g.category})`)
-        .join(', styled with ');
+    const clothes = garments.filter(g => ['upper garment', 'lower garment', 'clothing', 'top', 'bottom', 'outerwear', 'jacket', 't-shirt', 'shirt', 'pants', 'trousers', 'skirt', 'dress'].includes(g.category.toLowerCase()));
+    const shoes = garments.filter(g => ['shoes', 'footwear', 'sneakers', 'boots', 'loafers', 'sandals'].includes(g.category.toLowerCase()));
+    const caps = garments.filter(g => ['headwear', 'caps', 'cap', 'hat', 'beanie', 'helmet'].includes(g.category.toLowerCase()));
+
+    let garmentDesc = '';
+    if (clothes.length > 0) {
+      garmentDesc += `exquisite clothing pieces including ${clothes.map(g => `${g.title} in a beautiful ${g.primaryColor} color`).join(' paired with ')}`;
+    } else {
+      garmentDesc += `a complete modern styled outfit`;
     }
 
-    const promptBody = `Photorealistic fashion editorial lookbook shot of a ${gender} mannequin or human model wearing: ${garmentDesc}. 
-The style theme is "${theme}" with a vibe that is ${vibe}, possessing high aesthetic fashion curation. 
+    if (shoes.length > 0) {
+      garmentDesc += `, accessorized on-feet with matching premium footwear: ${shoes.map(g => `${g.title} in ${g.primaryColor}`).join(', ')}`;
+    }
+
+    if (caps.length > 0) {
+      garmentDesc += `, and styled with modern headwear on the model's head: ${caps.map(g => `${g.title} in ${g.primaryColor}`).join(', ')}`;
+    }
+
+    const promptBody = `Photorealistic professional fashion editorial lookbook shot of a ${gender === 'unisex' ? 'unisex' : (gender === 'male' ? 'male fashion model' : 'female fashion model')} elegantly showcasing a styled look, wearing: ${garmentDesc}. 
+The style theme is "${theme}" with a vibe that is ${vibe}, presenting high aesthetic luxury fashion curation. 
 Formality is ${formality}, tailored meticulously for the ${season} season. 
-Composition: full body editorial shot, modern composition with elegant negative space, professional lighting, photorealistic details.
+Composition: full body modeling editorial pose, modern composition with elegant negative space, professional lighting, photorealistic details.
 The background setting is ${setting}. 
-Shot on 35mm lens, sharp focus, volumetric light, highly cinematic, 8k resolution, detailed fabric textures.`;
+Shot on 35mm lens, sharp focus, volumetric light, highly cinematic studio photography, 8k resolution, realistic fabric textures and detailed accessories.`;
 
     return promptBody.trim();
   }

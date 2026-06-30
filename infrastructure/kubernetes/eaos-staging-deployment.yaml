@@ -1,0 +1,74 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: eaos-staging-config
+  namespace: eaos-staging
+data:
+  NODE_ENV: "staging"
+  GATEWAY_PORT: "8000"
+  DATABASE_SSL: "true"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: eaos-staging-deployment
+  namespace: eaos-staging
+  labels:
+    app: eaos-core-staging
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: eaos-core-staging
+  template:
+    metadata:
+      labels:
+        app: eaos-core-staging
+    spec:
+      containers:
+      - name: eaos-runtime-container
+        image: gcr.io/eaos-platform/core-runtime:staging-latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3000
+        envFrom:
+        - configMapRef:
+            name: eaos-staging-config
+        env:
+        - name: GEMINI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: eaos-staging-secrets
+              key: gemini-api-key
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: eaos-staging-secrets
+              key: pgvector-database-url
+        resources:
+          limits:
+            cpu: "1"
+            memory: 2Gi
+          requests:
+            cpu: "250m"
+            memory: 512Mi
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: eaos-staging-service
+  namespace: eaos-staging
+spec:
+  type: ClusterIP
+  selector:
+    app: eaos-core-staging
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 3000
