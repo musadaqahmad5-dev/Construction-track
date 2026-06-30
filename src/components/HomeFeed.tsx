@@ -47,6 +47,7 @@ interface HomeFeedProps {
   onLogout?: () => void;
   onReset?: () => void;
   onLoadSamples?: () => void;
+  setActiveSubTab?: (tab: 'HOME' | 'AI_STUDIO' | 'WARDROBE' | 'DASHBOARD' | 'PROFILE' | 'SYSTEM_ROOM') => void;
 }
 
 function getGarmentImage(title: string): string {
@@ -226,7 +227,8 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
   user,
   onLogout,
   onReset,
-  onLoadSamples
+  onLoadSamples,
+  setActiveSubTab
 }) => {
   const isOnline = useOnlineStatus();
   const styleProfile = useStyleProfile();
@@ -353,7 +355,44 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
     const timer = setTimeout(() => {
       setShowUnderstanding(false);
     }, 3000);
-    return () => clearTimeout(timer);
+    
+    const handleSwitchFilter = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail) {
+        setActiveFeedFilter(customEvent.detail);
+      }
+    };
+    const handleSetQuery = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail !== undefined) {
+        setSearchPrompt(customEvent.detail);
+      }
+    };
+    const handleOpenOrders = () => {
+      setIsBuyerOrdersOpen(true);
+    };
+    const handleOpenCloset = () => {
+      setIsClosetDrawerOpen(true);
+    };
+    const handleShowToast = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      alert(customEvent.detail);
+    };
+    
+    window.addEventListener('lookvision_switch_feed_filter', handleSwitchFilter);
+    window.addEventListener('lookvision_set_search_query', handleSetQuery);
+    window.addEventListener('lookvision_open_orders', handleOpenOrders);
+    window.addEventListener('lookvision_open_closet', handleOpenCloset);
+    window.addEventListener('lookvision_show_toast', handleShowToast);
+    
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('lookvision_switch_feed_filter', handleSwitchFilter);
+      window.removeEventListener('lookvision_set_search_query', handleSetQuery);
+      window.removeEventListener('lookvision_open_orders', handleOpenOrders);
+      window.removeEventListener('lookvision_open_closet', handleOpenCloset);
+      window.removeEventListener('lookvision_show_toast', handleShowToast);
+    };
   }, []);
 
   // Modals & Panels
@@ -992,7 +1031,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
   };
 
   return (
-    <div className="w-full max-w-xl mx-auto space-y-8 pb-32 animate-fade-in relative selection:bg-transparent">
+    <div className="w-full max-w-4xl mx-auto space-y-8 pb-32 animate-fade-in relative selection:bg-transparent">
       {/* Toast Notification */}
       <AnimatePresence>
         {feedbackSuccessToast && (

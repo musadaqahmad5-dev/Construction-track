@@ -1,6 +1,6 @@
 {
-  "name": "Wardrobe Companion",
-  "description": "A self-running AI Fashion Social and Marketplace platform connecting private digital wardrobe archives, local shop catalog highlights, and style recommendations in one unified feeds publication.",
+  "name": "LOOK VISION",
+  "description": "Premium luxury AI Fashion Operating System. Coordinate, schedule, and compile digital wardrobes with advanced cognitive style profiles and real-time design telemetry.",
   "requestFramePermissions": ["camera"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

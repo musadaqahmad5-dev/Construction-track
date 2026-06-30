@@ -160,7 +160,7 @@ export default function App() {
   useEffect(() => {
     // 1. Listen to Firebase standard state
     const unsubscribe = onAuthStateChanged(auth, async (u) => {
-      const minDelay = new Promise(resolve => setTimeout(resolve, 2600));
+      const minDelay = new Promise(resolve => setTimeout(resolve, 400));
       if (u) {
         const uSession = {
           uid: u.uid,
@@ -710,45 +710,28 @@ export default function App() {
       {!user ? (
         <AuthModule onGuestMode={handleGuestActivation} />
       ) : (
-        /* Main Workspace - 100% Black & White Consumer Product */
-        <div className={`min-h-screen ${theme.bg} ${theme.text} selection:bg-white/20 selection:text-white antialiased font-sans`}>
-          
-          {/* Primary Display viewport - physically spaced breathing transitions */}
-          <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-16 pb-24 lg:pt-28 lg:pb-36 animate-fade-in">
-            <React.Suspense fallback={
-              <div className="flex flex-col items-center justify-center min-h-[400px] text-center space-y-4">
-                <div className="w-10 h-10 border-2 border-white/10 border-t-white rounded-full animate-spin" />
-                <p className="font-mono text-[10px] uppercase tracking-widest text-white/40">Initializing Fashion OS...</p>
-              </div>
-            }>
-              <AIStyleHub 
-                wardrobe={allItems}
-                onAddGarment={async (title, desc, category, extra) => {
-                  await handleAddGarment(title, desc, category, extra);
-                }}
-                onDeleteGarment={handleDeleteGarment}
-                user={user}
-                onLogout={handleLogout}
-                onReset={handleReset}
-                onLoadSamples={handleAddSampleWardrobe}
-                isResetting={isResetting}
-                onEnterSilence={() => setIsSilent(true)}
-              />
-            </React.Suspense>
-          </main>
-
-          {/* Physical Footer Section */}
-          <footer className="py-24 text-center select-none mt-12 pb-32">
-            <p className="text-white/20 text-lg font-light">—</p>
-            <p className="font-serif italic text-xs text-white/30 tracking-wide mt-2">
-              {[
-                "Still here.",
-                "Nothing missing.",
-                "Collected quietly.",
-                "Enough for now."
-              ][footerIndex]}
-            </p>
-          </footer>
+        /* LOOK VISION: Premium fashion OS persistent shell workspace */
+        <div className={`h-screen w-screen overflow-hidden ${theme.bg} ${theme.text} selection:bg-white/20 selection:text-white antialiased font-sans`}>
+          <React.Suspense fallback={
+            <div className="flex flex-col items-center justify-center min-h-screen text-center space-y-4 bg-black">
+              <div className="w-10 h-10 border-2 border-white/10 border-t-white rounded-full animate-spin" />
+              <p className="font-mono text-[10px] uppercase tracking-widest text-white/40">Initializing LOOK VISION OS...</p>
+            </div>
+          }>
+            <AIStyleHub 
+              wardrobe={allItems}
+              onAddGarment={async (title, desc, category, extra) => {
+                await handleAddGarment(title, desc, category, extra);
+              }}
+              onDeleteGarment={handleDeleteGarment}
+              user={user}
+              onLogout={handleLogout}
+              onReset={handleReset}
+              onLoadSamples={handleAddSampleWardrobe}
+              isResetting={isResetting}
+              onEnterSilence={() => setIsSilent(true)}
+            />
+          </React.Suspense>
         </div>
       )}
     </ErrorBoundary>

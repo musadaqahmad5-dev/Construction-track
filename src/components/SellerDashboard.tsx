@@ -97,6 +97,8 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({ user, onClose,
   const [isSavingProduct, setIsSavingProduct] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [onboardError, setOnboardError] = useState<string | null>(null);
+  const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // Merchant Native Sign-In flow
   const [authError, setAuthError] = useState<string | null>(null);
@@ -365,18 +367,25 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({ user, onClose,
   // Handle Delete Product
   const handleDeleteProduct = async (prodId: string) => {
     if (!isOnline) {
-      alert("Retiring listings is disabled while operating in offline mode.");
+      setDeleteError("Retiring listings is disabled while operating in offline mode.");
+      setTimeout(() => setDeleteError(null), 4000);
       return;
     }
 
-    if (!window.confirm("Are you sure you want to retire this product listing from the active fashion feed?")) {
-      return;
-    }
-
-    try {
-      await deleteDoc(doc(db, 'products', prodId));
-    } catch (err) {
-      console.error("Retiring listing failed:", err);
+    if (deletingProductId === prodId) {
+      try {
+        await deleteDoc(doc(db, 'products', prodId));
+        setDeletingProductId(null);
+      } catch (err: any) {
+        console.error("Retiring listing failed:", err);
+        setDeleteError(err.message || "Failed to retire the listing from the server.");
+        setTimeout(() => setDeleteError(null), 4000);
+      }
+    } else {
+      setDeletingProductId(prodId);
+      setTimeout(() => {
+        setDeletingProductId(prev => prev === prodId ? null : prev);
+      }, 4500);
     }
   };
 
@@ -868,6 +877,12 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({ user, onClose,
                 <Package className="w-4 h-4 text-white/50" /> Live Shop Collection ({myProducts.length})
               </h3>
 
+              {deleteError && (
+                <div className="p-3.5 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[10px] font-mono uppercase tracking-[0.15em] rounded-xl animate-pulse">
+                  {deleteError}
+                </div>
+              )}
+
               {myProducts.length === 0 ? (
                 <div className="p-8 text-center border border-dashed border-white/5 rounded-2xl bg-white/[0.005] space-y-2">
                   <p className="font-serif italic text-xs text-white/35">"Your merchant rack is currently empty."</p>
@@ -909,9 +924,13 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({ user, onClose,
                           </button>
                           <button
                             onClick={() => handleDeleteProduct(prod.id)}
-                            className="text-[9px] font-mono uppercase text-rose-500/60 hover:text-rose-400 flex items-center gap-1 cursor-pointer"
+                            className={`text-[9px] font-mono uppercase flex items-center gap-1 cursor-pointer transition-all ${
+                              deletingProductId === prod.id 
+                                ? 'text-red-400 font-bold animate-pulse' 
+                                : 'text-rose-500/60 hover:text-rose-400'
+                            }`}
                           >
-                            <Trash2 className="w-2.5 h-2.5" /> Retire
+                            <Trash2 className="w-2.5 h-2.5" /> {deletingProductId === prod.id ? 'Tap to Confirm' : 'Retire'}
                           </button>
                         </div>
                       </div>

@@ -23,6 +23,7 @@ export const WardrobeGrid: React.FC<WardrobeGridProps> = ({
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [selectedSeason, setSelectedSeason] = useState<string>('ALL');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const filtered = items.filter(item => {
     const isCategoryMatch = selectedCategory === 'ALL' || item.category === selectedCategory;
@@ -166,14 +167,26 @@ export const WardrobeGrid: React.FC<WardrobeGridProps> = ({
                     )}
                   </div>
 
-                  <button
+                   <button
                     id={`btn-delete-${item.id}`}
                     onClick={(e) => {
                       e.stopPropagation();
-                      onDelete(item);
+                      if (deletingId === item.id) {
+                        onDelete(item);
+                        setDeletingId(null);
+                      } else {
+                        setDeletingId(item.id);
+                        setTimeout(() => {
+                          setDeletingId(prev => prev === item.id ? null : prev);
+                        }, 4000);
+                      }
                     }}
-                    className="p-1.5 bg-white/[0.02] border border-white/5 rounded-md hover:bg-red-950/30 text-white/30 hover:text-red-400 hover:border-red-900/20 cursor-pointer transition-colors relative z-20"
-                    title="Remove item"
+                    className={`p-1.5 rounded-md cursor-pointer transition-all relative z-20 border ${
+                      deletingId === item.id 
+                        ? 'bg-red-500/20 border-red-500 text-red-400 animate-pulse' 
+                        : 'bg-white/[0.02] border-white/5 text-white/30 hover:bg-red-950/30 hover:text-red-400 hover:border-red-900/20'
+                    }`}
+                    title={deletingId === item.id ? "Click again to confirm delete" : "Remove item"}
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>

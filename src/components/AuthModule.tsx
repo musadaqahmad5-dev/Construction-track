@@ -106,13 +106,13 @@ export const AuthModule: React.FC<AuthModuleProps> = ({ onGuestMode }) => {
         {/* Editorial Header */}
         <div className="text-center space-y-3">
           <span className="text-[10px] font-mono tracking-[0.25em] text-white/30 uppercase block font-light">
-            Vol. XI / Archive Entry
+            SARTORIAL SYSTEM GATE / ACCESS PORTAL
           </span>
           <h2 className="text-4xl font-serif font-light tracking-[-0.03em] text-white">
-            Wardrobe Companion
+            LOOK VISION
           </h2>
           <p className="text-xs font-serif italic text-white/40 leading-relaxed max-w-xs mx-auto">
-            "A printed archive of personal silhouettes."
+            "Sartorial system and cognitive fashion operating workspace."
           </p>
         </div>
 
@@ -163,12 +163,12 @@ export const AuthModule: React.FC<AuthModuleProps> = ({ onGuestMode }) => {
 
           <div className="space-y-1">
             <label className="text-[10px] font-mono text-white/40 uppercase tracking-[0.15em] block font-light">
-              Your email archive
+              Your email identity
             </label>
             <input
               type="email"
               required
-              placeholder="name@companion.com"
+              placeholder="name@lookvision.ai"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full bg-transparent border-b border-white/10 py-3 text-sm text-white placeholder-white/20 focus:outline-none focus:border-white transition-all font-light"
@@ -195,7 +195,7 @@ export const AuthModule: React.FC<AuthModuleProps> = ({ onGuestMode }) => {
               disabled={loading}
               className="w-full bg-white hover:bg-neutral-200 text-black py-4 rounded-none font-mono text-xs font-semibold uppercase tracking-[0.2em] cursor-pointer transition-all disabled:opacity-50"
             >
-              {loading ? '[ entering... ]' : '[ Enter Archive ]'}
+              {loading ? '[ INITIALIZING OS... ]' : '[ ACCESS LOOK VISION OS ]'}
             </button>
           </div>
         </form>
@@ -206,7 +206,7 @@ export const AuthModule: React.FC<AuthModuleProps> = ({ onGuestMode }) => {
             onClick={() => setIsSignUp(!isSignUp)}
             className="text-[10px] font-mono uppercase tracking-[0.15em] text-white/40 hover:text-white transition-colors cursor-pointer"
           >
-            {isSignUp ? '[ Standard entry ]' : '[ Register signature ]'}
+            {isSignUp ? '[ Standard entry ]' : '[ Register key signature ]'}
           </button>
         </div>
 
@@ -230,7 +230,7 @@ export const AuthModule: React.FC<AuthModuleProps> = ({ onGuestMode }) => {
             disabled={loading}
             className="w-full bg-white/5 border border-white/10 hover:bg-white/10 text-white/80 py-3 rounded-none text-[10px] uppercase font-semibold tracking-wider cursor-pointer transition-all"
           >
-            Guest Presence
+            Enter Guest Mode
           </button>
         </div>
       </motion.div>

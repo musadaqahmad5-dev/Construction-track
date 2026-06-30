@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Shield, Sparkles, AlertTriangle, Cpu, TrendingUp, CheckCircle } from 'lucide-react';
 
 interface SystemHealthPanelProps {
@@ -28,6 +28,8 @@ export const SystemHealthPanel: React.FC<SystemHealthPanelProps> = ({
   onRunRehearsal,
   onClearMemory
 }) => {
+  const [confirmClear, setConfirmClear] = useState(false);
+
   return (
     <div id={id || "system-health-panel"} className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -114,10 +116,22 @@ export const SystemHealthPanel: React.FC<SystemHealthPanelProps> = ({
           {onClearMemory && (
             <button
               id="btn-trigger-clearmemory"
-              onClick={onClearMemory}
-              className="px-3 py-1.5 bg-red-950/20 border border-red-900/20 hover:border-red-800 text-red-400 text-[10px] font-mono rounded uppercase tracking-wider cursor-pointer"
+              onClick={() => {
+                if (!confirmClear) {
+                  setConfirmClear(true);
+                  setTimeout(() => setConfirmClear(false), 4000);
+                } else {
+                  onClearMemory();
+                  setConfirmClear(false);
+                }
+              }}
+              className={`px-3 py-1.5 border text-[10px] font-mono rounded uppercase tracking-wider cursor-pointer transition-all ${
+                confirmClear 
+                  ? 'bg-red-500 text-white border-red-400 font-bold' 
+                  : 'bg-red-950/20 border-red-900/20 hover:border-red-800 text-red-400'
+              }`}
             >
-              Reset DNA
+              {confirmClear ? "Confirm?" : "Reset DNA"}
             </button>
           )}
         </div>
