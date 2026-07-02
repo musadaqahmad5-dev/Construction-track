@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  Sparkles, ShoppingBag, Search, ChevronRight, ChevronLeft, Shirt, Plus, RefreshCw, 
+  Sparkles, Sparkle, ShoppingBag, Search, ChevronRight, ChevronLeft, Shirt, Plus, RefreshCw, 
   Clock, Heart, Share2, Bookmark, Award, TrendingUp, UserCheck, Users, Compass, 
   Layers, MessageSquare, Mail, Crown, Star, MessageCircle, Check, MapPin, 
-  SlidersHorizontal, CheckCircle, Flame, ArrowUpRight, Zap
+  SlidersHorizontal, CheckCircle, Flame, ArrowUpRight, Zap, Palette, ChevronDown, MoreVertical
 } from 'lucide-react';
 import { db } from '../firebase';
 import { collection, onSnapshot, query, limit, addDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
@@ -42,7 +42,12 @@ export const LookVisionMainDashboard: React.FC<LookVisionMainDashboardProps> = (
   const [bookmarkedPosts, setBookmarkedPosts] = useState<Record<string, boolean>>({});
 
   // Hero carousel state
-  const [carouselIndex, setCarouselIndex] = useState(0);
+  const [carouselIndex, setCarouselIndex] = useState(1);
+
+  // Column Sub-tabs states to match the imaginary image
+  const [aiCreationsTab, setAiCreationsTab] = useState('For You');
+  const [communityTab, setCommunityTab] = useState('Following');
+  const [marketplaceTab, setMarketplaceTab] = useState('For You');
 
   // Fallback / SEED data to ensure spectacular looks right out of the box
   const seedCommunityFits = [
@@ -162,10 +167,11 @@ export const LookVisionMainDashboard: React.FC<LookVisionMainDashboardProps> = (
   ];
 
   const editorsPicks = [
-    { title: 'Summer Edit 2024', desc: 'Flowing linen coordinates and lightweight layers.', imageUrl: 'https://images.unsplash.com/photo-1509319117193-57bab727e09d?q=80&w=400&auto=format&fit=crop' },
-    { title: 'Monochrome Luxe', desc: 'Heavy wool trench coats and midnight trousers.', imageUrl: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=400&auto=format&fit=crop' },
-    { title: 'Wedding Inspo 24', desc: 'Ethereal tailoring and formal evening drapes.', imageUrl: 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?q=80&w=400&auto=format&fit=crop' },
-    { title: 'Street Icons', desc: 'Distressed acid washed utility configurations.', imageUrl: 'https://images.unsplash.com/photo-1479064555552-3ef4979f8908?q=80&w=400&auto=format&fit=crop' }
+    { title: "Summer Edit", subtitle: "2024", imageUrl: "https://images.unsplash.com/photo-1539109136881-3be0616acf4b?q=80&w=400&auto=format&fit=crop" },
+    { title: "Monochrome", subtitle: "Collection", imageUrl: "https://images.unsplash.com/photo-1501196354995-cbb51c65aaea?q=80&w=400&auto=format&fit=crop" },
+    { title: "Wedding", subtitle: "Inspo", imageUrl: "https://images.unsplash.com/photo-1595777457583-95e059d581b8?q=80&w=400&auto=format&fit=crop" },
+    { title: "Street Icons", subtitle: "This Week", imageUrl: "https://images.unsplash.com/photo-1554412933-514a83d2f3c8?q=80&w=400&auto=format&fit=crop" },
+    { title: "Street Icons", subtitle: "This Week", imageUrl: "https://images.unsplash.com/photo-1617137968427-85924c800a22?q=80&w=400&auto=format&fit=crop" }
   ];
 
   // Sync state with Firestore
@@ -267,25 +273,25 @@ export const LookVisionMainDashboard: React.FC<LookVisionMainDashboardProps> = (
   // Hero carousel slides
   const carouselSlides = [
     {
-      title: "Streetwear Cargo Core",
-      subtitle: "Tactical techwear alignments",
-      imageUrl: "https://images.unsplash.com/photo-1501196354995-cbb51c65aaea?q=80&w=500&auto=format&fit=crop",
+      title: "Minimal Beige",
+      subtitle: "Y2K beige outfit, clean aesthetic",
+      imageUrl: "https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?q=80&w=600&auto=format&fit=crop",
+      creator: "@elena_rostova",
+      glow: "rgba(168,85,247,0.3)"
+    },
+    {
+      title: "Monochrome Tailoring Core",
+      subtitle: "Tactical sleek black suits & chains",
+      imageUrl: "https://images.unsplash.com/photo-1617137968427-85924c800a22?q=80&w=600&auto=format&fit=crop",
       creator: "@hamza_ali",
       glow: "rgba(168,85,247,0.4)"
     },
     {
-      title: "Nordic Warm Cashmere",
-      subtitle: "Classic winter trench & weave",
-      imageUrl: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=500&auto=format&fit=crop",
-      creator: "@elena_rostova",
-      glow: "rgba(99,102,241,0.4)"
-    },
-    {
-      title: "Asymmetric Silk Drape",
-      subtitle: "Avant-garde flowing tailoring",
-      imageUrl: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=500&auto=format&fit=crop",
+      title: "Midnight Silhouette",
+      subtitle: "Avant-garde flowing leather alignments",
+      imageUrl: "https://images.unsplash.com/photo-1534126511673-b6899657816a?q=80&w=600&auto=format&fit=crop",
       creator: "@ayesha_malik",
-      glow: "rgba(236,72,153,0.4)"
+      glow: "rgba(168,85,247,0.3)"
     }
   ];
 
@@ -318,159 +324,174 @@ export const LookVisionMainDashboard: React.FC<LookVisionMainDashboardProps> = (
   };
 
   return (
-    <div className="w-full space-y-10 pb-24 animate-fade-in relative text-left select-none">
-      
-      {/* 1. HERO HEADER AREA (SPLIT HERO + CAROUSEL STACK) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center bg-gradient-to-b from-[#0e0e18] to-transparent p-6 sm:p-8 rounded-3xl border border-white/5 relative overflow-hidden">
+    <div className="w-full animate-fade-in relative text-left select-none pb-24">
+      <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
+        
+        {/* Left/Center Main Content Column */}
+        <div className="xl:col-span-3 space-y-10">
+          
+          {/* 1. HERO HEADER AREA (SPLIT HERO + CAROUSEL STACK) */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center bg-gradient-to-b from-[#0e0e18] to-transparent p-6 sm:p-8 rounded-3xl border border-white/5 relative overflow-hidden">
         
         {/* Hero Left Content */}
         <div className="lg:col-span-7 space-y-6 z-10 relative">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-violet-500/10 border border-violet-500/20 rounded-full">
-            <Sparkles className="w-3.5 h-3.5 text-violet-400 animate-pulse" />
-            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-violet-300">Generation Engine v4.0 Live</span>
-          </div>
           
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold font-sans tracking-tight text-white leading-[1.1]">
-            Create. Inspire. <br />
-            <span className="bg-gradient-to-r from-violet-400 via-fuchsia-400 to-indigo-400 bg-clip-text text-transparent drop-shadow-[0_0_15px_rgba(168,85,247,0.2)]">
-              Express with AI.
-            </span>
+          <h2 className="text-3xl sm:text-4xl md:text-[44px] font-bold font-sans tracking-tight text-white leading-[1.15]">
+            Create. Inspire.<br />
+            Express with <span className="bg-gradient-to-r from-violet-400 to-fuchsia-500 bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(168,85,247,0.35)]">AI.</span>
           </h2>
           
-          <p className="text-white/60 text-sm max-w-md font-sans leading-relaxed">
-            Generate stunning fashion looks in seconds, try them on virtually, and sync with your digital archive workspace.
+          <p className="text-white/60 text-xs sm:text-sm max-w-md font-sans leading-relaxed">
+            Generate stunning fashion looks,<br className="hidden sm:inline" /> in seconds.
           </p>
 
-          {/* Prompt Generator Box */}
-          <form onSubmit={handleGenerate} className="max-w-xl space-y-3 pt-2">
+           {/* Prompt Generator Box */}
+          <form onSubmit={handleGenerate} className="max-w-xl space-y-4 pt-1">
             <div className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+              <Sparkle className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-violet-400/80 fill-violet-400/10" />
               <input 
                 type="text"
-                placeholder="What do you want to wear today? (e.g. Minimalist charcoal coat with linen...)"
+                placeholder="What do you want to wear today?"
                 value={promptInput}
                 onChange={(e) => setPromptInput(e.target.value)}
-                className="w-full bg-black/60 hover:bg-black/80 border border-white/5 pl-11 pr-28 py-3.5 text-xs text-white placeholder-white/20 rounded-2xl focus:outline-none focus:border-violet-500/40 transition-all font-light"
+                className="w-full bg-black/50 hover:bg-black/75 border border-white/5 pl-11 pr-28 py-3.5 text-xs text-white placeholder-white/20 rounded-2xl focus:outline-none focus:border-violet-500/40 transition-all font-light"
               />
               <button 
                 type="submit"
-                className="absolute right-2 top-1/2 -translate-y-1/2 bg-violet-600 hover:bg-violet-500 text-white text-[10px] font-mono font-bold uppercase tracking-wider px-4 py-2 rounded-xl cursor-pointer transition-all shadow-md shadow-violet-600/20"
+                className="absolute right-2 top-1/2 -translate-y-1/2 bg-violet-600 hover:bg-violet-500 text-white text-[10px] font-mono font-bold uppercase tracking-wider px-5 py-2 rounded-xl cursor-pointer transition-all shadow-md shadow-violet-600/20"
               >
                 Generate
               </button>
             </div>
 
             {/* Quick Vibe Tags */}
-            <div className="flex flex-wrap items-center gap-1.5 text-white/40 text-[10px] font-mono">
-              <span className="text-white/25 uppercase mr-1">VIBE CHIPS:</span>
+            <div className="flex flex-wrap items-center gap-2">
               {['Casual', 'Streetwear', 'Minimal', 'Luxury', 'Korean', 'Y2K'].map((vtag) => (
                 <button
                   type="button"
                   key={vtag}
                   onClick={() => setPromptInput(`A stunning ${vtag.toLowerCase()} outfit arrangement, detailed fabrics, premium studio look`)}
-                  className="px-2.5 py-1 bg-white/5 hover:bg-white/10 hover:text-white border border-white/5 rounded-lg cursor-pointer transition-colors"
+                  className="px-3 py-1.5 bg-white/[0.04] hover:bg-white/10 hover:text-white border border-white/5 rounded-xl text-[10.5px] font-sans text-white/50 cursor-pointer transition-colors"
                 >
                   {vtag}
                 </button>
               ))}
-              <span className="opacity-40 cursor-help">+</span>
+              <button
+                type="button"
+                className="w-7 h-7 flex items-center justify-center bg-white/[0.04] hover:bg-white/10 border border-white/5 text-white/50 hover:text-white rounded-xl text-xs cursor-pointer transition-all"
+              >
+                +
+              </button>
             </div>
           </form>
 
           {/* Social Proof Avatar Stack */}
           <div className="flex items-center gap-3 pt-2">
-            <div className="flex -space-x-2.5">
-              <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=80&auto=format&fit=crop" className="w-7 h-7 rounded-full border border-black object-cover" alt="" />
-              <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=80&auto=format&fit=crop" className="w-7 h-7 rounded-full border border-black object-cover" alt="" />
-              <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=80&auto=format&fit=crop" className="w-7 h-7 rounded-full border border-black object-cover" alt="" />
+            <div className="flex -space-x-2">
+              <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=80&auto=format&fit=crop" className="w-6 h-6 rounded-full border border-black object-cover" alt="" referrerPolicy="no-referrer" />
+              <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=80&auto=format&fit=crop" className="w-6 h-6 rounded-full border border-black object-cover" alt="" referrerPolicy="no-referrer" />
+              <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=80&auto=format&fit=crop" className="w-6 h-6 rounded-full border border-black object-cover" alt="" referrerPolicy="no-referrer" />
+              <img src="https://images.unsplash.com/photo-1524504388940-b1c1722653e1?q=80&w=80&auto=format&fit=crop" className="w-6 h-6 rounded-full border border-black object-cover" alt="" referrerPolicy="no-referrer" />
             </div>
-            <p className="text-[11px] font-mono text-white/40 tracking-wide uppercase">
-              <strong className="text-white font-bold">50,000+</strong> fashion lovers creating with AI
+            <p className="text-[11px] font-sans text-white/40 tracking-wide text-left leading-normal">
+              <span className="text-white font-bold">50,000+</span> fashion lovers <br /> creating with AI
             </p>
           </div>
         </div>
 
         {/* Hero Right: Overlapping 3D Carousel Stack */}
-        <div className="lg:col-span-5 h-[340px] flex items-center justify-center relative select-none mt-4 lg:mt-0">
+        <div className="lg:col-span-5 h-[340px] flex items-center justify-center relative select-none mt-4 lg:mt-0 px-2">
           <div className="absolute inset-0 bg-violet-600/5 rounded-full blur-3xl pointer-events-none" />
           
-          <div className="relative w-[240px] h-[300px]">
-            <AnimatePresence mode="popLayout">
-              {carouselSlides.map((slide, sIdx) => {
-                // Circular layout calculation for overlapping cards
-                const offset = (sIdx - carouselIndex + carouselSlides.length) % carouselSlides.length;
-                if (offset > 2) return null;
+          {/* Orbital ring track as shown in the imaginary image */}
+          <div className="absolute w-[106%] h-[160px] border border-violet-500/20 rounded-[50%] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -rotate-[6deg] pointer-events-none z-0">
+            <div className="absolute top-[10%] left-[20%] text-violet-400 opacity-60 animate-pulse"><Sparkles className="w-2.5 h-2.5 fill-violet-400" /></div>
+            <div className="absolute bottom-[10%] right-[20%] text-violet-400 opacity-60 animate-pulse"><Sparkles className="w-2.5 h-2.5 fill-violet-400" /></div>
+            <div className="absolute top-[80%] left-[10%] text-violet-400 opacity-40 animate-pulse"><Sparkles className="w-2 h-2 fill-violet-400" /></div>
+            <div className="absolute top-[20%] right-[10%] text-violet-400 opacity-40 animate-pulse"><Sparkles className="w-2 h-2 fill-violet-400" /></div>
+          </div>
 
-                const zIndex = 30 - offset;
-                const scale = 1 - offset * 0.08;
-                const xOffset = offset * 25;
-                const yOffset = -offset * 12;
-                const rotate = offset * 4;
+          <div className="relative w-full max-w-[420px] h-[300px] flex items-center justify-center">
+            {/* Left/Right Arrow buttons floating on the orbital ring */}
+            <button 
+              onClick={(e) => { e.stopPropagation(); prevSlide(); }}
+              className="absolute left-[3%] top-1/2 -translate-y-1/2 z-30 w-7 h-7 rounded-full bg-black/40 hover:bg-black/80 border border-white/5 flex items-center justify-center text-white/70 hover:text-white cursor-pointer transition-all"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <button 
+              onClick={(e) => { e.stopPropagation(); nextSlide(); }}
+              className="absolute right-[3%] top-1/2 -translate-y-1/2 z-30 w-7 h-7 rounded-full bg-black/40 hover:bg-black/80 border border-white/5 flex items-center justify-center text-white/70 hover:text-white cursor-pointer transition-all"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
 
+            {/* Left Slide (Unfocused, rotated) */}
+            {(() => {
+              const leftIdx = (carouselIndex - 1 + carouselSlides.length) % carouselSlides.length;
+              const slide = carouselSlides[leftIdx];
+              return (
+                <div 
+                  onClick={() => setCarouselIndex(leftIdx)}
+                  className="absolute left-[0%] top-1/2 -translate-y-1/2 w-[135px] h-[230px] z-10 opacity-55 hover:opacity-80 transition-all duration-300 rounded-[24px] overflow-hidden border border-white/5 -rotate-[8deg] cursor-pointer shadow-lg group select-none"
+                >
+                  <img src={slide.imageUrl} alt="" className="w-full h-full object-cover grayscale opacity-80 group-hover:grayscale-0 transition-all duration-500" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
+                </div>
+              );
+            })()}
+
+            {/* Center Slide (Focused, glowing, highlighted) */}
+            {(() => {
+              const slide = carouselSlides[carouselIndex % carouselSlides.length];
+              return (
+                <div 
+                  onClick={() => {
+                    if (setActiveSubTab) setActiveSubTab('AI_STUDIO');
+                  }}
+                  className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[185px] h-[285px] z-20 transition-all duration-300 rounded-[28px] overflow-hidden border border-violet-500/20 cursor-pointer shadow-[0_20px_50px_rgba(139,92,246,0.35)] group select-none"
+                >
+                  <img src={slide.imageUrl} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
+                  
+                  {/* AI Generated Pill Badge */}
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/70 backdrop-blur-md border border-white/10 px-3 py-1 rounded-full flex items-center gap-1.5 shadow-lg select-none">
+                    <Sparkles className="w-3 h-3 text-violet-400 fill-violet-400" />
+                    <span className="text-[9.5px] font-sans font-semibold tracking-wide text-white uppercase leading-none">AI Generated</span>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Right Slide (Unfocused, rotated) */}
+            {(() => {
+              const rightIdx = (carouselIndex + 1) % carouselSlides.length;
+              const slide = carouselSlides[rightIdx];
+              return (
+                <div 
+                  onClick={() => setCarouselIndex(rightIdx)}
+                  className="absolute right-[0%] top-1/2 -translate-y-1/2 w-[135px] h-[230px] z-10 opacity-55 hover:opacity-80 transition-all duration-300 rounded-[24px] overflow-hidden border border-white/5 rotate-[8deg] cursor-pointer shadow-lg group select-none"
+                >
+                  <img src={slide.imageUrl} alt="" className="w-full h-full object-cover grayscale opacity-80 group-hover:grayscale-0 transition-all duration-500" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
+                </div>
+              );
+            })()}
+
+            {/* Pagination Dots */}
+            <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-1.5 z-40">
+              {[0, 1, 2, 3, 4].map((dotIndex) => {
+                const isActive = (carouselIndex % carouselSlides.length) === (dotIndex % carouselSlides.length);
                 return (
-                  <motion.div
-                    key={slide.title}
-                    initial={{ opacity: 0, scale: 0.8, x: 100 }}
-                    animate={{ 
-                      opacity: 1 - offset * 0.35, 
-                      scale, 
-                      x: xOffset,
-                      y: yOffset,
-                      rotate,
-                      zIndex 
-                    }}
-                    exit={{ opacity: 0, scale: 0.7, x: -100 }}
-                    transition={{ type: 'spring', damping: 25, stiffness: 180 }}
-                    className="absolute inset-0 rounded-3xl overflow-hidden shadow-2xl border cursor-pointer select-none group"
-                    style={{ 
-                      borderColor: offset === 0 ? 'rgba(139, 92, 246, 0.4)' : 'rgba(255, 255, 255, 0.05)',
-                      boxShadow: offset === 0 ? `0 10px 40px ${slide.glow}` : 'none'
-                    }}
-                    onClick={() => {
-                      if (offset !== 0) {
-                        setCarouselIndex(sIdx);
-                      } else if (setActiveSubTab) {
-                        setActiveSubTab('AI_STUDIO');
-                      }
-                    }}
-                  >
-                    <img 
-                      src={slide.imageUrl} 
-                      alt={slide.title}
-                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                    />
-                    
-                    {/* Glowing gradient overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-transparent flex flex-col justify-end p-5" />
-                    
-                    <div className="absolute bottom-4 left-4 right-4 text-left z-10 space-y-1">
-                      <span className="text-[8px] font-mono uppercase tracking-widest text-violet-400 bg-violet-950/80 border border-violet-500/20 px-2 py-0.5 rounded-full inline-block font-semibold">
-                        {slide.creator}
-                      </span>
-                      <h4 className="text-sm font-semibold font-sans text-white leading-tight">{slide.title}</h4>
-                      <p className="text-[10px] text-white/50 leading-none">{slide.subtitle}</p>
-                    </div>
-                  </motion.div>
+                  <button
+                    key={dotIndex}
+                    onClick={() => setCarouselIndex(dotIndex % carouselSlides.length)}
+                    className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
+                      isActive ? 'bg-violet-500 scale-125' : 'bg-white/25 hover:bg-white/45'
+                    }`}
+                  />
                 );
               })}
-            </AnimatePresence>
-
-            {/* Manual Controls */}
-            <div className="absolute -left-12 top-1/2 -translate-y-1/2 z-40 flex flex-col gap-2">
-              <button 
-                onClick={(e) => { e.stopPropagation(); prevSlide(); }}
-                className="w-8 h-8 rounded-full bg-black/60 hover:bg-black border border-white/10 hover:border-violet-500/30 flex items-center justify-center text-white cursor-pointer transition-all"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="absolute -right-12 top-1/2 -translate-y-1/2 z-40 flex flex-col gap-2">
-              <button 
-                onClick={(e) => { e.stopPropagation(); nextSlide(); }}
-                className="w-8 h-8 rounded-full bg-black/60 hover:bg-black border border-white/10 hover:border-violet-500/30 flex items-center justify-center text-white cursor-pointer transition-all"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
             </div>
           </div>
         </div>
@@ -481,63 +502,113 @@ export const LookVisionMainDashboard: React.FC<LookVisionMainDashboardProps> = (
         
         {/* ================= COLUMN 1: AI CREATIONS ================= */}
         <div className="space-y-4">
-          <div className="flex justify-between items-center pb-2 border-b border-white/5">
+          <div className="space-y-1.5 pb-2 border-b border-white/5 text-left">
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-violet-400" />
-              <h3 className="text-[11px] font-mono uppercase tracking-[0.15em] text-white/90 font-bold">AI Creations</h3>
+              <h3 className="text-xs font-bold font-sans uppercase tracking-wider text-white">AI CREATIONS</h3>
             </div>
-            <span className="text-[9px] font-mono text-violet-400 bg-violet-500/5 px-2 py-0.5 rounded-full border border-violet-500/10">Stable</span>
+            <p className="text-[10px] text-white/40 font-sans font-light">AI generated looks by our community</p>
+            
+            {/* Sub-tabs selection */}
+            <div className="flex flex-wrap gap-1.5 pt-2">
+              {['For You', 'Trending', 'New', 'Remix'].map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setAiCreationsTab(tab)}
+                  className={`px-3 py-1 rounded-lg text-[10px] font-sans font-medium transition-all cursor-pointer ${
+                    aiCreationsTab === tab 
+                      ? 'bg-violet-600 text-white shadow-md shadow-violet-600/10 font-semibold' 
+                      : 'bg-white/5 text-white/50 hover:bg-white/10 hover:text-white'
+                  }`}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div className="space-y-5">
-            {(aiLooks.length > 0 ? aiLooks : seedAiLooks).map((item) => (
+          <div className="space-y-3.5">
+            {/* Render items based on active tab */}
+            {(aiCreationsTab === 'For You' ? [
+              {
+                id: 'ai-f-1',
+                title: 'Minimal Beige',
+                prompt: 'Prompt: Minimal beige outfit, clean aesthetic',
+                imageUrl: 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?q=80&w=600&auto=format&fit=crop',
+                likesCount: '2.4K',
+                commentsCount: 136,
+                creator: 'AI Generated',
+                creatorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=80&auto=format&fit=crop'
+              },
+              {
+                id: 'ai-f-2',
+                title: 'Y2K Pink Vibes',
+                prompt: 'Prompt: Y2K pink streetwear with cargo pants',
+                imageUrl: 'https://images.unsplash.com/photo-1509631179647-0177331693ae?q=80&w=500&auto=format&fit=crop',
+                likesCount: '3.1K',
+                commentsCount: 214,
+                creator: 'AI Generated',
+                creatorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=80&auto=format&fit=crop'
+              }
+            ] : (aiLooks.length > 0 ? aiLooks : seedAiLooks)).map((item) => (
               <motion.div 
                 key={item.id}
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-[#0b0b12] hover:bg-[#0f0f1c]/40 border border-white/5 hover:border-violet-500/10 rounded-2xl overflow-hidden transition-all group flex flex-col justify-between"
+                className="relative aspect-[3/4] rounded-2xl overflow-hidden border border-white/5 transition-all group shadow-lg flex flex-col"
               >
-                <div className="relative aspect-[3/4] overflow-hidden bg-zinc-950">
+                <div className="absolute inset-0 bg-zinc-950">
                   <img 
                     src={item.imageUrl} 
                     alt={item.title} 
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                     onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?q=80&w=200&auto=format&fit=crop"; }}
                   />
-                  <div className="absolute top-3 left-3">
-                    <span className="text-[8px] font-mono uppercase tracking-widest bg-violet-950/85 backdrop-blur-md text-violet-300 px-2.5 py-1 rounded-full border border-violet-500/20 font-bold flex items-center gap-1">
-                      <Sparkles className="w-2 h-2 text-violet-400" /> AI Design
-                    </span>
-                  </div>
-
-                  <button 
-                    onClick={() => toggleLike(item.id)}
-                    className="absolute bottom-3 right-3 p-2 bg-black/65 backdrop-blur-md hover:bg-rose-500/20 text-white hover:text-rose-400 border border-white/10 hover:border-rose-500/20 rounded-full transition-all cursor-pointer"
-                  >
-                    <Heart className={`w-3.5 h-3.5 ${likedPosts[item.id] ? 'fill-rose-500 text-rose-500' : ''}`} />
-                  </button>
                 </div>
 
-                <div className="p-4 space-y-3 text-left">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] font-medium text-white/90 truncate max-w-[120px]">{item.title}</span>
-                      {item.isVerified && <CheckCircle className="w-3 h-3 text-violet-400 shrink-0" />}
-                    </div>
-                    <span className="text-[9px] font-mono text-white/30">by {item.creator || 'AIStyleHub'}</span>
-                  </div>
+                <div className="absolute top-3 left-3 z-10">
+                  <span className="text-[9px] font-sans font-medium uppercase tracking-wider bg-black/70 backdrop-blur-md text-white/90 px-3 py-1 rounded-full border border-white/10 flex items-center gap-1.5">
+                    <Sparkles className="w-3 h-3 text-violet-400" /> AI Generated
+                  </span>
+                </div>
 
-                  <div className="p-2.5 bg-black/40 border border-white/[0.03] rounded-xl">
-                    <span className="text-[7.5px] font-mono uppercase text-violet-400/50 block tracking-wider">Prompt Parameters:</span>
-                    <p className="text-[10.5px] font-sans text-white/60 leading-normal italic line-clamp-2">
-                      "{item.prompt}"
+                <button 
+                  onClick={() => toggleLike(item.id)}
+                  className="absolute top-3 right-3 p-2 bg-black/60 backdrop-blur-md hover:bg-rose-500/20 text-white hover:text-rose-400 border border-white/10 rounded-full transition-all cursor-pointer z-10"
+                >
+                  <Heart className={`w-3.5 h-3.5 ${likedPosts[item.id] ? 'fill-rose-500 text-rose-500' : ''}`} />
+                </button>
+
+                {/* Bottom details gradient background overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/45 to-transparent pointer-events-none z-0" />
+
+                <div className="absolute bottom-0 left-0 right-0 p-3.5 space-y-2.5 text-left z-10">
+                  <div>
+                    <h4 className="text-[12px] font-bold text-white leading-tight">{item.title}</h4>
+                    <p className="text-[9.5px] font-sans text-white/60 mt-0.5 line-clamp-2 leading-relaxed">
+                      {item.prompt.startsWith('Prompt:') ? item.prompt : `Prompt: ${item.prompt}`}
                     </p>
                   </div>
 
-                  <div className="flex justify-between items-center pt-1 border-t border-white/5 text-[9px] font-mono text-white/40">
-                    <div className="flex gap-3">
-                      <span>❤️ {likedPosts[item.id] ? (item.likesCount || 120) + 1 : (item.likesCount || 120)}</span>
-                      <span>🔄 {item.remixesCount || 24} remixes</span>
+                  <div className="flex items-center gap-2 pt-0.5">
+                    <img 
+                      src={item.creatorAvatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=80&auto=format&fit=crop"} 
+                      className="w-4 h-4 rounded-full object-cover" 
+                      alt="" 
+                    />
+                    <span className="text-[10px] text-white/40">{item.creator || 'AI Generated'}</span>
+                  </div>
+
+                  <div className="flex justify-between items-center pt-2 text-[10.5px] font-mono text-white/55 border-t border-white/5">
+                    <div className="flex gap-4">
+                      <button onClick={() => toggleLike(item.id)} className={`flex items-center gap-1 hover:text-rose-400 transition-colors ${likedPosts[item.id] ? 'text-rose-400' : ''}`}>
+                        <Heart className={`w-3.5 h-3.5 ${likedPosts[item.id] ? 'fill-rose-500 text-rose-500' : ''}`} />
+                        <span>{item.likesCount}</span>
+                      </button>
+                      <span className="flex items-center gap-1 text-white/35">
+                        <MessageCircle className="w-3.5 h-3.5" />
+                        <span>{item.commentsCount}</span>
+                      </span>
                     </div>
                     <button 
                       onClick={() => {
@@ -546,9 +617,10 @@ export const LookVisionMainDashboard: React.FC<LookVisionMainDashboardProps> = (
                           window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: 'AI generated look compiled into your local closet!' }));
                         }
                       }}
-                      className="text-violet-400 hover:text-white uppercase font-bold text-[8.5px] tracking-wider"
+                      className="text-violet-400 hover:text-white uppercase font-sans font-bold text-[9px] tracking-wider flex items-center gap-1"
                     >
-                      [ ARCHIVE ]
+                      <RefreshCw className="w-3 h-3" />
+                      <span>Remix</span>
                     </button>
                   </div>
                 </div>
@@ -558,49 +630,89 @@ export const LookVisionMainDashboard: React.FC<LookVisionMainDashboardProps> = (
 
           <button 
             onClick={() => setActiveSubTab && setActiveSubTab('AI_STUDIO')}
-            className="w-full py-2.5 bg-white/[0.02] hover:bg-white/5 border border-white/5 rounded-xl text-[9px] font-mono uppercase tracking-widest text-white/60 hover:text-white flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+            className="w-full py-2.5 bg-violet-950/10 hover:bg-violet-950/25 border border-violet-500/10 hover:border-violet-500/20 rounded-xl text-[10px] font-sans font-semibold uppercase tracking-wider text-violet-400 hover:text-violet-300 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
           >
             <span>View more AI looks</span>
-            <ChevronRight className="w-3 h-3" />
+            <ChevronRight className="w-3.5 h-3.5 animate-pulse" />
           </button>
         </div>
 
         {/* ================= COLUMN 2: COMMUNITY ================= */}
         <div className="space-y-4">
-          <div className="flex justify-between items-center pb-2 border-b border-white/5">
+          <div className="space-y-1.5 pb-2 border-b border-white/5 text-left">
             <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-emerald-400" />
-              <h3 className="text-[11px] font-mono uppercase tracking-[0.15em] text-white/90 font-bold">Community</h3>
+              <Users className="w-4 h-4 text-blue-400" />
+              <h3 className="text-xs font-bold font-sans uppercase tracking-wider text-white">COMMUNITY</h3>
             </div>
-            <span className="text-[9px] font-mono text-emerald-400 bg-emerald-500/5 px-2 py-0.5 rounded-full border border-emerald-500/10">Active</span>
+            <p className="text-[10px] text-white/40 font-sans font-light">Real people, real looks, real inspiration</p>
+            
+            {/* Sub-tabs selection */}
+            <div className="flex flex-wrap gap-1.5 pt-2">
+              {['Following', 'Popular', 'New', 'Challenge'].map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setCommunityTab(tab)}
+                  className={`px-3 py-1 rounded-lg text-[10px] font-sans font-medium transition-all cursor-pointer ${
+                    communityTab === tab 
+                      ? 'bg-violet-600 text-white shadow-md shadow-violet-600/10 font-semibold' 
+                      : 'bg-white/5 text-white/50 hover:bg-white/10 hover:text-white'
+                  }`}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div className="space-y-5">
-            {(communityPosts.length > 0 ? communityPosts : seedCommunityFits).map((item) => (
+          <div className="space-y-3.5">
+            {/* Render items based on active tab */}
+            {(communityTab === 'Following' ? [
+              {
+                id: 'comm-f-1',
+                username: 'Ayesha Malik',
+                userAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=80&auto=format&fit=crop',
+                imageUrl: 'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?q=80&w=500&auto=format&fit=crop',
+                caption: 'Street style walking vibes in urban neutral tones.',
+                likesCount: '2.6K',
+                commentsCount: 89,
+                time: '2h ago'
+              },
+              {
+                id: 'comm-f-2',
+                username: 'Hamza Ali',
+                userAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=80&auto=format&fit=crop',
+                imageUrl: 'https://images.unsplash.com/photo-1501196354995-cbb51c65aaea?q=80&w=500&auto=format&fit=crop',
+                caption: 'Ready for monochrome tailoring season. Minimal outerwear rules.',
+                likesCount: '1.8K',
+                commentsCount: 72,
+                time: '4h ago'
+              }
+            ] : (communityPosts.length > 0 ? communityPosts : seedCommunityFits)).map((item) => (
               <motion.div 
                 key={item.id}
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-[#08080c] hover:bg-neutral-900/40 border border-white/5 hover:border-emerald-500/10 rounded-2xl overflow-hidden transition-all group flex flex-col justify-between"
+                className="bg-[#0b0b14] border border-white/5 rounded-2xl overflow-hidden transition-all group flex flex-col"
               >
-                {/* User profile header inside column card */}
-                <div className="p-3 flex items-center justify-between text-left">
+                {/* Community Header with Avatar & Time */}
+                <div className="p-3.5 flex items-center justify-between text-left border-b border-white/[0.02]">
                   <div className="flex items-center gap-2.5">
                     <img 
                       src={item.userAvatar} 
-                      className="w-7 h-7 rounded-full object-cover border border-white/10"
+                      className="w-7 h-7 rounded-full object-cover"
                       alt="" 
                     />
                     <div>
-                      <span className="block text-[11px] font-medium text-white leading-tight">{item.username}</span>
-                      <span className="block text-[8px] font-mono text-white/30 uppercase tracking-wide">{item.time}</span>
+                      <span className="block text-xs font-semibold text-white leading-tight">{item.username}</span>
+                      <span className="block text-[9px] font-mono text-white/30 tracking-wide mt-0.5">{item.time}</span>
                     </div>
                   </div>
+                  
                   <button 
-                    onClick={() => window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: `Now following ${item.username}` }))}
-                    className="text-[9px] font-mono text-emerald-400 hover:text-white px-2 py-0.5 bg-emerald-500/10 rounded border border-emerald-500/20"
+                    onClick={() => window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: `Account options loaded.` }))}
+                    className="p-1 text-white/40 hover:text-white transition-colors"
                   >
-                    Follow
+                    <MoreVertical className="w-4 h-4" />
                   </button>
                 </div>
 
@@ -611,44 +723,26 @@ export const LookVisionMainDashboard: React.FC<LookVisionMainDashboardProps> = (
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                     onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=200&auto=format&fit=crop"; }}
                   />
-                  
-                  <button 
-                    onClick={() => toggleLike(item.id)}
-                    className="absolute bottom-3 right-3 p-2 bg-black/65 backdrop-blur-md hover:bg-rose-500/20 text-white hover:text-rose-400 border border-white/10 hover:border-rose-500/20 rounded-full transition-all cursor-pointer"
-                  >
-                    <Heart className={`w-3.5 h-3.5 ${likedPosts[item.id] ? 'fill-rose-500 text-rose-500' : ''}`} />
-                  </button>
                 </div>
 
-                <div className="p-4 space-y-3 text-left">
-                  <p className="text-[11px] font-sans text-white/70 leading-relaxed font-light">
-                    "{item.caption}"
-                  </p>
-
-                  <div className="flex flex-wrap gap-1">
-                    {item.vibeTags?.map((tag: string, tIdx: number) => (
-                      <span key={tIdx} className="text-[8px] font-mono text-white/40 bg-white/5 border border-white/5 px-2 py-0.5 rounded uppercase">
-                        #{tag}
-                      </span>
-                    ))}
-                  </div>
-
-                  <div className="flex justify-between items-center pt-2.5 border-t border-white/5 text-[9px] font-mono text-white/40">
+                <div className="p-3.5 pt-2.5 text-left">
+                  <div className="flex justify-between items-center text-[11px] font-mono text-white/55">
                     <div className="flex gap-4">
-                      <span className="flex items-center gap-1 text-white/60">
-                        ❤️ {likedPosts[item.id] ? (item.likesCount || 140) + 1 : (item.likesCount || 140)}
-                      </span>
-                      <span className="flex items-center gap-1 text-white/40">
-                        💬 {item.commentsCount || 12}
+                      <button onClick={() => toggleLike(item.id)} className={`flex items-center gap-1 hover:text-rose-400 transition-colors ${likedPosts[item.id] ? 'text-rose-400' : ''}`}>
+                        <Heart className={`w-3.5 h-3.5 ${likedPosts[item.id] ? 'fill-rose-500 text-rose-500' : ''}`} />
+                        <span>{item.likesCount}</span>
+                      </button>
+                      <span className="flex items-center gap-1 text-white/35">
+                        <MessageCircle className="w-3.5 h-3.5" />
+                        <span>{item.commentsCount}</span>
                       </span>
                     </div>
                     
                     <button
                       onClick={() => toggleBookmark(item.id)}
-                      className={`text-emerald-400 hover:text-white flex items-center gap-1 ${bookmarkedPosts[item.id] ? 'font-bold' : ''}`}
+                      className={`hover:text-violet-400 flex items-center gap-1.5 transition-colors ${bookmarkedPosts[item.id] ? 'text-violet-400 font-bold' : 'text-white/40'}`}
                     >
-                      <Bookmark className={`w-3 h-3 ${bookmarkedPosts[item.id] ? 'fill-emerald-400' : ''}`} />
-                      <span>{bookmarkedPosts[item.id] ? 'Saved' : 'Collect'}</span>
+                      <Bookmark className={`w-3.5 h-3.5 ${bookmarkedPosts[item.id] ? 'fill-violet-400 text-violet-400' : ''}`} />
                     </button>
                   </div>
                 </div>
@@ -658,33 +752,71 @@ export const LookVisionMainDashboard: React.FC<LookVisionMainDashboardProps> = (
 
           <button 
             onClick={() => {
-              setActiveTag('Minimal');
-              window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: 'Filtered community feed stream.' }));
+              window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: 'Loading community directory.' }));
             }}
-            className="w-full py-2.5 bg-white/[0.02] hover:bg-white/5 border border-white/5 rounded-xl text-[9px] font-mono uppercase tracking-widest text-white/60 hover:text-white flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+            className="w-full py-2.5 bg-blue-950/10 hover:bg-blue-950/25 border border-blue-500/10 hover:border-blue-500/20 rounded-xl text-[10px] font-sans font-semibold uppercase tracking-wider text-blue-400 hover:text-blue-300 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
           >
             <span>Explore community</span>
-            <ChevronRight className="w-3 h-3" />
+            <ChevronRight className="w-3.5 h-3.5 animate-pulse" />
           </button>
         </div>
 
         {/* ================= COLUMN 3: MARKETPLACE ================= */}
         <div className="space-y-4">
-          <div className="flex justify-between items-center pb-2 border-b border-white/5">
+          <div className="space-y-1.5 pb-2 border-b border-white/5 text-left">
             <div className="flex items-center gap-2">
-              <ShoppingBag className="w-4 h-4 text-indigo-400" />
-              <h3 className="text-[11px] font-mono uppercase tracking-[0.15em] text-white/90 font-bold">Marketplace</h3>
+              <ShoppingBag className="w-4 h-4 text-emerald-400" />
+              <h3 className="text-xs font-bold font-sans uppercase tracking-wider text-white">MARKETPLACE</h3>
             </div>
-            <span className="text-[9px] font-mono text-indigo-400 bg-indigo-500/5 px-2 py-0.5 rounded-full border border-indigo-500/10">Boutique</span>
+            <p className="text-[10px] text-white/40 font-sans font-light">Shop real products from top brands</p>
+            
+            {/* Sub-tabs selection */}
+            <div className="flex flex-wrap gap-1.5 pt-2">
+              {['For You', 'New In', 'Brands', 'Sale'].map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setMarketplaceTab(tab)}
+                  className={`px-3 py-1 rounded-lg text-[10px] font-sans font-medium transition-all cursor-pointer ${
+                    marketplaceTab === tab 
+                      ? 'bg-[#183a2b] border border-emerald-500/20 text-emerald-400 font-semibold' 
+                      : 'bg-white/5 text-white/50 hover:bg-white/10 hover:text-white'
+                  }`}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div className="space-y-5">
-            {seedMarketplaceProducts.map((item) => (
+          <div className="space-y-3.5">
+            {/* Render items based on active tab */}
+            {(marketplaceTab === 'For You' ? [
+              {
+                id: 'm-f-1',
+                brand: 'ZARA',
+                title: 'Relaxed Fit Blazer',
+                price: 79.99,
+                originalPrice: 99.99,
+                discount: '-20%',
+                rating: '4.8',
+                reviews: 128,
+                imageUrl: 'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?q=80&w=500&auto=format&fit=crop'
+              },
+              {
+                id: 'm-f-2',
+                brand: 'NIKE',
+                title: "Air Force 1 '07",
+                price: 110.00,
+                rating: '4.7',
+                reviews: 342,
+                imageUrl: 'https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?q=80&w=500&auto=format&fit=crop'
+              }
+            ] : seedMarketplaceProducts).map((item) => (
               <motion.div 
                 key={item.id}
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-[#08080f] hover:bg-neutral-900/40 border border-white/5 hover:border-indigo-500/10 rounded-2xl overflow-hidden transition-all group flex flex-col justify-between"
+                className="bg-[#0b0b14] border border-white/5 rounded-2xl overflow-hidden transition-all group flex flex-col justify-between relative"
               >
                 <div className="relative aspect-[3/4] overflow-hidden bg-zinc-950">
                   <img 
@@ -695,7 +827,7 @@ export const LookVisionMainDashboard: React.FC<LookVisionMainDashboardProps> = (
                   />
                   {item.discount && (
                     <div className="absolute top-3 left-3">
-                      <span className="text-[8px] font-mono uppercase tracking-widest bg-rose-600/90 text-white px-2.5 py-1 rounded-full border border-rose-500/20 font-bold">
+                      <span className="text-[9px] font-sans font-bold uppercase tracking-wider bg-rose-600 text-white px-2.5 py-1 rounded-lg border border-rose-500/20">
                         {item.discount}
                       </span>
                     </div>
@@ -703,42 +835,46 @@ export const LookVisionMainDashboard: React.FC<LookVisionMainDashboardProps> = (
 
                   <button 
                     onClick={() => toggleLike(item.id)}
-                    className="absolute bottom-3 right-3 p-2 bg-black/65 backdrop-blur-md hover:bg-rose-500/20 text-white hover:text-rose-400 border border-white/10 hover:border-rose-500/20 rounded-full transition-all cursor-pointer"
+                    className="absolute top-3 right-3 p-2 bg-black/60 backdrop-blur-md hover:bg-rose-500/20 text-white hover:text-rose-400 border border-white/10 rounded-full transition-all cursor-pointer"
                   >
                     <Heart className={`w-3.5 h-3.5 ${likedPosts[item.id] ? 'fill-rose-500 text-rose-500' : ''}`} />
                   </button>
                 </div>
 
-                <div className="p-4 space-y-2.5 text-left">
+                <div className="p-3.5 space-y-2.5 text-left">
                   <div>
-                    <span className="text-[8px] font-mono text-violet-400 uppercase tracking-widest block font-bold">{item.brand}</span>
-                    <h4 className="text-[11px] font-medium text-white truncate">{item.title}</h4>
+                    <span className="text-[10px] font-bold text-white uppercase tracking-wider block">{item.brand}</span>
+                    <h4 className="text-[11px] text-white/50 font-sans mt-0.5 truncate">{item.title}</h4>
+                    <div className="mt-1.5 flex items-center gap-1.5">
+                      {item.originalPrice ? (
+                        <>
+                          <span className="text-white font-sans font-bold text-xs">${item.price}</span>
+                          <span className="text-white/30 line-through font-sans text-[10px]">${item.originalPrice}</span>
+                        </>
+                      ) : (
+                        <span className="text-white font-sans font-bold text-xs">${item.price}</span>
+                      )}
+                    </div>
                   </div>
 
-                  <div className="flex justify-between items-center pt-1 border-t border-white/5 text-[9px] font-mono text-white/40">
-                    <div>
-                      {item.originalPrice ? (
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-white font-sans font-semibold text-xs">${item.price}</span>
-                          <span className="text-white/30 line-through font-sans text-[10px]">${item.originalPrice}</span>
-                        </div>
-                      ) : (
-                        <span className="text-white font-sans font-semibold text-xs">${item.price}</span>
-                      )}
-                      <span className="text-[8.5px] text-white/30 font-mono block mt-0.5">⭐️ {item.rating} ({item.reviews} Reviews)</span>
+                  <div className="flex justify-between items-center pt-1">
+                    <div className="flex items-center gap-1 text-[10px] text-white/40">
+                      <span className="text-amber-400 font-bold">★</span>
+                      <span>{item.rating}</span>
+                      <span>({item.reviews})</span>
                     </div>
                     
                     <button 
                       onClick={() => {
                         if (onAddGarment) {
-                          onAddGarment(item.title, `Purchased piece from ${item.brand}`, item.category || 'Casual', { imageUrl: item.imageUrl, price: item.price });
+                          onAddGarment(item.title, `Purchased piece from ${item.brand}`, 'Casual', { imageUrl: item.imageUrl, price: item.price });
                           window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: `Registered ${item.title} into your local Closet!` }));
                         }
                       }}
-                      className="w-8 h-8 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center cursor-pointer transition-colors shadow-md shadow-emerald-600/15"
+                      className="w-7 h-7 rounded-lg bg-[#22c55e] hover:bg-[#16a34a] text-black flex items-center justify-center cursor-pointer transition-colors"
                       title="Add to Closet"
                     >
-                      <Plus className="w-4 h-4" />
+                      <ShoppingBag className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
@@ -748,39 +884,38 @@ export const LookVisionMainDashboard: React.FC<LookVisionMainDashboardProps> = (
 
           <button 
             onClick={() => {
-              setActiveTag('Luxury');
-              window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: 'Displaying luxury boutique inventory.' }));
+              window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: 'Displaying complete boutique list.' }));
             }}
-            className="w-full py-2.5 bg-white/[0.02] hover:bg-white/5 border border-white/5 rounded-xl text-[9px] font-mono uppercase tracking-widest text-white/60 hover:text-white flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+            className="w-full py-2.5 bg-emerald-950/10 hover:bg-emerald-950/25 border border-emerald-500/10 hover:border-emerald-500/20 rounded-xl text-[10px] font-sans font-semibold uppercase tracking-wider text-emerald-400 hover:text-emerald-300 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
           >
             <span>Shop all products</span>
-            <ChevronRight className="w-3 h-3" />
+            <ChevronRight className="w-3.5 h-3.5 animate-pulse" />
           </button>
         </div>
 
       </div>
 
       {/* 3. EDITOR'S PICKS BOTTOM HORIZONTAL CAROUSEL */}
-      <div className="space-y-4 pt-4 border-t border-white/5">
-        <div className="flex justify-between items-center">
+      <div className="space-y-4 pt-6 border-t border-white/5 text-left">
+        <div className="flex justify-between items-end">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <Award className="w-4 h-4 text-violet-400" />
-              <h3 className="text-sm font-bold text-white tracking-wide uppercase font-mono">Editor's Picks</h3>
+              <Star className="w-4 h-4 text-violet-400 fill-violet-400" />
+              <h3 className="text-sm font-bold text-white tracking-widest uppercase font-sans">EDITOR'S PICKS</h3>
             </div>
-            <p className="text-[10px] text-white/40 font-sans leading-none uppercase">Curated boutique collections updated daily</p>
+            <p className="text-[10px] text-white/40 font-sans leading-none uppercase tracking-wider">Curated by our editors</p>
           </div>
           
           <div className="flex gap-1.5">
             <button 
               onClick={() => scrollHorizontal('left')}
-              className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 border border-white/5 text-white flex items-center justify-center cursor-pointer transition-colors"
+              className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 border border-white/5 text-white flex items-center justify-center cursor-pointer transition-all"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
             <button 
               onClick={() => scrollHorizontal('right')}
-              className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 border border-white/5 text-white flex items-center justify-center cursor-pointer transition-colors"
+              className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 border border-white/5 text-white flex items-center justify-center cursor-pointer transition-all"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -794,27 +929,210 @@ export const LookVisionMainDashboard: React.FC<LookVisionMainDashboardProps> = (
           {editorsPicks.map((pick, pIdx) => (
             <div 
               key={pIdx}
-              className="min-w-[260px] md:min-w-[280px] bg-[#07070c]/50 border border-white/5 rounded-2xl overflow-hidden relative group cursor-pointer"
-              onClick={() => setActiveSubTab && setActiveSubTab('AI_STUDIO')}
+              className="min-w-[270px] w-[270px] h-[92px] bg-[#07070c] border border-white/5 rounded-2xl overflow-hidden flex cursor-pointer select-none group"
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: `Displaying curated collection: ${pick.title}` }));
+                if (setActiveSubTab) setActiveSubTab('AI_STUDIO');
+              }}
             >
-              <div className="aspect-[4/3] overflow-hidden bg-zinc-950 relative">
+              {/* Left side: Image */}
+              <div className="w-[100px] h-full overflow-hidden relative shrink-0 border-r border-white/5 bg-zinc-950">
                 <img 
                   src={pick.imageUrl} 
                   alt={pick.title}
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=200&auto=format&fit=crop"; }}
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-4 text-left" />
-                
-                <div className="absolute bottom-3 left-3 right-3 text-left space-y-1">
-                  <h4 className="text-xs font-bold text-white font-sans">{pick.title}</h4>
-                  <p className="text-[10px] text-white/50 leading-relaxed font-sans">{pick.desc}</p>
+              </div>
+
+              {/* Right side: Metadata and Call to Action */}
+              <div className="flex-1 p-2.5 flex flex-col justify-between text-left min-w-0 bg-[#07070c]">
+                <div className="space-y-0.5">
+                  <h4 className="text-[11px] font-bold text-white font-sans truncate leading-tight">{pick.title}</h4>
+                  <span className="text-[9px] text-white/35 font-mono block tracking-wider uppercase">{pick.subtitle}</span>
                 </div>
+                
+                <button className="self-start text-[8px] font-sans font-bold text-violet-400 bg-violet-600/10 hover:bg-violet-600 hover:text-white px-2 py-1 rounded transition-all">
+                  View Collection
+                </button>
               </div>
             </div>
           ))}
         </div>
       </div>
 
+        </div> {/* End of xl:col-span-3 (Left Content Column) */}
+
+        {/* Right Sidebar Area (25% width on xl screens) */}
+        <div className="xl:col-span-1 space-y-6">
+          
+          {/* A. QUICK ACTIONS */}
+          <div className="bg-[#07070c]/50 border border-white/5 rounded-2xl p-5 space-y-4">
+            <h3 className="text-sm font-bold text-white font-sans tracking-wide text-left">Quick Actions</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <button 
+                onClick={() => setActiveSubTab && setActiveSubTab('AI_STUDIO')}
+                className="bg-[#13112b] hover:bg-[#1a173d] border border-violet-500/20 rounded-xl p-3 flex items-center gap-2.5 transition-all cursor-pointer group text-left shadow-lg shadow-violet-950/25"
+              >
+                <div className="p-1.5 bg-violet-500/20 rounded-lg text-violet-300 group-hover:bg-violet-500 group-hover:text-white transition-all">
+                  <Sparkles className="w-3.5 h-3.5 fill-violet-300 group-hover:fill-white" />
+                </div>
+                <div className="min-w-0">
+                  <span className="block text-[11px] font-bold text-white truncate">AI Studio</span>
+                </div>
+              </button>
+
+              <button 
+                onClick={() => setActiveSubTab && setActiveSubTab('VIRTUAL_TRY' as any)}
+                className="bg-[#07070c] hover:bg-[#0e0e18] border border-white/5 rounded-xl p-3 flex items-center gap-2.5 transition-all cursor-pointer group text-left"
+              >
+                <div className="p-1.5 bg-white/5 rounded-lg text-white/50 group-hover:bg-white/10 group-hover:text-white transition-all">
+                  <Shirt className="w-3.5 h-3.5" />
+                </div>
+                <div className="min-w-0">
+                  <span className="block text-[11px] font-medium text-white/70 group-hover:text-white truncate">Virtual Try-On</span>
+                </div>
+              </button>
+
+              <button 
+                onClick={() => setActiveSubTab && setActiveSubTab('OUTFIT_GEN' as any)}
+                className="bg-[#07070c] hover:bg-[#0e0e18] border border-white/5 rounded-xl p-3 flex items-center gap-2.5 transition-all cursor-pointer group text-left"
+              >
+                <div className="p-1.5 bg-white/5 rounded-lg text-white/50 group-hover:bg-white/10 group-hover:text-white transition-all">
+                  <SlidersHorizontal className="w-3.5 h-3.5" />
+                </div>
+                <div className="min-w-0">
+                  <span className="block text-[11px] font-medium text-white/70 group-hover:text-white truncate">AI Stylist</span>
+                </div>
+              </button>
+
+              <button 
+                onClick={() => setActiveSubTab && setActiveSubTab('SYSTEM_ROOM' as any)}
+                className="bg-[#07070c] hover:bg-[#0e0e18] border border-white/5 rounded-xl p-3 flex items-center gap-2.5 transition-all cursor-pointer group text-left"
+              >
+                <div className="p-1.5 bg-white/5 rounded-lg text-white/50 group-hover:bg-white/10 group-hover:text-white transition-all">
+                  <Palette className="w-3.5 h-3.5" />
+                </div>
+                <div className="min-w-0">
+                  <span className="block text-[11px] font-medium text-white/70 group-hover:text-white truncate">Color Palette</span>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {/* B. TRENDING TAGS */}
+          <div className="bg-[#07070c]/50 border border-white/5 rounded-2xl p-5 space-y-4">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <Flame className="w-4 h-4 text-orange-500" />
+                <h3 className="text-sm font-bold text-white font-sans tracking-wide">Trending Tags</h3>
+              </div>
+              <button 
+                onClick={() => window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: 'Loading full style tag database.' }))}
+                className="text-[10px] font-sans font-medium text-white/40 hover:text-white hover:underline transition-colors"
+              >
+                See all
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              {[
+                { name: '# Streetwear', views: '12.5K' },
+                { name: '# OldMoney', views: '9.8K' },
+                { name: '# KoreanStyle', views: '8.3K' },
+                { name: '# Minimal', views: '7.1K' },
+                { name: '# Y2K', views: '6.3K' }
+              ].map((tag, tIdx) => (
+                <button
+                  key={tIdx}
+                  onClick={() => {
+                    setPromptInput(`A classic high-end ${tag.name.replace('# ', '').toLowerCase()} look`);
+                    window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: `Vibe prompt preset configured: ${tag.name}` }));
+                  }}
+                  className="w-full flex justify-between items-center py-2 px-3 bg-transparent hover:bg-white/[0.02] rounded-xl transition-all text-left text-xs text-white/80 group cursor-pointer"
+                >
+                  <span className="font-medium group-hover:text-violet-400 transition-colors">{tag.name}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10.5px] font-mono text-white/30">{tag.views}</span>
+                    <ChevronRight className="w-3.5 h-3.5 text-white/20 group-hover:text-white/50 transition-colors" />
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* C. TRY VIRTUAL TRY-ON */}
+          <div className="relative bg-gradient-to-br from-violet-950/40 via-indigo-950/30 to-black/60 border border-violet-500/10 rounded-3xl overflow-hidden p-5 flex justify-between items-center group">
+            <div className="space-y-3.5 z-10 max-w-[60%] text-left">
+              <div className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-violet-600/30 border border-violet-500/30 rounded-full">
+                <span className="text-[8px] font-sans font-extrabold uppercase tracking-wider text-violet-300">NEW</span>
+              </div>
+              <div className="space-y-1">
+                <h4 className="text-xs font-bold text-white font-sans tracking-wide leading-snug">Try Virtual Try-On</h4>
+                <p className="text-[10px] text-white/50 leading-relaxed font-sans font-light">See how outfits look on you instantly.</p>
+              </div>
+              <button 
+                onClick={() => setActiveSubTab && setActiveSubTab('VIRTUAL_TRY' as any)}
+                className="py-1.5 px-3 bg-transparent border border-white/10 hover:border-white text-white font-sans text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <span>Try Now</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            <div className="absolute right-0 bottom-0 top-0 w-[42%] pointer-events-none overflow-hidden flex items-end justify-end">
+              <img 
+                src="https://images.unsplash.com/photo-1524504388940-b1c1722653e1?q=80&w=250&auto=format&fit=crop" 
+                className="h-full w-full object-cover object-center translate-y-2 translate-x-1 group-hover:scale-105 transition-transform duration-500" 
+                alt="" 
+                referrerPolicy="no-referrer"
+              />
+            </div>
+          </div>
+
+          {/* D. TOP CONTRIBUTORS */}
+          <div className="bg-[#07070c]/50 border border-white/5 rounded-2xl p-5 space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-sm font-bold text-white font-sans tracking-wide">Top Contributors</h3>
+              <div className="flex items-center gap-1 text-[9.5px] font-sans text-white/40 border border-white/5 bg-white/[0.02] px-2 py-0.5 rounded-lg cursor-pointer">
+                <span>This Week</span>
+                <ChevronDown className="w-3 h-3" />
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {[
+                { rank: 1, name: 'Ayesha Malik', views: '12.4K', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&auto=format&fit=crop' },
+                { rank: 2, name: 'Hamza Ali', views: '9.8K', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=150&auto=format&fit=crop' },
+                { rank: 3, name: 'Noor Fatima', views: '8.2K', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=150&auto=format&fit=crop' },
+                { rank: 4, name: 'Zaynab', views: '7.1K', avatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?q=80&w=150&auto=format&fit=crop' }
+              ].map((contributor) => (
+                <div 
+                  key={contributor.rank}
+                  className="flex items-center justify-between py-1 text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-[10px] font-sans font-semibold text-white/30 w-3">{contributor.rank}</span>
+                    <img 
+                      src={contributor.avatar} 
+                      className="w-8 h-8 rounded-full object-cover" 
+                      alt="" 
+                    />
+                    <div>
+                      <span className="block text-xs font-semibold text-white leading-tight">{contributor.name}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-violet-400">
+                    <Heart className="w-3.5 h-3.5 text-violet-400" />
+                    <span className="text-[10.5px] font-mono font-bold text-white/60">{contributor.views}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+        </div>
+
+      </div>
     </div>
   );
 };

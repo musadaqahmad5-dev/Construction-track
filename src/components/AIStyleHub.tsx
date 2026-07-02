@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  Trash2, Shield, Settings, AlertTriangle, RefreshCw, CheckCircle, Sparkles,
+  Trash2, Shield, Settings, AlertTriangle, RefreshCw, CheckCircle, Sparkles, Sparkle, BarChart2,
   Search, ShoppingBag, Shirt, Clock, Info, Store, SlidersHorizontal, LogOut, 
   ChevronRight, Compass, Eye, Cpu, Database, Activity, CloudSun, User,
-  Bell, PenSquare, X, ChevronDown,
+  Bell, PenSquare, X, ChevronDown, Award, Check,
   Home, Users, Heart, Layers, MessageSquare, Mail, Crown, MoreVertical, Moon
 } from 'lucide-react';
 import { WardrobeItem } from '../types';
@@ -30,6 +30,7 @@ import { SartorialControlCenter } from './SartorialControlCenter';
 import { AIEngineStudio } from './AIEngineStudio';
 import { CognitivePassport } from './CognitivePassport';
 import { SystemSettingsAudit } from './SystemSettingsAudit';
+import { ArchitectureMap } from './ArchitectureMap';
 
 export interface LookVisionTheme {
   id: string;
@@ -491,13 +492,14 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
 }) => {
   const [state, setState] = useState<UnifiedState>(() => UnifiedFashionOS.getState());
   const hasRestoredRef = useRef(false);
-  const [activeSubTab, setActiveSubTab] = useState<'HOME' | 'AI_STUDIO' | 'WARDROBE' | 'DASHBOARD' | 'PROFILE' | 'SYSTEM_ROOM'>(() => {
+  const [activeSubTab, setActiveSubTab] = useState<'HOME' | 'AI_STUDIO' | 'WARDROBE' | 'DASHBOARD' | 'PROFILE' | 'SYSTEM_ROOM' | 'OUTFIT_GEN' | 'VIRTUAL_TRY' | 'COLLECTIONS' | 'HISTORY' | 'MESSAGES' | 'FAVORITES'>(() => {
     const saved = localStorage.getItem('last_active_place_subtab');
-    if (saved && ['HOME', 'AI_STUDIO', 'WARDROBE', 'DASHBOARD', 'PROFILE', 'SYSTEM_ROOM'].includes(saved)) {
+    if (saved && ['HOME', 'AI_STUDIO', 'WARDROBE', 'DASHBOARD', 'PROFILE', 'SYSTEM_ROOM', 'OUTFIT_GEN', 'VIRTUAL_TRY', 'COLLECTIONS', 'HISTORY', 'MESSAGES', 'FAVORITES'].includes(saved)) {
       return saved as any;
     }
     return 'HOME';
   });
+  const [activeCockpitSubTab, setActiveCockpitSubTab] = useState<'HOME' | 'AI_STUDIO' | 'WARDROBE' | 'DASHBOARD' | 'PROFILE' | 'SYSTEM_ROOM' | 'OUTFIT_GEN' | 'VIRTUAL_TRY' | 'COLLECTIONS' | 'HISTORY' | 'MESSAGES' | 'FAVORITES'>('HOME');
   const [showFounderConsole, setShowFounderConsole] = useState(false);
   
   // Ceremony of Addition Form Steps States (Restore draft silently)
@@ -1507,160 +1509,171 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
     );
   }
 
+  const handleNavigate = (targetTab: any) => {
+    setActiveSubTab(targetTab);
+    localStorage.setItem('last_active_place_subtab', targetTab);
+  };
+
+  const activeSubTabForRendering = activeSubTab;
+
   const themeObj = LOOK_VISION_THEMES.find(t => t.id === currentTheme) || LOOK_VISION_THEMES[0];
 
-  return (
-    <div className={`h-screen w-screen overflow-hidden ${themeObj.bg} ${themeObj.text} flex flex-col font-sans antialiased`} id="editorial-style-hub-root">
+  const renderAppStructure = (isNested: boolean) => {
+    const activeSubTab = activeSubTabForRendering;
+    const setActiveSubTab = (newTab: any) => {
+      handleNavigate(newTab);
+    };
+
+    return (
+      <div 
+        className={`${isNested ? 'w-full h-[710px] rounded-2xl border border-white/5 shadow-2xl overflow-hidden' : 'h-screen w-screen overflow-hidden'} ${themeObj.bg} ${themeObj.text} flex flex-col font-sans antialiased relative`} 
+        id={isNested ? undefined : "editorial-style-hub-root"}
+      >
       
       {/* 1. TOP BAR NAVIGATION */}
-      <header className="h-16 flex items-center justify-between px-6 border-b shrink-0 bg-[#07070c]/80 border-white/5 z-40 relative backdrop-blur-xl">
-        {/* Left: Mobile Branding or Logo */}
-        <div className="flex items-center gap-3 select-none">
-          <div className="lg:hidden p-2 rounded-xl bg-gradient-to-tr from-violet-600 to-indigo-600 text-white flex items-center justify-center shadow-lg shadow-violet-500/20">
-            <Sparkles className="w-4 h-4 animate-pulse" />
-          </div>
-          <div>
-            <h1 className="text-xs font-bold font-mono tracking-[0.2em] uppercase text-white bg-gradient-to-r from-white via-neutral-200 to-neutral-400 bg-clip-text text-transparent">
-              LOOK VISION
-            </h1>
-            <p className="text-[8px] font-mono tracking-[0.2em] text-neutral-400 uppercase mt-0.5">
-              FASHION AI PLATFORM OS v1.2
-            </p>
+      <header className="h-16 flex items-center shrink-0 bg-[#07070c] border-b border-white/5 z-40 relative">
+        {/* Left header column (aligned with Left Sidebar width) */}
+        <div className="w-64 shrink-0 h-full flex items-center justify-start pl-6 border-r border-white/5">
+          <div className="flex items-center gap-2">
+            <Sparkle className="w-5 h-5 text-violet-400 fill-violet-400 filter drop-shadow-[0_0_8px_rgba(168,85,247,0.85)]" />
           </div>
         </div>
 
-        {/* Center: Wider, Elegant Search Input */}
-        <div className="flex-1 max-w-xl mx-8 relative hidden md:block select-none">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40" />
-          <input 
-            type="text" 
-            placeholder="Search styles, users, collections..." 
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              // Dispatch query to HomeFeed if active
-              window.dispatchEvent(new CustomEvent('lookvision_set_search_query', { detail: e.target.value }));
-            }}
-            className="w-full bg-white/[0.03] hover:bg-white/[0.05] border border-white/5 rounded-full py-2 pl-10 pr-16 text-xs text-white placeholder-white/30 focus:outline-none focus:border-violet-500/30 transition-all font-light"
-          />
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 px-1.5 py-0.5 bg-white/5 border border-white/10 rounded text-[9px] font-mono text-white/40 tracking-wider">
-            ⌘ K
-          </div>
-        </div>
-
-        {/* Right: Actions and Profile dropdown */}
-        <div className="flex items-center gap-4 relative">
-          
-          {/* Dark Mode toggle icon */}
-          <button 
-            onClick={() => {
-              window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: 'Aesthetic theme locking active.' }));
-            }}
-            className="p-2 rounded-full bg-white/5 hover:bg-white/10 border border-white/5 text-white/70 hover:text-white transition-all cursor-pointer"
-            title="Theme Lock"
-          >
-            <Moon className="w-4 h-4" />
-          </button>
-
-          {/* Notifications Bell */}
-          <div className="relative">
-            <button
-              onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
-              className="p-2 rounded-full bg-white/5 hover:bg-white/10 border border-white/5 text-white/70 hover:text-white transition-all cursor-pointer relative"
-              title="Notifications"
-            >
-              <Bell className="w-4 h-4" />
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-violet-600 rounded-full flex items-center justify-center text-[8px] font-bold font-mono text-white">8</span>
-            </button>
-
-            {/* Notifications Drawer Slide-over */}
-            {isNotificationsOpen && (
-              <>
-                <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs" onClick={() => setIsNotificationsOpen(false)} />
-                <div className="fixed top-0 right-0 h-full w-80 bg-[#0c0c12] border-l border-white/5 shadow-2xl p-6 z-50 text-left space-y-6 select-none flex flex-col justify-between">
-                  <div className="space-y-6">
-                    <div className="flex justify-between items-center border-b border-white/5 pb-3">
-                      <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-white/30 block">Live Feed Updates</span>
-                      <button 
-                        onClick={() => setIsNotificationsOpen(false)}
-                        className="text-white/40 hover:text-white cursor-pointer"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-
-                    <div className="space-y-4">
-                      {[
-                        { title: '🔥 Vibe Check', desc: 'Your last post received 14 likes from style creators!', time: '2m ago' },
-                        { title: '⚡ Style Drop', desc: 'Classic Noir silk shirts added to boutiques!', time: '1h ago' },
-                        { title: '🧬 DNA Alignment', desc: 'Coherence reaches 98% with Nordic Minimalist aesthetics.', time: '3h ago' },
-                        { title: '🌦️ Weather Alert', desc: 'Lighter layers advised for warm morning strolls.', time: '5h ago' }
-                      ].map((not, i) => (
-                        <div key={i} className="p-3 bg-white/[0.02] border border-white/5 rounded-xl space-y-1">
-                          <div className="flex justify-between items-center">
-                            <strong className="text-[10px] font-mono uppercase text-white tracking-wider">{not.title}</strong>
-                            <span className="text-[8px] font-mono text-white/30">{not.time}</span>
-                          </div>
-                          <p className="text-[10px] font-serif italic text-white/50 leading-relaxed">
-                            "{not.desc}"
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => setIsNotificationsOpen(false)}
-                    className="w-full bg-white text-black py-3 rounded-xl text-[10px] font-mono uppercase tracking-widest font-semibold text-center cursor-pointer hover:bg-neutral-200 transition-colors"
-                  >
-                    Clear All Notifications
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* Shopping Bag Icon button */}
-          <button 
-            onClick={() => {
-              setActiveSubTab('HOME');
-              // Let's open the orders drawer inside HomeFeed by sending a custom event!
-              setTimeout(() => {
-                window.dispatchEvent(new CustomEvent('lookvision_open_orders'));
-              }, 50);
-            }}
-            className="p-2 rounded-full bg-white/5 hover:bg-white/10 border border-white/5 text-white/70 hover:text-white transition-all cursor-pointer relative"
-            title="Shopping Orders"
-          >
-            <ShoppingBag className="w-4 h-4" />
-          </button>
-
-          {/* Create with AI Button */}
-          <button 
-            onClick={() => {
-              setActiveSubTab('AI_STUDIO');
-            }}
-            className="bg-violet-600 hover:bg-violet-500 text-white px-4 py-2 rounded-full text-xs font-medium flex items-center gap-2 cursor-pointer transition-all shadow-md shadow-violet-600/15"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Create with AI</span>
-          </button>
-
-          {/* User profile dropdown caret */}
-          <div className="flex items-center gap-1.5 border-l border-white/10 pl-4">
-            <button
-              onClick={() => {
-                setActiveSubTab('PROFILE');
+        {/* Right header column (aligned with main workspace content and right sidebar) */}
+        <div className="flex-grow h-full flex items-center justify-between px-6">
+          {/* Left: Wider, Elegant Search Input */}
+          <div className="flex-1 max-w-xl relative hidden md:block select-none">
+            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40" />
+            <input 
+              type="text" 
+              placeholder="Search styles, users, collections..." 
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                // Dispatch query to HomeFeed if active
+                window.dispatchEvent(new CustomEvent('lookvision_set_search_query', { detail: e.target.value }));
               }}
-              className="flex items-center gap-1 hover:opacity-80 transition-opacity cursor-pointer"
+              className="w-full bg-white/[0.02] hover:bg-white/[0.04] border border-white/5 rounded-xl py-2 pl-10 pr-16 text-xs text-white placeholder-white/30 focus:outline-none focus:border-violet-500/30 transition-all font-light"
+            />
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 px-1.5 py-0.5 bg-white/5 border border-white/10 rounded text-[9px] font-mono text-white/40 tracking-wider">
+              ⌘ K
+            </div>
+          </div>
+
+          {/* Right: Actions and Profile dropdown */}
+          <div className="flex items-center gap-4 relative">
+            
+            {/* Dark Mode toggle icon */}
+            <button 
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: 'Aesthetic theme locking active.' }));
+              }}
+              className="p-2 rounded-full hover:bg-white/5 text-white/70 hover:text-white transition-all cursor-pointer"
+              title="Theme Lock"
             >
-              <img 
-                src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=150&auto=format&fit=crop" 
-                alt="Sarah Khan avatar"
-                className="w-8 h-8 rounded-full object-cover border border-white/10"
-              />
-              <ChevronDown className="w-3.5 h-3.5 text-white/50" />
+              <Moon className="w-4 h-4" />
             </button>
+
+            {/* Notifications Bell */}
+            <div className="relative">
+              <button
+                onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+                className="p-2 rounded-full hover:bg-white/5 text-white/70 hover:text-white transition-all cursor-pointer relative"
+                title="Notifications"
+              >
+                <Bell className="w-4 h-4" />
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-violet-600 rounded-full flex items-center justify-center text-[8px] font-bold font-mono text-white">8</span>
+              </button>
+
+              {/* Notifications Drawer Slide-over */}
+              {isNotificationsOpen && (
+                <>
+                  <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs" onClick={() => setIsNotificationsOpen(false)} />
+                  <div className="fixed top-0 right-0 h-full w-80 bg-[#0c0c12] border-l border-white/5 shadow-2xl p-6 z-50 text-left space-y-6 select-none flex flex-col justify-between">
+                    <div className="space-y-6">
+                      <div className="flex justify-between items-center border-b border-white/5 pb-3">
+                        <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-white/30 block">Live Feed Updates</span>
+                        <button 
+                          onClick={() => setIsNotificationsOpen(false)}
+                          className="text-white/40 hover:text-white cursor-pointer"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      <div className="space-y-4">
+                        {[
+                          { title: '🔥 Vibe Check', desc: 'Your last post received 14 likes from style creators!', time: '2m ago' },
+                          { title: '⚡ Style Drop', desc: 'Classic Noir silk shirts added to boutiques!', time: '1h ago' },
+                          { title: '🧬 DNA Alignment', desc: 'Coherence reaches 98% with Nordic Minimalist aesthetics.', time: '3h ago' },
+                          { title: '🌦️ Weather Alert', desc: 'Lighter layers advised for warm morning strolls.', time: '5h ago' }
+                        ].map((not, i) => (
+                          <div key={i} className="p-3 bg-white/[0.02] border border-white/5 rounded-xl space-y-1">
+                            <div className="flex justify-between items-center">
+                              <strong className="text-[10px] font-mono uppercase text-white tracking-wider">{not.title}</strong>
+                              <span className="text-[8px] font-mono text-white/30">{not.time}</span>
+                            </div>
+                            <p className="text-[10px] font-serif italic text-white/50 leading-relaxed">
+                              "{not.desc}"
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => setIsNotificationsOpen(false)}
+                      className="w-full bg-white text-black py-3 rounded-xl text-[10px] font-mono uppercase tracking-widest font-semibold text-center cursor-pointer hover:bg-neutral-200 transition-colors"
+                    >
+                      Clear All Notifications
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Shopping Bag Icon button */}
+            <button 
+              onClick={() => {
+                setActiveSubTab('HOME');
+                // Let's open the orders drawer inside HomeFeed by sending a custom event!
+                setTimeout(() => {
+                  window.dispatchEvent(new CustomEvent('lookvision_open_orders'));
+                }, 50);
+              }}
+              className="p-2 rounded-full hover:bg-white/5 text-white/70 hover:text-white transition-all cursor-pointer relative"
+              title="Shopping Orders"
+            >
+              <ShoppingBag className="w-4 h-4" />
+            </button>
+
+            {/* Create with AI Button */}
+            <button 
+              onClick={() => {
+                setActiveSubTab('AI_STUDIO');
+              }}
+              className="bg-violet-600 hover:bg-violet-500 text-white px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 cursor-pointer transition-all shadow-lg shadow-violet-600/20 animate-pulse-slow"
+            >
+              <Sparkle className="w-3.5 h-3.5 fill-white" />
+              <span>Create with AI</span>
+            </button>
+
+            {/* User profile dropdown caret */}
+            <div className="flex items-center gap-1.5 border-l border-white/10 pl-4">
+              <button
+                onClick={() => {
+                  setActiveSubTab('PROFILE');
+                }}
+                className="flex items-center gap-1 hover:opacity-80 transition-opacity cursor-pointer"
+              >
+                <img 
+                  src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&auto=format&fit=crop" 
+                  alt="Sarah Khan avatar"
+                  className="w-8 h-8 rounded-full object-cover border border-white/10"
+                />
+                <ChevronDown className="w-3.5 h-3.5 text-white/50" />
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -1672,37 +1685,20 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
         <aside className="w-64 shrink-0 p-4 flex flex-col justify-between hidden lg:flex bg-[#07070c] border-r border-white/5 select-none">
           <div className="space-y-5 overflow-y-auto no-scrollbar flex-1 pb-4">
             
-            {/* LOOK VISION Branding */}
-            <div className="flex items-center gap-3 px-2 py-1">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-violet-600 to-indigo-600 text-white flex items-center justify-center font-bold text-sm tracking-wider shadow-lg shadow-violet-500/20">
-                LV
-              </div>
-              <div className="text-left">
-                <h1 className="text-xs font-bold font-mono tracking-[0.25em] text-white">
-                  LOOK VISION
-                </h1>
-                <p className="text-[7px] font-mono tracking-wider text-white/30 uppercase mt-0.5">
-                  FASHION PLATFORM OS
-                </p>
-              </div>
-            </div>
-
             {/* Navigation options */}
             <div className="space-y-0.5">
               {[
                 { id: 'HOME', label: 'Home', icon: Home, route: 'HOME', filter: 'AI_INVENT' },
                 { id: 'AI_STUDIO', label: 'AI Studio', icon: Sparkles, route: 'AI_STUDIO', badge: 'NEW' },
-                { id: 'OUTFIT_GEN', label: 'Outfit Generator', icon: SlidersHorizontal, route: 'AI_STUDIO' },
-                { id: 'VIRTUAL_TRY', label: 'Virtual Try-On', icon: Shirt, route: 'AI_STUDIO' },
-                { id: 'WARDROBE', label: 'Wardrobe', icon: Layers, route: 'WARDROBE' },
-                { id: 'COLLECTIONS', label: 'Collections', icon: Store, route: 'WARDROBE' },
-                { id: 'HISTORY', label: 'History', icon: Clock, route: 'WARDROBE' },
-                { id: 'COMMUNITY', label: 'Community', icon: Users, route: 'HOME', filter: 'COMMUNITY' },
                 { id: 'MARKETPLACE', label: 'Marketplace', icon: ShoppingBag, route: 'HOME', filter: 'BRANDS' },
-                { id: 'ANALYTICS', label: 'Analytics', icon: Activity, route: 'DASHBOARD' },
-                { id: 'MESSAGES', label: 'Messages', icon: Mail, badge: '12' },
-                { id: 'NOTIFICATIONS', label: 'Notifications', icon: Bell, action: 'NOTIFICATIONS', badge: '5' },
-                { id: 'FAVORITES', label: 'Favorites', icon: Heart },
+                { id: 'COMMUNITY', label: 'Community', icon: Users, route: 'HOME', filter: 'COMMUNITY' },
+                { id: 'EXPLORE', label: 'Explore', icon: Compass, route: 'OUTFIT_GEN' },
+                { id: 'COLLECTIONS', label: 'Collections', icon: Store, route: 'COLLECTIONS' },
+                { id: 'WARDROBE', label: 'Wardrobe', icon: Layers, route: 'WARDROBE' },
+                { id: 'OUTFITS', label: 'Outfits', icon: Shirt, route: 'VIRTUAL_TRY' },
+                { id: 'MESSAGES', label: 'Messages', icon: Mail, route: 'MESSAGES', badge: '3' },
+                { id: 'NOTIFICATIONS', label: 'Notifications', icon: Bell, action: 'NOTIFICATIONS' },
+                { id: 'ANALYTICS', label: 'Analytics', icon: BarChart2, route: 'DASHBOARD' },
                 { id: 'SETTINGS', label: 'Settings', icon: Settings, route: 'SYSTEM_ROOM' }
               ].map((tab) => {
                 const Icon = tab.icon;
@@ -1710,39 +1706,40 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
                 // Determine active state selection matching look vision layout
                 let isSelected = false;
                 const currentFilter = localStorage.getItem('last_active_feed_filter');
-                if (tab.id === 'HOME' && activeSubTab === 'HOME' && currentFilter !== 'BRANDS' && currentFilter !== 'COMMUNITY') {
+                if (tab.id === 'HOME' && activeSubTabForRendering === 'HOME' && currentFilter !== 'BRANDS' && currentFilter !== 'COMMUNITY') {
                   isSelected = true;
-                } else if (tab.id === 'MARKETPLACE' && activeSubTab === 'HOME' && currentFilter === 'BRANDS') {
+                } else if (tab.id === 'MARKETPLACE' && activeSubTabForRendering === 'HOME' && currentFilter === 'BRANDS') {
                   isSelected = true;
-                } else if (tab.id === 'COMMUNITY' && activeSubTab === 'HOME' && currentFilter === 'COMMUNITY') {
+                } else if (tab.id === 'COMMUNITY' && activeSubTabForRendering === 'HOME' && currentFilter === 'COMMUNITY') {
                   isSelected = true;
-                } else if (tab.id === 'AI_STUDIO' && activeSubTab === 'AI_STUDIO') {
+                } else if (tab.id === 'AI_STUDIO' && activeSubTabForRendering === 'AI_STUDIO') {
                   isSelected = true;
-                } else if (tab.id === 'OUTFIT_GEN' && activeSubTab === 'AI_STUDIO') {
-                  isSelected = false;
-                } else if (tab.id === 'VIRTUAL_TRY' && activeSubTab === 'AI_STUDIO') {
-                  isSelected = false;
-                } else if (tab.id === 'ANALYTICS' && activeSubTab === 'DASHBOARD') {
+                } else if (tab.id === 'EXPLORE' && activeSubTabForRendering === 'OUTFIT_GEN') {
                   isSelected = true;
-                } else if (tab.id === 'WARDROBE' && activeSubTab === 'WARDROBE') {
+                } else if (tab.id === 'COLLECTIONS' && activeSubTabForRendering === 'COLLECTIONS') {
                   isSelected = true;
-                } else if (tab.id === 'SETTINGS' && activeSubTab === 'SYSTEM_ROOM') {
+                } else if (tab.id === 'WARDROBE' && activeSubTabForRendering === 'WARDROBE') {
+                  isSelected = true;
+                } else if (tab.id === 'OUTFITS' && activeSubTabForRendering === 'VIRTUAL_TRY') {
+                  isSelected = true;
+                } else if (tab.id === 'MESSAGES' && activeSubTabForRendering === 'MESSAGES') {
+                  isSelected = true;
+                } else if (tab.id === 'ANALYTICS' && activeSubTabForRendering === 'DASHBOARD') {
+                  isSelected = true;
+                } else if (tab.id === 'SETTINGS' && activeSubTabForRendering === 'SYSTEM_ROOM') {
                   isSelected = true;
                 }
 
                 return (
                   <button
                     key={tab.id}
+                    id={`app-${tab.id.toLowerCase().replace('_', '-')}`}
                     onClick={() => {
                       triggerQuietPause(() => {
                         if (tab.action === 'NOTIFICATIONS') {
                           setIsNotificationsOpen(!isNotificationsOpen);
-                        } else if (tab.id === 'MESSAGES') {
-                          window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: '12 unread styling recommendations in your inbox.' }));
-                        } else if (tab.id === 'FAVORITES') {
-                          window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: 'Loaded your sartorial favorites.' }));
                         } else if (tab.route) {
-                          setActiveSubTab(tab.route as any);
+                          handleNavigate(tab.route as any);
                           if (tab.filter) {
                             localStorage.setItem('last_active_feed_filter', tab.filter);
                             window.dispatchEvent(new CustomEvent('lookvision_switch_feed_filter', { detail: tab.filter }));
@@ -1757,26 +1754,24 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
                         }
                       });
                     }}
-                    className={`w-full px-3 py-2 rounded-xl flex items-center justify-between transition-all group cursor-pointer text-[11px] ${
+                    className={`w-full px-3 py-2.5 rounded-xl flex items-center justify-between transition-all group cursor-pointer text-[11.5px] ${
                       isSelected 
-                        ? 'bg-white/5 text-white shadow-md font-medium' 
+                        ? 'bg-[#18142c] text-white shadow-md font-medium border border-violet-500/10' 
                         : 'text-white/55 hover:text-white hover:bg-white/[0.02]'
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <Icon className={`w-3.5 h-3.5 shrink-0 ${
+                      <Icon className={`w-4 h-4 shrink-0 ${
                         isSelected ? 'text-violet-400' : 'text-white/30 group-hover:text-white/80'
                       }`} />
                       <span className="tracking-wide font-sans">{tab.label}</span>
                     </div>
 
                     {tab.badge && (
-                      <span className={`px-1.5 py-0.5 rounded text-[8px] font-mono font-bold tracking-wider leading-none uppercase shrink-0 ${
+                      <span className={`flex items-center justify-center font-bold shrink-0 ${
                         tab.badge === 'NEW' 
-                          ? 'bg-violet-600/20 text-violet-400 border border-violet-500/20' 
-                          : tab.id === 'MESSAGES' 
-                            ? 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/10'
-                            : 'bg-indigo-600 text-white'
+                          ? 'px-1.5 py-0.5 text-[8px] bg-violet-600 text-white rounded font-mono tracking-wider' 
+                          : 'w-4 h-4 text-[9px] bg-violet-600 text-white rounded-full font-sans'
                       }`}>
                         {tab.badge}
                       </span>
@@ -1787,61 +1782,60 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
             </div>
           </div>
 
-          {/* AI Stylist Panel & User Profile */}
-          <div className="pt-4 border-t border-white/5 space-y-3.5">
+          {/* Upgrade & Profile Section */}
+          <div className="pt-4 border-t border-white/5 space-y-4">
             
-            {/* AI Stylist Interactive Widget inside Sidebar */}
-            <div className="p-3.5 rounded-2xl bg-zinc-950/40 border border-white/5 space-y-3 relative overflow-hidden text-left">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="relative flex h-1.5 w-1.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
-                  </span>
-                  <strong className="text-[10px] font-mono uppercase tracking-wider text-white">AI STYLIST</strong>
-                </div>
-                <span className="text-[7.5px] font-mono text-emerald-400 uppercase bg-emerald-500/5 px-1.5 py-0.5 rounded border border-emerald-500/10">Active</span>
+            {/* Upgrade to Pro Card */}
+            <div className="p-4 rounded-2xl bg-[#0e0c1f] border border-violet-500/15 space-y-3 relative overflow-hidden text-left shadow-lg shadow-violet-950/20">
+              <div className="absolute -right-6 -top-6 w-16 h-16 bg-violet-500/10 rounded-full blur-xl pointer-events-none"></div>
+              <div className="flex items-center gap-2">
+                <Crown className="w-4 h-4 text-violet-400" />
+                <strong className="text-xs font-bold text-white tracking-wide font-sans">Upgrade to Pro</strong>
               </div>
               
               <p className="text-[10px] text-white/50 leading-relaxed font-sans font-light">
-                Ask me anything about fashion coordinates, color pairing, or summer styling.
+                Unlock unlimited generations, premium styles, and more.
               </p>
               
               <button 
                 onClick={() => {
-                  setActiveSubTab('AI_STUDIO');
-                  window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: 'AI Assistant loaded. Ask your style prompt.' }));
+                  window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: 'Thank you for upgrading! You now have lifetime access.' }));
                 }}
-                className="w-full bg-violet-600 hover:bg-violet-500 text-white rounded-xl py-1.5 font-mono uppercase text-[9px] font-bold tracking-widest cursor-pointer transition-all flex items-center justify-center gap-1"
+                className="w-full bg-violet-600 hover:bg-violet-500 text-white rounded-xl py-2 font-sans font-semibold text-[10px] cursor-pointer transition-all flex items-center justify-center gap-1 shadow-md shadow-violet-600/20"
               >
-                <span>Chat Now</span>
-                <ChevronRight className="w-3 h-3" />
+                <span>Upgrade Now</span>
               </button>
             </div>
 
-            {/* Profile Identity Card (Sarah Khan / John Creator as specified by LOOK VISION) */}
-            <div className="flex items-center justify-between p-2 rounded-xl bg-white/[0.01] hover:bg-white/[0.04] transition-all border border-white/5 group">
+            {/* Profile Identity Card (Sarah Khan verified) */}
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.01] hover:bg-white/[0.04] transition-all border border-white/5 group">
               <div className="flex items-center gap-3">
                 <img 
                   src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&auto=format&fit=crop" 
-                  alt="John Creator"
+                  alt="Sarah Khan"
                   className="w-9 h-9 rounded-full object-cover border border-white/10"
                 />
                 <div className="text-left">
                   <div className="flex items-center gap-1">
-                    <p className="text-[11px] font-semibold text-white leading-none">John Creator</p>
-                    <CheckCircle className="w-3 h-3 text-violet-400" />
+                    <p className="text-[11px] font-semibold text-white leading-none">Sarah Khan</p>
+                    <div className="w-3 h-3 rounded-full bg-blue-500 flex items-center justify-center shrink-0">
+                      <Check className="w-2.5 h-2.5 text-white stroke-[3.5]" />
+                    </div>
                   </div>
-                  <span className="text-[8px] font-mono text-white/40 uppercase tracking-widest mt-1 block">Premium Member</span>
+                  <div className="flex items-center gap-1 mt-1">
+                    <span className="w-1 h-1 rounded-full bg-violet-400"></span>
+                    <span className="text-[8px] font-mono text-violet-400 uppercase tracking-widest leading-none">Premium</span>
+                  </div>
                 </div>
               </div>
               
               <button
-                onClick={() => onLogout()}
-                className="p-1.5 text-white/30 hover:text-rose-400 transition-colors cursor-pointer rounded-lg hover:bg-white/5"
-                title="Log Out OS"
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: 'Account Management loaded.' }));
+                }}
+                className="p-1.5 text-white/30 hover:text-white transition-colors cursor-pointer rounded-lg"
               >
-                <LogOut className="w-3.5 h-3.5" />
+                <MoreVertical className="w-4 h-4" />
               </button>
             </div>
           </div>
@@ -3426,6 +3420,355 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
               </div>
             )}
 
+            {/* ROOM: ARCHITECTURE ROADMAP */}
+            {(activeSubTab as any) === 'ROADMAP' && (
+              <ArchitectureMap 
+                user={user} 
+                onNavigateToTab={(tab) => {
+                  setActiveSubTab(tab as any);
+                  localStorage.setItem('last_active_place_subtab', tab);
+                }} 
+              />
+            )}
+
+            {/* ROOM: OUTFIT GENERATOR ROADMAP */}
+            {activeSubTab === 'OUTFIT_GEN' && (
+              <div className="space-y-8 max-w-lg mx-auto py-12 text-center animate-fade-in select-none">
+                <div className="w-16 h-16 rounded-2xl bg-violet-600/10 border border-violet-500/20 text-violet-400 flex items-center justify-center mx-auto shadow-lg shadow-violet-500/5">
+                  <SlidersHorizontal className="w-6 h-6 animate-pulse" />
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-center gap-1.5 text-[10px] font-mono tracking-[0.2em] text-violet-400 uppercase font-semibold">
+                    <span>Preview Release</span>
+                    <span>•</span>
+                    <span className="flex items-center gap-0.5 bg-violet-500/10 text-violet-300 px-1.5 py-0.5 rounded border border-violet-500/20 text-[8px] uppercase font-bold">
+                      🔒 Locked
+                    </span>
+                  </div>
+                  <h2 className="font-sans font-bold tracking-tight text-3xl text-white">Outfit Generator</h2>
+                  <p className="text-sm text-white/50 leading-relaxed font-sans max-w-md mx-auto">
+                    Assemble high-fidelity styled coordinates dynamically using your personal catalog. Our smart physics-aware drape solver and seasonal weight calculators are finalizing training.
+                  </p>
+                </div>
+
+                <div className="bg-white/[0.01] border border-white/5 rounded-2xl p-5 text-left max-w-md mx-auto space-y-4">
+                  <span className="text-[9px] font-mono uppercase tracking-[0.15em] text-white/30 block font-bold">Planned Capabilities</span>
+                  <div className="space-y-3 text-xs">
+                    <div className="flex items-start gap-3 text-white/70">
+                      <span className="text-violet-400 mt-0.5 font-bold">🔒</span>
+                      <div>
+                        <p className="font-semibold text-white">Automated Silhouette Layering</p>
+                        <p className="text-[10px] text-white/40 mt-0.5">Auto-arrange base, mid-layers, and outerwear dynamically based on style preferences.</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3 text-white/70">
+                      <span className="text-violet-400 mt-0.5 font-bold">🔒</span>
+                      <div>
+                        <p className="font-semibold text-white">Smart Atmospheric Adaptations</p>
+                        <p className="text-[10px] text-white/40 mt-0.5">Real-time weather weight tuning of coordinates to accommodate current climate changes.</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3 text-white/70">
+                      <span className="text-violet-400 mt-0.5 font-bold">🔒</span>
+                      <div>
+                        <p className="font-semibold text-white">Color Harmony DNA Balancer</p>
+                        <p className="text-[10px] text-white/40 mt-0.5">Uses mathematical vectors to prevent color clashing while preserving avant-garde contrasts.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-4 max-w-md mx-auto">
+                  <button
+                    onClick={() => {
+                      window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: 'You are now on the Outfit Generator Priority Waitlist!' }));
+                    }}
+                    className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white py-3 rounded-xl text-[11.5px] font-semibold tracking-wide cursor-pointer transition-all shadow-md shadow-violet-600/15"
+                  >
+                    Request Early Beta Access
+                  </button>
+                  <p className="text-[9px] font-mono text-white/30 mt-3 uppercase tracking-wider">
+                    Priority release expected Q3 2026 for Premium Members
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* ROOM: VIRTUAL TRY-ON ROADMAP */}
+            {activeSubTab === 'VIRTUAL_TRY' && (
+              <div className="space-y-8 max-w-lg mx-auto py-12 text-center animate-fade-in select-none">
+                <div className="w-16 h-16 rounded-2xl bg-cyan-600/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center mx-auto shadow-lg shadow-cyan-500/5">
+                  <Shirt className="w-6 h-6 animate-pulse" />
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-center gap-1.5 text-[10px] font-mono tracking-[0.2em] text-cyan-400 uppercase font-semibold">
+                    <span>Neural Engine Workspace</span>
+                    <span>•</span>
+                    <span className="flex items-center gap-0.5 bg-cyan-500/10 text-cyan-300 px-1.5 py-0.5 rounded border border-cyan-500/20 text-[8px] uppercase font-bold">
+                      🔒 Locked
+                    </span>
+                  </div>
+                  <h2 className="font-sans font-bold tracking-tight text-3xl text-white">Virtual Try-On Space</h2>
+                  <p className="text-sm text-white/50 leading-relaxed font-sans max-w-md mx-auto">
+                    Drape styled garments, customized boutique items, or complete AI Creations onto your personal 3D avatar likeness. High-fidelity rendering is currently training.
+                  </p>
+                </div>
+
+                <div className="bg-white/[0.01] border border-white/5 rounded-2xl p-5 text-left max-w-md mx-auto space-y-4">
+                  <span className="text-[9px] font-mono uppercase tracking-[0.15em] text-white/30 block font-bold">Planned Capabilities</span>
+                  <div className="space-y-3 text-xs">
+                    <div className="flex items-start gap-3 text-white/70">
+                      <span className="text-cyan-400 mt-0.5 font-bold">🔒</span>
+                      <div>
+                        <p className="font-semibold text-white">Full-Body 3D Silhouette Likeness</p>
+                        <p className="text-[10px] text-cyan-400/40 mt-0.5">Upload front/side photos to reconstruct a scale-accurate spatial twin model.</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3 text-white/70">
+                      <span className="text-cyan-400 mt-0.5 font-bold">🔒</span>
+                      <div>
+                        <p className="font-semibold text-white">Fabric Drape Physics</p>
+                        <p className="text-[10px] text-cyan-400/40 mt-0.5">Simulate actual fabric weights—from heavy leather trenches to airy linen shirts.</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3 text-white/70">
+                      <span className="text-cyan-400 mt-0.5 font-bold">🔒</span>
+                      <div>
+                        <p className="font-semibold text-white">Pose & Lighting Sandbox</p>
+                        <p className="text-[10px] text-cyan-400/40 mt-0.5">Toggle atmospheric lighting and model stances to see how shadows interact with fabrics.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-4 max-w-md mx-auto">
+                  <button
+                    onClick={() => {
+                      window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: 'Joined the Virtual Try-On Priority Waitlist! Model setup ready.' }));
+                    }}
+                    className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white py-3 rounded-xl text-[11.5px] font-semibold tracking-wide cursor-pointer transition-all shadow-md shadow-cyan-600/15"
+                  >
+                    Reserve Likeness Model Sandbox
+                  </button>
+                  <p className="text-[9px] font-mono text-white/30 mt-3 uppercase tracking-wider">
+                    Premium early access slots open soon
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* ROOM: COLLECTIONS ROADMAP */}
+            {activeSubTab === 'COLLECTIONS' && (
+              <div className="space-y-8 max-w-lg mx-auto py-12 text-center animate-fade-in select-none">
+                <div className="w-16 h-16 rounded-2xl bg-amber-600/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mx-auto shadow-lg shadow-amber-500/5">
+                  <Store className="w-6 h-6 animate-pulse" />
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-center gap-1.5 text-[10px] font-mono tracking-[0.2em] text-amber-400 uppercase font-semibold">
+                    <span>Sartorial Portfolios</span>
+                    <span>•</span>
+                    <span className="flex items-center gap-0.5 bg-amber-500/10 text-amber-300 px-1.5 py-0.5 rounded border border-amber-500/20 text-[8px] uppercase font-bold">
+                      🔒 Locked
+                    </span>
+                  </div>
+                  <h2 className="font-sans font-bold tracking-tight text-3xl text-white">Style Collections</h2>
+                  <p className="text-sm text-white/50 leading-relaxed font-sans max-w-md mx-auto">
+                    Organize your wardrobe pieces, design templates, and marketplace acquisitions into seasonal capsules and shareable aesthetic boards.
+                  </p>
+                </div>
+
+                <div className="bg-white/[0.01] border border-white/5 rounded-2xl p-5 text-left max-w-md mx-auto space-y-4">
+                  <span className="text-[9px] font-mono uppercase tracking-[0.15em] text-white/30 block font-bold">Planned Capabilities</span>
+                  <div className="space-y-3 text-xs">
+                    <div className="flex items-start gap-3 text-white/70">
+                      <span className="text-amber-400 mt-0.5 font-bold">🔒</span>
+                      <div>
+                        <p className="font-semibold text-white">Capsule Integrity Evaluator</p>
+                        <p className="text-[10px] text-amber-400/40 mt-0.5">Analyze if your collection matches the 10-piece minimalist balance criteria.</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3 text-white/70">
+                      <span className="text-amber-400 mt-0.5 font-bold">🔒</span>
+                      <div>
+                        <p className="font-semibold text-white">Collaborator Shared Closets</p>
+                        <p className="text-[10px] text-amber-400/40 mt-0.5">Compile mixed lookbooks with other Look Vision creators and stylists.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-4 max-w-md mx-auto">
+                  <button
+                    onClick={() => {
+                      window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: 'Collection curation waitlist requested.' }));
+                    }}
+                    className="w-full bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 text-white py-3 rounded-xl text-[11.5px] font-semibold tracking-wide cursor-pointer transition-all shadow-md shadow-amber-600/15"
+                  >
+                    Request Collection Curation early beta
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* ROOM: HISTORY ROADMAP */}
+            {activeSubTab === 'HISTORY' && (
+              <div className="space-y-8 max-w-lg mx-auto py-12 text-center animate-fade-in select-none">
+                <div className="w-16 h-16 rounded-2xl bg-emerald-600/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/5">
+                  <Clock className="w-6 h-6 animate-pulse" />
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-center gap-1.5 text-[10px] font-mono tracking-[0.2em] text-emerald-400 uppercase font-semibold">
+                    <span>Chronological Record</span>
+                    <span>•</span>
+                    <span className="flex items-center gap-0.5 bg-emerald-500/10 text-emerald-300 px-1.5 py-0.5 rounded border border-emerald-500/20 text-[8px] uppercase font-bold">
+                      🔒 Locked
+                    </span>
+                  </div>
+                  <h2 className="font-sans font-bold tracking-tight text-3xl text-white">Sartorial History Archive</h2>
+                  <p className="text-sm text-white/50 leading-relaxed font-sans max-w-md mx-auto">
+                    Explore the timeline of styled selections, worn combinations, and design iterations over calendar months.
+                  </p>
+                </div>
+
+                <div className="bg-white/[0.01] border border-white/5 rounded-2xl p-5 text-left max-w-md mx-auto space-y-4">
+                  <span className="text-[9px] font-mono uppercase tracking-[0.15em] text-white/30 block font-bold">Planned Capabilities</span>
+                  <div className="space-y-3 text-xs">
+                    <div className="flex items-start gap-3 text-white/70">
+                      <span className="text-emerald-400 mt-0.5 font-bold">🔒</span>
+                      <div>
+                        <p className="font-semibold text-white">Chronological Style Timeline</p>
+                        <p className="text-[10px] text-emerald-400/40 mt-0.5">Scroll through calendar months to track aesthetic shifts, colors, and styling patterns.</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3 text-white/70">
+                      <span className="text-emerald-400 mt-0.5 font-bold">🔒</span>
+                      <div>
+                        <p className="font-semibold text-white">Aesthetic Coherence Diagnostics</p>
+                        <p className="text-[10px] text-emerald-400/40 mt-0.5">Historical telemetry demonstrating how closely daily selections aligned with your Core DNA.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-4 max-w-md mx-auto">
+                  <button
+                    onClick={() => {
+                      window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: 'Added to History Analytics beta waitlist!' }));
+                    }}
+                    className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white py-3 rounded-xl text-[11.5px] font-semibold tracking-wide cursor-pointer transition-all shadow-md shadow-emerald-600/15"
+                  >
+                    Enable Style Timeline Logs
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* ROOM: MESSAGES ROADMAP */}
+            {activeSubTab === 'MESSAGES' && (
+              <div className="space-y-8 max-w-lg mx-auto py-12 text-center animate-fade-in select-none">
+                <div className="w-16 h-16 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center mx-auto shadow-lg shadow-indigo-500/5">
+                  <Mail className="w-6 h-6 animate-pulse" />
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-center gap-1.5 text-[10px] font-mono tracking-[0.2em] text-indigo-400 uppercase font-semibold">
+                    <span>Secure Inbox</span>
+                    <span>•</span>
+                    <span className="flex items-center gap-0.5 bg-indigo-500/10 text-indigo-300 px-1.5 py-0.5 rounded border border-indigo-500/20 text-[8px] uppercase font-bold">
+                      🔒 Locked
+                    </span>
+                  </div>
+                  <h2 className="font-sans font-bold tracking-tight text-3xl text-white">Style Message Center</h2>
+                  <p className="text-sm text-white/50 leading-relaxed font-sans max-w-md mx-auto">
+                    Interact securely with verified style curators, custom tailors, clothing boutiques, and fashion consultants.
+                  </p>
+                </div>
+
+                <div className="bg-white/[0.01] border border-white/5 rounded-2xl p-5 text-left max-w-md mx-auto space-y-4">
+                  <span className="text-[9px] font-mono uppercase tracking-[0.15em] text-white/30 block font-bold">Planned Capabilities</span>
+                  <div className="space-y-3 text-xs">
+                    <div className="flex items-start gap-3 text-white/70">
+                      <span className="text-indigo-400 mt-0.5 font-bold">🔒</span>
+                      <div>
+                        <p className="font-semibold text-white">Curator Consultations</p>
+                        <p className="text-[10px] text-indigo-400/40 mt-0.5">Secure, real-time message routing to direct styling consultations and tailor booking flows.</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3 text-white/70">
+                      <span className="text-indigo-400 mt-0.5 font-bold">🔒</span>
+                      <div>
+                        <p className="font-semibold text-white">Collaborator Design Threads</p>
+                        <p className="text-[10px] text-indigo-400/40 mt-0.5">Draft, review, and exchange custom styled coordinate mockups inside shared canvas rooms.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-4 max-w-md mx-auto">
+                  <button
+                    onClick={() => {
+                      window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: 'Added to Style Inbox waitlist.' }));
+                    }}
+                    className="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white py-3 rounded-xl text-[11.5px] font-semibold tracking-wide cursor-pointer transition-all shadow-md shadow-indigo-600/15"
+                  >
+                    Join Secure Communicator Waitlist
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* ROOM: FAVORITES ROADMAP */}
+            {activeSubTab === 'FAVORITES' && (
+              <div className="space-y-8 max-w-lg mx-auto py-12 text-center animate-fade-in select-none">
+                <div className="w-16 h-16 rounded-2xl bg-rose-600/10 border border-rose-500/20 text-rose-400 flex items-center justify-center mx-auto shadow-lg shadow-rose-500/5">
+                  <Heart className="w-6 h-6 animate-pulse" />
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-center gap-1.5 text-[10px] font-mono tracking-[0.2em] text-rose-400 uppercase font-semibold">
+                    <span>Curated Inspirations</span>
+                    <span>•</span>
+                    <span className="flex items-center gap-0.5 bg-rose-500/10 text-rose-300 px-1.5 py-0.5 rounded border border-rose-500/20 text-[8px] uppercase font-bold">
+                      🔒 Locked
+                    </span>
+                  </div>
+                  <h2 className="font-sans font-bold tracking-tight text-3xl text-white">Sartorial Favorites</h2>
+                  <p className="text-sm text-white/50 leading-relaxed font-sans max-w-md mx-auto">
+                    Your high-contrast aesthetic showcase of liked pieces, saved AI-created silhouettes, and inspiring community looks.
+                  </p>
+                </div>
+
+                <div className="bg-white/[0.01] border border-white/5 rounded-2xl p-5 text-left max-w-md mx-auto space-y-4">
+                  <span className="text-[9px] font-mono uppercase tracking-[0.15em] text-white/30 block font-bold">Planned Capabilities</span>
+                  <div className="space-y-3 text-xs">
+                    <div className="flex items-start gap-3 text-white/70">
+                      <span className="text-rose-400 mt-0.5 font-bold">🔒</span>
+                      <div>
+                        <p className="font-semibold text-white">Smart Folder Organizing</p>
+                        <p className="text-[10px] text-rose-400/40 mt-0.5">Filter and categorize favorited looks by occasion weight, color accents, or brands.</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3 text-white/70">
+                      <span className="text-rose-400 mt-0.5 font-bold">🔒</span>
+                      <div>
+                        <p className="font-semibold text-white">Quick-Remix Workspace Link</p>
+                        <p className="text-[10px] text-rose-400/40 mt-0.5">Instantly load any saved community look as a reference baseline into the AI Design Studio.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-4 max-w-md mx-auto">
+                  <button
+                    onClick={() => {
+                      window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: 'Favorites vault waitlist registered.' }));
+                    }}
+                    className="w-full bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white py-3 rounded-xl text-[11.5px] font-semibold tracking-wide cursor-pointer transition-all shadow-md shadow-rose-600/15"
+                  >
+                    Enable Smart Favorites Folder
+                  </button>
+                </div>
+              </div>
+            )}
+
             </motion.div>
           </AnimatePresence>
         </div>
@@ -3669,4 +4012,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
     <FloatingAIChat wardrobe={activeWardrobeList} />
   </div>
   );
+};
+
+  return renderAppStructure(false);
 };

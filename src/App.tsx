@@ -56,20 +56,13 @@ const initialUser = (() => {
   } catch (e) {
     console.warn("Stored user session fallback parsing halted:", e);
   }
-  try {
-    const wasGuestActive = localStorage.getItem('auth_guest_active') === 'true';
-    if (wasGuestActive) {
-      return {
-        uid: 'guest-sartorialist-user-100',
-        displayName: 'Guest Sartorialist',
-        email: 'guest@companion.com',
-        isAnonymous: true
-      } as User;
-    }
-  } catch (e) {
-    console.warn("Guest presence verification failed:", e);
-  }
-  return null;
+  // Automatically bypass the login wall for the preview system to enter the Look Vision interface directly as Sarah Khan
+  return {
+    uid: 'guest-sartorialist-user-100',
+    displayName: 'Sarah Khan',
+    email: 'sarah.khan@lookvision.com',
+    isAnonymous: true
+  } as User;
 })();
 
 export default function App() {
@@ -553,8 +546,8 @@ export default function App() {
     localStorage.setItem('auth_guest_active', 'true');
     const guestUser = {
       uid: 'guest-sartorialist-user-100',
-      displayName: 'Guest Sartorialist',
-      email: 'guest@companion.com',
+      displayName: 'Sarah Khan',
+      email: 'sarah.khan@lookvision.com',
       isAnonymous: true
     } as User;
     setUser(guestUser);

@@ -8,6 +8,15 @@
 }
 
 body {
-  background-color: #090909;
+  background-color: #030206;
   color: #FFFFFF;
+}
+
+/* Hide scrollbars but keep functionality */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
