@@ -93,16 +93,16 @@ export const LOOK_VISION_THEMES: LookVisionTheme[] = [
   {
     id: 'cosmic-dream',
     name: 'Cosmic Couture',
-    bg: 'bg-[#040212] text-violet-100',
-    text: 'text-violet-100',
+    bg: 'bg-[#05050a] text-zinc-100',
+    text: 'text-zinc-100',
     accent: 'text-indigo-400 border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20',
     accentBg: 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:opacity-90',
     glassBg: 'bg-indigo-950/20 backdrop-blur-xl',
     glassBorder: 'border-indigo-500/15',
     glowClass: 'shadow-[0_0_35px_rgba(99,102,241,0.2)]',
     badgeBg: 'bg-indigo-950/40 text-indigo-200 border-indigo-500/20',
-    sidebarBg: 'bg-[#02010a]/85 border-r border-indigo-950/40',
-    cardBg: 'bg-indigo-950/10 border border-indigo-500/10',
+    sidebarBg: 'bg-[#07070c] border-r border-white/5',
+    cardBg: 'bg-[#0e0e1a]/40 border border-white/5 shadow-md',
   }
 ];
 
@@ -1526,165 +1526,19 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
 
     return (
       <div 
-        className={`${isNested ? 'w-full h-[710px] rounded-2xl border border-white/5 shadow-2xl overflow-hidden' : 'h-screen w-screen overflow-hidden'} ${themeObj.bg} ${themeObj.text} flex flex-col font-sans antialiased relative`} 
+        className={`${isNested ? 'w-full h-[710px] rounded-2xl border border-white/5 shadow-2xl overflow-hidden' : 'h-screen w-screen overflow-hidden'} ${themeObj.bg} ${themeObj.text} flex flex-row font-sans antialiased relative`} 
         id={isNested ? undefined : "editorial-style-hub-root"}
       >
-      
-      {/* 1. TOP BAR NAVIGATION */}
-      <header className="h-16 flex items-center shrink-0 bg-[#07070c] border-b border-white/5 z-40 relative">
-        {/* Left header column (aligned with Left Sidebar width) */}
-        <div className="w-64 shrink-0 h-full flex items-center justify-start pl-6 border-r border-white/5">
-          <div className="flex items-center gap-2">
-            <Sparkle className="w-5 h-5 text-violet-400 fill-violet-400 filter drop-shadow-[0_0_8px_rgba(168,85,247,0.85)]" />
-          </div>
-        </div>
-
-        {/* Right header column (aligned with main workspace content and right sidebar) */}
-        <div className="flex-grow h-full flex items-center justify-between px-6">
-          {/* Left: Wider, Elegant Search Input */}
-          <div className="flex-1 max-w-xl relative hidden md:block select-none">
-            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40" />
-            <input 
-              type="text" 
-              placeholder="Search styles, users, collections..." 
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                // Dispatch query to HomeFeed if active
-                window.dispatchEvent(new CustomEvent('lookvision_set_search_query', { detail: e.target.value }));
-              }}
-              className="w-full bg-white/[0.02] hover:bg-white/[0.04] border border-white/5 rounded-xl py-2 pl-10 pr-16 text-xs text-white placeholder-white/30 focus:outline-none focus:border-violet-500/30 transition-all font-light"
-            />
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 px-1.5 py-0.5 bg-white/5 border border-white/10 rounded text-[9px] font-mono text-white/40 tracking-wider">
-              ⌘ K
-            </div>
-          </div>
-
-          {/* Right: Actions and Profile dropdown */}
-          <div className="flex items-center gap-4 relative">
-            
-            {/* Dark Mode toggle icon */}
-            <button 
-              onClick={() => {
-                window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: 'Aesthetic theme locking active.' }));
-              }}
-              className="p-2 rounded-full hover:bg-white/5 text-white/70 hover:text-white transition-all cursor-pointer"
-              title="Theme Lock"
-            >
-              <Moon className="w-4 h-4" />
-            </button>
-
-            {/* Notifications Bell */}
-            <div className="relative">
-              <button
-                onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
-                className="p-2 rounded-full hover:bg-white/5 text-white/70 hover:text-white transition-all cursor-pointer relative"
-                title="Notifications"
-              >
-                <Bell className="w-4 h-4" />
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-violet-600 rounded-full flex items-center justify-center text-[8px] font-bold font-mono text-white">8</span>
-              </button>
-
-              {/* Notifications Drawer Slide-over */}
-              {isNotificationsOpen && (
-                <>
-                  <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs" onClick={() => setIsNotificationsOpen(false)} />
-                  <div className="fixed top-0 right-0 h-full w-80 bg-[#0c0c12] border-l border-white/5 shadow-2xl p-6 z-50 text-left space-y-6 select-none flex flex-col justify-between">
-                    <div className="space-y-6">
-                      <div className="flex justify-between items-center border-b border-white/5 pb-3">
-                        <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-white/30 block">Live Feed Updates</span>
-                        <button 
-                          onClick={() => setIsNotificationsOpen(false)}
-                          className="text-white/40 hover:text-white cursor-pointer"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-
-                      <div className="space-y-4">
-                        {[
-                          { title: '🔥 Vibe Check', desc: 'Your last post received 14 likes from style creators!', time: '2m ago' },
-                          { title: '⚡ Style Drop', desc: 'Classic Noir silk shirts added to boutiques!', time: '1h ago' },
-                          { title: '🧬 DNA Alignment', desc: 'Coherence reaches 98% with Nordic Minimalist aesthetics.', time: '3h ago' },
-                          { title: '🌦️ Weather Alert', desc: 'Lighter layers advised for warm morning strolls.', time: '5h ago' }
-                        ].map((not, i) => (
-                          <div key={i} className="p-3 bg-white/[0.02] border border-white/5 rounded-xl space-y-1">
-                            <div className="flex justify-between items-center">
-                              <strong className="text-[10px] font-mono uppercase text-white tracking-wider">{not.title}</strong>
-                              <span className="text-[8px] font-mono text-white/30">{not.time}</span>
-                            </div>
-                            <p className="text-[10px] font-serif italic text-white/50 leading-relaxed">
-                              "{not.desc}"
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => setIsNotificationsOpen(false)}
-                      className="w-full bg-white text-black py-3 rounded-xl text-[10px] font-mono uppercase tracking-widest font-semibold text-center cursor-pointer hover:bg-neutral-200 transition-colors"
-                    >
-                      Clear All Notifications
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-
-            {/* Shopping Bag Icon button */}
-            <button 
-              onClick={() => {
-                setActiveSubTab('HOME');
-                // Let's open the orders drawer inside HomeFeed by sending a custom event!
-                setTimeout(() => {
-                  window.dispatchEvent(new CustomEvent('lookvision_open_orders'));
-                }, 50);
-              }}
-              className="p-2 rounded-full hover:bg-white/5 text-white/70 hover:text-white transition-all cursor-pointer relative"
-              title="Shopping Orders"
-            >
-              <ShoppingBag className="w-4 h-4" />
-            </button>
-
-            {/* Create with AI Button */}
-            <button 
-              onClick={() => {
-                setActiveSubTab('AI_STUDIO');
-              }}
-              className="bg-violet-600 hover:bg-violet-500 text-white px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 cursor-pointer transition-all shadow-lg shadow-violet-600/20 animate-pulse-slow"
-            >
-              <Sparkle className="w-3.5 h-3.5 fill-white" />
-              <span>Create with AI</span>
-            </button>
-
-            {/* User profile dropdown caret */}
-            <div className="flex items-center gap-1.5 border-l border-white/10 pl-4">
-              <button
-                onClick={() => {
-                  setActiveSubTab('PROFILE');
-                }}
-                className="flex items-center gap-1 hover:opacity-80 transition-opacity cursor-pointer"
-              >
-                <img 
-                  src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&auto=format&fit=crop" 
-                  alt="Sarah Khan avatar"
-                  className="w-8 h-8 rounded-full object-cover border border-white/10"
-                />
-                <ChevronDown className="w-3.5 h-3.5 text-white/50" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* 2. SPLIT INTERFACE STRUCTURE */}
-      <div className="flex-1 flex overflow-hidden">
         
-        {/* A. LEFT NAVIGATION SIDEBAR */}
-        <aside className="w-64 shrink-0 p-4 flex flex-col justify-between hidden lg:flex bg-[#07070c] border-r border-white/5 select-none">
+        {/* A. LEFT NAVIGATION SIDEBAR (Continuous from top to bottom) */}
+        <aside className="w-64 shrink-0 p-4 flex flex-col justify-between hidden lg:flex bg-[#07070c] border-r border-white/5 select-none h-full z-40">
           <div className="space-y-5 overflow-y-auto no-scrollbar flex-1 pb-4">
             
+            {/* Star Logo matching mockup */}
+            <div className="flex items-center pl-3 py-2 mb-4">
+              <Sparkle className="w-6 h-6 text-violet-400 fill-violet-400 filter drop-shadow-[0_0_8px_rgba(168,85,247,0.85)]" />
+            </div>
+
             {/* Navigation options */}
             <div className="space-y-0.5">
               {[
@@ -1756,7 +1610,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
                     }}
                     className={`w-full px-3 py-2.5 rounded-xl flex items-center justify-between transition-all group cursor-pointer text-[11.5px] ${
                       isSelected 
-                        ? 'bg-[#18142c] text-white shadow-md font-medium border border-violet-500/10' 
+                        ? 'bg-[#181135] text-[#b6a1ff] shadow-md font-medium border border-[#2b1c63]' 
                         : 'text-white/55 hover:text-white hover:bg-white/[0.02]'
                     }`}
                   >
@@ -1841,8 +1695,165 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
           </div>
         </aside>
 
-        {/* B. CENTRAL WORKSPACE CONTENT */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 scrollbar-thin scrollbar-thumb-white/5 relative bg-gradient-to-b from-white/[0.01] to-transparent">
+        {/* RIGHT AREA: HEADER + MAIN WORKSPACE (Takes rest of the viewport) */}
+        <div className="flex-1 flex flex-col overflow-hidden h-full">
+          
+          {/* 1. TOP BAR NAVIGATION (Sits at the top of the right area) */}
+          <header className="h-16 flex items-center shrink-0 bg-[#07070c] border-b border-white/5 z-40 relative">
+            {/* Mobile Logo: Shown only if sidebar is hidden */}
+            <div className="pl-6 lg:hidden flex items-center shrink-0">
+              <Sparkle className="w-5 h-5 text-violet-400 fill-violet-400 filter drop-shadow-[0_0_8px_rgba(168,85,247,0.85)]" />
+            </div>
+
+            {/* Right header column (aligned with main workspace content and right sidebar) */}
+            <div className="flex-grow h-full flex items-center justify-between px-6">
+              {/* Left: Wider, Elegant Search Input */}
+              <div className="flex-1 max-w-xl relative hidden md:block select-none">
+                <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40" />
+                <input 
+                  type="text" 
+                  placeholder="Search styles, users, collections..." 
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    // Dispatch query to HomeFeed if active
+                    window.dispatchEvent(new CustomEvent('lookvision_set_search_query', { detail: e.target.value }));
+                  }}
+                  className="w-full bg-white/[0.02] hover:bg-white/[0.04] border border-white/5 rounded-xl py-2 pl-10 pr-16 text-xs text-white placeholder-white/30 focus:outline-none focus:border-violet-500/30 transition-all font-light"
+                />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 px-1.5 py-0.5 bg-white/5 border border-white/10 rounded text-[9px] font-mono text-white/40 tracking-wider">
+                  ⌘ K
+                </div>
+              </div>
+
+              {/* Right: Actions and Profile dropdown */}
+              <div className="flex items-center gap-4 relative">
+                
+                {/* Dark Mode toggle icon */}
+                <button 
+                  onClick={() => {
+                    const currentIndex = LOOK_VISION_THEMES.findIndex(t => t.id === currentTheme);
+                    const nextIndex = (currentIndex + 1) % LOOK_VISION_THEMES.length;
+                    const nextTheme = LOOK_VISION_THEMES[nextIndex];
+                    setCurrentTheme(nextTheme.id);
+                    localStorage.setItem('look_vision_theme', nextTheme.id);
+                    window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: `Theme switched to: ${nextTheme.name}` }));
+                  }}
+                  className="p-2 rounded-full hover:bg-white/5 text-white/70 hover:text-white transition-all cursor-pointer"
+                  title="Cycle Theme"
+                >
+                  <Moon className="w-4 h-4 text-violet-400" />
+                </button>
+
+                {/* Notifications Bell */}
+                <div className="relative">
+                  <button
+                    onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+                    className="p-2 rounded-full hover:bg-white/5 text-white/70 hover:text-white transition-all cursor-pointer relative"
+                    title="Notifications"
+                  >
+                    <Bell className="w-4 h-4" />
+                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-violet-600 rounded-full flex items-center justify-center text-[8px] font-bold font-mono text-white">8</span>
+                  </button>
+
+                  {/* Notifications Drawer Slide-over */}
+                  {isNotificationsOpen && (
+                    <>
+                      <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs" onClick={() => setIsNotificationsOpen(false)} />
+                      <div className="fixed top-0 right-0 h-full w-80 bg-[#0c0c12] border-l border-white/5 shadow-2xl p-6 z-50 text-left space-y-6 select-none flex flex-col justify-between">
+                        <div className="space-y-6">
+                          <div className="flex justify-between items-center border-b border-white/5 pb-3">
+                            <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-white/30 block">Live Feed Updates</span>
+                            <button 
+                              onClick={() => setIsNotificationsOpen(false)}
+                              className="text-white/40 hover:text-white cursor-pointer"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+
+                          <div className="space-y-4">
+                            {[
+                              { title: '🔥 Vibe Check', desc: 'Your last post received 14 likes from style creators!', time: '2m ago' },
+                              { title: '⚡ Style Drop', desc: 'Classic Noir silk shirts added to boutiques!', time: '1h ago' },
+                              { title: '🧬 DNA Alignment', desc: 'Coherence reaches 98% with Nordic Minimalist aesthetics.', time: '3h ago' },
+                              { title: '🌦️ Weather Alert', desc: 'Lighter layers advised for warm morning strolls.', time: '5h ago' }
+                            ].map((not, i) => (
+                              <div key={i} className="p-3 bg-white/[0.02] border border-white/5 rounded-xl space-y-1">
+                                <div className="flex justify-between items-center">
+                                  <strong className="text-[10px] font-mono uppercase text-white tracking-wider">{not.title}</strong>
+                                  <span className="text-[8px] font-mono text-white/30">{not.time}</span>
+                                </div>
+                                <p className="text-[10px] font-serif italic text-white/50 leading-relaxed">
+                                  "{not.desc}"
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={() => setIsNotificationsOpen(false)}
+                          className="w-full bg-white text-black py-3 rounded-xl text-[10px] font-mono uppercase tracking-widest font-semibold text-center cursor-pointer hover:bg-neutral-200 transition-colors"
+                        >
+                          Clear All Notifications
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Shopping Bag Icon button */}
+                <button 
+                  onClick={() => {
+                    setActiveSubTab('HOME');
+                    // Let's open the orders drawer inside HomeFeed by sending a custom event!
+                    setTimeout(() => {
+                      window.dispatchEvent(new CustomEvent('lookvision_open_orders'));
+                    }, 50);
+                  }}
+                  className="p-2 rounded-full hover:bg-white/5 text-white/70 hover:text-white transition-all cursor-pointer relative"
+                  title="Shopping Orders"
+                >
+                  <ShoppingBag className="w-4 h-4" />
+                </button>
+
+                {/* Create with AI Button */}
+                <button 
+                  onClick={() => {
+                    setActiveSubTab('AI_STUDIO');
+                  }}
+                  className="bg-violet-600 hover:bg-violet-500 text-white px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 cursor-pointer transition-all shadow-lg shadow-violet-600/20 animate-pulse-slow"
+                >
+                  <Sparkle className="w-3.5 h-3.5 fill-white" />
+                  <span>Create with AI</span>
+                </button>
+
+                {/* User profile dropdown caret */}
+                <div className="flex items-center gap-1.5 border-l border-white/10 pl-4">
+                  <button
+                    onClick={() => {
+                      setActiveSubTab('PROFILE');
+                    }}
+                    className="flex items-center gap-1 hover:opacity-80 transition-opacity cursor-pointer"
+                  >
+                    <img 
+                      src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&auto=format&fit=crop" 
+                      alt="Sarah Khan avatar"
+                      className="w-8 h-8 rounded-full object-cover border border-white/10"
+                    />
+                    <ChevronDown className="w-3.5 h-3.5 text-white/50" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </header>
+
+          {/* 2. SPLIT INTERFACE STRUCTURE (Sits underneath header, scrolls independently) */}
+          <div className="flex-grow flex overflow-hidden">
+
+            {/* B. CENTRAL WORKSPACE CONTENT */}
+            <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 scrollbar-thin scrollbar-thumb-white/5 relative bg-gradient-to-b from-white/[0.01] to-transparent">
           
           {/* Undo Banner if active */}
           {undoAction && (
@@ -3775,6 +3786,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
       </main>
 
       {/* C. RIGHT SIDEBAR PERSISTENT PANEL */}
+      {activeSubTab !== 'HOME' && (
       <aside className="w-80 shrink-0 bg-[#07070c] border-l border-white/5 p-4 flex flex-col gap-5 overflow-y-auto no-scrollbar hidden xl:flex text-left">
         
         {/* 1. Quick Actions */}
@@ -4007,7 +4019,9 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
         </div>
 
       </aside>
+      )}
 
+    </div>
     </div>
     <FloatingAIChat wardrobe={activeWardrobeList} />
   </div>

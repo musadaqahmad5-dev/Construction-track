@@ -292,6 +292,20 @@ export const LookVisionMainDashboard: React.FC<LookVisionMainDashboardProps> = (
       imageUrl: "https://images.unsplash.com/photo-1534126511673-b6899657816a?q=80&w=600&auto=format&fit=crop",
       creator: "@ayesha_malik",
       glow: "rgba(168,85,247,0.3)"
+    },
+    {
+      title: "Urban Streetwear Aura",
+      subtitle: "Casual loose-fitting cargo aesthetics",
+      imageUrl: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=600&auto=format&fit=crop",
+      creator: "@sarah_khan",
+      glow: "rgba(168,85,247,0.25)"
+    },
+    {
+      title: "Korean Aesthetic Core",
+      subtitle: "Tailored minimal outerwear style",
+      imageUrl: "https://images.unsplash.com/photo-1509631179647-0177331693ae?q=80&w=600&auto=format&fit=crop",
+      creator: "@noor_fatima",
+      glow: "rgba(168,85,247,0.3)"
     }
   ];
 
@@ -871,7 +885,7 @@ export const LookVisionMainDashboard: React.FC<LookVisionMainDashboardProps> = (
                           window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: `Registered ${item.title} into your local Closet!` }));
                         }
                       }}
-                      className="w-7 h-7 rounded-lg bg-[#22c55e] hover:bg-[#16a34a] text-black flex items-center justify-center cursor-pointer transition-colors"
+                      className="w-8 h-8 rounded-xl bg-[#22c55e] hover:bg-[#16a34a] text-black flex items-center justify-center cursor-pointer transition-colors"
                       title="Add to Closet"
                     >
                       <ShoppingBag className="w-3.5 h-3.5" />
