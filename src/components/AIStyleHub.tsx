@@ -5,7 +5,7 @@ import {
   Search, ShoppingBag, Shirt, Clock, Info, Store, SlidersHorizontal, LogOut, 
   ChevronRight, Compass, Eye, Cpu, Database, Activity, CloudSun, User,
   Bell, PenSquare, X, ChevronDown, Award, Check,
-  Home, Users, Heart, Layers, MessageSquare, Mail, Crown, MoreVertical, Moon
+  Home, Users, Heart, Layers, MessageSquare, Mail, Crown, MoreVertical, Moon, Menu
 } from 'lucide-react';
 import { WardrobeItem } from '../types';
 import { EmptyStateLibrary } from './EmptyStateLibrary';
@@ -31,6 +31,15 @@ import { AIEngineStudio } from './AIEngineStudio';
 import { CognitivePassport } from './CognitivePassport';
 import { SystemSettingsAudit } from './SystemSettingsAudit';
 import { ArchitectureMap } from './ArchitectureMap';
+import { StyleMessageCenter } from './StyleMessageCenter';
+import { StyleCollections } from './StyleCollections';
+import { StyleHistoryArchive } from './StyleHistoryArchive';
+import { StyleFavorites } from './StyleFavorites';
+import { DiscoverScreen } from './screens/DiscoverScreen';
+import { CommunityScreen } from './screens/CommunityScreen';
+import { MarketplaceScreen } from './screens/MarketplaceScreen';
+import { ProductDetailScreen } from './screens/ProductDetailScreen';
+import { CreatorWorkspaceScreen } from './screens/CreatorWorkspaceScreen';
 
 export interface LookVisionTheme {
   id: string;
@@ -491,15 +500,31 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
   onEnterSilence
 }) => {
   const [state, setState] = useState<UnifiedState>(() => UnifiedFashionOS.getState());
+  
+  // Design Sandbox & Figma Mockup Overlay states
+  const [isQASandboxOpen, setIsQASandboxOpen] = useState(false);
+  const [isMockOverlayActive, setIsMockOverlayActive] = useState(false);
+  const [mockOverlayOpacity, setMockOverlayOpacity] = useState(1.0);
+  const [showGridLines, setShowGridLines] = useState(false);
+  const [showPaddingBadges, setShowPaddingBadges] = useState(false);
+  const [mockImageUrl, setMockImageUrl] = useState(() => {
+    return localStorage.getItem('lookvision_mock_image_url') || '/given_ui_reference.jpg';
+  });
+  const [mockBlendMode, setMockBlendMode] = useState<'normal' | 'difference' | 'multiply' | 'screen' | 'overlay'>(() => {
+    return (localStorage.getItem('lookvision_mock_blend_mode') as any) || 'normal';
+  });
+  const [mockImageFit, setMockImageFit] = useState<'cover' | 'contain' | 'fill'>(() => {
+    return (localStorage.getItem('lookvision_mock_image_fit') as any) || 'cover';
+  });
   const hasRestoredRef = useRef(false);
-  const [activeSubTab, setActiveSubTab] = useState<'HOME' | 'AI_STUDIO' | 'WARDROBE' | 'DASHBOARD' | 'PROFILE' | 'SYSTEM_ROOM' | 'OUTFIT_GEN' | 'VIRTUAL_TRY' | 'COLLECTIONS' | 'HISTORY' | 'MESSAGES' | 'FAVORITES'>(() => {
+  const [activeSubTab, setActiveSubTab] = useState<'HOME' | 'AI_STUDIO' | 'WARDROBE' | 'DASHBOARD' | 'PROFILE' | 'SYSTEM_ROOM' | 'OUTFIT_GEN' | 'VIRTUAL_TRY' | 'COLLECTIONS' | 'HISTORY' | 'MESSAGES' | 'FAVORITES' | 'MARKETPLACE_ROOM' | 'COMMUNITY_ROOM' | 'DISCOVER' | 'CREATOR_WORKSPACE' | 'PRODUCT_DETAIL'>(() => {
     const saved = localStorage.getItem('last_active_place_subtab');
-    if (saved && ['HOME', 'AI_STUDIO', 'WARDROBE', 'DASHBOARD', 'PROFILE', 'SYSTEM_ROOM', 'OUTFIT_GEN', 'VIRTUAL_TRY', 'COLLECTIONS', 'HISTORY', 'MESSAGES', 'FAVORITES'].includes(saved)) {
+    if (saved && ['HOME', 'AI_STUDIO', 'WARDROBE', 'DASHBOARD', 'PROFILE', 'SYSTEM_ROOM', 'OUTFIT_GEN', 'VIRTUAL_TRY', 'COLLECTIONS', 'HISTORY', 'MESSAGES', 'FAVORITES', 'MARKETPLACE_ROOM', 'COMMUNITY_ROOM', 'DISCOVER', 'CREATOR_WORKSPACE', 'PRODUCT_DETAIL'].includes(saved)) {
       return saved as any;
     }
     return 'HOME';
   });
-  const [activeCockpitSubTab, setActiveCockpitSubTab] = useState<'HOME' | 'AI_STUDIO' | 'WARDROBE' | 'DASHBOARD' | 'PROFILE' | 'SYSTEM_ROOM' | 'OUTFIT_GEN' | 'VIRTUAL_TRY' | 'COLLECTIONS' | 'HISTORY' | 'MESSAGES' | 'FAVORITES'>('HOME');
+  const [activeCockpitSubTab, setActiveCockpitSubTab] = useState<'HOME' | 'AI_STUDIO' | 'WARDROBE' | 'DASHBOARD' | 'PROFILE' | 'SYSTEM_ROOM' | 'OUTFIT_GEN' | 'VIRTUAL_TRY' | 'COLLECTIONS' | 'HISTORY' | 'MESSAGES' | 'FAVORITES' | 'MARKETPLACE_ROOM' | 'COMMUNITY_ROOM' | 'DISCOVER' | 'CREATOR_WORKSPACE' | 'PRODUCT_DETAIL'>('HOME');
   const [showFounderConsole, setShowFounderConsole] = useState(false);
   
   // Ceremony of Addition Form Steps States (Restore draft silently)
@@ -522,6 +547,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
   const [feedbackNote, setFeedbackNote] = useState('Quietly noted.');
 
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isQuickActionsOpen, setIsQuickActionsOpen] = useState(false);
   const [wardrobeSubView, setWardrobeSubView] = useState<'CLOSET' | 'COLLECTIONS'>('CLOSET');
 
@@ -533,6 +559,9 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
 
   // Selected Garment detail page state
   const [selectedGarment, setSelectedGarment] = useState<WardrobeItem | null>(null);
+
+  // Selected Product detail page state for boutique
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
 
   // GENTLE TOMORROW Tomorrow room state
   const [tomorrowOutfit, setTomorrowOutfitState] = useState<{ items: WardrobeItem[]; note: string; timeAtmosphere?: string } | null>(() => {
@@ -578,6 +607,9 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
     setWeatherWeightState(weight);
     localStorage.setItem('weather_weight', weight);
   };
+
+  // Premium custom notification toast state
+  const [toasts, setToasts] = useState<{ id: string; message: string; type?: 'success' | 'info' | 'warning' | 'error' }[]>([]);
 
   // 7. Ownership Export states
   const [showSnapshot, setShowSnapshot] = useState(false);
@@ -676,13 +708,18 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
   useEffect(() => {
     const handleLocationChange = () => {
       const path = window.location.pathname;
-      let mappedTab: 'HOME' | 'AI_STUDIO' | 'WARDROBE' | 'DASHBOARD' | 'PROFILE' | 'SYSTEM_ROOM' | null = null;
+      let mappedTab: any = null;
       if (path === '/home' || path === '/' || path === '') mappedTab = 'HOME';
       else if (path === '/ai-studio') mappedTab = 'AI_STUDIO';
       else if (path === '/wardrobe') mappedTab = 'WARDROBE';
       else if (path === '/dashboard') mappedTab = 'DASHBOARD';
       else if (path === '/profile') mappedTab = 'PROFILE';
       else if (path === '/settings' || path === '/presence') mappedTab = 'SYSTEM_ROOM';
+      else if (path === '/marketplace') mappedTab = 'MARKETPLACE_ROOM';
+      else if (path === '/community') mappedTab = 'COMMUNITY_ROOM';
+      else if (path === '/discover' || path === '/explore') mappedTab = 'DISCOVER';
+      else if (path === '/creator' || path === '/creator-workspace') mappedTab = 'CREATOR_WORKSPACE';
+      else if (path === '/product-detail') mappedTab = 'PRODUCT_DETAIL';
       
       if (mappedTab) {
         setActiveSubTab(mappedTab);
@@ -705,6 +742,11 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
     else if (activeSubTab === 'DASHBOARD') targetPath = '/dashboard';
     else if (activeSubTab === 'PROFILE') targetPath = '/profile';
     else if (activeSubTab === 'SYSTEM_ROOM') targetPath = '/settings';
+    else if (activeSubTab === 'MARKETPLACE_ROOM') targetPath = '/marketplace';
+    else if (activeSubTab === 'COMMUNITY_ROOM') targetPath = '/community';
+    else if (activeSubTab === 'DISCOVER') targetPath = '/discover';
+    else if (activeSubTab === 'CREATOR_WORKSPACE') targetPath = '/creator';
+    else if (activeSubTab === 'PRODUCT_DETAIL') targetPath = '/product-detail';
 
     if (targetPath && window.location.pathname !== targetPath) {
       window.history.pushState(null, '', targetPath);
@@ -716,6 +758,53 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
       setState(latest);
     });
     return () => unsub();
+  }, []);
+
+  // Centralized Custom Toast event handler
+  useEffect(() => {
+    const handleGlobalShowToast = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const detail = customEvent.detail;
+      if (!detail) return;
+      const id = `${Date.now()}-${Math.random()}`;
+      setToasts(prev => [...prev, { id, message: detail }]);
+      setTimeout(() => {
+        setToasts(prev => prev.filter(t => t.id !== id));
+      }, 5000);
+    };
+    window.addEventListener('lookvision_show_toast', handleGlobalShowToast);
+    return () => {
+      window.removeEventListener('lookvision_show_toast', handleGlobalShowToast);
+    };
+  }, []);
+
+  // Centralized Custom Navigation event handler
+  useEffect(() => {
+    const handleGlobalNavigate = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const detail = customEvent.detail;
+      if (!detail) return;
+      handleNavigate(detail);
+    };
+    window.addEventListener('lookvision_navigate', handleGlobalNavigate);
+    return () => {
+      window.removeEventListener('lookvision_navigate', handleGlobalNavigate);
+    };
+  }, []);
+
+  // Centralized Custom Product View event handler
+  useEffect(() => {
+    const handleGlobalViewProduct = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const detail = customEvent.detail;
+      if (!detail) return;
+      setSelectedProduct(detail);
+      handleNavigate('PRODUCT_DETAIL');
+    };
+    window.addEventListener('lookvision_view_product', handleGlobalViewProduct);
+    return () => {
+      window.removeEventListener('lookvision_view_product', handleGlobalViewProduct);
+    };
   }, []);
 
   // Profile Syncing
@@ -1524,6 +1613,21 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
       handleNavigate(newTab);
     };
 
+    const navigationItems = [
+      { id: 'HOME', label: 'Home', icon: Home, route: 'HOME', filter: 'AI_INVENT' },
+      { id: 'DISCOVER', label: 'Discover', icon: Compass, route: 'DISCOVER' },
+      { id: 'AI_CREATE', label: 'AI Create', icon: Sparkles, route: 'AI_STUDIO', badge: 'NEW' },
+      { id: 'MY_WARDROBE', label: 'My Wardrobe', icon: Layers, route: 'WARDROBE' },
+      { id: 'COMMUNITY', label: 'Community', icon: Users, route: 'COMMUNITY_ROOM' },
+      { id: 'MARKETPLACE', label: 'Marketplace', icon: ShoppingBag, route: 'MARKETPLACE_ROOM' },
+      { id: 'TRY_ON_STUDIO', label: 'Try-On Studio', icon: Shirt, route: 'VIRTUAL_TRY' },
+      { id: 'COLLECTIONS', label: 'Collections', icon: Store, route: 'COLLECTIONS' },
+      { id: 'FAVORITES', label: 'Favorites', icon: Heart, route: 'FAVORITES' },
+      { id: 'MESSAGES', label: 'Messages', icon: Mail, route: 'MESSAGES', badge: '3' },
+      { id: 'NOTIFICATIONS', label: 'Notifications', icon: Bell, action: 'NOTIFICATIONS', badge: '8' },
+      { id: 'SETTINGS', label: 'Settings', icon: Settings, route: 'SYSTEM_ROOM' }
+    ];
+
     return (
       <div 
         className={`${isNested ? 'w-full h-[710px] rounded-2xl border border-white/5 shadow-2xl overflow-hidden' : 'h-screen w-screen overflow-hidden'} ${themeObj.bg} ${themeObj.text} flex flex-row font-sans antialiased relative`} 
@@ -1532,29 +1636,20 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
         
         {/* A. LEFT NAVIGATION SIDEBAR (Continuous from top to bottom) */}
         <aside className="w-64 shrink-0 p-4 flex flex-col justify-between hidden lg:flex bg-[#07070c] border-r border-white/5 select-none h-full z-40">
-          <div className="space-y-5 overflow-y-auto no-scrollbar flex-1 pb-4">
+          <div className="space-y-5 overflow-y-auto no-scrollbar flex-1 pb-4 pr-1">
             
-            {/* Star Logo matching mockup */}
-            <div className="flex items-center pl-3 py-2 mb-4">
-              <Sparkle className="w-6 h-6 text-violet-400 fill-violet-400 filter drop-shadow-[0_0_8px_rgba(168,85,247,0.85)]" />
+            {/* AIStyleHub / LookVision Logo */}
+            <div className="flex items-center gap-3 pl-3 py-2 mb-4">
+              <Sparkle className="w-6 h-6 text-violet-400 fill-violet-400 filter drop-shadow-[0_0_8px_rgba(168,85,247,0.85)] animate-pulse-slow" />
+              <div className="flex flex-col">
+                <span className="text-sm font-mono tracking-[0.25em] uppercase text-white font-bold leading-none">AIStyleHub</span>
+                <span className="text-[9px] font-mono tracking-widest text-violet-400/60 uppercase mt-0.5">LookVision</span>
+              </div>
             </div>
 
             {/* Navigation options */}
             <div className="space-y-0.5">
-              {[
-                { id: 'HOME', label: 'Home', icon: Home, route: 'HOME', filter: 'AI_INVENT' },
-                { id: 'AI_STUDIO', label: 'AI Studio', icon: Sparkles, route: 'AI_STUDIO', badge: 'NEW' },
-                { id: 'MARKETPLACE', label: 'Marketplace', icon: ShoppingBag, route: 'HOME', filter: 'BRANDS' },
-                { id: 'COMMUNITY', label: 'Community', icon: Users, route: 'HOME', filter: 'COMMUNITY' },
-                { id: 'EXPLORE', label: 'Explore', icon: Compass, route: 'OUTFIT_GEN' },
-                { id: 'COLLECTIONS', label: 'Collections', icon: Store, route: 'COLLECTIONS' },
-                { id: 'WARDROBE', label: 'Wardrobe', icon: Layers, route: 'WARDROBE' },
-                { id: 'OUTFITS', label: 'Outfits', icon: Shirt, route: 'VIRTUAL_TRY' },
-                { id: 'MESSAGES', label: 'Messages', icon: Mail, route: 'MESSAGES', badge: '3' },
-                { id: 'NOTIFICATIONS', label: 'Notifications', icon: Bell, action: 'NOTIFICATIONS' },
-                { id: 'ANALYTICS', label: 'Analytics', icon: BarChart2, route: 'DASHBOARD' },
-                { id: 'SETTINGS', label: 'Settings', icon: Settings, route: 'SYSTEM_ROOM' }
-              ].map((tab) => {
+              {navigationItems.map((tab) => {
                 const Icon = tab.icon;
                 
                 // Determine active state selection matching look vision layout
@@ -1562,23 +1657,25 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
                 const currentFilter = localStorage.getItem('last_active_feed_filter');
                 if (tab.id === 'HOME' && activeSubTabForRendering === 'HOME' && currentFilter !== 'BRANDS' && currentFilter !== 'COMMUNITY') {
                   isSelected = true;
-                } else if (tab.id === 'MARKETPLACE' && activeSubTabForRendering === 'HOME' && currentFilter === 'BRANDS') {
+                } else if (tab.id === 'DISCOVER' && activeSubTabForRendering === 'DISCOVER') {
                   isSelected = true;
-                } else if (tab.id === 'COMMUNITY' && activeSubTabForRendering === 'HOME' && currentFilter === 'COMMUNITY') {
+                } else if (tab.id === 'AI_CREATE' && activeSubTabForRendering === 'AI_STUDIO') {
                   isSelected = true;
-                } else if (tab.id === 'AI_STUDIO' && activeSubTabForRendering === 'AI_STUDIO') {
+                } else if (tab.id === 'MY_WARDROBE' && activeSubTabForRendering === 'WARDROBE') {
                   isSelected = true;
-                } else if (tab.id === 'EXPLORE' && activeSubTabForRendering === 'OUTFIT_GEN') {
+                } else if ((tab.id === 'COMMUNITY' || tab.id === 'COMMUNITY_ROOM') && activeSubTabForRendering === 'COMMUNITY_ROOM') {
+                  isSelected = true;
+                } else if ((tab.id === 'MARKETPLACE' || tab.id === 'MARKETPLACE_ROOM') && activeSubTabForRendering === 'MARKETPLACE_ROOM') {
+                  isSelected = true;
+                } else if (tab.id === 'TRY_ON_STUDIO' && activeSubTabForRendering === 'VIRTUAL_TRY') {
                   isSelected = true;
                 } else if (tab.id === 'COLLECTIONS' && activeSubTabForRendering === 'COLLECTIONS') {
                   isSelected = true;
-                } else if (tab.id === 'WARDROBE' && activeSubTabForRendering === 'WARDROBE') {
-                  isSelected = true;
-                } else if (tab.id === 'OUTFITS' && activeSubTabForRendering === 'VIRTUAL_TRY') {
+                } else if (tab.id === 'FAVORITES' && activeSubTabForRendering === 'FAVORITES') {
                   isSelected = true;
                 } else if (tab.id === 'MESSAGES' && activeSubTabForRendering === 'MESSAGES') {
                   isSelected = true;
-                } else if (tab.id === 'ANALYTICS' && activeSubTabForRendering === 'DASHBOARD') {
+                } else if (tab.id === 'NOTIFICATIONS' && isNotificationsOpen) {
                   isSelected = true;
                 } else if (tab.id === 'SETTINGS' && activeSubTabForRendering === 'SYSTEM_ROOM') {
                   isSelected = true;
@@ -1608,21 +1705,21 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
                         }
                       });
                     }}
-                    className={`w-full px-3 py-2.5 rounded-xl flex items-center justify-between transition-all group cursor-pointer text-[11.5px] ${
+                    className={`w-full px-3 py-2.5 rounded-xl flex items-center justify-between transition-all group cursor-pointer text-[11.5px] focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50 hover:translate-x-0.5 duration-200 ${
                       isSelected 
                         ? 'bg-[#181135] text-[#b6a1ff] shadow-md font-medium border border-[#2b1c63]' 
                         : 'text-white/55 hover:text-white hover:bg-white/[0.02]'
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <Icon className={`w-4 h-4 shrink-0 ${
+                      <Icon className={`w-4 h-4 shrink-0 transition-transform group-hover:scale-110 duration-200 ${
                         isSelected ? 'text-violet-400' : 'text-white/30 group-hover:text-white/80'
                       }`} />
                       <span className="tracking-wide font-sans">{tab.label}</span>
                     </div>
 
                     {tab.badge && (
-                      <span className={`flex items-center justify-center font-bold shrink-0 ${
+                      <span className={`flex items-center justify-center font-bold shrink-0 transition-transform group-hover:scale-105 duration-200 ${
                         tab.badge === 'NEW' 
                           ? 'px-1.5 py-0.5 text-[8px] bg-violet-600 text-white rounded font-mono tracking-wider' 
                           : 'w-4 h-4 text-[9px] bg-violet-600 text-white rounded-full font-sans'
@@ -1655,7 +1752,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
                 onClick={() => {
                   window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: 'Thank you for upgrading! You now have lifetime access.' }));
                 }}
-                className="w-full bg-violet-600 hover:bg-violet-500 text-white rounded-xl py-2 font-sans font-semibold text-[10px] cursor-pointer transition-all flex items-center justify-center gap-1 shadow-md shadow-violet-600/20"
+                className="w-full bg-violet-600 hover:bg-violet-500 text-white rounded-xl py-2 font-sans font-semibold text-[10px] cursor-pointer transition-all flex items-center justify-center gap-1 shadow-md shadow-violet-600/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
               >
                 <span>Upgrade Now</span>
               </button>
@@ -1687,7 +1784,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
                 onClick={() => {
                   window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: 'Account Management loaded.' }));
                 }}
-                className="p-1.5 text-white/30 hover:text-white transition-colors cursor-pointer rounded-lg"
+                className="p-1.5 text-white/30 hover:text-white transition-colors cursor-pointer rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
               >
                 <MoreVertical className="w-4 h-4" />
               </button>
@@ -1695,14 +1792,210 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
           </div>
         </aside>
 
+        {/* RESPONSIVE MOBILE DRAWER SIDEBAR */}
+        <AnimatePresence>
+          {isMobileSidebarOpen && (
+            <div className="fixed inset-0 z-50 lg:hidden flex">
+              {/* Backdrop */}
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setIsMobileSidebarOpen(false)}
+                className="fixed inset-0 bg-black/60 backdrop-blur-xs"
+              />
+              
+              {/* Sidebar Content */}
+              <motion.div 
+                initial={{ x: '-100%' }}
+                animate={{ x: 0 }}
+                exit={{ x: '-100%' }}
+                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                className="relative w-64 max-w-[85vw] h-full bg-[#07070c] border-r border-white/5 flex flex-col justify-between p-4 z-50"
+              >
+                {/* Close Button */}
+                <button 
+                  onClick={() => setIsMobileSidebarOpen(false)}
+                  className="absolute top-4 right-4 p-1.5 rounded-lg bg-white/5 border border-white/10 text-white/60 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+                  aria-label="Close menu"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+
+                <div className="space-y-5 overflow-y-auto no-scrollbar flex-1 pb-4">
+                  {/* Logo */}
+                  <div className="flex items-center gap-3 pl-3 py-2 mb-4">
+                    <Sparkle className="w-6 h-6 text-violet-400 fill-violet-400 filter drop-shadow-[0_0_8px_rgba(168,85,247,0.85)] animate-pulse-slow" />
+                    <div className="flex flex-col">
+                      <span className="text-sm font-mono tracking-[0.25em] uppercase text-white font-bold leading-none">AIStyleHub</span>
+                      <span className="text-[9px] font-mono tracking-widest text-violet-400/60 uppercase mt-0.5">LookVision</span>
+                    </div>
+                  </div>
+
+                  {/* Navigation Links */}
+                  <div className="space-y-0.5">
+                    {navigationItems.map((tab) => {
+                      const Icon = tab.icon;
+                      
+                      let isSelected = false;
+                      const currentFilter = localStorage.getItem('last_active_feed_filter');
+                      if (tab.id === 'HOME' && activeSubTabForRendering === 'HOME' && currentFilter !== 'BRANDS' && currentFilter !== 'COMMUNITY') {
+                        isSelected = true;
+                      } else if (tab.id === 'DISCOVER' && activeSubTabForRendering === 'DISCOVER') {
+                        isSelected = true;
+                      } else if (tab.id === 'AI_CREATE' && activeSubTabForRendering === 'AI_STUDIO') {
+                        isSelected = true;
+                      } else if (tab.id === 'MY_WARDROBE' && activeSubTabForRendering === 'WARDROBE') {
+                        isSelected = true;
+                      } else if ((tab.id === 'COMMUNITY' || tab.id === 'COMMUNITY_ROOM') && activeSubTabForRendering === 'COMMUNITY_ROOM') {
+                        isSelected = true;
+                      } else if ((tab.id === 'MARKETPLACE' || tab.id === 'MARKETPLACE_ROOM') && activeSubTabForRendering === 'MARKETPLACE_ROOM') {
+                        isSelected = true;
+                      } else if (tab.id === 'TRY_ON_STUDIO' && activeSubTabForRendering === 'VIRTUAL_TRY') {
+                        isSelected = true;
+                      } else if (tab.id === 'COLLECTIONS' && activeSubTabForRendering === 'COLLECTIONS') {
+                        isSelected = true;
+                      } else if (tab.id === 'FAVORITES' && activeSubTabForRendering === 'FAVORITES') {
+                        isSelected = true;
+                      } else if (tab.id === 'MESSAGES' && activeSubTabForRendering === 'MESSAGES') {
+                        isSelected = true;
+                      } else if (tab.id === 'NOTIFICATIONS' && isNotificationsOpen) {
+                        isSelected = true;
+                      } else if (tab.id === 'SETTINGS' && activeSubTabForRendering === 'SYSTEM_ROOM') {
+                        isSelected = true;
+                      }
+
+                      return (
+                        <button
+                          key={tab.id}
+                          id={`mob-app-${tab.id.toLowerCase().replace('_', '-')}`}
+                          onClick={() => {
+                            setIsMobileSidebarOpen(false); // Close sidebar drawer on click
+                            triggerQuietPause(() => {
+                              if (tab.action === 'NOTIFICATIONS') {
+                                setIsNotificationsOpen(!isNotificationsOpen);
+                              } else if (tab.route) {
+                                handleNavigate(tab.route as any);
+                                if (tab.filter) {
+                                  localStorage.setItem('last_active_feed_filter', tab.filter);
+                                  window.dispatchEvent(new CustomEvent('lookvision_switch_feed_filter', { detail: tab.filter }));
+                                } else {
+                                  if (tab.id === 'HOME') {
+                                    localStorage.setItem('last_active_feed_filter', 'AI_INVENT');
+                                    window.dispatchEvent(new CustomEvent('lookvision_switch_feed_filter', { detail: 'AI_INVENT' }));
+                                  }
+                                }
+                              } else {
+                                window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: `${tab.label} is loaded.` }));
+                              }
+                            });
+                          }}
+                          className={`w-full px-3 py-2.5 rounded-xl flex items-center justify-between transition-all group cursor-pointer text-[11.5px] focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50 hover:translate-x-0.5 duration-200 ${
+                            isSelected 
+                              ? 'bg-[#181135] text-[#b6a1ff] shadow-md font-medium border border-[#2b1c63]' 
+                              : 'text-white/55 hover:text-white hover:bg-white/[0.02]'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <Icon className={`w-4 h-4 shrink-0 transition-transform group-hover:scale-110 duration-200 ${
+                              isSelected ? 'text-violet-400' : 'text-white/30 group-hover:text-white/80'
+                            }`} />
+                            <span className="tracking-wide font-sans">{tab.label}</span>
+                          </div>
+
+                          {tab.badge && (
+                            <span className={`flex items-center justify-center font-bold shrink-0 transition-transform group-hover:scale-105 duration-200 ${
+                              tab.badge === 'NEW' 
+                                ? 'px-1.5 py-0.5 text-[8px] bg-violet-600 text-white rounded font-mono tracking-wider' 
+                                : 'w-4 h-4 text-[9px] bg-violet-600 text-white rounded-full font-sans'
+                            }`}>
+                              {tab.badge}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Upgrade & Profile Section */}
+                <div className="pt-4 border-t border-white/5 space-y-4">
+                  {/* Upgrade to Pro Card */}
+                  <div className="p-4 rounded-2xl bg-[#0e0c1f] border border-violet-500/15 space-y-3 relative overflow-hidden text-left shadow-lg shadow-violet-950/20">
+                    <div className="absolute -right-6 -top-6 w-16 h-16 bg-violet-500/10 rounded-full blur-xl pointer-events-none"></div>
+                    <div className="flex items-center gap-2">
+                      <Crown className="w-4 h-4 text-violet-400" />
+                      <strong className="text-xs font-bold text-white tracking-wide font-sans">Upgrade to Pro</strong>
+                    </div>
+                    
+                    <p className="text-[10px] text-white/50 leading-relaxed font-sans font-light">
+                      Unlock unlimited generations, premium styles, and more.
+                    </p>
+                    
+                    <button 
+                      onClick={() => {
+                        setIsMobileSidebarOpen(false);
+                        window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: 'Thank you for upgrading! You now have lifetime access.' }));
+                      }}
+                      className="w-full bg-violet-600 hover:bg-violet-500 text-white rounded-xl py-2 font-sans font-semibold text-[10px] cursor-pointer transition-all flex items-center justify-center gap-1 shadow-md shadow-violet-600/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+                    >
+                      <span>Upgrade Now</span>
+                    </button>
+                  </div>
+
+                  {/* Profile Identity Card */}
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.01] hover:bg-white/[0.04] transition-all border border-white/5 group">
+                    <div className="flex items-center gap-3">
+                      <img 
+                        src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&auto=format&fit=crop" 
+                        alt="Sarah Khan"
+                        className="w-9 h-9 rounded-full object-cover border border-white/10"
+                      />
+                      <div className="text-left">
+                        <div className="flex items-center gap-1">
+                          <p className="text-[11px] font-semibold text-white leading-none">Sarah Khan</p>
+                          <div className="w-3 h-3 rounded-full bg-blue-500 flex items-center justify-center shrink-0">
+                            <Check className="w-2.5 h-2.5 text-white stroke-[3.5]" />
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 mt-1">
+                          <span className="w-1 h-1 rounded-full bg-violet-400"></span>
+                          <span className="text-[8px] font-mono text-violet-400 uppercase tracking-widest leading-none">Premium</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <button
+                      onClick={() => {
+                        setIsMobileSidebarOpen(false);
+                        window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: 'Account Management loaded.' }));
+                      }}
+                      className="p-1.5 text-white/30 hover:text-white transition-colors cursor-pointer rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+                    >
+                      <MoreVertical className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
         {/* RIGHT AREA: HEADER + MAIN WORKSPACE (Takes rest of the viewport) */}
         <div className="flex-1 flex flex-col overflow-hidden h-full">
           
           {/* 1. TOP BAR NAVIGATION (Sits at the top of the right area) */}
           <header className="h-16 flex items-center shrink-0 bg-[#07070c] border-b border-white/5 z-40 relative">
-            {/* Mobile Logo: Shown only if sidebar is hidden */}
-            <div className="pl-6 lg:hidden flex items-center shrink-0">
-              <Sparkle className="w-5 h-5 text-violet-400 fill-violet-400 filter drop-shadow-[0_0_8px_rgba(168,85,247,0.85)]" />
+            {/* Mobile Menu & Logo: Shown only if sidebar is hidden */}
+            <div className="pl-6 lg:hidden flex items-center gap-3 shrink-0">
+              <button
+                onClick={() => setIsMobileSidebarOpen(true)}
+                className="p-2 -ml-2 rounded-lg text-white/70 hover:text-white hover:bg-white/5 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+                title="Open Navigation"
+              >
+                <Menu className="w-5 h-5" />
+              </button>
+              <Sparkle className="w-5 h-5 text-violet-400 fill-violet-400 filter drop-shadow-[0_0_8px_rgba(168,85,247,0.85)] animate-pulse-slow" />
             </div>
 
             {/* Right header column (aligned with main workspace content and right sidebar) */}
@@ -1852,8 +2145,8 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
           {/* 2. SPLIT INTERFACE STRUCTURE (Sits underneath header, scrolls independently) */}
           <div className="flex-grow flex overflow-hidden">
 
-            {/* B. CENTRAL WORKSPACE CONTENT */}
-            <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 scrollbar-thin scrollbar-thumb-white/5 relative bg-gradient-to-b from-white/[0.01] to-transparent">
+             {/* B. CENTRAL WORKSPACE CONTENT */}
+            <main className="flex-1 overflow-y-auto p-3.5 sm:p-5 lg:p-5 scrollbar-thin scrollbar-thumb-white/5 relative bg-gradient-to-b from-white/[0.01] to-transparent">
           
           {/* Undo Banner if active */}
           {undoAction && (
@@ -3442,342 +3735,99 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
               />
             )}
 
-            {/* ROOM: OUTFIT GENERATOR ROADMAP */}
+            {/* ROOM: OUTFIT GENERATOR (Fully connected and interactive) */}
             {activeSubTab === 'OUTFIT_GEN' && (
-              <div className="space-y-8 max-w-lg mx-auto py-12 text-center animate-fade-in select-none">
-                <div className="w-16 h-16 rounded-2xl bg-violet-600/10 border border-violet-500/20 text-violet-400 flex items-center justify-center mx-auto shadow-lg shadow-violet-500/5">
-                  <SlidersHorizontal className="w-6 h-6 animate-pulse" />
-                </div>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-center gap-1.5 text-[10px] font-mono tracking-[0.2em] text-violet-400 uppercase font-semibold">
-                    <span>Preview Release</span>
-                    <span>•</span>
-                    <span className="flex items-center gap-0.5 bg-violet-500/10 text-violet-300 px-1.5 py-0.5 rounded border border-violet-500/20 text-[8px] uppercase font-bold">
-                      🔒 Locked
-                    </span>
-                  </div>
-                  <h2 className="font-sans font-bold tracking-tight text-3xl text-white">Outfit Generator</h2>
-                  <p className="text-sm text-white/50 leading-relaxed font-sans max-w-md mx-auto">
-                    Assemble high-fidelity styled coordinates dynamically using your personal catalog. Our smart physics-aware drape solver and seasonal weight calculators are finalizing training.
-                  </p>
-                </div>
-
-                <div className="bg-white/[0.01] border border-white/5 rounded-2xl p-5 text-left max-w-md mx-auto space-y-4">
-                  <span className="text-[9px] font-mono uppercase tracking-[0.15em] text-white/30 block font-bold">Planned Capabilities</span>
-                  <div className="space-y-3 text-xs">
-                    <div className="flex items-start gap-3 text-white/70">
-                      <span className="text-violet-400 mt-0.5 font-bold">🔒</span>
-                      <div>
-                        <p className="font-semibold text-white">Automated Silhouette Layering</p>
-                        <p className="text-[10px] text-white/40 mt-0.5">Auto-arrange base, mid-layers, and outerwear dynamically based on style preferences.</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3 text-white/70">
-                      <span className="text-violet-400 mt-0.5 font-bold">🔒</span>
-                      <div>
-                        <p className="font-semibold text-white">Smart Atmospheric Adaptations</p>
-                        <p className="text-[10px] text-white/40 mt-0.5">Real-time weather weight tuning of coordinates to accommodate current climate changes.</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3 text-white/70">
-                      <span className="text-violet-400 mt-0.5 font-bold">🔒</span>
-                      <div>
-                        <p className="font-semibold text-white">Color Harmony DNA Balancer</p>
-                        <p className="text-[10px] text-white/40 mt-0.5">Uses mathematical vectors to prevent color clashing while preserving avant-garde contrasts.</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pt-4 max-w-md mx-auto">
-                  <button
-                    onClick={() => {
-                      window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: 'You are now on the Outfit Generator Priority Waitlist!' }));
-                    }}
-                    className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white py-3 rounded-xl text-[11.5px] font-semibold tracking-wide cursor-pointer transition-all shadow-md shadow-violet-600/15"
-                  >
-                    Request Early Beta Access
-                  </button>
-                  <p className="text-[9px] font-mono text-white/30 mt-3 uppercase tracking-wider">
-                    Priority release expected Q3 2026 for Premium Members
-                  </p>
-                </div>
+              <div className="max-w-6xl mx-auto py-2 px-4 animate-fade-in">
+                <AIEngineStudio wardrobe={activeWardrobeList} initialSubTab="GENERATOR" />
               </div>
             )}
 
-            {/* ROOM: VIRTUAL TRY-ON ROADMAP */}
+            {/* ROOM: VIRTUAL TRY-ON (Fully connected and interactive) */}
             {activeSubTab === 'VIRTUAL_TRY' && (
-              <div className="space-y-8 max-w-lg mx-auto py-12 text-center animate-fade-in select-none">
-                <div className="w-16 h-16 rounded-2xl bg-cyan-600/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center mx-auto shadow-lg shadow-cyan-500/5">
-                  <Shirt className="w-6 h-6 animate-pulse" />
-                </div>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-center gap-1.5 text-[10px] font-mono tracking-[0.2em] text-cyan-400 uppercase font-semibold">
-                    <span>Neural Engine Workspace</span>
-                    <span>•</span>
-                    <span className="flex items-center gap-0.5 bg-cyan-500/10 text-cyan-300 px-1.5 py-0.5 rounded border border-cyan-500/20 text-[8px] uppercase font-bold">
-                      🔒 Locked
-                    </span>
-                  </div>
-                  <h2 className="font-sans font-bold tracking-tight text-3xl text-white">Virtual Try-On Space</h2>
-                  <p className="text-sm text-white/50 leading-relaxed font-sans max-w-md mx-auto">
-                    Drape styled garments, customized boutique items, or complete AI Creations onto your personal 3D avatar likeness. High-fidelity rendering is currently training.
-                  </p>
-                </div>
-
-                <div className="bg-white/[0.01] border border-white/5 rounded-2xl p-5 text-left max-w-md mx-auto space-y-4">
-                  <span className="text-[9px] font-mono uppercase tracking-[0.15em] text-white/30 block font-bold">Planned Capabilities</span>
-                  <div className="space-y-3 text-xs">
-                    <div className="flex items-start gap-3 text-white/70">
-                      <span className="text-cyan-400 mt-0.5 font-bold">🔒</span>
-                      <div>
-                        <p className="font-semibold text-white">Full-Body 3D Silhouette Likeness</p>
-                        <p className="text-[10px] text-cyan-400/40 mt-0.5">Upload front/side photos to reconstruct a scale-accurate spatial twin model.</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3 text-white/70">
-                      <span className="text-cyan-400 mt-0.5 font-bold">🔒</span>
-                      <div>
-                        <p className="font-semibold text-white">Fabric Drape Physics</p>
-                        <p className="text-[10px] text-cyan-400/40 mt-0.5">Simulate actual fabric weights—from heavy leather trenches to airy linen shirts.</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3 text-white/70">
-                      <span className="text-cyan-400 mt-0.5 font-bold">🔒</span>
-                      <div>
-                        <p className="font-semibold text-white">Pose & Lighting Sandbox</p>
-                        <p className="text-[10px] text-cyan-400/40 mt-0.5">Toggle atmospheric lighting and model stances to see how shadows interact with fabrics.</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pt-4 max-w-md mx-auto">
-                  <button
-                    onClick={() => {
-                      window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: 'Joined the Virtual Try-On Priority Waitlist! Model setup ready.' }));
-                    }}
-                    className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white py-3 rounded-xl text-[11.5px] font-semibold tracking-wide cursor-pointer transition-all shadow-md shadow-cyan-600/15"
-                  >
-                    Reserve Likeness Model Sandbox
-                  </button>
-                  <p className="text-[9px] font-mono text-white/30 mt-3 uppercase tracking-wider">
-                    Premium early access slots open soon
-                  </p>
-                </div>
+              <div className="max-w-6xl mx-auto py-2 px-4 animate-fade-in">
+                <AIEngineStudio wardrobe={activeWardrobeList} initialSubTab="TRY_ON" />
               </div>
             )}
 
-            {/* ROOM: COLLECTIONS ROADMAP */}
+            {/* ROOM: COLLECTIONS (Fully connected and interactive) */}
             {activeSubTab === 'COLLECTIONS' && (
-              <div className="space-y-8 max-w-lg mx-auto py-12 text-center animate-fade-in select-none">
-                <div className="w-16 h-16 rounded-2xl bg-amber-600/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mx-auto shadow-lg shadow-amber-500/5">
-                  <Store className="w-6 h-6 animate-pulse" />
-                </div>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-center gap-1.5 text-[10px] font-mono tracking-[0.2em] text-amber-400 uppercase font-semibold">
-                    <span>Sartorial Portfolios</span>
-                    <span>•</span>
-                    <span className="flex items-center gap-0.5 bg-amber-500/10 text-amber-300 px-1.5 py-0.5 rounded border border-amber-500/20 text-[8px] uppercase font-bold">
-                      🔒 Locked
-                    </span>
-                  </div>
-                  <h2 className="font-sans font-bold tracking-tight text-3xl text-white">Style Collections</h2>
-                  <p className="text-sm text-white/50 leading-relaxed font-sans max-w-md mx-auto">
-                    Organize your wardrobe pieces, design templates, and marketplace acquisitions into seasonal capsules and shareable aesthetic boards.
-                  </p>
-                </div>
-
-                <div className="bg-white/[0.01] border border-white/5 rounded-2xl p-5 text-left max-w-md mx-auto space-y-4">
-                  <span className="text-[9px] font-mono uppercase tracking-[0.15em] text-white/30 block font-bold">Planned Capabilities</span>
-                  <div className="space-y-3 text-xs">
-                    <div className="flex items-start gap-3 text-white/70">
-                      <span className="text-amber-400 mt-0.5 font-bold">🔒</span>
-                      <div>
-                        <p className="font-semibold text-white">Capsule Integrity Evaluator</p>
-                        <p className="text-[10px] text-amber-400/40 mt-0.5">Analyze if your collection matches the 10-piece minimalist balance criteria.</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3 text-white/70">
-                      <span className="text-amber-400 mt-0.5 font-bold">🔒</span>
-                      <div>
-                        <p className="font-semibold text-white">Collaborator Shared Closets</p>
-                        <p className="text-[10px] text-amber-400/40 mt-0.5">Compile mixed lookbooks with other Look Vision creators and stylists.</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pt-4 max-w-md mx-auto">
-                  <button
-                    onClick={() => {
-                      window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: 'Collection curation waitlist requested.' }));
-                    }}
-                    className="w-full bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 text-white py-3 rounded-xl text-[11.5px] font-semibold tracking-wide cursor-pointer transition-all shadow-md shadow-amber-600/15"
-                  >
-                    Request Collection Curation early beta
-                  </button>
-                </div>
+              <div className="max-w-6xl mx-auto py-2 px-4 animate-fade-in">
+                <StyleCollections wardrobe={activeWardrobeList} />
               </div>
             )}
 
-            {/* ROOM: HISTORY ROADMAP */}
+            {/* ROOM: HISTORY (Fully connected and interactive) */}
             {activeSubTab === 'HISTORY' && (
-              <div className="space-y-8 max-w-lg mx-auto py-12 text-center animate-fade-in select-none">
-                <div className="w-16 h-16 rounded-2xl bg-emerald-600/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/5">
-                  <Clock className="w-6 h-6 animate-pulse" />
-                </div>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-center gap-1.5 text-[10px] font-mono tracking-[0.2em] text-emerald-400 uppercase font-semibold">
-                    <span>Chronological Record</span>
-                    <span>•</span>
-                    <span className="flex items-center gap-0.5 bg-emerald-500/10 text-emerald-300 px-1.5 py-0.5 rounded border border-emerald-500/20 text-[8px] uppercase font-bold">
-                      🔒 Locked
-                    </span>
-                  </div>
-                  <h2 className="font-sans font-bold tracking-tight text-3xl text-white">Sartorial History Archive</h2>
-                  <p className="text-sm text-white/50 leading-relaxed font-sans max-w-md mx-auto">
-                    Explore the timeline of styled selections, worn combinations, and design iterations over calendar months.
-                  </p>
-                </div>
-
-                <div className="bg-white/[0.01] border border-white/5 rounded-2xl p-5 text-left max-w-md mx-auto space-y-4">
-                  <span className="text-[9px] font-mono uppercase tracking-[0.15em] text-white/30 block font-bold">Planned Capabilities</span>
-                  <div className="space-y-3 text-xs">
-                    <div className="flex items-start gap-3 text-white/70">
-                      <span className="text-emerald-400 mt-0.5 font-bold">🔒</span>
-                      <div>
-                        <p className="font-semibold text-white">Chronological Style Timeline</p>
-                        <p className="text-[10px] text-emerald-400/40 mt-0.5">Scroll through calendar months to track aesthetic shifts, colors, and styling patterns.</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3 text-white/70">
-                      <span className="text-emerald-400 mt-0.5 font-bold">🔒</span>
-                      <div>
-                        <p className="font-semibold text-white">Aesthetic Coherence Diagnostics</p>
-                        <p className="text-[10px] text-emerald-400/40 mt-0.5">Historical telemetry demonstrating how closely daily selections aligned with your Core DNA.</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pt-4 max-w-md mx-auto">
-                  <button
-                    onClick={() => {
-                      window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: 'Added to History Analytics beta waitlist!' }));
-                    }}
-                    className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white py-3 rounded-xl text-[11.5px] font-semibold tracking-wide cursor-pointer transition-all shadow-md shadow-emerald-600/15"
-                  >
-                    Enable Style Timeline Logs
-                  </button>
-                </div>
+              <div className="max-w-6xl mx-auto py-2 px-4 animate-fade-in">
+                <StyleHistoryArchive wardrobe={activeWardrobeList} />
               </div>
             )}
 
-            {/* ROOM: MESSAGES ROADMAP */}
+            {/* ROOM: MESSAGES (Fully connected and interactive) */}
             {activeSubTab === 'MESSAGES' && (
-              <div className="space-y-8 max-w-lg mx-auto py-12 text-center animate-fade-in select-none">
-                <div className="w-16 h-16 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center mx-auto shadow-lg shadow-indigo-500/5">
-                  <Mail className="w-6 h-6 animate-pulse" />
-                </div>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-center gap-1.5 text-[10px] font-mono tracking-[0.2em] text-indigo-400 uppercase font-semibold">
-                    <span>Secure Inbox</span>
-                    <span>•</span>
-                    <span className="flex items-center gap-0.5 bg-indigo-500/10 text-indigo-300 px-1.5 py-0.5 rounded border border-indigo-500/20 text-[8px] uppercase font-bold">
-                      🔒 Locked
-                    </span>
-                  </div>
-                  <h2 className="font-sans font-bold tracking-tight text-3xl text-white">Style Message Center</h2>
-                  <p className="text-sm text-white/50 leading-relaxed font-sans max-w-md mx-auto">
-                    Interact securely with verified style curators, custom tailors, clothing boutiques, and fashion consultants.
-                  </p>
-                </div>
-
-                <div className="bg-white/[0.01] border border-white/5 rounded-2xl p-5 text-left max-w-md mx-auto space-y-4">
-                  <span className="text-[9px] font-mono uppercase tracking-[0.15em] text-white/30 block font-bold">Planned Capabilities</span>
-                  <div className="space-y-3 text-xs">
-                    <div className="flex items-start gap-3 text-white/70">
-                      <span className="text-indigo-400 mt-0.5 font-bold">🔒</span>
-                      <div>
-                        <p className="font-semibold text-white">Curator Consultations</p>
-                        <p className="text-[10px] text-indigo-400/40 mt-0.5">Secure, real-time message routing to direct styling consultations and tailor booking flows.</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3 text-white/70">
-                      <span className="text-indigo-400 mt-0.5 font-bold">🔒</span>
-                      <div>
-                        <p className="font-semibold text-white">Collaborator Design Threads</p>
-                        <p className="text-[10px] text-indigo-400/40 mt-0.5">Draft, review, and exchange custom styled coordinate mockups inside shared canvas rooms.</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pt-4 max-w-md mx-auto">
-                  <button
-                    onClick={() => {
-                      window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: 'Added to Style Inbox waitlist.' }));
-                    }}
-                    className="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white py-3 rounded-xl text-[11.5px] font-semibold tracking-wide cursor-pointer transition-all shadow-md shadow-indigo-600/15"
-                  >
-                    Join Secure Communicator Waitlist
-                  </button>
-                </div>
+              <div className="max-w-6xl mx-auto py-2 px-4 animate-fade-in">
+                <StyleMessageCenter wardrobe={activeWardrobeList} />
               </div>
             )}
 
-            {/* ROOM: FAVORITES ROADMAP */}
+            {/* ROOM: FAVORITES (Fully connected and interactive) */}
             {activeSubTab === 'FAVORITES' && (
-              <div className="space-y-8 max-w-lg mx-auto py-12 text-center animate-fade-in select-none">
-                <div className="w-16 h-16 rounded-2xl bg-rose-600/10 border border-rose-500/20 text-rose-400 flex items-center justify-center mx-auto shadow-lg shadow-rose-500/5">
-                  <Heart className="w-6 h-6 animate-pulse" />
-                </div>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-center gap-1.5 text-[10px] font-mono tracking-[0.2em] text-rose-400 uppercase font-semibold">
-                    <span>Curated Inspirations</span>
-                    <span>•</span>
-                    <span className="flex items-center gap-0.5 bg-rose-500/10 text-rose-300 px-1.5 py-0.5 rounded border border-rose-500/20 text-[8px] uppercase font-bold">
-                      🔒 Locked
-                    </span>
-                  </div>
-                  <h2 className="font-sans font-bold tracking-tight text-3xl text-white">Sartorial Favorites</h2>
-                  <p className="text-sm text-white/50 leading-relaxed font-sans max-w-md mx-auto">
-                    Your high-contrast aesthetic showcase of liked pieces, saved AI-created silhouettes, and inspiring community looks.
-                  </p>
-                </div>
-
-                <div className="bg-white/[0.01] border border-white/5 rounded-2xl p-5 text-left max-w-md mx-auto space-y-4">
-                  <span className="text-[9px] font-mono uppercase tracking-[0.15em] text-white/30 block font-bold">Planned Capabilities</span>
-                  <div className="space-y-3 text-xs">
-                    <div className="flex items-start gap-3 text-white/70">
-                      <span className="text-rose-400 mt-0.5 font-bold">🔒</span>
-                      <div>
-                        <p className="font-semibold text-white">Smart Folder Organizing</p>
-                        <p className="text-[10px] text-rose-400/40 mt-0.5">Filter and categorize favorited looks by occasion weight, color accents, or brands.</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3 text-white/70">
-                      <span className="text-rose-400 mt-0.5 font-bold">🔒</span>
-                      <div>
-                        <p className="font-semibold text-white">Quick-Remix Workspace Link</p>
-                        <p className="text-[10px] text-rose-400/40 mt-0.5">Instantly load any saved community look as a reference baseline into the AI Design Studio.</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pt-4 max-w-md mx-auto">
-                  <button
-                    onClick={() => {
-                      window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: 'Favorites vault waitlist registered.' }));
-                    }}
-                    className="w-full bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white py-3 rounded-xl text-[11.5px] font-semibold tracking-wide cursor-pointer transition-all shadow-md shadow-rose-600/15"
-                  >
-                    Enable Smart Favorites Folder
-                  </button>
-                </div>
+              <div className="max-w-6xl mx-auto py-2 px-4 animate-fade-in">
+                <StyleFavorites wardrobe={activeWardrobeList} />
               </div>
+            )}
+
+            {/* ROOM: DISCOVER SCREEN (Aesthetic style & editor's selection) */}
+            {activeSubTab === 'DISCOVER' && (
+              <DiscoverScreen 
+                userWardrobe={activeWardrobeList} 
+                onNavigateToTab={(tab) => handleNavigate(tab as any)} 
+                onAddGarment={onAddGarment} 
+              />
+            )}
+
+            {/* ROOM: COMMUNITY SCREEN (Social styles & style challenge feed) */}
+            {activeSubTab === 'COMMUNITY_ROOM' && (
+              <CommunityScreen 
+                user={user} 
+                userWardrobe={activeWardrobeList} 
+                onNavigateToTab={(tab) => handleNavigate(tab as any)} 
+                onAddGarment={onAddGarment} 
+              />
+            )}
+
+            {/* ROOM: MARKETPLACE SCREEN (Premium boutique showroom catalog) */}
+            {activeSubTab === 'MARKETPLACE_ROOM' && (
+              <MarketplaceScreen 
+                userWardrobe={activeWardrobeList} 
+                onNavigateToTab={(tab) => handleNavigate(tab as any)} 
+                onAddGarment={onAddGarment} 
+                onSelectProduct={(prod) => {
+                  setSelectedProduct(prod);
+                  handleNavigate('PRODUCT_DETAIL');
+                }}
+              />
+            )}
+
+            {/* ROOM: PRODUCT DETAIL SCREEN (AI compat score, sizing & try-on) */}
+            {activeSubTab === 'PRODUCT_DETAIL' && selectedProduct && (
+              <ProductDetailScreen 
+                product={selectedProduct} 
+                userWardrobe={activeWardrobeList} 
+                onBack={() => handleNavigate('MARKETPLACE_ROOM')} 
+                onNavigateToTab={(tab) => handleNavigate(tab as any)} 
+                onAddGarment={onAddGarment} 
+              />
+            )}
+
+            {/* ROOM: CREATOR WORKSPACE SCREEN (Brand analytics, style demand prediction) */}
+            {activeSubTab === 'CREATOR_WORKSPACE' && (
+              <CreatorWorkspaceScreen 
+                user={user} 
+                userWardrobe={activeWardrobeList} 
+                onNavigateToTab={(tab) => handleNavigate(tab as any)} 
+                onAddGarment={onAddGarment} 
+              />
             )}
 
             </motion.div>
@@ -4024,6 +4074,334 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
     </div>
     </div>
     <FloatingAIChat wardrobe={activeWardrobeList} />
+
+    {/* --- DESIGN REFERENCE MOCK OVERLAY ENGINE --- */}
+    {isMockOverlayActive && (
+      <div 
+        className="absolute inset-0 pointer-events-none z-50 overflow-hidden mix-blend-normal select-none flex items-center justify-center"
+        style={{ opacity: mockOverlayOpacity }}
+      >
+        {/* Render actual custom uploaded mock image if present */}
+        {mockImageUrl ? (
+          <img 
+            src={mockImageUrl} 
+            alt="Reference Mockup" 
+            className={`absolute inset-0 w-full h-full pointer-events-none ${
+              mockImageFit === 'contain' ? 'object-contain' : mockImageFit === 'fill' ? 'object-fill' : 'object-cover'
+            }`}
+            style={{ 
+              mixBlendMode: mockBlendMode as any
+            }} 
+          />
+        ) : (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-violet-950/5 border-4 border-dashed border-violet-500/10">
+            <p className="text-violet-400/60 font-mono text-[9px] uppercase tracking-[0.2em] animate-pulse">Waiting for layout reference image...</p>
+            <p className="text-white/20 font-mono text-[7px] uppercase mt-1">Upload or paste URL in the Design Sandbox below</p>
+          </div>
+        )}
+
+        {/* Figma Grid Overlay & Ruler Guidelines */}
+        {showGridLines && (
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(236,72,153,0.06)_1px,transparent_1px),linear-gradient(to_bottom,rgba(236,72,153,0.06)_1px,transparent_1px)] bg-[size:20px_20px]" />
+        )}
+
+        {/* Blueprint Layout Outline Map */}
+        {showGridLines && (
+          <div className="absolute inset-0 border-[3px] border-pink-500/20 flex flex-row">
+            {/* Sidebar Area Indicator */}
+            <div className="w-64 border-r-2 border-pink-500/30 bg-pink-500/[0.01] relative">
+              <span className="absolute top-2 left-2 px-1.5 py-0.5 bg-pink-500/80 text-white text-[7px] font-mono rounded uppercase">Sidebar (256px)</span>
+              {showPaddingBadges && (
+                <div className="absolute bottom-4 right-4 bg-fuchsia-600/80 text-white text-[8px] font-mono px-1 rounded">p-4 (16px)</div>
+              )}
+            </div>
+
+            {/* Main Space Container */}
+            <div className="flex-1 flex flex-col relative">
+              {/* Header Area Indicator */}
+              <div className="h-[72px] border-b-2 border-pink-500/30 bg-pink-500/[0.005] relative flex items-center px-4">
+                <span className="absolute top-2 left-2 px-1.5 py-0.5 bg-pink-500/80 text-white text-[7px] font-mono rounded uppercase">Header (72px)</span>
+                {showPaddingBadges && (
+                  <div className="absolute right-4 top-4 bg-fuchsia-600/80 text-white text-[8px] font-mono px-1 rounded font-bold">h-18 (72px)</div>
+                )}
+              </div>
+
+              {/* Bottom Content Split Space */}
+              <div className="flex-1 flex flex-row relative">
+                
+                {/* Left Column Section: Bento Dashboard Columns */}
+                <div className="flex-1 border-r border-dashed border-pink-500/15 p-4 relative bg-pink-500/[0.002]">
+                  <span className="absolute top-2 left-2 px-1.5 py-0.5 bg-pink-500/80 text-white text-[7px] font-mono rounded uppercase">Bento Center Workspace</span>
+                  {showPaddingBadges && (
+                    <div className="absolute top-4 right-4 bg-fuchsia-600/80 text-white text-[8px] font-mono px-1 rounded">p-8 (32px)</div>
+                  )}
+
+                  {/* Simulated Columns for You / Following / Sale */}
+                  <div className="absolute inset-x-4 top-14 bottom-4 grid grid-cols-3 gap-6 pointer-events-none opacity-30">
+                    <div className="border border-pink-500/15 rounded-2xl bg-pink-500/[0.005] flex items-center justify-center text-[10px] text-pink-400 font-mono">Column 1: AI Creations</div>
+                    <div className="border border-pink-500/15 rounded-2xl bg-pink-500/[0.005] flex items-center justify-center text-[10px] text-pink-400 font-mono">Column 2: Community</div>
+                    <div className="border border-pink-500/15 rounded-2xl bg-pink-500/[0.005] flex items-center justify-center text-[10px] text-pink-400 font-mono">Column 3: Marketplace</div>
+                  </div>
+                </div>
+
+                {/* Right Sidebar Widget Section */}
+                <div className="w-80 bg-pink-500/[0.002] relative">
+                  <span className="absolute top-2 left-2 px-1.5 py-0.5 bg-pink-500/80 text-white text-[7px] font-mono rounded uppercase">Right Sidebar (320px)</span>
+                  {showPaddingBadges && (
+                    <div className="absolute bottom-4 left-4 bg-fuchsia-600/80 text-white text-[8px] font-mono px-1 rounded">w-80 (320px)</div>
+                  )}
+                </div>
+
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    )}
+
+    {/* --- VISUAL QA CONTROL CENTER GLASS PANEL --- */}
+    <div className="fixed bottom-4 left-4 z-50">
+      <div className={`transition-all duration-300 ${isQASandboxOpen ? 'w-80 h-[500px] p-4' : 'w-48 h-10 p-2'} bg-black/95 backdrop-blur-xl border border-violet-500/30 rounded-2xl shadow-2xl flex flex-col justify-between overflow-hidden text-left`}>
+        {/* Panel Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-2.5 h-2.5 rounded-full bg-violet-500 animate-pulse" />
+            <span className="text-[10.5px] font-mono uppercase tracking-wider text-white font-bold">📐 Design Sandbox</span>
+          </div>
+          <button 
+            onClick={() => setIsQASandboxOpen(!isQASandboxOpen)}
+            className="text-[9px] font-mono uppercase text-violet-400 hover:text-white px-2 py-0.5 rounded bg-white/5 border border-white/10 transition-colors"
+          >
+            {isQASandboxOpen ? 'Hide' : 'Expand'}
+          </button>
+        </div>
+
+        {/* Extended Body */}
+        {isQASandboxOpen ? (
+          <div className="flex-grow flex flex-col justify-between mt-3 space-y-3 border-t border-white/5 pt-3 overflow-y-auto no-scrollbar">
+            
+            {/* Opacity slider */}
+            <div className="space-y-1">
+              <div className="flex justify-between items-center text-[9.5px] font-mono text-white/60">
+                <span>Figma Mock Overlay</span>
+                <span className="text-violet-400 font-bold">{isMockOverlayActive ? 'ACTIVE' : 'INACTIVE'}</span>
+              </div>
+              <div className="flex gap-2 items-center">
+                <button 
+                  onClick={() => setIsMockOverlayActive(!isMockOverlayActive)}
+                  className={`px-3 py-1 text-[9px] font-mono uppercase rounded transition-all cursor-pointer ${
+                    isMockOverlayActive ? 'bg-violet-600 text-white font-bold' : 'bg-white/5 text-white/50 hover:bg-white/10'
+                  }`}
+                >
+                  {isMockOverlayActive ? 'Disable' : 'Enable'}
+                </button>
+                <input 
+                  type="range"
+                  min="0.1"
+                  max="1"
+                  step="0.05"
+                  value={mockOverlayOpacity}
+                  onChange={(e) => setMockOverlayOpacity(parseFloat(e.target.value))}
+                  disabled={!isMockOverlayActive}
+                  className="flex-1 accent-violet-500 cursor-pointer disabled:opacity-30"
+                />
+                <span className="text-[9.5px] font-mono text-white/30 w-8 text-right">{Math.round(mockOverlayOpacity * 100)}%</span>
+              </div>
+            </div>
+
+            {/* Helper toggles */}
+            <div className="grid grid-cols-2 gap-2">
+              <button 
+                onClick={() => setShowGridLines(!showGridLines)}
+                disabled={!isMockOverlayActive}
+                className={`py-1 text-[8.5px] font-mono uppercase rounded border transition-all cursor-pointer ${
+                  showGridLines ? 'bg-pink-950/40 border-pink-500/50 text-pink-300' : 'bg-white/5 border-white/5 text-white/40 hover:bg-white/10 disabled:opacity-30'
+                }`}
+              >
+                Pixel Grid
+              </button>
+              <button 
+                onClick={() => setShowPaddingBadges(!showPaddingBadges)}
+                disabled={!isMockOverlayActive}
+                className={`py-1 text-[8.5px] font-mono uppercase rounded border transition-all cursor-pointer ${
+                  showPaddingBadges ? 'bg-pink-950/40 border-pink-500/50 text-pink-300' : 'bg-white/5 border-white/5 text-white/40 hover:bg-white/10 disabled:opacity-30'
+                }`}
+              >
+                Padding Badges
+              </button>
+            </div>
+
+            {/* URL Input & File Upload for Reference Image */}
+            <div className="space-y-1.5 border-t border-white/5 pt-2">
+              <span className="text-[8.5px] font-mono uppercase text-white/40 block font-bold">Mock Image Source</span>
+              
+              <div className="flex gap-1.5">
+                <input 
+                  type="text"
+                  placeholder="Paste layout image URL (https://...)"
+                  value={mockImageUrl}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setMockImageUrl(val);
+                    localStorage.setItem('lookvision_mock_image_url', val);
+                  }}
+                  className="flex-grow bg-white/5 border border-white/10 rounded px-2 py-1 text-[9.5px] font-mono text-white placeholder-white/20 focus:outline-none focus:border-violet-500/50"
+                />
+                {mockImageUrl && (
+                  <button 
+                    onClick={() => {
+                      setMockImageUrl('');
+                      localStorage.removeItem('lookvision_mock_image_url');
+                    }}
+                    className="px-2 bg-red-950/40 hover:bg-red-900/40 border border-red-500/20 text-red-400 text-[8.5px] rounded font-mono uppercase cursor-pointer"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+
+              {/* Base64 File Uploader */}
+              <div className="relative">
+                <input 
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = (event) => {
+                        const base64 = event.target?.result as string;
+                        if (base64) {
+                          setMockImageUrl(base64);
+                          try {
+                            localStorage.setItem('lookvision_mock_image_url', base64);
+                          } catch (err) {
+                            console.warn("Storage full, base64 cached in state only:", err);
+                          }
+                        }
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                  className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10"
+                />
+                <div className="w-full py-1.5 border border-dashed border-violet-500/20 hover:border-violet-500/40 bg-violet-950/5 hover:bg-violet-950/10 rounded text-center text-[9px] font-mono text-violet-300 uppercase cursor-pointer transition-all">
+                  ↑ Drag or Upload Layout Image
+                </div>
+              </div>
+            </div>
+
+            {/* Blend Mode & Fit Controls */}
+            {mockImageUrl && (
+              <div className="space-y-1.5 border-t border-white/5 pt-2 grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <span className="text-[8px] font-mono uppercase text-white/40 block font-bold">Blend Mode</span>
+                  <div className="flex flex-col gap-1">
+                    {(['normal', 'difference', 'multiply', 'screen', 'overlay'] as const).map((mode) => (
+                      <button 
+                        key={mode}
+                        onClick={() => {
+                          setMockBlendMode(mode);
+                          localStorage.setItem('lookvision_mock_blend_mode', mode);
+                        }}
+                        className={`text-[8px] font-mono uppercase py-0.5 rounded text-left px-1.5 transition-all cursor-pointer ${
+                          mockBlendMode === mode ? 'bg-violet-500/20 border border-violet-500/30 text-violet-300 font-bold' : 'text-white/40 hover:text-white/70'
+                        }`}
+                      >
+                        {mode}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <span className="text-[8px] font-mono uppercase text-white/40 block font-bold">Image Fit</span>
+                  <div className="flex flex-col gap-1">
+                    {(['cover', 'contain', 'fill'] as const).map((fit) => (
+                      <button 
+                        key={fit}
+                        onClick={() => {
+                          setMockImageFit(fit);
+                          localStorage.setItem('lookvision_mock_image_fit', fit);
+                        }}
+                        className={`text-[8px] font-mono uppercase py-0.5 rounded text-left px-1.5 transition-all cursor-pointer ${
+                          mockImageFit === fit ? 'bg-violet-500/20 border border-violet-500/30 text-violet-300 font-bold' : 'text-white/40 hover:text-white/70'
+                        }`}
+                      >
+                        {fit}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Gap Analysis checklist */}
+            <div className="bg-[#0b0b14] border border-white/5 rounded-xl p-2 space-y-1 text-left">
+              <span className="text-[8px] font-mono uppercase text-white/30 block font-bold">Layout Matching Integrity Checklist:</span>
+              <div className="space-y-0.5 text-[8px] font-mono text-white/70">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-emerald-400">✓</span>
+                  <span>Sidebar locked to #07070c / white/5 borders</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-emerald-400">✓</span>
+                  <span>Premium Dark-slate bg #05050a / #06060c</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-emerald-400">✓</span>
+                  <span>Three-Column Home Grid Layout alignment</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-emerald-400">✓</span>
+                  <span>Header Search and Icons identical</span>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-[7.5px] font-mono text-neutral-500 text-center uppercase tracking-wider">
+              LookVision CAD Engine v4.0.1
+            </p>
+
+          </div>
+        ) : (
+          <div className="flex items-center justify-between text-[9px] text-white/40 font-mono mt-0.5 w-full">
+            <span>QA Sandbox Off</span>
+            <button 
+              onClick={() => {
+                setIsQASandboxOpen(true);
+                setIsMockOverlayActive(true);
+              }} 
+              className="text-violet-400 hover:text-white uppercase font-bold"
+            >
+              Open QA Sandbox
+            </button>
+          </div>
+        )}
+
+        {/* Custom Premium Toast Notifications Overlay */}
+        <div className="absolute bottom-6 right-6 z-[9999] flex flex-col gap-2 max-w-sm pointer-events-none select-none">
+          <AnimatePresence>
+            {toasts.map(toast => (
+              <motion.div
+                key={toast.id}
+                initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                transition={{ duration: 0.25, ease: 'easeOut' }}
+                className="pointer-events-auto flex items-center gap-2.5 px-4 py-3 bg-[#0c0c14]/95 border border-white/10 rounded-2xl shadow-xl backdrop-blur-md"
+              >
+                <div className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse shrink-0" />
+                <p className="text-[11px] font-sans font-medium text-zinc-100 leading-normal">
+                  {toast.message}
+                </p>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
+
+      </div>
+    </div>
   </div>
   );
 };

@@ -344,6 +344,36 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
     });
     return () => unsubscribe();
   }, [user]);
+
+  // Listen to B2B simulator stock drop events
+  useEffect(() => {
+    const handleStockDrop = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (!customEvent.detail) return;
+      const detail = customEvent.detail;
+      const parsedPrice = parseFloat(String(detail.price).replace(/[^\d\.]/g, '')) || 450;
+      
+      const newProduct = {
+        id: `stock-drop-${Date.now()}`,
+        title: detail.title,
+        description: `Exclusive consignment stock drop of ${detail.title} from ${detail.merchant}. SKU: ${detail.sku}. Total available quantity: ${detail.qty} units.`,
+        price: parsedPrice,
+        location: detail.merchant.includes('Milan') ? 'Milan Atelier Hub' : 'Kyoto Atelier Hub',
+        category: 'Outerwear',
+        availability: 'Limited',
+        shopName: detail.merchant,
+        imageUrl: "https://images.unsplash.com/photo-1479064555552-3ef4979f8908?q=80&w=450&auto=format&fit=crop",
+        vibeTags: ['consignment', 'couture', 'star-grade', 'new-release']
+      };
+
+      setRawProducts(prev => [newProduct, ...prev]);
+    };
+
+    window.addEventListener('lookvision_add_retail_stock', handleStockDrop);
+    return () => {
+      window.removeEventListener('lookvision_add_retail_stock', handleStockDrop);
+    };
+  }, []);
   
   // AI Prompt search states
   const [searchPrompt, setSearchPrompt] = useState('');
@@ -374,16 +404,11 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
     const handleOpenCloset = () => {
       setIsClosetDrawerOpen(true);
     };
-    const handleShowToast = (e: Event) => {
-      const customEvent = e as CustomEvent;
-      alert(customEvent.detail);
-    };
     
     window.addEventListener('lookvision_switch_feed_filter', handleSwitchFilter);
     window.addEventListener('lookvision_set_search_query', handleSetQuery);
     window.addEventListener('lookvision_open_orders', handleOpenOrders);
     window.addEventListener('lookvision_open_closet', handleOpenCloset);
-    window.addEventListener('lookvision_show_toast', handleShowToast);
     
     return () => {
       clearTimeout(timer);
@@ -391,7 +416,6 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
       window.removeEventListener('lookvision_set_search_query', handleSetQuery);
       window.removeEventListener('lookvision_open_orders', handleOpenOrders);
       window.removeEventListener('lookvision_open_closet', handleOpenCloset);
-      window.removeEventListener('lookvision_show_toast', handleShowToast);
     };
   }, []);
 

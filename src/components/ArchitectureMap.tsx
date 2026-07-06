@@ -6,8 +6,10 @@ import {
   CheckCircle, RefreshCw, Send, Terminal, ArrowRight,
   Database, Activity, Shield, Info, Heart, Bell, Settings, Eye, Globe,
   Moon, Sun, Search, SlidersHorizontal, Plus, Star, Award, ChevronDown,
-  Trash2, ShieldCheck, AlertTriangle, Play, HelpCircle
+  Trash2, ShieldCheck, AlertTriangle, Play, HelpCircle,
+  Camera, Scissors, Truck, DollarSign, TrendingUp, Sliders, Layers3
 } from 'lucide-react';
+import { UnifiedFashionOS } from '../features/ai-core/UnifiedFashionOS';
 
 interface ArchitectureMapProps {
   user: any;
@@ -36,9 +38,123 @@ export const ArchitectureMap: React.FC<ArchitectureMapProps> = ({
   const [activeHoverNode, setActiveHoverNode] = useState<string | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [selectedMilestone, setSelectedMilestone] = useState<number>(2);
-  const [isWaitlisted, setIsWaitlisted] = useState<Record<string, boolean>>({});
+  
+  // Initialize modules as registered/waitlisted so they are immediately simulate-able
+  const [isWaitlisted, setIsWaitlisted] = useState<Record<string, boolean>>({
+    'right-designer': true,
+    'right-photoshoot': true,
+    'right-moodboard': true,
+    'right-influencer': true,
+    'right-brand': true,
+    'right-shopper': true,
+    'right-global': true,
+    'right-vip-stars': true,
+    'right-cinema-wardrobe': true,
+    'right-retail-stock': true
+  });
+
+  // Track the actual percentage completion of each feature module
+  const [featureProgress, setFeatureProgress] = useState<Record<string, number>>({
+    'right-designer': 100,
+    'right-photoshoot': 100,
+    'right-vip-stars': 100,
+    'right-cinema-wardrobe': 100,
+    'right-retail-stock': 100,
+    'right-moodboard': 100,
+    'right-influencer': 100,
+    'right-brand': 100,
+    'right-shopper': 100,
+    'right-global': 100
+  });
+
+  const [compilingFeatureId, setCompilingFeatureId] = useState<string | null>(null);
+
+  const handleAutoUnlock = (id: string, label: string) => {
+    if (compilingFeatureId) return;
+    setCompilingFeatureId(id);
+    
+    window.dispatchEvent(new CustomEvent('lookvision_show_toast', { 
+      detail: `⚙️ Deploying ${label}: Compiling typescript bundles & mapping APIs...` 
+    }));
+    
+    setTimeout(() => {
+      setFeatureProgress(prev => ({ ...prev, [id]: 100 }));
+      setCompilingFeatureId(null);
+      window.dispatchEvent(new CustomEvent('lookvision_show_toast', { 
+        detail: `🚀 SUCCESS: ${label} is now 100% READY and unlocked in live preview!` 
+      }));
+    }, 2200);
+  };
+  
   const [showNotificationCount, setShowNotificationCount] = useState(5);
   const [cartCount, setCartCount] = useState(2);
+
+  // Experimental Sandbox Simulator States
+  const [activeSimModule, setActiveSimModule] = useState<{ id: string; label: string } | null>(null);
+  const [simStep, setSimStep] = useState<'IDLE' | 'SIMULATING' | 'RESULT'>('IDLE');
+  const [simLogs, setSimLogs] = useState<string[]>([]);
+  
+  // 1. Designer State
+  const [designerCategory, setDesignerCategory] = useState('Trench Coat');
+  const [designerSliders, setDesignerSliders] = useState({ drape: 75, asymmetry: 60, luster: 25, density: 80 });
+  const [designerFabric, setDesignerFabric] = useState('Organic Cotton 450gsm');
+  const [designerColor, setDesignerColor] = useState('Midnight Charcoal');
+  const [designerResult, setDesignerResult] = useState<any>(null);
+
+  // 2. Photoshoot State
+  const [selectedPhotoshootItems, setSelectedPhotoshootItems] = useState<string[]>([]);
+  const [photoshootEnv, setPhotoshootEnv] = useState('Brutalist Concrete Atrium');
+  const [photoshootStance, setPhotoshootStance] = useState('Dynamic Stride');
+  const [photoshootLighting, setPhotoshootLighting] = useState('Neon Indigo Contrast Rim');
+  const [photoshootResult, setPhotoshootResult] = useState<any>(null);
+
+  // 3. Mood Board State
+  const [moodTags, setMoodTags] = useState('Cyber-brutalist, Minimalist, Low-Saturation');
+  const [moodColors, setMoodColors] = useState<string[]>(['#05050a', '#181135', '#f43f5e', '#a78bfa']);
+  const [pinnedItems, setPinnedItems] = useState<string[]>([]);
+  const [moodBoardSaved, setMoodBoardSaved] = useState<any>(null);
+
+  // 4. Influencer State
+  const [influencerTitle, setInfluencerTitle] = useState('Silent Asymmetry Layering');
+  const [influencerRegion, setInfluencerRegion] = useState('Kyoto Streetwear (Harajuku)');
+  const [influencerPlatform, setInfluencerPlatform] = useState('Look Vision Collective Feed');
+  const [influencerStats, setInfluencerStats] = useState({ views: 0, likes: 0, saves: 0, earning: 0 });
+  const [influencerActive, setInfluencerActive] = useState(false);
+
+  // 5. Collaborator State
+  const [collarSpecs, setCollarSpecs] = useState({ seam: 5, lapel: 8.5, sleeve: 62, chest: 104 });
+  const [collarSourcing, setCollarSourcing] = useState('Artisanal Kyoto Atelier');
+  const [collarBids, setCollarBids] = useState<Array<{ name: string; price: number; detail: string; time: string }>>([]);
+
+  // 6. Personal Shopper State
+  const [shopperOccasion, setShopperOccasion] = useState('High-End Art Gallery Opening');
+  const [shopperResult, setShopperResult] = useState<any>(null);
+
+  // 7. Global Freight State
+  const [freightOrigin, setFreightOrigin] = useState('Boutique Vault Rome (IT)');
+  const [freightDestCity, setFreightDestCity] = useState('Tokyo');
+  const [freightDestCountry, setFreightDestCountry] = useState('Japan');
+  const [freightClass, setFreightClass] = useState('Zero-Emission Green Freight');
+  const [freightResult, setFreightResult] = useState<any>(null);
+
+  // 8. VIP & Celebrity Fitting Suite State
+  const [vipActorName, setVipActorName] = useState('Timothée Chalamet');
+  const [vipEventClass, setVipEventClass] = useState('Met Gala Red Carpet');
+  const [vipBespokeStyle, setVipBespokeStyle] = useState('Avant-Garde Velvet Silhouette');
+  const [vipFittingResult, setVipFittingResult] = useState<any>(null);
+
+  // 9. Cinema Wardrobe Master State
+  const [cinemaScriptText, setCinemaScriptText] = useState('A lone detective walks under the heavy, neon-lit neon rain, his coat collar pulled up against the cybernetic chill.');
+  const [cinemaPeriodEra, setCinemaPeriodEra] = useState('Cyberpunk Neo-Noir');
+  const [cinemaAtmosphere, setCinemaAtmosphere] = useState('Midnight Heavy Rain');
+  const [cinemaWardrobeResult, setCinemaWardrobeResult] = useState<any>(null);
+
+  // 10. New Stock B2B Drops State
+  const [stockMerchantName, setStockMerchantName] = useState('Prada Milan');
+  const [stockQuantity, setStockQuantity] = useState(25);
+  const [stockItemType, setStockItemType] = useState('Luxury Cashmere Trench Coat');
+  const [stockPrice, setStockPrice] = useState(480);
+  const [stockDropResult, setStockDropResult] = useState<any>(null);
   
   // Connection line coordinates
   const [connections, setConnections] = useState<Connection[]>([
@@ -74,7 +190,10 @@ export const ArchitectureMap: React.FC<ArchitectureMapProps> = ({
     { id: 'f-influencer', fromId: 'right-influencer', toId: 'app-community-grid', color: '#f59e0b', dashArray: '4 4' },
     { id: 'f-brand', fromId: 'right-brand', toId: 'app-marketplace-grid', color: '#f59e0b', dashArray: '4 4' },
     { id: 'f-shopper', fromId: 'right-shopper', toId: 'app-hero', color: '#f59e0b', dashArray: '4 4' },
-    { id: 'f-global', fromId: 'right-global', toId: 'app-marketplace', color: '#f59e0b', dashArray: '4 4' }
+    { id: 'f-global', fromId: 'right-global', toId: 'app-marketplace', color: '#f59e0b', dashArray: '4 4' },
+    { id: 'f-vip-stars', fromId: 'right-vip-stars', toId: 'app-virtual-try', color: '#ff3399', dashArray: '4 4' },
+    { id: 'f-cinema-wardrobe', fromId: 'right-cinema-wardrobe', toId: 'app-collections', color: '#818cf8', dashArray: '4 4' },
+    { id: 'f-retail-stock', fromId: 'right-retail-stock', toId: 'app-marketplace', color: '#10b981', dashArray: '4 4' }
   ]);
 
   const [coords, setCoords] = useState<Record<string, { x1: number; y1: number; x2: number; y2: number }>>({});
@@ -154,6 +273,230 @@ export const ArchitectureMap: React.FC<ArchitectureMapProps> = ({
     }));
   };
 
+  const handleLaunchSimulator = (id: string, label: string) => {
+    setActiveSimModule({ id, label });
+    setSimStep('IDLE');
+    setSimLogs([]);
+    
+    // Auto-select initial closet items from UnifiedFashionOS state if available
+    const osState = UnifiedFashionOS.getState();
+    const closet = osState.unifiedStyleMemory?.wardrobe_items || [];
+    if (closet.length > 0) {
+      setSelectedPhotoshootItems(closet.slice(0, 2).map(c => c.id));
+      setPinnedItems(closet.slice(0, 1).map(c => c.id));
+    }
+  };
+
+  const handleRunSimulation = () => {
+    if (!activeSimModule) return;
+    setSimStep('SIMULATING');
+    setSimLogs([]);
+
+    const moduleLogs: Record<string, string[]> = {
+      'right-designer': [
+        '⚙️ Initializing Sartorial Drafting Canvas...',
+        '📏 Standardizing measurements to metric coordinate arrays...',
+        '🧬 Running cloth-simulation collision algorithm (4,500 vertices)...',
+        '⚡ Applying fabric weight constraints and tension fields...',
+        '🎨 Rendering colorway shaders and luster index textures...',
+        '✓ Tech Pack successfully compiled!'
+      ],
+      'right-photoshoot': [
+        '📷 Camera rig initialized. Calibrating lens profile (Sony 85mm GM)...',
+        '🪐 Reconstructing environment geometry vectors...',
+        '💡 Computing 3-point light ray-casting (neon indigo accents)...',
+        '🚶 Placing model mesh in dynamic stride posture...',
+        '🧥 Layering selected closet garments onto the virtual mannequin...',
+        '✓ High-fidelity campaign layout successfully composited!'
+      ],
+      'right-moodboard': [
+        '🎨 Initializing creative blank-board matrix...',
+        '📌 Pinning selected wardrobe items to grid anchor points...',
+        '🌈 Analyzing core colorways and extracting palette swatches...',
+        '🏷️ Processing typography and custom aesthetic tags...',
+        '⚡ Balancing layout whitespace & margins...',
+        '✓ Mood Board compiled!'
+      ],
+      'right-influencer': [
+        '🌐 Authenticating Look Vision collective broadcast stream...',
+        '📡 Injecting metadata tags into decentralized content nodes...',
+        '📊 Priming engagement simulator models (Kyoto/Milan/New York)...',
+        '🚀 Publishing coordinate layout to active subscriber queues...',
+        '✓ Simulation online. Listening for engagement feedback loop...'
+      ],
+      'right-brand': [
+        '🤝 Handshaking with B2B Collaborator Network...',
+        '📜 Transmitting bespoke garment technical specs to ateliers...',
+        '⚖️ Analyzing atelier workloads and sourcing capacity parameters...',
+        '📥 Receiving incoming secure bids from tailoring hubs...',
+        '✓ Bidding queue completed!'
+      ],
+      'right-shopper': [
+        '🧭 Aligning occasion requirements with Style DNA parameters...',
+        '👕 Fetching full wardrobe state database from storage...',
+        '🧩 Comparing item attributes (color, formality, fabric) against occasion gravity...',
+        '🧠 Scoring wardrobe coherence indices in real-time...',
+        '💡 Formulating custom layering & accessory suggestions...',
+        '✓ Recommendation portfolio ready!'
+      ],
+      'right-global': [
+        '📦 Retrieving luxury packaging dimensions...',
+        '🚛 Querying international freight routing corridors...',
+        '🛡️ Calculating customs duties, import tariffs, and local offsets...',
+        '🌱 Computing eco-emissions equivalents...',
+        '✓ Routing ledger generated!'
+      ]
+    };
+
+    const targetLogs = moduleLogs[activeSimModule.id] || ['Processing simulation parameters...'];
+    
+    let currentIdx = 0;
+    const interval = setInterval(() => {
+      if (currentIdx < targetLogs.length) {
+        setSimLogs(prev => [...prev, targetLogs[currentIdx]]);
+        currentIdx++;
+      } else {
+        clearInterval(interval);
+        
+        // Generate mock results
+        const osState = UnifiedFashionOS.getState();
+        const closet = osState.unifiedStyleMemory?.wardrobe_items || [];
+        
+        if (activeSimModule.id === 'right-designer') {
+          setDesignerResult({
+            id: `techpack-${Date.now()}`,
+            name: `${designerColor} ${designerCategory}`,
+            token: `NFT-SART-VAL-${Math.floor(Math.random() * 900000 + 100000)}`,
+            weight: designerSliders.density > 60 ? 'Heavyweight 480gsm' : 'Midweight 280gsm',
+            specs: {
+              'Drape Slouch': `${designerSliders.drape}%`,
+              'Asymmetric Offsets': `${designerSliders.asymmetry}%`,
+              'Luster/Glow': `${designerSliders.luster}%`,
+              'Fabric Density': `${designerSliders.density}%`
+            },
+            instructions: [
+              `Cut asymmetric bias pattern at a ${Math.floor(designerSliders.asymmetry / 2)}° slope`,
+              `Apply reinforced flatlock stitch across tension shoulders`,
+              `Treat face with fluorocarbon-free hydrophobic finish (Luster level: ${designerSliders.luster}%)`
+            ]
+          });
+        } else if (activeSimModule.id === 'right-photoshoot') {
+          const selectedTitles = closet
+            .filter(c => selectedPhotoshootItems.includes(c.id))
+            .map(c => c.title);
+          setPhotoshootResult({
+            camera: 'Sony α7R V, 85mm f/1.2 GM Prime',
+            settings: '1/250s at f/1.4, ISO 160',
+            grading: 'Low-Saturation High-Contrast Indigo Cinematic LUT',
+            summary: `A high-contrast wide-angle composition showcasing the model in a ${photoshootStance} stance within a ${photoshootEnv}. Under ${photoshootLighting} lighting, the draped contours of ${selectedTitles.join(' & ') || 'Custom Garment'} cast long structural shadows on the rough background surfaces.`
+          });
+        } else if (activeSimModule.id === 'right-moodboard') {
+          const selectedItemsObj = closet.filter(c => pinnedItems.includes(c.id));
+          setMoodBoardSaved({
+            title: `Aesthetic Synthesis Board`,
+            tags: moodTags.split(',').map(t => t.trim()),
+            colors: moodColors,
+            items: selectedItemsObj
+          });
+        } else if (activeSimModule.id === 'right-influencer') {
+          setInfluencerActive(true);
+          setInfluencerStats({ views: 0, likes: 0, saves: 0, earning: 0 });
+        } else if (activeSimModule.id === 'right-brand') {
+          const bidders = [
+            { name: 'Atelier Brera (Milan)', price: 340, detail: 'Using premium double-faced silk threading and seamless shoulders.', time: '2 mins ago' },
+            { name: 'Kyoto Artisanal Collective', price: 420, detail: 'Hand-dyed indigo accents, blind hem stitching, and custom inside embroidery.', time: '1 min ago' },
+            { name: 'London Savile Row (Beta Partners)', price: 495, detail: 'Interlined structured canvas with horsehair drape support.', time: 'Just now' }
+          ];
+          setCollarBids(bidders);
+        } else if (activeSimModule.id === 'right-shopper') {
+          // Construct recommendations based on wardrobe
+          const matchingItems = closet.slice(0, 3);
+          const score = Math.floor(Math.random() * 15 + 85); // 85 - 100%
+          setShopperResult({
+            score,
+            verdict: score > 92 ? 'Perfect Harmony' : 'Highly Coherent',
+            items: matchingItems,
+            advice: `Your closet items matches the ${shopperOccasion} occasion weight perfectly. We recommend layering your ${matchingItems[0]?.title || 'overcoat'} as an asymmetric outer frame with high-contrast inner accessories.`
+          });
+        } else if (activeSimModule.id === 'right-global') {
+          const distance = Math.floor(Math.random() * 4000 + 1000);
+          const time = freightClass.includes('Express') ? '36 - 48 Hours' : '3 - 5 Days';
+          const fee = freightClass.includes('Express') ? 45.00 : 15.00;
+          setFreightResult({
+            distance: `${distance} km`,
+            time,
+            fee: `$${fee.toFixed(2)} USD`,
+            carbon: freightClass.includes('Green') ? '0.00 kg CO₂ (Carbon offsetted)' : `${(distance * 0.12).toFixed(2)} kg CO₂`
+          });
+        } else if (activeSimModule.id === 'right-vip-stars') {
+          const fitScore = Math.floor(Math.random() * 8 + 92);
+          setVipFittingResult({
+            vip: vipActorName,
+            event: vipEventClass,
+            silhouette: vipBespokeStyle,
+            fitScore: `${fitScore}%`,
+            measurements: {
+              chest: '98 cm',
+              shoulder: '44 cm',
+              inseam: '82 cm',
+              collar: '39 cm'
+            },
+            recommendation: `Bespoke drapes formulated for ${vipActorName}'s visual frame during the ${vipEventClass}. Combining a deep ${vipBespokeStyle} layer with an ultra-matte interior ensures maximum spotlight flash absorption and zero crease persistence.`
+          });
+        } else if (activeSimModule.id === 'right-cinema-wardrobe') {
+          setCinemaWardrobeResult({
+            era: cinemaPeriodEra,
+            vibe: cinemaAtmosphere,
+            scriptSegment: cinemaScriptText,
+            extractedOutfits: [
+              { character: 'Protagonist', garment: 'Asymmetric Oiled Heavy Canvas Trench', color: 'Oil-Slick Slate' },
+              { character: 'Supporting Cast', garment: 'Matte Technical Utility Under-Vest', color: 'Sub-Zero Ash' }
+            ],
+            lightingGuide: 'Low-key high-contrast side keylights with cold backlighting profiles.'
+          });
+        } else if (activeSimModule.id === 'right-retail-stock') {
+          setStockDropResult({
+            merchant: stockMerchantName,
+            item: stockItemType,
+            qty: stockQuantity,
+            price: `$${stockPrice} USD`,
+            sku: `B2B-DRP-${Math.floor(Math.random() * 90000 + 10000)}`,
+            postedLive: false
+          });
+        }
+
+        setSimStep('RESULT');
+      }
+    }, 450);
+  };
+
+  useEffect(() => {
+    let timer: any;
+    if (influencerActive && simStep === 'RESULT') {
+      timer = setInterval(() => {
+        setInfluencerStats(prev => {
+          const nextViews = prev.views + Math.floor(Math.random() * 45 + 15);
+          const nextLikes = prev.likes + Math.floor(Math.random() * 15 + 5);
+          const nextSaves = prev.saves + Math.floor(Math.random() * 8 + 2);
+          const nextEarning = prev.earning + (Math.random() > 0.8 ? Math.random() * 14 + 3 : 0);
+          
+          if (nextViews >= 4500) {
+            clearInterval(timer);
+            setInfluencerActive(false);
+          }
+          
+          return {
+            views: nextViews,
+            likes: nextLikes,
+            saves: nextSaves,
+            earning: parseFloat(nextEarning.toFixed(2))
+          };
+        });
+      }, 300);
+    }
+    return () => clearInterval(timer);
+  }, [influencerActive, simStep]);
+
   const handleInteractiveClick = (tabId: string, label: string) => {
     if (onNavigateToTab) {
       onNavigateToTab(tabId);
@@ -162,6 +505,10 @@ export const ArchitectureMap: React.FC<ArchitectureMapProps> = ({
       }));
     }
   };
+
+  const totalFeatureCount = Object.keys(featureProgress).length;
+  const totalProgressSum = Object.values(featureProgress).reduce((a, b) => a + b, 0);
+  const overallPercentage = Math.round(totalProgressSum / totalFeatureCount);
 
   return (
     <div 
@@ -266,6 +613,12 @@ export const ArchitectureMap: React.FC<ArchitectureMapProps> = ({
               <span>🖥️ Focus Mode (App Only)</span>
             </button>
           )}
+          <div className="flex flex-wrap items-center gap-2.5 bg-white/[0.02] border border-white/5 rounded-xl px-4 py-2 text-xs font-mono">
+            <span className="text-white/40 uppercase">System Progress:</span>
+            <span className="text-violet-400 font-bold flex items-center gap-1.5 animate-pulse">
+              <span className="w-2 h-2 rounded-full bg-violet-400" /> {overallPercentage}% Complete
+            </span>
+          </div>
           <div className="flex flex-wrap items-center gap-2.5 bg-white/[0.02] border border-white/5 rounded-xl px-4 py-2 text-xs font-mono">
             <span className="text-white/40 uppercase">Ecosystem Health:</span>
             <span className="text-emerald-400 font-bold flex items-center gap-1.5">
@@ -1019,13 +1372,13 @@ export const ArchitectureMap: React.FC<ArchitectureMapProps> = ({
           </div>
 
           {/* FUTURE MODULES */}
-          <div className="bg-[#07070e]/80 border border-amber-500/10 rounded-2xl p-4 shadow-xl space-y-4">
+          <div className="bg-[#07070e]/80 border border-violet-500/10 rounded-2xl p-4 shadow-xl space-y-4">
             <div className="flex items-center justify-between border-b border-white/5 pb-2.5">
-              <h2 className="text-[11px] font-bold font-mono tracking-[0.2em] text-amber-400 uppercase">
-                FUTURE MODULES (Locked)
+              <h2 className="text-[11px] font-bold font-mono tracking-[0.2em] text-violet-400 uppercase">
+                ADVANCED CAPABILITY SUITE (AUTOMATED COMPILE)
               </h2>
-              <span className="text-[8px] font-mono bg-amber-500/10 border border-amber-500/20 text-amber-300 px-2 py-0.5 rounded uppercase flex items-center gap-1">
-                <Lock className="w-2.5 h-2.5" /> Locked
+              <span className="text-[8px] font-mono bg-violet-500/10 border border-violet-500/20 text-violet-300 px-2 py-0.5 rounded uppercase flex items-center gap-1">
+                <Activity className="w-2.5 h-2.5 animate-pulse" /> Auto-Unlock Active
               </span>
             </div>
 
@@ -1033,13 +1386,20 @@ export const ArchitectureMap: React.FC<ArchitectureMapProps> = ({
               {[
                 { id: 'right-designer', label: 'AI Fashion Designer', desc: 'Tweak silhouettes & draft complete clothes.', milestone: 'Milestone 3' },
                 { id: 'right-photoshoot', label: 'AI Photoshoot', desc: 'Render model campaigns with customized poses.', milestone: 'Milestone 3' },
+                { id: 'right-vip-stars', label: 'VIP & Celebrity Fitting Suite', desc: 'Design, measurements & fittings for Actors, Stars, VIPs.', milestone: 'Milestone 3' },
                 { id: 'right-moodboard', label: 'Mood Board Curation', desc: 'Interactive style workspace boards.', milestone: 'Milestone 4' },
+                { id: 'right-cinema-wardrobe', label: 'Cinema Wardrobe Master', desc: 'Script-to-costume layout matching for Film & Drama makers.', milestone: 'Milestone 4' },
                 { id: 'right-influencer', label: 'Style Influencer Mode', desc: 'Telemetry shares & profile monetization.', milestone: 'Milestone 4' },
                 { id: 'right-brand', label: 'Brand Collaborator Hub', desc: 'Secure boutique portal for custom tailors.', milestone: 'Milestone 5' },
                 { id: 'right-shopper', label: 'AI Personal Shopper', desc: 'Live wardrobe matching recommendations.', milestone: 'Milestone 5' },
-                { id: 'right-global', label: 'Global Marketplace API', desc: 'Worldwide luxury freight shipping routing.', milestone: 'Milestone 5' }
+                { id: 'right-global', label: 'Global Marketplace API', desc: 'Worldwide luxury freight shipping routing.', milestone: 'Milestone 5' },
+                { id: 'right-retail-stock', label: 'New Stock Drops B2B', desc: 'Sourcing, inventory consignment & drops for new boutique stock.', milestone: 'Milestone 5' }
               ].map((fut) => {
                 const waitlisted = isWaitlisted[fut.id];
+                const progress = featureProgress[fut.id] || 0;
+                const isCompiling = compilingFeatureId === fut.id;
+                const isFullyReady = progress === 100;
+
                 return (
                   <div
                     key={fut.id}
@@ -1049,28 +1409,93 @@ export const ArchitectureMap: React.FC<ArchitectureMapProps> = ({
                       setActiveHoverNode(null);
                       updateCoordinates();
                     }}
-                    className="bg-white/[0.01] border border-white/5 rounded-xl p-3 space-y-2 text-left transition-all hover:bg-white/[0.02]"
+                    className={`border rounded-xl p-3 space-y-2 text-left transition-all duration-300 ${
+                      isFullyReady
+                        ? 'bg-emerald-500/[0.01] border-emerald-500/10 hover:bg-emerald-500/[0.02] hover:border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.02)]'
+                        : isCompiling
+                        ? 'bg-violet-500/[0.02] border-violet-500/30 animate-pulse'
+                        : 'bg-white/[0.01] border-white/5 hover:bg-white/[0.02]'
+                    }`}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5">
-                        <Lock className="w-3 h-3 text-amber-400/80" />
-                        <span className="text-xs font-bold text-white/90">{fut.label}</span>
+                        {isFullyReady ? (
+                          <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+                        ) : isCompiling ? (
+                          <RefreshCw className="w-3.5 h-3.5 text-violet-400 animate-spin" />
+                        ) : (
+                          <Lock className="w-3 h-3 text-amber-400/80" />
+                        )}
+                        <span className={`text-xs font-bold ${isFullyReady ? 'text-emerald-400/90' : 'text-white/90'}`}>
+                          {fut.label}
+                        </span>
                       </div>
-                      <span className="text-[8px] font-mono text-amber-400/80">{fut.milestone}</span>
+                      <span className={`text-[8px] font-mono ${isFullyReady ? 'text-emerald-400/80 bg-emerald-500/10 border border-emerald-500/20 px-1.5 rounded' : 'text-amber-400/80'}`}>
+                        {isFullyReady ? 'READY' : fut.milestone}
+                      </span>
                     </div>
+                    
                     <p className="text-[10px] text-white/40 leading-relaxed font-sans">{fut.desc}</p>
                     
-                    <div className="pt-0.5 text-right">
-                      <button
-                        onClick={() => joinWaitlist(fut.id, fut.label)}
-                        className={`text-[8px] font-mono tracking-wider uppercase px-2 py-0.5 rounded border select-none transition-all ${
-                          waitlisted 
-                            ? 'bg-amber-500/10 border-amber-500/30 text-amber-400 font-bold' 
-                            : 'bg-white/5 border-white/10 text-white/60 hover:text-white hover:border-white/30 cursor-pointer'
-                        }`}
-                      >
-                        {waitlisted ? 'Priority Registered' : 'Pre-register'}
-                      </button>
+                    {/* Visual Progress Bar */}
+                    <div className="space-y-1 pt-1">
+                      <div className="flex justify-between text-[8px] font-mono text-white/35">
+                        <span>Development Integration</span>
+                        <span className={isFullyReady ? 'text-emerald-400 font-bold' : isCompiling ? 'text-violet-400 animate-pulse' : 'text-amber-400'}>
+                          {isCompiling ? 'Compiling bundles...' : `${progress}% Complete`}
+                        </span>
+                      </div>
+                      <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
+                        <div 
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            isFullyReady 
+                              ? 'bg-emerald-500' 
+                              : isCompiling 
+                              ? 'bg-gradient-to-r from-violet-500 to-fuchsia-500' 
+                              : 'bg-amber-500'
+                          }`}
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="pt-1 flex gap-2 justify-between items-center">
+                      <div className="flex items-center gap-1.5">
+                        {isFullyReady ? (
+                          <span className="text-[8.5px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded font-bold uppercase tracking-wider">
+                            Unlocked ✓
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => handleAutoUnlock(fut.id, fut.label)}
+                            disabled={isCompiling}
+                            className="text-[8.5px] font-mono bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 px-2 py-0.5 rounded border border-amber-500/30 hover:border-amber-500/50 font-bold transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1"
+                          >
+                            {isCompiling ? (
+                              <>
+                                <RefreshCw className="w-2 h-2 animate-spin" />
+                                <span>Building...</span>
+                              </>
+                            ) : (
+                              <span>🛠 Auto-Unlock</span>
+                            )}
+                          </button>
+                        )}
+                      </div>
+
+                      {waitlisted && (
+                        <button
+                          onClick={() => handleLaunchSimulator(fut.id, fut.label)}
+                          className={`text-[8.5px] font-mono px-2 py-0.5 rounded font-bold transition-all cursor-pointer flex items-center gap-0.5 shrink-0 shadow-sm ${
+                            isFullyReady 
+                              ? 'bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400/30' 
+                              : 'bg-violet-600 hover:bg-violet-500 text-white border border-violet-400/30'
+                          }`}
+                        >
+                          <Play className="w-2.5 h-2.5 fill-white text-white" />
+                          <span>Simulate</span>
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
@@ -1224,6 +1649,1057 @@ export const ArchitectureMap: React.FC<ArchitectureMapProps> = ({
 
       </div>
 
+      {/* SANDBOX PROTOTYPE SIMULATOR MODAL */}
+      <AnimatePresence>
+        {activeSimModule && (
+          <div className="fixed inset-0 z-[110] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-[#0b0b14] border border-white/10 rounded-2xl max-w-2xl w-full p-6 text-left space-y-5 max-h-[90vh] overflow-y-auto no-scrollbar relative"
+            >
+              {/* Top ambient banner */}
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-violet-500 to-pink-500" />
+              
+              <div className="flex justify-between items-start">
+                <div>
+                  <div className="flex items-center gap-1.5 text-[9px] font-mono tracking-[0.2em] text-violet-400 uppercase font-bold">
+                    <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" />
+                    <span>Experimental Sandbox</span>
+                    <span>•</span>
+                    <span className="text-zinc-400">Prototyping Node</span>
+                  </div>
+                  <h3 className="text-lg font-serif font-light text-white mt-1">
+                    {activeSimModule.label} Simulator
+                  </h3>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setActiveSimModule(null);
+                    setSimStep('IDLE');
+                    setSimLogs([]);
+                    setInfluencerActive(false);
+                  }}
+                  className="px-2.5 py-1 text-[9px] font-mono text-white/40 hover:text-white hover:bg-white/5 border border-white/10 rounded-lg cursor-pointer transition-all"
+                >
+                  [CLOSE Sandbox]
+                </button>
+              </div>
+
+              {simStep === 'IDLE' && (
+                <div className="space-y-4">
+                  <p className="text-xs text-white/50 leading-relaxed font-sans">
+                    This sandbox compiles a dynamic, offline-simulated instance of the <strong className="text-white font-semibold">{activeSimModule.label}</strong> service. Tweak parameters below to run tech pack generations, photorealistic grading, or algorithmic influencer streams.
+                  </p>
+
+                  {/* 1. DESIGNER CONTROLS */}
+                  {activeSimModule.id === 'right-designer' && (
+                    <div className="space-y-4 bg-white/[0.01] border border-white/5 p-4 rounded-xl">
+                      <span className="text-[9px] font-mono text-white/30 uppercase tracking-wider block font-bold">Design Parameters</span>
+                      
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-mono text-white/40 uppercase">Garment Category</label>
+                          <select
+                            value={designerCategory}
+                            onChange={(e) => setDesignerCategory(e.target.value)}
+                            className="w-full bg-neutral-900 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white/80 focus:outline-none"
+                          >
+                            <option>Trench Coat</option>
+                            <option>Knitwear Turtleneck</option>
+                            <option>Raw Canvas Denim</option>
+                            <option>Asymmetrical Utility Vest</option>
+                          </select>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-mono text-white/40 uppercase">Fabric Manifest</label>
+                          <select
+                            value={designerFabric}
+                            onChange={(e) => setDesignerFabric(e.target.value)}
+                            className="w-full bg-neutral-900 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white/80 focus:outline-none"
+                          >
+                            <option>Organic Cotton 450gsm</option>
+                            <option>Japanese Raw Selvedge</option>
+                            <option>Recycled Cordura Weave</option>
+                            <option>Loro Piana Cashmere Blend</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-mono text-white/40 uppercase">Colorway Profile</label>
+                        <select
+                          value={designerColor}
+                          onChange={(e) => setDesignerColor(e.target.value)}
+                          className="w-full bg-neutral-900 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white/80 focus:outline-none"
+                        >
+                          <option>Midnight Charcoal</option>
+                          <option>Aesthetic Off-White</option>
+                          <option>Cyberpunk Indigo Glow</option>
+                          <option>Gravel Zinc</option>
+                        </select>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4 pt-2">
+                        {Object.entries(designerSliders).map(([key, val]) => (
+                          <div key={key} className="space-y-1">
+                            <div className="flex justify-between text-[10px] font-mono">
+                              <span className="capitalize text-white/40">{key} Index</span>
+                              <span className="text-violet-400 font-bold">{val}%</span>
+                            </div>
+                            <input
+                              type="range"
+                              min="10"
+                              max="100"
+                              value={val}
+                              onChange={(e) => setDesignerSliders(prev => ({ ...prev, [key]: parseInt(e.target.value) }))}
+                              className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-violet-500"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 2. PHOTOSHOOT CONTROLS */}
+                  {activeSimModule.id === 'right-photoshoot' && (
+                    <div className="space-y-4 bg-white/[0.01] border border-white/5 p-4 rounded-xl">
+                      <span className="text-[9px] font-mono text-white/30 uppercase tracking-wider block font-bold">Campaign Parameters</span>
+
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-mono text-white/40 uppercase block">Mannequin Closet Apparel (Multi-select)</label>
+                        <div className="bg-neutral-950/80 border border-white/5 rounded-lg p-2 max-h-24 overflow-y-auto no-scrollbar grid grid-cols-2 gap-1.5">
+                          {(() => {
+                            const closet = UnifiedFashionOS.getState().unifiedStyleMemory?.wardrobe_items || [];
+                            return closet.map(item => {
+                              const isSel = selectedPhotoshootItems.includes(item.id);
+                              return (
+                                <button
+                                  key={item.id}
+                                  onClick={() => {
+                                    setSelectedPhotoshootItems(prev =>
+                                      prev.includes(item.id) ? prev.filter(id => id !== item.id) : [...prev, item.id]
+                                    );
+                                  }}
+                                  className={`p-1.5 rounded text-left text-[9.5px] border truncate flex justify-between items-center cursor-pointer ${
+                                    isSel ? 'bg-violet-500/10 border-violet-500/30 text-violet-300' : 'bg-white/[0.01] border-white/5 text-white/60'
+                                  }`}
+                                >
+                                  <span className="truncate">{item.title}</span>
+                                  {isSel && <span className="text-[7.5px] font-bold text-violet-400 shrink-0 ml-1">✓</span>}
+                                </button>
+                              );
+                            });
+                          })()}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-mono text-white/40 uppercase">Location Set</label>
+                          <select
+                            value={photoshootEnv}
+                            onChange={(e) => setPhotoshootEnv(e.target.value)}
+                            className="w-full bg-neutral-900 border border-white/10 rounded-lg px-2 py-1.5 text-[10px] text-white focus:outline-none"
+                          >
+                            <option>Brutalist Concrete Atrium</option>
+                            <option>Tokyo Cyberpunk Alleyways</option>
+                            <option>Nordic Glacial Ridge</option>
+                            <option>High-Contrast Studio Spread</option>
+                          </select>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-mono text-white/40 uppercase">Model posture</label>
+                          <select
+                            value={photoshootStance}
+                            onChange={(e) => setPhotoshootStance(e.target.value)}
+                            className="w-full bg-neutral-900 border border-white/10 rounded-lg px-2 py-1.5 text-[10px] text-white focus:outline-none"
+                          >
+                            <option>Dynamic Stride</option>
+                            <option>Sartorial Silhouette Pivot</option>
+                            <option>Static Gaze / Contemplative</option>
+                            <option>Heroic Architectural Angle</option>
+                          </select>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-mono text-white/40 uppercase">Lighting Preset</label>
+                          <select
+                            value={photoshootLighting}
+                            onChange={(e) => setPhotoshootLighting(e.target.value)}
+                            className="w-full bg-neutral-900 border border-white/10 rounded-lg px-2 py-1.5 text-[10px] text-white focus:outline-none"
+                          >
+                            <option>Golden Hour Ambient Glow</option>
+                            <option>Neon Indigo Contrast Rim</option>
+                            <option>Diffused Overcast Nordic</option>
+                            <option>Cinematic High-Key Spotlight</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 3. MOOD BOARD CONTROLS */}
+                  {activeSimModule.id === 'right-moodboard' && (
+                    <div className="space-y-4 bg-white/[0.01] border border-white/5 p-4 rounded-xl">
+                      <span className="text-[9px] font-mono text-white/30 uppercase tracking-wider block font-bold">Curation Elements</span>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-mono text-white/40 uppercase">Aesthetic Core Tags</label>
+                        <input
+                          type="text"
+                          value={moodTags}
+                          onChange={(e) => setMoodTags(e.target.value)}
+                          className="w-full bg-neutral-900 border border-white/10 rounded-lg px-3 py-2 text-xs font-mono text-white focus:outline-none"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-mono text-white/40 uppercase block">Palette Color Blocks</label>
+                          <div className="flex gap-2">
+                            {moodColors.map((col, idx) => (
+                              <button
+                                key={idx}
+                                onClick={() => {
+                                  const hex = prompt('Enter color hex:', col);
+                                  if (hex && hex.startsWith('#')) {
+                                    setMoodColors(prev => prev.map((c, i) => i === idx ? hex : c));
+                                  }
+                                }}
+                                className="w-8 h-8 rounded-lg border border-white/10 transition-all cursor-pointer flex items-center justify-center relative"
+                                style={{ backgroundColor: col }}
+                                title="Click to adjust hex"
+                              >
+                                <span className="text-[7px] font-mono bg-black/40 text-white rounded px-0.5 pointer-events-none">{col.substring(1)}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-mono text-white/40 uppercase block">Pin Closet Garments</label>
+                          <div className="bg-neutral-950 border border-white/5 rounded-lg p-1.5 max-h-16 overflow-y-auto no-scrollbar flex flex-wrap gap-1">
+                            {(() => {
+                              const closet = UnifiedFashionOS.getState().unifiedStyleMemory?.wardrobe_items || [];
+                              return closet.map(item => {
+                                const isPinned = pinnedItems.includes(item.id);
+                                return (
+                                  <button
+                                    key={item.id}
+                                    onClick={() => {
+                                      setPinnedItems(prev =>
+                                        prev.includes(item.id) ? prev.filter(id => id !== item.id) : [...prev, item.id]
+                                      );
+                                    }}
+                                    className={`px-1.5 py-0.5 rounded text-[8px] font-mono border cursor-pointer ${
+                                      isPinned ? 'bg-pink-500/10 border-pink-500/20 text-pink-300' : 'bg-white/5 border-white/5 text-white/40'
+                                    }`}
+                                  >
+                                    {item.title}
+                                  </button>
+                                );
+                              });
+                            })()}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 4. INFLUENCER CONTROLS */}
+                  {activeSimModule.id === 'right-influencer' && (
+                    <div className="space-y-4 bg-white/[0.01] border border-white/5 p-4 rounded-xl">
+                      <span className="text-[9px] font-mono text-white/30 uppercase tracking-wider block font-bold">Algorithmic Broadcast Options</span>
+                      
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-mono text-white/40 uppercase">Aesthetic Post Title</label>
+                        <input
+                          type="text"
+                          value={influencerTitle}
+                          onChange={(e) => setInfluencerTitle(e.target.value)}
+                          className="w-full bg-neutral-900 border border-white/10 rounded-lg px-3 py-2 text-xs font-mono text-white focus:outline-none"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-mono text-white/40 uppercase">Demographic Focus Region</label>
+                          <select
+                            value={influencerRegion}
+                            onChange={(e) => setInfluencerRegion(e.target.value)}
+                            className="w-full bg-neutral-900 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none"
+                          >
+                            <option>Kyoto Streetwear (Harajuku)</option>
+                            <option>Milan High-Fashion (Brera)</option>
+                            <option>London Cyber Couture (Soho)</option>
+                            <option>New York Brutalist Minimalist</option>
+                          </select>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-mono text-white/40 uppercase">Platform Feed Route</label>
+                          <select
+                            value={influencerPlatform}
+                            onChange={(e) => setInfluencerPlatform(e.target.value)}
+                            className="w-full bg-neutral-900 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none"
+                          >
+                            <option>Look Vision Collective Feed</option>
+                            <option>Aesthetic Telemetry Stream</option>
+                            <option>Boutique Curation Feed</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 5. BRAND COLLABORATOR CONTROLS */}
+                  {activeSimModule.id === 'right-brand' && (
+                    <div className="space-y-4 bg-white/[0.01] border border-white/5 p-4 rounded-xl">
+                      <span className="text-[9px] font-mono text-white/30 uppercase tracking-wider block font-bold">Atelier Specification Drafting</span>
+
+                      <div className="grid grid-cols-4 gap-2">
+                        {Object.entries(collarSpecs).map(([spec, val]) => (
+                          <div key={spec} className="space-y-1">
+                            <label className="text-[9px] font-mono text-white/40 uppercase block truncate">{spec} (cm/mm)</label>
+                            <input
+                              type="number"
+                              value={val}
+                              onChange={(e) => setCollarSpecs(prev => ({ ...prev, [spec]: parseFloat(e.target.value) || 0 }))}
+                              className="w-full bg-neutral-900 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none font-mono"
+                            />
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-mono text-white/40 uppercase">Atelier Tier Preference</label>
+                        <select
+                          value={collarSourcing}
+                          onChange={(e) => setCollarSourcing(e.target.value)}
+                          className="w-full bg-neutral-900 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                        >
+                          <option>Artisanal Kyoto Atelier</option>
+                          <option>Premium High-Capacity Atelier (Milan)</option>
+                          <option>Sustainable Local Atelier Collective</option>
+                        </select>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 6. PERSONAL SHOPPER CONTROLS */}
+                  {activeSimModule.id === 'right-shopper' && (
+                    <div className="space-y-4 bg-white/[0.01] border border-white/5 p-4 rounded-xl">
+                      <span className="text-[9px] font-mono text-white/30 uppercase tracking-wider block font-bold">Occasion Target Matcher</span>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-mono text-white/40 uppercase">Occasion & Event Environment</label>
+                        <select
+                          value={shopperOccasion}
+                          onChange={(e) => setShopperOccasion(e.target.value)}
+                          className="w-full bg-neutral-900 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                        >
+                          <option>High-End Art Gallery Opening</option>
+                          <option>Techwear Midnight Meetup</option>
+                          <option>Rainy Coffee Stroll</option>
+                          <option>Business Casual Pitch Presentation</option>
+                        </select>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 7. GLOBAL SHIPPER CONTROLS */}
+                  {activeSimModule.id === 'right-global' && (
+                    <div className="space-y-4 bg-white/[0.01] border border-white/5 p-4 rounded-xl">
+                      <span className="text-[9px] font-mono text-white/30 uppercase tracking-wider block font-bold">Luxury Logistics Configuration</span>
+
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-mono text-white/40 uppercase">Origin Vault</label>
+                          <select
+                            value={freightOrigin}
+                            onChange={(e) => setFreightOrigin(e.target.value)}
+                            className="w-full bg-neutral-900 border border-white/10 rounded-lg px-2 py-1.5 text-[10px] text-white focus:outline-none"
+                          >
+                            <option>Boutique Vault Rome (IT)</option>
+                            <option>Atelier Kyoto (JP)</option>
+                            <option>Sartorial Warehouse New York (US)</option>
+                          </select>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-mono text-white/40 uppercase">Destination City</label>
+                          <input
+                            type="text"
+                            value={freightDestCity}
+                            onChange={(e) => setFreightDestCity(e.target.value)}
+                            className="w-full bg-neutral-900 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none font-sans"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-mono text-white/40 uppercase">Destination Country</label>
+                          <input
+                            type="text"
+                            value={freightDestCountry}
+                            onChange={(e) => setFreightDestCountry(e.target.value)}
+                            className="w-full bg-neutral-900 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none font-sans"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-mono text-white/40 uppercase block">Logistics Class</label>
+                        <select
+                          value={freightClass}
+                          onChange={(e) => setFreightClass(e.target.value)}
+                          className="w-full bg-neutral-900 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                        >
+                          <option>Zero-Emission Green Freight</option>
+                          <option>Sartorial Air Express</option>
+                          <option>Standard Secure Courier</option>
+                        </select>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 8. VIP & CELEBRITY FITTING CONTROLS */}
+                  {activeSimModule.id === 'right-vip-stars' && (
+                    <div className="space-y-4 bg-white/[0.01] border border-white/5 p-4 rounded-xl">
+                      <span className="text-[9px] font-mono text-white/30 uppercase tracking-wider block font-bold">VIP & Star Fit Specifier</span>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-mono text-white/40 uppercase">Actor / Star Name</label>
+                          <input
+                            type="text"
+                            value={vipActorName}
+                            onChange={(e) => setVipActorName(e.target.value)}
+                            className="w-full bg-neutral-900 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                            placeholder="e.g. Timothée Chalamet"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-mono text-white/40 uppercase">Event Class</label>
+                          <select
+                            value={vipEventClass}
+                            onChange={(e) => setVipEventClass(e.target.value)}
+                            className="w-full bg-neutral-900 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white/80 focus:outline-none"
+                          >
+                            <option>Met Gala Red Carpet</option>
+                            <option>Cannes Film Festival Premiere</option>
+                            <option>Bespoke Drama Costume Fitting</option>
+                            <option>VIP Private Gala Appearance</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-mono text-white/40 uppercase">Bespoke Fit Direction</label>
+                        <select
+                          value={vipBespokeStyle}
+                          onChange={(e) => setVipBespokeStyle(e.target.value)}
+                          className="w-full bg-neutral-900 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white/80 focus:outline-none"
+                        >
+                          <option>Avant-Garde Velvet Silhouette</option>
+                          <option>Sleek Monochrome Silk Drape</option>
+                          <option>Structured Double-Breasted Savile</option>
+                          <option>Deconstructed Post-Modern Layering</option>
+                        </select>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 9. CINEMA WARDROBE CONTROLS */}
+                  {activeSimModule.id === 'right-cinema-wardrobe' && (
+                    <div className="space-y-4 bg-white/[0.01] border border-white/5 p-4 rounded-xl">
+                      <span className="text-[9px] font-mono text-white/30 uppercase tracking-wider block font-bold">Drama Script Scene Parser</span>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-mono text-white/40 uppercase block">Screenplay Scene Description / Script Segment</label>
+                        <textarea
+                          rows={3}
+                          value={cinemaScriptText}
+                          onChange={(e) => setCinemaScriptText(e.target.value)}
+                          className="w-full bg-neutral-900 border border-white/10 rounded-lg p-2.5 text-xs text-white focus:outline-none font-mono"
+                          placeholder="Describe the cinematic scene..."
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-mono text-white/40 uppercase">Aesthetic Era</label>
+                          <select
+                            value={cinemaPeriodEra}
+                            onChange={(e) => setCinemaPeriodEra(e.target.value)}
+                            className="w-full bg-neutral-900 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white"
+                          >
+                            <option>Cyberpunk Neo-Noir</option>
+                            <option>Regency Edwardian Elegance</option>
+                            <option>1980s Retro Synthwave</option>
+                            <option>High-Fantasy Textured Woolen</option>
+                          </select>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-mono text-white/40 uppercase">Scene Atmosphere</label>
+                          <select
+                            value={cinemaAtmosphere}
+                            onChange={(e) => setCinemaAtmosphere(e.target.value)}
+                            className="w-full bg-neutral-900 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white"
+                          >
+                            <option>Midnight Heavy Rain</option>
+                            <option>Misty Candlelit Ballroom</option>
+                            <option>Scorching Desert Noon</option>
+                            <option>Overcast Cold Winds</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 10. NEW STOCK B2B CONTROLS */}
+                  {activeSimModule.id === 'right-retail-stock' && (
+                    <div className="space-y-4 bg-white/[0.01] border border-white/5 p-4 rounded-xl">
+                      <span className="text-[9px] font-mono text-white/30 uppercase tracking-wider block font-bold">Stock Drops Sourcing Portal</span>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-mono text-white/40 uppercase">Brand / Merchant Atelier</label>
+                          <input
+                            type="text"
+                            value={stockMerchantName}
+                            onChange={(e) => setStockMerchantName(e.target.value)}
+                            className="w-full bg-neutral-900 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                            placeholder="e.g. Prada Milan"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-mono text-white/40 uppercase">New Release Apparel Name</label>
+                          <input
+                            type="text"
+                            value={stockItemType}
+                            onChange={(e) => setStockItemType(e.target.value)}
+                            className="w-full bg-neutral-900 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                            placeholder="e.g. Cashmere Bomber"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-mono text-white/40 uppercase">Retail Drops Quantity</label>
+                          <input
+                            type="number"
+                            value={stockQuantity}
+                            onChange={(e) => setStockQuantity(parseInt(e.target.value) || 0)}
+                            className="w-full bg-neutral-900 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-mono text-white/40 uppercase">Unit Price ($ USD)</label>
+                          <input
+                            type="number"
+                            value={stockPrice}
+                            onChange={(e) => setStockPrice(parseFloat(e.target.value) || 0)}
+                            className="w-full bg-neutral-900 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="pt-2">
+                    <button
+                      onClick={handleRunSimulation}
+                      className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-mono text-[10.5px] uppercase tracking-wider font-bold py-3 rounded-xl transition-all cursor-pointer shadow-lg shadow-violet-600/10 flex items-center justify-center gap-1.5"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin-slow text-violet-200" />
+                      <span>Compile Simulator Environment</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {simStep === 'SIMULATING' && (
+                <div className="space-y-5 py-6 text-center">
+                  <div className="w-12 h-12 rounded-2xl bg-violet-600/10 border border-violet-500/20 text-violet-400 flex items-center justify-center mx-auto animate-spin">
+                    <RefreshCw className="w-5 h-5" />
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <span className="text-[9px] font-mono tracking-widest text-violet-400 uppercase block font-bold">Compiling Modules</span>
+                    <p className="text-xs text-white/50 italic">"Resolving coordinate dependencies and structural models..."</p>
+                  </div>
+
+                  <div className="bg-neutral-950/80 border border-white/5 p-4 rounded-xl text-left font-mono text-[9px] text-zinc-400 h-36 overflow-y-auto space-y-1.5 no-scrollbar">
+                    {simLogs.map((log, idx) => (
+                      <div key={idx} className="flex gap-2">
+                        <span className="text-violet-500 select-none">[{idx}]</span>
+                        <span>{log}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {simStep === 'RESULT' && (
+                <div className="space-y-5 animate-fade-in">
+                  
+                  {/* Result Header */}
+                  <div className="flex items-center gap-2 border-b border-white/5 pb-3">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                      <CheckCircle className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="text-[9px] font-mono text-emerald-400 uppercase block font-bold">Simulation Complete</span>
+                      <h4 className="text-sm font-bold text-white font-sans">Active Sandbox Output</h4>
+                    </div>
+                  </div>
+
+                  {/* 1. DESIGNER OUTPUT */}
+                  {activeSimModule.id === 'right-designer' && designerResult && (
+                    <div className="space-y-4 text-xs font-sans">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1 bg-neutral-950 p-3 rounded-lg border border-white/5">
+                          <span className="text-[9px] font-mono text-white/30 uppercase block">Digital Validation Token</span>
+                          <span className="text-[10px] font-mono text-emerald-400 font-bold block">{designerResult.token}</span>
+                        </div>
+                        <div className="space-y-1 bg-neutral-950 p-3 rounded-lg border border-white/5">
+                          <span className="text-[9px] font-mono text-white/30 uppercase block">GSM Class weight</span>
+                          <span className="text-[10px] font-mono text-white/80 font-bold block">{designerResult.weight}</span>
+                        </div>
+                      </div>
+
+                      <div className="bg-neutral-950 p-4 rounded-xl border border-white/5 font-mono text-[9px] text-zinc-400">
+                        <p className="text-white font-bold mb-2 uppercase text-[10px]">Technical Drafting Schematic (ASCII):</p>
+                        <pre className="leading-snug text-violet-400 select-all">
+{`          /===============\\
+         /  ___________  \\
+        // /           \\ \\\\
+       // /             \\ \\\\
+      || |   D-SLOUCH:   | ||
+      || |   ${designerResult.specs['Drape Slouch']}        | ||
+      || |               | ||
+      || |   A-BIAS:     | ||
+      || |   ${designerResult.specs['Asymmetric Offsets']}        | ||
+       \\\\ \\             / //
+        \\\\ \\___________/ //
+         \\===============/`}
+                        </pre>
+                      </div>
+
+                      <div className="space-y-2 bg-white/[0.01] border border-white/5 p-3 rounded-xl">
+                        <span className="text-[9px] font-mono text-white/30 uppercase font-bold block">Sartorial Cut & Trim Directives</span>
+                        <ul className="space-y-1.5 text-[11px] text-white/70">
+                          {designerResult.instructions.map((inst: string, i: number) => (
+                            <li key={i} className="flex gap-2">
+                              <span className="text-violet-400 font-bold font-mono">•</span>
+                              <span>{inst}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 2. PHOTOSHOOT OUTPUT */}
+                  {activeSimModule.id === 'right-photoshoot' && photoshootResult && (
+                    <div className="space-y-4 text-xs font-sans">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-neutral-950 p-3 rounded-lg border border-white/5">
+                          <span className="text-[9px] font-mono text-white/30 uppercase block">Production Rig</span>
+                          <span className="font-mono text-[10px] text-zinc-300 block">{photoshootResult.camera}</span>
+                        </div>
+                        <div className="bg-neutral-950 p-3 rounded-lg border border-white/5">
+                          <span className="text-[9px] font-mono text-white/30 uppercase block">Grading LUT</span>
+                          <span className="font-mono text-[10px] text-zinc-300 block truncate">{photoshootResult.grading}</span>
+                        </div>
+                      </div>
+
+                      <div className="bg-neutral-950 p-4 rounded-xl border border-white/5 text-[11px] text-zinc-300 leading-relaxed italic font-serif">
+                        "{photoshootResult.summary}"
+                      </div>
+
+                      <div className="p-4 bg-gradient-to-br from-violet-600/15 to-purple-600/5 border border-violet-500/10 rounded-xl">
+                        <div className="flex justify-between items-center text-[10px] font-mono mb-2">
+                          <span className="text-violet-400">COORDINATE MAPPED RENDER PREVIEW</span>
+                          <span className="text-white/30">H-RES BLUEPRINT</span>
+                        </div>
+                        <div className="h-28 bg-[#05050a] border border-white/5 rounded-lg flex items-center justify-center font-mono text-[9px] text-white/20 select-none">
+                          [V-RAY SPATIAL CAMPAIGN COMPOSITE OUT]
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 3. MOOD BOARD OUTPUT */}
+                  {activeSimModule.id === 'right-moodboard' && moodBoardSaved && (
+                    <div className="space-y-4">
+                      <div className="bg-[#07070c] border border-white/5 p-4 rounded-xl space-y-3">
+                        <div className="flex justify-between items-center">
+                          <h4 className="text-xs font-bold text-white uppercase font-sans tracking-wide">{moodBoardSaved.title}</h4>
+                          <span className="text-[8px] font-mono bg-pink-500/15 border border-pink-500/20 text-pink-300 px-1.5 py-0.5 rounded uppercase">Pinned Collage</span>
+                        </div>
+
+                        <div className="flex flex-wrap gap-1.5">
+                          {moodBoardSaved.tags.map((tag: string, i: number) => (
+                            <span key={i} className="text-[9px] font-mono text-white/50 bg-white/5 px-2 py-0.5 rounded-full">#{tag}</span>
+                          ))}
+                        </div>
+
+                        {/* Colors */}
+                        <div className="flex gap-1.5 pt-1">
+                          {moodBoardSaved.colors.map((col: string, i: number) => (
+                            <div key={i} className="flex-1 h-12 rounded-lg border border-white/10 relative overflow-hidden" style={{ backgroundColor: col }}>
+                              <span className="absolute bottom-1 left-1.5 text-[8px] font-mono bg-black/40 text-white/90 px-1 rounded">{col}</span>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Items pinned */}
+                        <div className="space-y-1.5 border-t border-white/5 pt-3">
+                          <span className="text-[9px] font-mono text-white/30 uppercase block">Pinned Wardrobe Items</span>
+                          <div className="flex flex-wrap gap-1">
+                            {moodBoardSaved.items.map((item: any) => (
+                              <span key={item.id} className="text-[9px] font-sans font-bold bg-violet-600/10 border border-violet-500/20 text-violet-300 px-2 py-1 rounded">
+                                {item.title}
+                              </span>
+                            ))}
+                            {moodBoardSaved.items.length === 0 && (
+                              <span className="text-[9px] font-mono text-white/20 italic">No custom wardrobe items pinned.</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 4. INFLUENCER OUTPUT */}
+                  {activeSimModule.id === 'right-influencer' && (
+                    <div className="space-y-4">
+                      <div className="bg-[#05050a] border border-white/5 p-4 rounded-xl space-y-3.5 relative overflow-hidden">
+                        
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <span className="text-[9px] font-mono text-rose-400 uppercase tracking-widest block font-bold">Simulated Telemetry Stream</span>
+                            <h4 className="text-xs font-bold text-white mt-0.5">"{influencerTitle}"</h4>
+                          </div>
+                          <span className="text-[8px] font-mono bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded uppercase">
+                            {influencerActive ? 'Streaming' : 'Completed'}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-4 gap-2 text-center">
+                          <div className="bg-neutral-950 p-2 rounded-lg border border-white/5">
+                            <span className="text-[9px] font-mono text-white/30 block uppercase">Views</span>
+                            <span className="text-xs font-bold font-mono text-white mt-1 block">{influencerStats.views.toLocaleString()}</span>
+                          </div>
+                          <div className="bg-neutral-950 p-2 rounded-lg border border-white/5">
+                            <span className="text-[9px] font-mono text-white/30 block uppercase">Likes</span>
+                            <span className="text-xs font-bold font-mono text-pink-400 mt-1 block">{influencerStats.likes.toLocaleString()}</span>
+                          </div>
+                          <div className="bg-neutral-950 p-2 rounded-lg border border-white/5">
+                            <span className="text-[9px] font-mono text-white/30 block uppercase">Saves</span>
+                            <span className="text-xs font-bold font-mono text-amber-400 mt-1 block">{influencerStats.saves.toLocaleString()}</span>
+                          </div>
+                          <div className="bg-neutral-950 p-2 rounded-lg border border-white/5">
+                            <span className="text-[9px] font-mono text-white/30 block uppercase">Earning</span>
+                            <span className="text-xs font-bold font-mono text-emerald-400 mt-1 block">${influencerStats.earning.toFixed(2)}</span>
+                          </div>
+                        </div>
+
+                        {/* Pulse progress bar */}
+                        <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-rose-500 transition-all duration-300"
+                            style={{ width: `${Math.min(100, (influencerStats.views / 4500) * 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 5. COLLABORATOR OUTPUT */}
+                  {activeSimModule.id === 'right-brand' && (
+                    <div className="space-y-4">
+                      <span className="text-[9px] font-mono text-white/30 uppercase tracking-widest block font-bold">Incoming Atelier Bids</span>
+                      <div className="space-y-2.5">
+                        {collarBids.map((bid, i) => (
+                          <div key={i} className="bg-[#05050a] border border-white/5 p-3 rounded-xl flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+                            <div className="space-y-1 text-left">
+                              <div className="flex items-center gap-2">
+                                <h5 className="text-[11px] font-bold text-white">{bid.name}</h5>
+                                <span className="text-[8px] font-mono text-zinc-500">{bid.time}</span>
+                              </div>
+                              <p className="text-[10px] text-white/50 leading-relaxed font-sans max-w-md">{bid.detail}</p>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <span className="text-xs font-mono text-emerald-400 font-bold block">${bid.price} USD</span>
+                              <button
+                                onClick={() => {
+                                  window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: `Selected bid from ${bid.name} for $${bid.price}!` }));
+                                  setActiveSimModule(null);
+                                }}
+                                className="text-[8px] font-mono bg-white hover:bg-neutral-200 text-black px-2 py-0.5 rounded font-bold transition-all cursor-pointer block mt-1"
+                              >
+                                Select Bid
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 6. PERSONAL SHOPPER OUTPUT */}
+                  {activeSimModule.id === 'right-shopper' && shopperResult && (
+                    <div className="space-y-4 text-xs font-sans">
+                      <div className="bg-[#05050a] border border-white/5 p-4 rounded-xl flex items-center justify-between">
+                        <div>
+                          <span className="text-[9px] font-mono text-white/30 uppercase block">Occasion Match Score</span>
+                          <span className="text-xl font-serif font-light text-violet-400">{shopperOccasion}</span>
+                        </div>
+                        <div className="text-center shrink-0">
+                          <span className="text-2xl font-mono text-emerald-400 font-bold block">{shopperResult.score}%</span>
+                          <span className="text-[8px] font-mono uppercase bg-emerald-500/10 text-emerald-400 px-1.5 py-0.5 rounded block mt-1 font-bold">{shopperResult.verdict}</span>
+                        </div>
+                      </div>
+
+                      <div className="bg-neutral-950 p-3.5 rounded-xl border border-white/5 text-[11.5px] text-zinc-300 leading-relaxed italic">
+                        "{shopperResult.advice}"
+                      </div>
+
+                      <div className="space-y-2">
+                        <span className="text-[9px] font-mono text-white/30 uppercase block font-bold">Recommended Closet Combination</span>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {shopperResult.items.map((item: any) => (
+                            <div key={item.id} className="bg-white/[0.01] border border-white/5 p-2.5 rounded-lg flex items-center justify-between">
+                              <div>
+                                <span className="text-[10px] font-sans font-bold text-white block">{item.title}</span>
+                                <span className="text-[8px] font-mono text-white/30 uppercase mt-0.5 block">{item.category}</span>
+                              </div>
+                              <span className="text-[9px] font-mono text-violet-400 uppercase">Coherent Match</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 7. GLOBAL FREIGHT OUTPUT */}
+                  {activeSimModule.id === 'right-global' && freightResult && (
+                    <div className="space-y-4 text-xs font-sans">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-neutral-950 p-3 rounded-lg border border-white/5">
+                          <span className="text-[9px] font-mono text-white/30 uppercase block">Sartorial Distance</span>
+                          <span className="font-mono text-[10.5px] text-zinc-300 block">{freightResult.distance}</span>
+                        </div>
+                        <div className="bg-neutral-950 p-3 rounded-lg border border-white/5">
+                          <span className="text-[9px] font-mono text-white/30 uppercase block">Transit Corridor Delivery</span>
+                          <span className="font-mono text-[10.5px] text-zinc-300 block">{freightResult.time}</span>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-neutral-950 p-3 rounded-lg border border-white/5">
+                          <span className="text-[9px] font-mono text-white/30 uppercase block">Estimated Shipping Fee</span>
+                          <span className="font-mono text-[10.5px] text-emerald-400 font-bold block">{freightResult.fee}</span>
+                        </div>
+                        <div className="bg-neutral-950 p-3 rounded-lg border border-white/5">
+                          <span className="text-[9px] font-mono text-white/30 uppercase block">Environmental Footprint</span>
+                          <span className="font-mono text-[10.5px] text-zinc-400 block">{freightResult.carbon}</span>
+                        </div>
+                      </div>
+
+                      <div className="bg-neutral-950 p-4 rounded-xl border border-white/5 font-mono text-[9px] text-zinc-400">
+                        <p className="text-white font-bold mb-1 uppercase text-[10px]">Logistics Ledger:</p>
+                        <p className="leading-relaxed">
+                          SART-ROUTE-OUT // ROUTED FROM: <span className="text-violet-400">{freightOrigin}</span> TO <span className="text-violet-400">{freightDestCity}, {freightDestCountry}</span>. NO CUSTOMS BLOCK DETECTED. CUSTOM DUTY WAIVED UNDER PLATFORM LUXURY TRADE blue-sheet.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 8. VIP & CELEBRITY FITTING OUTPUT */}
+                  {activeSimModule.id === 'right-vip-stars' && vipFittingResult && (
+                    <div className="space-y-4 text-xs font-sans">
+                      <div className="bg-[#05050a] border border-white/5 p-4 rounded-xl flex items-center justify-between">
+                        <div>
+                          <span className="text-[9px] font-mono text-white/30 uppercase block">Actor Fit Synergy</span>
+                          <span className="text-xl font-serif font-light text-rose-400">{vipFittingResult.vip}</span>
+                        </div>
+                        <div className="text-center shrink-0">
+                          <span className="text-2xl font-mono text-pink-500 font-bold block">{vipFittingResult.fitScore}</span>
+                          <span className="text-[8px] font-mono uppercase bg-pink-500/10 text-pink-400 px-1.5 py-0.5 rounded block mt-1 font-bold">Bespoke Fit</span>
+                        </div>
+                      </div>
+
+                      <div className="bg-neutral-950 p-3.5 rounded-xl border border-white/5 text-[11.5px] text-zinc-300 leading-relaxed italic">
+                        "{vipFittingResult.recommendation}"
+                      </div>
+
+                      <div className="space-y-2">
+                        <span className="text-[9px] font-mono text-white/30 uppercase block font-bold">Star Anatomical Measurements</span>
+                        <div className="grid grid-cols-4 gap-2 font-mono text-[10px]">
+                          {Object.entries(vipFittingResult.measurements).map(([key, val]: [any, any]) => (
+                            <div key={key} className="bg-white/[0.01] border border-white/5 p-2 rounded-lg text-center">
+                              <span className="text-[8px] text-white/30 uppercase block">{key}</span>
+                              <span className="text-white font-bold block mt-0.5">{val}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 9. CINEMA WARDROBE OUTPUT */}
+                  {activeSimModule.id === 'right-cinema-wardrobe' && cinemaWardrobeResult && (
+                    <div className="space-y-4 text-xs font-sans">
+                      <div className="bg-neutral-950 p-4 rounded-xl border border-white/5">
+                        <span className="text-[9px] font-mono text-white/30 uppercase block mb-1.5">Parsed Script Scene Segment</span>
+                        <p className="text-[11px] font-mono text-zinc-300 leading-relaxed bg-[#05050a] p-3 rounded-lg border border-white/5">
+                          "{cinemaWardrobeResult.scriptSegment}"
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3 font-mono text-[10px]">
+                        <div className="bg-neutral-950 p-3 rounded-lg border border-white/5">
+                          <span className="text-[8px] text-white/30 uppercase block">Aesthetic Era</span>
+                          <span className="text-white font-bold block mt-0.5">{cinemaWardrobeResult.era}</span>
+                        </div>
+                        <div className="bg-neutral-950 p-3 rounded-lg border border-white/5">
+                          <span className="text-[8px] text-white/30 uppercase block">Environment Vibe</span>
+                          <span className="text-white font-bold block mt-0.5">{cinemaWardrobeResult.vibe}</span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <span className="text-[9px] font-mono text-white/30 uppercase block font-bold">Extracted Cast Wardrobe Breakdown</span>
+                        <div className="space-y-2">
+                          {cinemaWardrobeResult.extractedOutfits.map((out: any, i: number) => (
+                            <div key={i} className="bg-white/[0.01] border border-white/5 p-3 rounded-xl flex items-center justify-between">
+                              <div>
+                                <span className="text-[8px] font-mono text-violet-400 uppercase tracking-wider block font-bold">{out.character}</span>
+                                <span className="text-[11px] font-sans text-white/90 font-bold block mt-0.5">{out.garment}</span>
+                              </div>
+                              <span className="text-[10px] font-mono text-zinc-400 bg-neutral-900 border border-white/10 px-2.5 py-1 rounded-md">{out.color}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="bg-neutral-950 p-3 rounded-xl border border-white/5 font-mono text-[9px] text-zinc-400">
+                        <p className="text-white font-bold mb-1 uppercase text-[10px]">Director's Camera Lighting Guide:</p>
+                        <p className="leading-relaxed">{cinemaWardrobeResult.lightingGuide}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 10. NEW STOCK B2B OUTPUT */}
+                  {activeSimModule.id === 'right-retail-stock' && stockDropResult && (
+                    <div className="space-y-4 text-xs font-sans">
+                      <div className="bg-[#05050a] border border-white/5 p-4 rounded-xl flex items-center justify-between">
+                        <div>
+                          <span className="text-[9px] font-mono text-white/30 uppercase block">Drops Consignor Atelier</span>
+                          <span className="text-xl font-serif font-light text-emerald-400">{stockDropResult.merchant}</span>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <span className="text-[9px] font-mono text-white/30 uppercase block">Assigned SKU</span>
+                          <span className="font-mono text-[11.5px] text-zinc-300 font-bold block mt-0.5">{stockDropResult.sku}</span>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-3 font-mono text-[10px]">
+                        <div className="bg-neutral-950 p-3 rounded-lg border border-white/5">
+                          <span className="text-[8px] text-white/30 uppercase block">Apparel Item</span>
+                          <span className="text-white font-bold block mt-1.5 truncate">{stockDropResult.item}</span>
+                        </div>
+                        <div className="bg-neutral-950 p-3 rounded-lg border border-white/5">
+                          <span className="text-[8px] text-white/30 uppercase block">Drops Qty</span>
+                          <span className="text-white font-bold block mt-1.5">{stockDropResult.qty} Units</span>
+                        </div>
+                        <div className="bg-neutral-950 p-3 rounded-lg border border-white/5">
+                          <span className="text-[8px] text-white/30 uppercase block">B2B Unit Price</span>
+                          <span className="text-emerald-400 font-bold block mt-1.5">{stockDropResult.price}</span>
+                        </div>
+                      </div>
+
+                      <div className="bg-neutral-950 p-4 rounded-xl border border-white/5 font-mono text-[10px] space-y-2">
+                        <p className="text-white font-bold uppercase text-[10.5px]">Platform Stock Consignment Status:</p>
+                        <p className="text-zinc-400 leading-relaxed">
+                          The apparel stock has been verified for textile purity and standard sizing metrics. You can now publish this exclusive drop directly into the LIVE marketplace & community feed for filmmakers, star agents, and shoppers!
+                        </p>
+                      </div>
+
+                      <div className="pt-2">
+                        {stockDropResult.postedLive ? (
+                          <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl p-3 text-center font-mono text-[10px] font-bold uppercase tracking-wider">
+                            ✓ Pushed Successfully to Live Marketplace
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              setStockDropResult((prev: any) => ({ ...prev, postedLive: true }));
+                              
+                              // Dispatch custom event to push this item live to HomeFeed!
+                              window.dispatchEvent(new CustomEvent('lookvision_add_retail_stock', {
+                                detail: {
+                                  title: stockDropResult.item,
+                                  merchant: stockDropResult.merchant,
+                                  price: stockDropResult.price,
+                                  qty: stockDropResult.qty,
+                                  sku: stockDropResult.sku
+                                }
+                              }));
+
+                              window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
+                                detail: `SUCCESS: Consigned stock for ${stockDropResult.item} pushed to Live Marketplace & Community Feed!`
+                              }));
+                            }}
+                            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-mono text-[10.5px] uppercase tracking-wider font-bold py-3.5 rounded-xl transition-all cursor-pointer shadow-lg shadow-emerald-600/10 flex items-center justify-center gap-1.5"
+                          >
+                            <span>🚀 Push Drop to Live Feed / Shop Stock</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      onClick={() => setSimStep('IDLE')}
+                      className="flex-1 py-2.5 bg-white/5 hover:bg-white/10 text-white rounded-xl text-xs font-mono font-medium transition-all cursor-pointer"
+                    >
+                      Reset Simulator
+                    </button>
+                    <button
+                      onClick={() => {
+                        setActiveSimModule(null);
+                        setSimStep('IDLE');
+                        setSimLogs([]);
+                        setInfluencerActive(false);
+                      }}
+                      className="flex-1 py-2.5 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center justify-center"
+                    >
+                      Exit Sandbox
+                    </button>
+                  </div>
+
+                </div>
+              )}
+
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

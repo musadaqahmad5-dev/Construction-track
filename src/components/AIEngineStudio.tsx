@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Sparkles, Cpu, Layers, Shirt, User, Info, 
@@ -9,6 +9,7 @@ import { AIFashionMVPSuite } from './AIFashionMVPSuite';
 
 interface AIEngineStudioProps {
   wardrobe: WardrobeItem[];
+  initialSubTab?: 'GENERATOR' | 'TRY_ON';
 }
 
 interface Avatar {
@@ -20,8 +21,12 @@ interface Avatar {
   styleDNA: string;
 }
 
-export const AIEngineStudio: React.FC<AIEngineStudioProps> = ({ wardrobe }) => {
-  const [studioSubTab, setStudioSubTab] = useState<'GENERATOR' | 'TRY_ON'>('GENERATOR');
+export const AIEngineStudio: React.FC<AIEngineStudioProps> = ({ wardrobe, initialSubTab = 'GENERATOR' }) => {
+  const [studioSubTab, setStudioSubTab] = useState<'GENERATOR' | 'TRY_ON'>(initialSubTab);
+
+  useEffect(() => {
+    setStudioSubTab(initialSubTab);
+  }, [initialSubTab]);
 
   // Virtual Try On States
   const [selectedAvatar, setSelectedAvatar] = useState<string>('avatar-1');

@@ -1425,7 +1425,7 @@ export const AIFashionMVPSuite: React.FC = () => {
             </div>
 
             {/* Generated & Governance Enforced Outfit Cards Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 font-sans">
+            <div className="grid grid-cols-1 gap-6 font-sans">
               {fiosData.outfits.slice(0, 3).map((outfit, index) => {
                 const isBestMonetized = fiosData.monetization_summary?.best_conversion_outfit_index === index;
                 const isPrimary = index === 0;
@@ -1443,93 +1443,98 @@ export const AIFashionMVPSuite: React.FC = () => {
                     }`}
                     id={`fios-look-card-${index}`}
                   >
-                    <div className="space-y-4">
-                      {/* Primary / Alternative Pick & Confidence Label Indicators */}
-                      <div className="flex flex-col gap-1.5 border-b border-white/5 pb-3">
-                        <div className="flex items-center justify-between">
-                          <span className={`text-[9px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
-                            isPrimary ? 'bg-indigo-500/25 text-indigo-300 border border-indigo-500/30' : 'bg-white/5 text-zinc-400 border border-white/5'
-                          }`}>
-                            {isPrimary ? '✦ Primary Pick' : 'Alternative Pick'}
-                          </span>
-                          <span className="text-[9px] font-mono text-zinc-500">Look 0{index + 1}</span>
-                        </div>
-                        <div className="flex items-center justify-between text-[10px]">
-                          <span className="text-zinc-500 font-mono">Confidence Label:</span>
-                          <span className="text-emerald-400 font-mono font-bold">
-                            {(outfit.confidence || 92) >= 90 ? 'Exceptional Match' : 'High Quality'}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Premium AI Lookbook Image Section */}
-                      <div className="relative aspect-[3/4] w-full rounded-xl overflow-hidden bg-zinc-950/80 border border-white/5 group/img">
-                        {(outfitImages[index] || outfit.imageUrl) ? (
-                          <div className="relative w-full h-full">
-                            <img 
-                              src={outfitImages[index] || outfit.imageUrl} 
-                              alt={`AI Lookbook ${index + 1}`} 
-                              referrerPolicy="no-referrer"
-                              className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover/img:scale-105"
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20" />
-                            <div className="absolute bottom-2 left-2 right-2 flex justify-between items-center text-[9px] font-mono text-white/90 bg-black/60 backdrop-blur-md px-2 py-1 rounded-md border border-white/5">
-                              <span className="flex items-center gap-1">
-                                <Sparkles className="w-2.5 h-2.5 text-indigo-400" />
-                                IMAGEN 4.0 ACTIVE
-                              </span>
-                              <span className="text-zinc-400">High-Fidelity</span>
+                    <div className="flex flex-col md:flex-row gap-6 items-stretch w-full">
+                      {/* LEFT COLUMN: Premium AI Lookbook Image Section */}
+                      <div className="w-full md:w-[280px] shrink-0">
+                        <div className="relative aspect-[3/4] w-full h-full rounded-xl overflow-hidden bg-zinc-950/80 border border-white/5 group/img min-h-[350px]">
+                          {(outfitImages[index] || outfit.imageUrl) ? (
+                            <div className="relative w-full h-full">
+                              <img 
+                                src={outfitImages[index] || outfit.imageUrl} 
+                                alt={`AI Lookbook ${index + 1}`} 
+                                referrerPolicy="no-referrer"
+                                className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover/img:scale-105"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20" />
+                              <div className="absolute bottom-2 left-2 right-2 flex justify-between items-center text-[9px] font-mono text-white/90 bg-black/60 backdrop-blur-md px-2 py-1 rounded-md border border-white/5">
+                                <span className="flex items-center gap-1">
+                                  <Sparkles className="w-2.5 h-2.5 text-indigo-400" />
+                                  IMAGEN 4.0 ACTIVE
+                                </span>
+                                <span className="text-zinc-400">High-Fidelity</span>
+                              </div>
                             </div>
-                          </div>
-                        ) : generatingImage[index] ? (
-                          <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center space-y-3 bg-black/45 backdrop-blur-sm">
-                            <Loader2 className="w-6 h-6 text-indigo-400 animate-spin" />
-                            <div className="space-y-1">
-                              <span className="text-[10px] font-mono text-zinc-300 block uppercase tracking-wider animate-pulse">
-                                Synthesizing Look...
-                              </span>
-                              <span className="text-[8px] font-mono text-zinc-500 block">
-                                Curation in synthesis via cloud GPU
-                              </span>
+                          ) : generatingImage[index] ? (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center space-y-3 bg-black/45 backdrop-blur-sm">
+                              <Loader2 className="w-6 h-6 text-indigo-400 animate-spin" />
+                              <div className="space-y-1">
+                                <span className="text-[10px] font-mono text-zinc-300 block uppercase tracking-wider animate-pulse">
+                                  Synthesizing Look...
+                                </span>
+                                <span className="text-[8px] font-mono text-zinc-500 block">
+                                  Curation in synthesis via cloud GPU
+                                </span>
+                              </div>
                             </div>
-                          </div>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => handleGenerateOutfitImage(index)}
-                            className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center space-y-2 cursor-pointer transition-all bg-[#121214]/60 hover:bg-indigo-950/20 w-full h-full border-none outline-none"
-                          >
-                            <div className="p-3 rounded-full bg-white/[0.02] border border-white/5 group-hover/img:border-indigo-500/30 group-hover/img:bg-indigo-500/5 transition-all">
-                              <ImageIcon className="w-5 h-5 text-zinc-400 group-hover/img:text-indigo-400 transition-colors" />
-                            </div>
-                            <div className="space-y-1">
-                              <span className="text-[10px] font-mono text-zinc-300 font-bold uppercase tracking-wider block group-hover/img:text-indigo-300 transition-colors">
-                                ✦ Visualize Style Photo
-                              </span>
-                              <span className="text-[8px] font-mono text-zinc-500 block max-w-[200px] mx-auto leading-relaxed">
-                                Generate a photorealistic 3:4 lookbook image for this outfit
-                              </span>
-                            </div>
-                          </button>
-                        )}
-
-                        {imageError[index] && (
-                          <div className="absolute inset-x-2 bottom-2 bg-rose-500/10 border border-rose-500/20 rounded-md p-1.5 text-center">
-                            <p className="text-[8px] font-mono text-rose-300 leading-tight">
-                              Error: {imageError[index]}
-                            </p>
-                            <button 
-                              type="button" 
-                              onClick={(e) => { e.stopPropagation(); handleGenerateOutfitImage(index); }}
-                              className="text-[8px] font-mono text-white underline mt-0.5 hover:text-rose-200"
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleGenerateOutfitImage(index)}
+                              className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center space-y-2 cursor-pointer transition-all bg-[#121214]/60 hover:bg-indigo-950/20 w-full h-full border-none outline-none"
                             >
-                              Retry Visual Generation
+                              <div className="p-3 rounded-full bg-white/[0.02] border border-white/5 group-hover/img:border-indigo-500/30 group-hover/img:bg-indigo-500/5 transition-all">
+                                <ImageIcon className="w-5 h-5 text-zinc-400 group-hover/img:text-indigo-400 transition-colors" />
+                              </div>
+                              <div className="space-y-1">
+                                <span className="text-[10px] font-mono text-zinc-300 font-bold uppercase tracking-wider block group-hover/img:text-indigo-300 transition-colors">
+                                  ✦ Visualize Style Photo
+                                </span>
+                                <span className="text-[8px] font-mono text-zinc-500 block max-w-[200px] mx-auto leading-relaxed">
+                                  Generate a photorealistic 3:4 lookbook image for this outfit
+                                </span>
+                              </div>
                             </button>
-                          </div>
-                        )}
+                          )}
+
+                          {imageError[index] && (
+                            <div className="absolute inset-x-2 bottom-2 bg-rose-500/10 border border-rose-500/20 rounded-md p-1.5 text-center">
+                              <p className="text-[8px] font-mono text-rose-300 leading-tight">
+                                Error: {imageError[index]}
+                              </p>
+                              <button 
+                                type="button" 
+                                onClick={(e) => { e.stopPropagation(); handleGenerateOutfitImage(index); }}
+                                className="text-[8px] font-mono text-white underline mt-0.5 hover:text-rose-200"
+                              >
+                                Retry Visual Generation
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
 
-                      {/* Wearable specific garments display */}
+                      {/* RIGHT COLUMN: Outfit details & actions next to image */}
+                      <div className="flex-1 flex flex-col justify-between space-y-4">
+                        <div className="space-y-4">
+                          {/* Primary / Alternative Pick & Confidence Label Indicators */}
+                          <div className="flex flex-col gap-1.5 border-b border-white/5 pb-3">
+                            <div className="flex items-center justify-between">
+                              <span className={`text-[9px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
+                                isPrimary ? 'bg-indigo-500/25 text-indigo-300 border border-indigo-500/30' : 'bg-white/5 text-zinc-400 border border-white/5'
+                              }`}>
+                                {isPrimary ? '✦ Primary Pick' : 'Alternative Pick'}
+                              </span>
+                              <span className="text-[9px] font-mono text-zinc-500">Look 0{index + 1}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-[10px]">
+                              <span className="text-zinc-500 font-mono">Confidence Label:</span>
+                              <span className="text-emerald-400 font-mono font-bold">
+                                {(outfit.confidence || 92) >= 90 ? 'Exceptional Match' : 'High Quality'}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Wearable specific garments display */}
                       <div className="space-y-2">
                         {outfit.items?.top && (
                           <div className="flex items-start gap-2 bg-white/[0.01] border border-white/5 rounded-lg p-2 hover:bg-white/[0.03] transition-colors">
@@ -1663,6 +1668,8 @@ export const AIFashionMVPSuite: React.FC = () => {
                         </div>
                       )}
                     </div>
+                  </div>
+                </div>
 
                     {/* Reasoning write-up capsule */}
                     <div className="space-y-2 pt-3 border-t border-white/5 text-left text-xs">
