@@ -259,6 +259,83 @@ export async function handler(event: any, context: any) {
     };
   }
 
+  // 2.5 STYLING INPUT INTENT SAFEGUARD (FASHION GUARDRAIL)
+  async function validateFashionQuery(query: string, key: string): Promise<{ isValid: boolean; error?: string }> {
+    const lowercase = query.toLowerCase();
+    
+    // If query is extremely short and obviously unrelated
+    const nonFashionExact = ["car", "cars", "dog", "dogs", "cat", "cats", "spaceship", "computer", "house", "building", "food", "pizza", "apple", "banana", "tree", "plant", "math", "code", "coding"];
+    if (nonFashionExact.includes(lowercase)) {
+      return {
+        isValid: false,
+        error: "This AI system is trained and calibrated strictly for luxury fashion curation, wardrobe coordination, and sartorial style lookbooks. Please specify a fashion or outfit-related styling query."
+      };
+    }
+
+    // Define positive keywords to bypass classification for obviously safe queries (saves API cost & time)
+    const obviouslyFashion = [
+      "outfit", "lookbook", "wardrobe", "wear", "dress", "clothing", "apparel", "attire", "garment", "suit", "blazer", "trousers", "styling", "sneakers", "boots", "loafers"
+    ];
+    const hasObviouslyFashion = obviouslyFashion.some(kw => lowercase.includes(kw));
+    if (hasObviouslyFashion && lowercase.length < 50) {
+      return { isValid: true };
+    }
+
+    // Use Gemini 3.5-flash to perform a fast, accurate classification check
+    try {
+      const classificationPrompt = `You are the Fashion Intelligence Filter. Analyze the user's styling request query and determine if it is related to fashion, style, garments, clothing, attire, personal styling, lookbooks, outfit coordination, or footwear.
+User Query: "${query}"
+
+Is this query related to fashion, styling, apparel, or clothing? Respond with exactly "YES" or "NO" and nothing else. No punctuation, no explanation.`;
+
+      const classificationPayload = {
+        contents: [{ parts: [{ text: classificationPrompt }] }],
+        generationConfig: {
+          temperature: 0.0,
+          maxOutputTokens: 5
+        }
+      };
+
+      const modelName = "gemini-3.5-flash";
+      const classificationUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${key}`;
+
+      const res = await fetch(classificationUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(classificationPayload)
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim()?.toUpperCase() || "";
+        if (text.includes("NO")) {
+          return {
+            isValid: false,
+            error: "This AI system is trained and calibrated strictly for luxury fashion curation, wardrobe coordination, and sartorial style lookbooks. Please specify a fashion or outfit-related styling query."
+          };
+        }
+      }
+    } catch (err) {
+      console.warn("[Validation] Gemini classification check bypassed due to error:", err);
+    }
+
+    return { isValid: true };
+  }
+
+  const validation = await validateFashionQuery(userInput, apiKey);
+  if (!validation.isValid) {
+    const { globalEvent } = emitTelemetry("FASHION_VALIDATION_REJECTED", "400", "VALIDATION_ERROR", 0);
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({
+        mode: "VALIDATION_ERROR",
+        error: validation.error,
+        telemetry: globalEvent
+      })
+    };
+  }
+
   // HIGH_ERROR_RATE (Autonomous Safe Mode): Immediate zero-cost structured recovery fallback
   if (runtimeState === "HIGH_ERROR_RATE") {
     console.log("[APCC] System in HIGH_ERROR_RATE mode. Deploying SRE-Telemetry safe recovery mock capsule.");
@@ -417,26 +494,55 @@ Ensure no clashing seasonal styles or duplications under strict governance check
   const modelName = "gemini-3.5-flash";
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
-  let response;
-  try {
-    response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(payload)
-    });
-  } catch (netErr: any) {
-    console.log("[APCC] Connection failure to Gemini:", netErr.message);
-    const { globalEvent } = emitTelemetry("GENERATE_CONTENT_OUTBOUND", "503", "GEMINI_FAILED", 0);
-    return getSafeRecoveryResponse(tenantId, globalEvent, `APCC SRE Alert: Network failure contacting style AI (${netErr.message || netErr}). Gracefully fell back to local lookbooks.`);
+  let response: any = null;
+  let lastError: any = null;
+  const maxAttempts = 3;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (response.ok) {
+        break;
+      }
+
+      // Retry on transient status codes (503, 500, 429)
+      if (response.status === 503 || response.status === 500 || response.status === 429) {
+        console.log(`[APCC] Attempt ${attempt} failed with status ${response.status}. Retrying...`);
+        lastError = new Error(`HTTP ${response.status}`);
+        if (attempt < maxAttempts) {
+          await new Promise(resolve => setTimeout(resolve, attempt * 500));
+          continue;
+        }
+      } else {
+        // Other non-ok statuses (e.g. 400 Bad Request) don't need retry
+        break;
+      }
+    } catch (netErr: any) {
+      console.log(`[APCC] Attempt ${attempt} connection failure to Gemini:`, netErr.message);
+      lastError = netErr;
+      if (attempt < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, attempt * 500));
+        continue;
+      }
+    }
   }
 
-  // Handle immediate invalid non-200 responses (Zero self-healing/retry attempt)
-  if (!response.ok) {
-    console.log(`[APCC] Non-OK API response status: ${response.status}`);
-    const { globalEvent } = emitTelemetry("GENERATE_CONTENT_OUTBOUND", String(response.status), "GEMINI_FAILED", 0);
-    return getSafeRecoveryResponse(tenantId, globalEvent, `APCC SRE Alert: Style AI service is currently overloaded (HTTP ${response.status}). Gracefully fell back to local lookbooks.`);
+  if (!response || !response.ok) {
+    const statusStr = response ? String(response.status) : "503";
+    console.log(`[APCC] All ${maxAttempts} attempts failed. Status: ${statusStr}. Error: ${lastError?.message || lastError}`);
+    const { globalEvent } = emitTelemetry("GENERATE_CONTENT_OUTBOUND", statusStr, "GEMINI_FAILED", 0);
+    return getSafeRecoveryResponse(
+      tenantId,
+      globalEvent,
+      `APCC SRE Alert: Style AI service is currently overloaded or unreachable (HTTP ${statusStr}). Gracefully fell back to local lookbooks.`
+    );
   }
 
   const responseBodyRaw = await response.text();

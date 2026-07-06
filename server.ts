@@ -204,6 +204,17 @@ async function startServer() {
   let isFirestoreDisabled = false;
   const memoryQuotas = new Map<string, { images: number; recommendations: number }>();
 
+  // Preemptive Firestore boot-test to verify credentials access
+  try {
+    const db = getFirestore();
+    await db.collection("system_verification_status").limit(1).get();
+    console.log("[Quota System] Firestore connection verified successfully on boot.");
+  } catch (err: any) {
+    const errMsg = err?.message || String(err);
+    console.info(`[Quota System] Preemptive Firestore boot-test failed (${errMsg.substring(0, 120)}). Activating robust in-memory quota fallback tracking immediately.`);
+    isFirestoreDisabled = true;
+  }
+
   // Firestore-backed Quota Verification & Deduction
   const checkAndDeductQuota = async (userId: string, type: 'images' | 'recommendations'): Promise<{ allowed: boolean; remaining?: number; limit?: number; error?: string }> => {
     if (userId === "guest-sartorialist-user-100") {
@@ -797,6 +808,24 @@ async function startServer() {
       }
 
       const { theme, vibe, garments, gender, formality, season, setting, provider } = req.body;
+      
+      // Strict Sarto-Guardrail for Image Generation
+      const testVibe = (vibe || "").toLowerCase();
+      const testTheme = (theme || "").toLowerCase();
+      const testSetting = (setting || "").toLowerCase();
+      const testCombined = `${testTheme} ${testVibe} ${testSetting}`;
+      const nonFashionBlocked = ["car", "cars", "dog", "dogs", "cat", "cats", "spaceship", "computer", "house", "building", "food", "pizza", "apple", "banana", "tree", "plant", "math", "code", "coding"];
+      
+      if (nonFashionBlocked.some(word => {
+        const regex = new RegExp(`\\b${word}s?\\b`, 'i');
+        return regex.test(testCombined);
+      })) {
+        res.json({
+          success: false,
+          error: "This AI is trained and calibrated strictly for luxury fashion curation, wardrobe coordination, and sartorial style lookbooks. Please specify a fashion-oriented request."
+        });
+        return;
+      }
       
       const prompt = FashionPromptBuilder.buildOutfitPrompt({
         theme, vibe, garments, gender, formality, season, setting

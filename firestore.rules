@@ -385,5 +385,12 @@ service cloud.firestore {
         && isValidRecommendation(request.resource.data);
       allow delete: if isSignedIn() && isValidId(recommendationId) && resource.data.userId == request.auth.uid;
     }
+
+    match /communityPosts/{postId} {
+      allow read, list, get: if true;
+      allow create: if isSignedIn() && isValidId(postId);
+      allow update: if isSignedIn() && isValidId(postId);
+      allow delete: if isSignedIn() && (resource.data.author.uid == request.auth.uid || resource.data.userId == request.auth.uid);
+    }
   }
 }

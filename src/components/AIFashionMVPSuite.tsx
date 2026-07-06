@@ -484,6 +484,10 @@ export const AIFashionMVPSuite: React.FC = () => {
 
       const data = await response.json();
       
+      if (data && data.error) {
+        throw new Error(data.error);
+      }
+      
       if (data && (data.mode === "CONFIG_ERROR" || data.mode === "GEMINI_FAILED" || data.mode === "GEMINI_PARSE_ERROR")) {
         throw new Error("Fashion Intelligence Engine executed with terminal exception.");
       }
