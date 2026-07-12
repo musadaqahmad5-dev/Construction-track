@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Mail, Send, Sparkles, User, Bot, Check, ArrowRight, ShieldCheck, HelpCircle } from 'lucide-react';
 import { auth } from '../firebase';
-import { WardrobeItem } from '../types';
-import { UnifiedFashionOS } from '../features/ai-core/UnifiedFashionOS';
+import { WardrobeItem } from '../platform';
+import { UnifiedFashionOS } from '../engine';
 
 interface StyleMessageCenterProps {
   wardrobe: WardrobeItem[];
@@ -122,7 +122,7 @@ export const StyleMessageCenter: React.FC<StyleMessageCenterProps> = ({ wardrobe
       let token: string | null = null;
       if (auth.currentUser) {
         token = await auth.currentUser.getIdToken();
-      } else if (typeof localStorage !== 'undefined' && localStorage.getItem('auth_guest_active') === 'true') {
+      } else {
         token = 'guest-token';
       }
 
@@ -139,8 +139,21 @@ export const StyleMessageCenter: React.FC<StyleMessageCenterProps> = ({ wardrobe
                               userMsgText.toLowerCase().includes('style');
 
       const endpoint = isOutfitRequest ? '/api/stylist/generate' : '/api/ai/recommend-mvp';
+
+      // Clean wardrobe to strip huge base64 image data before API calls
+      const cleanedWardrobe = Array.isArray(wardrobe)
+        ? wardrobe.map(item => {
+            const { imageUrl, ...rest } = item;
+            const cleaned: any = { ...rest };
+            if (imageUrl && !imageUrl.startsWith('data:')) {
+              cleaned.imageUrl = imageUrl;
+            }
+            return cleaned;
+          })
+        : [];
+
       const requestBody = isOutfitRequest 
-        ? { wardrobe, userProfile: { user_preferences_vector: UnifiedFashionOS.getState().unifiedStyleMemory?.user_preferences_vector || [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5] } }
+        ? { wardrobe: cleanedWardrobe, userProfile: { user_preferences_vector: UnifiedFashionOS.getState().unifiedStyleMemory?.user_preferences_vector || [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5] } }
         : { userInput: `[Consultation with Curator ${activeCurator.name} (${activeCurator.vibe})]: ${userMsgText}`, tenantId: 'default' };
 
       const response = await fetch(endpoint, {

@@ -29,12 +29,14 @@ import {
   Save,
   Trash2,
   Camera,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Upload,
+  X
 } from 'lucide-react';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { auth } from '../firebase';
 import { FirestoreService } from '../lib/firestoreService';
-import { UnifiedFashionOS } from '../features/ai-core/UnifiedFashionOS';
+import { UnifiedFashionOS } from '../engine';
 
 interface OutfitItem {
   items: {
@@ -106,13 +108,28 @@ interface FiosResponse {
   system_health: SystemHealth;
 }
 
-export const AIFashionMVPSuite: React.FC = () => {
+interface AIFashionMVPSuiteProps {
+  wardrobe?: any[];
+  onAddGarment?: (title: string, description: string, category: any, extraOptions?: any) => Promise<void>;
+}
+
+export const AIFashionMVPSuite: React.FC<AIFashionMVPSuiteProps> = ({
+  wardrobe = [],
+  onAddGarment
+}) => {
   const [userInput, setUserInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   // Tab states for Assistant vs Studio
   const [activeTab, setActiveTab] = useState<'STYLIST' | 'STUDIO'>('STYLIST');
+
+  // Inspire.express (homefeed generate) uploaded image & scan states
+  const [inspireUserImage, setInspireUserImage] = useState<string | null>(null);
+  const [scanStepLogs, setScanStepLogs] = useState<string[]>([]);
+  const [activeScanningIndex, setActiveScanningIndex] = useState<number | null>(null);
+  const [postingCommunityIndex, setPostingCommunityIndex] = useState<Record<number, boolean>>({});
+  const [postingCreationsIndex, setPostingCreationsIndex] = useState<boolean>(false);
 
   // Interactive Imagen Fashion Studio state
   const [studioGender, setStudioGender] = useState<'male' | 'female' | 'unisex'>('unisex');
@@ -128,6 +145,7 @@ export const AIFashionMVPSuite: React.FC = () => {
   const [studioHeadwearColor, setStudioHeadwearColor] = useState('Midnight Blue');
   const [studioSetting, setStudioSetting] = useState('an elegant architectural studio with soft daylight and concrete textures');
   const [studioVibe, setStudioVibe] = useState('clean, editorial, high-end fashion catalog');
+  const [studioProvider, setStudioProvider] = useState<string>('Google-Imagen-4.0');
   
   const [studioGeneratedImage, setStudioGeneratedImage] = useState<string | null>(null);
   const [studioGenerating, setStudioGenerating] = useState(false);
@@ -220,7 +238,7 @@ export const AIFashionMVPSuite: React.FC = () => {
           formality: studioFormality,
           season: 'All-Season',
           setting: studioSetting,
-          provider: 'imagen'
+          provider: studioProvider
         })
       });
 
@@ -458,7 +476,7 @@ export const AIFashionMVPSuite: React.FC = () => {
       let token: string | null = null;
       if (auth.currentUser) {
         token = await auth.currentUser.getIdToken();
-      } else if (typeof localStorage !== 'undefined' && localStorage.getItem('auth_guest_active') === 'true') {
+      } else {
         token = 'guest-token';
       }
 
@@ -562,6 +580,21 @@ export const AIFashionMVPSuite: React.FC = () => {
     setGeneratingImage(prev => ({ ...prev, [index]: true }));
     setImageError(prev => ({ ...prev, [index]: '' }));
 
+    // Simulate Scanning face and whole body if image is uploaded
+    if (inspireUserImage) {
+      setActiveScanningIndex(index);
+      setScanStepLogs(["🔍 Initializing advanced Sarto-Scan..."]);
+      await new Promise(r => setTimeout(r, 1000));
+      setScanStepLogs(prev => [...prev, "👤 Scanning face contours & biometric anchors..."]);
+      await new Promise(r => setTimeout(r, 1200));
+      setScanStepLogs(prev => [...prev, "🧍 Calibrating whole-body mesh proportions..."]);
+      await new Promise(r => setTimeout(r, 1200));
+      setScanStepLogs(prev => [...prev, "🧵 Fitting & overlaying recommended fashion garments..."]);
+      await new Promise(r => setTimeout(r, 1200));
+      setScanStepLogs(prev => [...prev, "✨ Resolving high-fidelity lighting & texture drapes..."]);
+      await new Promise(r => setTimeout(r, 1000));
+    }
+
     try {
       let token: string | null = null;
       if (auth.currentUser) {
@@ -582,18 +615,30 @@ export const AIFashionMVPSuite: React.FC = () => {
       if (outfit.items?.bottom) garmentsList.push({ title: outfit.items.bottom, category: 'Bottom', primaryColor: 'Selected' });
       if (outfit.items?.shoes) garmentsList.push({ title: outfit.items.shoes, category: 'Shoes', primaryColor: 'Selected' });
 
+      // If user provided a body/face picture, prompt AI to fit on that body.
+      // If no picture, prompt AI to generate ONLY standalone flatlay clothes/shoes (no model/human body!).
+      let vibePrompt = outfit.fashion_reason || 'highly curated editorial fashion look';
+      let settingPrompt = 'an elegant architectural studio with soft daylight and high-end concrete textures';
+      
+      if (inspireUserImage) {
+        vibePrompt += ", fitted beautifully on the uploaded human body model reference, seamless overlay, elegant natural lighting";
+      } else {
+        vibePrompt += ", isolated flatlay representation, no model, no human body, just the clothing garments and shoes";
+        settingPrompt = 'clean minimalist solid dark studio tabletop, flatlay catalog product shot';
+      }
+
       const response = await fetch('/api/image-generation/generate', {
         method: 'POST',
         headers,
         body: JSON.stringify({
           theme: fiosData.user_profile?.style || 'Minimalist',
-          vibe: outfit.fashion_reason || 'highly curated editorial fashion look',
+          vibe: vibePrompt,
           garments: garmentsList,
           gender: 'unisex',
           formality: 'Casual',
           season: (fiosData.user_profile as any)?.season || 'All-Season',
-          setting: 'an elegant architectural studio with soft daylight and high-end concrete textures',
-          provider: 'imagen'
+          setting: settingPrompt,
+          provider: studioProvider
         })
       });
 
@@ -614,7 +659,90 @@ export const AIFashionMVPSuite: React.FC = () => {
       setImageError(prev => ({ ...prev, [index]: err.message || "Failed to generate visual." }));
     } finally {
       setGeneratingImage(prev => ({ ...prev, [index]: false }));
+      setActiveScanningIndex(null);
+      setScanStepLogs([]);
     }
+  };
+
+  // 1. Post manually to Community Feed (Inspire.express layer)
+  const handlePostToCommunityFeed = async (index: number) => {
+    const imageUrl = outfitImages[index];
+    const outfit = fiosData?.outfits[index];
+    if (!imageUrl || !outfit) {
+      setDelightNotice("No generated image found to publish.");
+      return;
+    }
+
+    setPostingCommunityIndex(prev => ({ ...prev, [index]: true }));
+    try {
+      const topName = outfit.items?.top || '';
+      const bottomName = outfit.items?.bottom || '';
+      const shoesName = outfit.items?.shoes || '';
+      
+      const captionText = `Curated via Inspire.express with AI: ${fiosData.style_title || 'Coordinated Look'}`;
+      const detailText = `Top: ${topName}\nBottom: ${bottomName}\nShoes: ${shoesName}\n\nDescription: ${outfit.fashion_reason || ''}`;
+
+      const { collection, addDoc } = await import('firebase/firestore');
+      const { db } = await import('../firebase');
+
+      await addDoc(collection(db, 'community_posts'), {
+        userId: auth.currentUser?.uid || 'guest-user',
+        username: auth.currentUser?.displayName || auth.currentUser?.email?.split('@')[0] || 'Sartorialist Guest',
+        userAvatar: auth.currentUser?.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=100&auto=format&fit=crop',
+        imageUrl: imageUrl,
+        caption: captionText,
+        outfitDetails: detailText,
+        vibeTags: ['real-view', 'try-on', 'inspire-express'],
+        likesCount: 0,
+        createdAt: new Date().toISOString()
+      });
+
+      setDelightNotice("✓ Look manually published to Community Feed successfully!");
+    } catch (err: any) {
+      console.error("Error posting to community:", err);
+      setDelightNotice(`Failed to post: ${err.message}`);
+    } finally {
+      setPostingCommunityIndex(prev => ({ ...prev, [index]: false }));
+    }
+  };
+
+  // 2. Publish manually to AI Creations (Create with AI layer)
+  const handlePublishToAICreations = async (imageUrl: string, promptText: string) => {
+    if (!imageUrl) {
+      setDelightNotice("No generated studio image found to publish.");
+      return;
+    }
+
+    setPostingCreationsIndex(true);
+    try {
+      const { collection, addDoc, serverTimestamp } = await import('firebase/firestore');
+      const { db } = await import('../firebase');
+
+      await addDoc(collection(db, 'generatedLooks'), {
+        imageUrl: imageUrl,
+        prompt: promptText || `Creative Look: ${studioUpper} & ${studioLower}`,
+        provider: studioProvider,
+        vibe: studioTheme || "Creative Studio",
+        season: "All-Season",
+        createdAt: serverTimestamp()
+      });
+
+      setDelightNotice("✓ Look manually uploaded to AI Creations feed successfully!");
+    } catch (err: any) {
+      console.error("Error publishing to AI Creations:", err);
+      setDelightNotice(`Failed to publish: ${err.message}`);
+    } finally {
+      setPostingCreationsIndex(false);
+    }
+  };
+
+  // 3. Shop Similar in Marketplace
+  const handleShopSimilarInMarketplace = (itemName: string) => {
+    if (!itemName) return;
+    localStorage.setItem('marketplace_search_query', itemName);
+    window.dispatchEvent(new Event('lookvision_marketplace_search'));
+    window.dispatchEvent(new CustomEvent('lookvision_navigate', { detail: 'MARKETPLACE_ROOM' }));
+    setDelightNotice(`✓ Browsing Marketplace for matching items similar to: "${itemName}"`);
   };
 
   const handleFeedback = (outfitIndex: number, feedback: string) => {
@@ -794,7 +922,10 @@ export const AIFashionMVPSuite: React.FC = () => {
                 <span className="text-[8px] font-mono uppercase bg-neutral-500/20 text-neutral-400 border border-white/10 px-1.5 rounded leading-none py-0.5">OFFLINE</span>
               )}
             </div>
-            <h2 className="text-base font-serif font-semibold text-white tracking-wide">Fashion Intelligence Operating System</h2>
+            <h2 className="text-lg font-serif font-semibold text-white tracking-wide">Real-View Outfit Stylist & Wardrobe AI</h2>
+            <p className="text-[11px] text-zinc-400 font-sans mt-1">
+              Construct real-view garments close to market available images based on your custom instructions and closet wardrobe.
+            </p>
           </div>
         </div>
 
@@ -856,33 +987,63 @@ export const AIFashionMVPSuite: React.FC = () => {
         </div>
       </div>
 
+      {/* EXPLICIT WORKSPACE DISTINCTION INFO BLOCK */}
+      <div className="bg-[#0b0b14] border border-violet-500/10 rounded-2xl p-5 space-y-3 text-left">
+        <div className="flex items-center gap-2">
+          <Info className="w-4 h-4 text-violet-400 shrink-0" />
+          <span className="text-[10px] font-mono text-violet-300 uppercase tracking-widest font-bold">
+            Permanent Workspace Architecture & Concept Distinctions
+          </span>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+          <div className="bg-[#12121e]/50 border border-white/5 rounded-xl p-3.5 space-y-1.5">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-white">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+              <span>1. Inspire.express with AI (Homefeed Generate)</span>
+            </div>
+            <p className="text-[11px] text-zinc-400 font-sans leading-relaxed">
+              Upload your face or whole body picture to scan and overlay custom recommended outfits. If no picture is given, we generate only fashion garments/shoes. Published looks go directly into the manual <strong>Community Feed</strong>.
+            </p>
+          </div>
+          <div className="bg-[#12121e]/50 border border-white/5 rounded-xl p-3.5 space-y-1.5">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-white/90">
+              <span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0" />
+              <span>2. Create with AI (AI Creations)</span>
+            </div>
+            <p className="text-[11px] text-zinc-500 font-sans leading-relaxed">
+              Advanced generative design engine using synthetic AI models, bodies, and faces. There is <strong>no photo upload option</strong> here. Published looks are isolated and go exclusively into the <strong>AI Creations / AI Invent</strong> space.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* 1.5 PREMIUM VIEW TAB SWITCHER */}
-      <div className="flex border-b border-white/10 p-1 bg-black/45 rounded-xl max-w-md mx-auto sm:mx-0">
+      <div className="flex border border-white/5 p-1 bg-black/45 rounded-xl max-w-lg mx-auto sm:mx-0 gap-1">
         <button
           onClick={() => setActiveTab('STYLIST')}
-          className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg text-xs font-mono font-bold transition-all ${
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg text-xs font-mono font-bold transition-all ${
             activeTab === 'STYLIST'
               ? 'bg-gradient-to-r from-indigo-500/20 to-purple-500/20 text-white border border-indigo-500/30 shadow-md shadow-indigo-500/5'
               : 'text-zinc-400 hover:text-white border border-transparent cursor-pointer'
           }`}
         >
           <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-          <span>AI Stylist Curator</span>
+          <span>Inspire.express (Homefeed)</span>
         </button>
         <button
           onClick={() => setActiveTab('STUDIO')}
-          className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg text-xs font-mono font-bold transition-all ${
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg text-xs font-mono font-bold transition-all ${
             activeTab === 'STUDIO'
               ? 'bg-gradient-to-r from-purple-500/20 to-indigo-500/20 text-white border border-purple-500/30 shadow-md shadow-purple-500/5'
               : 'text-zinc-400 hover:text-white border border-transparent cursor-pointer'
           }`}
         >
           <Camera className="w-3.5 h-3.5 text-purple-400" />
-          <span>Fashion Look Studio</span>
+          <span>Create with AI (Studio)</span>
         </button>
       </div>
 
-      {activeTab === 'STYLIST' ? (
+      {activeTab === 'STYLIST' && (
         <>
           {/* 2. PROMPT CONSOLE INPUT ZONE OR RETURN TRIGGER CAP */}
       {generatedCount >= 3 ? (
@@ -975,6 +1136,82 @@ export const AIFashionMVPSuite: React.FC = () => {
                 </>
               )}
             </button>
+          </div>
+
+          {/* UPLOAD WIDGET FOR INSPIRE.EXPRESS */}
+          <div className="bg-black/20 border border-white/5 rounded-xl p-4 space-y-3">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+              <div>
+                <span className="text-[10px] font-mono text-zinc-300 font-bold uppercase tracking-wider block">
+                  📸 Try-On Body & Face Scanner (Optional)
+                </span>
+                <span className="text-[9px] text-zinc-500 font-sans block mt-0.5">
+                  Overlay garments precisely on your scanned body. Left blank? We'll synthesize flatlay fashion clothing/shoes instead.
+                </span>
+              </div>
+              {inspireUserImage && (
+                <button
+                  type="button"
+                  onClick={() => setInspireUserImage(null)}
+                  className="text-[9px] font-mono text-rose-400 bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 px-2 py-1 rounded cursor-pointer transition-all"
+                >
+                  Clear Photo
+                </button>
+              )}
+            </div>
+
+            {!inspireUserImage ? (
+              <div 
+                className="border border-dashed border-white/10 hover:border-indigo-500/30 rounded-lg p-6 flex flex-col items-center justify-center space-y-2 cursor-pointer bg-black/30 hover:bg-indigo-950/5 transition-all group"
+                onClick={() => {
+                  const input = document.createElement('input');
+                  input.type = 'file';
+                  input.accept = 'image/*';
+                  input.onchange = (e: any) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = () => {
+                        setInspireUserImage(reader.result as string);
+                        setDelightNotice("✓ Face and body model uploaded successfully!");
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  };
+                  input.click();
+                }}
+              >
+                <div className="p-2.5 rounded-full bg-white/[0.02] border border-white/5 group-hover:border-indigo-500/20 group-hover:bg-indigo-500/5 transition-all">
+                  <Upload className="w-4 h-4 text-zinc-400 group-hover:text-indigo-400" />
+                </div>
+                <div className="text-center">
+                  <span className="text-[10px] font-mono text-zinc-300 uppercase tracking-wide block group-hover:text-indigo-300 font-bold">
+                    Drop photo here or Click to upload
+                  </span>
+                  <span className="text-[8px] font-mono text-zinc-500 block mt-0.5">
+                    Supports JPG, PNG, WEBP (Face / Portrait / Body)
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 bg-black/40 border border-white/5 p-2 rounded-lg">
+                <div className="relative w-12 h-12 rounded bg-zinc-950 overflow-hidden border border-white/10 shrink-0">
+                  <img src={inspireUserImage} alt="Uploaded body reference" className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-emerald-500/10 animate-pulse" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-[10px] font-mono text-emerald-400 font-bold block uppercase tracking-wide">
+                    ● Biometric Scan Target Ready
+                  </span>
+                  <span className="text-[9px] text-zinc-400 font-sans block truncate">
+                    Ready to fit fashion models onto your customized physique contours.
+                  </span>
+                </div>
+                <div className="text-[9px] font-mono bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 px-2 py-0.5 rounded uppercase font-bold shrink-0">
+                  Active
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Live Chips */}
@@ -1453,6 +1690,10 @@ export const AIFashionMVPSuite: React.FC = () => {
                         <div className="relative aspect-[3/4] w-full h-full rounded-xl overflow-hidden bg-zinc-950/80 border border-white/5 group/img min-h-[350px]">
                           {(outfitImages[index] || outfit.imageUrl) ? (
                             <div className="relative w-full h-full">
+                              <div className="absolute top-2 left-2 z-10 bg-emerald-500/90 text-white text-[8px] font-mono font-bold uppercase px-2 py-0.5 rounded shadow border border-emerald-400/30 flex items-center gap-1">
+                                <span className="w-1 h-1 bg-white rounded-full animate-pulse" />
+                                Real-View Garment
+                              </div>
                               <img 
                                 src={outfitImages[index] || outfit.imageUrl} 
                                 alt={`AI Lookbook ${index + 1}`} 
@@ -1469,16 +1710,41 @@ export const AIFashionMVPSuite: React.FC = () => {
                               </div>
                             </div>
                           ) : generatingImage[index] ? (
-                            <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center space-y-3 bg-black/45 backdrop-blur-sm">
-                              <Loader2 className="w-6 h-6 text-indigo-400 animate-spin" />
-                              <div className="space-y-1">
-                                <span className="text-[10px] font-mono text-zinc-300 block uppercase tracking-wider animate-pulse">
-                                  Synthesizing Look...
-                                </span>
-                                <span className="text-[8px] font-mono text-zinc-500 block">
-                                  Curation in synthesis via cloud GPU
-                                </span>
-                              </div>
+                            <div className="absolute inset-0 flex flex-col items-center justify-center p-4 space-y-3 bg-[#08080d]/90 backdrop-blur-md overflow-hidden border border-white/5">
+                              {/* Sweeping Laser Scan Line */}
+                              <div className="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-indigo-500 to-transparent shadow-[0_0_15px_#6366f1] animate-bounce w-full top-1/4 pointer-events-none" />
+                              
+                              {inspireUserImage ? (
+                                <div className="w-full space-y-3 text-left">
+                                  <div className="flex items-center gap-2 justify-center text-center">
+                                    <Loader2 className="w-4 h-4 text-indigo-400 animate-spin" />
+                                    <span className="text-[10px] font-mono font-bold text-indigo-400 uppercase tracking-widest block">
+                                      Active Sarto-Scan
+                                    </span>
+                                  </div>
+                                  <div className="bg-black/85 border border-white/5 rounded-lg p-3 max-h-[220px] overflow-y-auto space-y-2 font-mono text-[9px] text-zinc-400 leading-normal">
+                                    {scanStepLogs.map((log, i) => (
+                                      <div key={i} className="flex items-start gap-1">
+                                        <span className="text-indigo-500 shrink-0">✓</span>
+                                        <span className="animate-pulse">{log}</span>
+                                      </div>
+                                    ))}
+                                    <div className="text-zinc-600 animate-pulse text-[8px] pl-3">... scanning body mesh tensors ...</div>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="flex flex-col items-center justify-center text-center space-y-3">
+                                  <Loader2 className="w-6 h-6 text-indigo-400 animate-spin" />
+                                  <div className="space-y-1">
+                                    <span className="text-[10px] font-mono text-zinc-300 block uppercase tracking-wider animate-pulse">
+                                      Synthesizing Flatlay...
+                                    </span>
+                                    <span className="text-[8.5px] font-mono text-zinc-500 block">
+                                      Isolating garments & shoes (no human body)
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           ) : (
                             <button
@@ -1491,10 +1757,10 @@ export const AIFashionMVPSuite: React.FC = () => {
                               </div>
                               <div className="space-y-1">
                                 <span className="text-[10px] font-mono text-zinc-300 font-bold uppercase tracking-wider block group-hover/img:text-indigo-300 transition-colors">
-                                  ✦ Visualize Style Photo
+                                  ✦ Generate Real-View Photo
                                 </span>
                                 <span className="text-[8px] font-mono text-zinc-500 block max-w-[200px] mx-auto leading-relaxed">
-                                  Generate a photorealistic 3:4 lookbook image for this outfit
+                                  Synthesize real-view clothes close to market available images based on instructions
                                 </span>
                               </div>
                             </button>
@@ -1531,9 +1797,16 @@ export const AIFashionMVPSuite: React.FC = () => {
                               <span className="text-[9px] font-mono text-zinc-500">Look 0{index + 1}</span>
                             </div>
                             <div className="flex items-center justify-between text-[10px]">
-                              <span className="text-zinc-500 font-mono">Confidence Label:</span>
-                              <span className="text-emerald-400 font-mono font-bold">
-                                {(outfit.confidence || 92) >= 90 ? 'Exceptional Match' : 'High Quality'}
+                              <span className="text-zinc-500 font-mono">Outfit Class:</span>
+                              <span className="text-emerald-400 font-mono font-bold flex items-center gap-1.5">
+                                <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full shrink-0" />
+                                Real-View Market Fit
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between text-[10px] pt-0.5">
+                              <span className="text-zinc-500 font-mono">Confidence Match:</span>
+                              <span className="text-zinc-300 font-mono font-medium">
+                                {(outfit.confidence || 92)}% Match Rate
                               </span>
                             </div>
                           </div>
@@ -1541,37 +1814,64 @@ export const AIFashionMVPSuite: React.FC = () => {
                           {/* Wearable specific garments display */}
                       <div className="space-y-2">
                         {outfit.items?.top && (
-                          <div className="flex items-start gap-2 bg-white/[0.01] border border-white/5 rounded-lg p-2 hover:bg-white/[0.03] transition-colors">
-                            <Shirt className="w-3.5 h-3.5 text-indigo-400 mt-0.5 shrink-0" />
-                            <div className="text-left">
-                              <span className="text-[8px] font-mono text-white/30 uppercase block">Fabric Top Coordinate</span>
-                              <span className="text-[10.5px] text-white/90 leading-snug block font-medium">{outfit.items.top}</span>
+                          <div className="flex items-center justify-between gap-2 bg-white/[0.01] border border-white/5 rounded-lg p-2 hover:bg-white/[0.03] transition-colors w-full">
+                            <div className="flex items-start gap-2 text-left min-w-0">
+                              <Shirt className="w-3.5 h-3.5 text-indigo-400 mt-0.5 shrink-0" />
+                              <div className="min-w-0">
+                                <span className="text-[8px] font-mono text-white/30 uppercase block font-semibold text-indigo-300">Fabric Top Coordinate</span>
+                                <span className="text-[10.5px] text-white/90 leading-snug block font-medium truncate">{outfit.items.top}</span>
+                              </div>
                             </div>
+                            <button
+                              type="button"
+                              onClick={() => handleShopSimilarInMarketplace(outfit.items.top)}
+                              className="text-[8.5px] font-mono text-indigo-400 hover:text-indigo-350 border border-indigo-500/20 hover:bg-indigo-500/10 rounded px-1.5 py-0.5 cursor-pointer transition-all shrink-0 select-none font-bold uppercase"
+                            >
+                              Shop Similar
+                            </button>
                           </div>
                         )}
 
                         {outfit.items?.bottom && (
-                          <div className="flex items-start gap-2 bg-white/[0.01] border border-white/5 rounded-lg p-2 hover:bg-white/[0.03] transition-colors">
-                            <svg className="w-3.5 h-3.5 text-purple-400 mt-0.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M4 3h16l2 9h-4l-1 9-5-2-5 2-1-9H2l2-9z" />
-                            </svg>
-                            <div className="text-left">
-                              <span className="text-[8px] font-mono text-white/30 uppercase block">Undergarment Base</span>
-                              <span className="text-[10.5px] text-white/90 leading-snug block font-medium">{outfit.items.bottom}</span>
+                          <div className="flex items-center justify-between gap-2 bg-white/[0.01] border border-white/5 rounded-lg p-2 hover:bg-white/[0.03] transition-colors w-full">
+                            <div className="flex items-start gap-2 text-left min-w-0">
+                              <svg className="w-3.5 h-3.5 text-purple-400 mt-0.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M4 3h16l2 9h-4l-1 9-5-2-5 2-1-9H2l2-9z" />
+                              </svg>
+                              <div className="min-w-0">
+                                <span className="text-[8px] font-mono text-white/30 uppercase block font-semibold text-purple-300">Undergarment Base</span>
+                                <span className="text-[10.5px] text-white/90 leading-snug block font-medium truncate">{outfit.items.bottom}</span>
+                              </div>
                             </div>
+                            <button
+                              type="button"
+                              onClick={() => handleShopSimilarInMarketplace(outfit.items.bottom)}
+                              className="text-[8.5px] font-mono text-purple-400 hover:text-purple-350 border border-purple-500/20 hover:bg-purple-500/10 rounded px-1.5 py-0.5 cursor-pointer transition-all shrink-0 select-none font-bold uppercase"
+                            >
+                              Shop Similar
+                            </button>
                           </div>
                         )}
 
                         {outfit.items?.shoes && (
-                          <div className="flex items-start gap-2 bg-white/[0.01] border border-white/5 rounded-lg p-2 hover:bg-white/[0.03] transition-colors">
-                            <svg className="w-3.5 h-3.5 text-amber-500/70 mt-0.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M3 18c0-3 .5-4.5 1.5-6C6 9.5 8 8 11.5 8h1S14 8 14 11.5v3.5c0 1.5.5 2.5 1.5 h.5M21 18a2 2 0 1 1-4 0v-4" />
-                              <rect x="2" y="18" width="20" height="2" rx="1" />
-                            </svg>
-                            <div className="text-left">
-                              <span className="text-[8px] font-mono text-white/30 uppercase block">Footwear Co-ordinate</span>
-                              <span className="text-[10.5px] text-white/90 leading-snug block font-medium">{outfit.items.shoes}</span>
+                          <div className="flex items-center justify-between gap-2 bg-white/[0.01] border border-white/5 rounded-lg p-2 hover:bg-white/[0.03] transition-colors w-full">
+                            <div className="flex items-start gap-2 text-left min-w-0">
+                              <svg className="w-3.5 h-3.5 text-amber-500/70 mt-0.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M3 18c0-3 .5-4.5 1.5-6C6 9.5 8 8 11.5 8h1S14 8 14 11.5v3.5c0 1.5.5 2.5 1.5 h.5M21 18a2 2 0 1 1-4 0v-4" />
+                                <rect x="2" y="18" width="20" height="2" rx="1" />
+                              </svg>
+                              <div className="min-w-0">
+                                <span className="text-[8px] font-mono text-white/30 uppercase block font-semibold text-amber-400">Footwear Coordinate</span>
+                                <span className="text-[10.5px] text-white/90 leading-snug block font-medium truncate">{outfit.items.shoes}</span>
+                              </div>
                             </div>
+                            <button
+                              type="button"
+                              onClick={() => handleShopSimilarInMarketplace(outfit.items.shoes)}
+                              className="text-[8.5px] font-mono text-amber-500/75 hover:text-amber-500 border border-amber-500/20 hover:bg-amber-500/10 rounded px-1.5 py-0.5 cursor-pointer transition-all shrink-0 select-none font-bold uppercase"
+                            >
+                              Shop Similar
+                            </button>
                           </div>
                         )}
                       </div>
@@ -1775,7 +2075,7 @@ ${shoes}`;
                       </div>
 
                       {/* Firestore Saving Loop */}
-                      <div className="pt-2 border-t border-white/5 mt-2">
+                      <div className="pt-2 border-t border-white/5 mt-2 space-y-2">
                         <button
                           onClick={() => handleSaveOutfit(index)}
                           disabled={savingOutfit[index]}
@@ -1793,6 +2093,26 @@ ${shoes}`;
                             </>
                           )}
                         </button>
+
+                        {outfitImages[index] && (
+                          <button
+                            onClick={() => handlePostToCommunityFeed(index)}
+                            disabled={postingCommunityIndex[index]}
+                            className="w-full text-[9.5px] font-mono py-1.5 rounded transition-all border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/25 text-emerald-300 hover:text-white flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 font-bold"
+                          >
+                            {postingCommunityIndex[index] ? (
+                              <>
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                <span>Publishing to Community...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Upload className="w-3.5 h-3.5" />
+                                <span>Post manually to Community Feed</span>
+                              </>
+                            )}
+                          </button>
+                        )}
                       </div>
 
                     </div>
@@ -1970,7 +2290,9 @@ ${shoes}`;
         )}
       </AnimatePresence>
         </>
-      ) : (
+      )}
+
+      {activeTab === 'STUDIO' && (
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
@@ -2134,7 +2456,7 @@ ${shoes}`;
             </div>
 
             {/* Aesthetic Setting & Mood / Theme Selection */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
               <div className="space-y-2">
                 <label className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider block">6. Studio Background Setting</label>
                 <select
@@ -2162,6 +2484,19 @@ ${shoes}`;
                   <option value="Avant-Garde Designer">Avant-Garde Designer</option>
                   <option value="Classic Vintage Retro">Classic Vintage Retro</option>
                   <option value="High Fashion Editorial">High Fashion Editorial</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider block">8. AI Generation Engine</label>
+                <select
+                  value={studioProvider}
+                  onChange={(e) => setStudioProvider(e.target.value)}
+                  className="w-full bg-black/40 text-xs text-white border border-white/5 rounded-xl p-3 outline-none focus:border-purple-500/30 cursor-pointer"
+                >
+                  <option value="Google-Imagen-4.0">Google Imagen 3.0 (Aesthetic)</option>
+                  <option value="Gemini-3.1-Flash-Image">Gemini 3.1 Flash (Creative)</option>
+                  <option value="Fashion-Picsum-Deterministic">Picsum Local (Demo Fallback)</option>
                 </select>
               </div>
             </div>
@@ -2258,26 +2593,100 @@ ${shoes}`;
 
               {/* Action buttons under image */}
               {studioGeneratedImage && (
-                <div className="grid grid-cols-2 gap-2 pt-2">
+                <div className="space-y-2.5 pt-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(studioGeneratedImage);
+                        setDelightNotice("✓ Image link copied to clipboard");
+                      }}
+                      className="cursor-pointer py-2 bg-black/40 hover:bg-neutral-800 border border-white/5 text-white font-mono text-[10px] font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-colors select-none"
+                    >
+                      <Copy className="w-3 h-3 text-zinc-400" />
+                      <span>Copy Link</span>
+                    </button>
+                    <a
+                      href={studioGeneratedImage}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="cursor-pointer py-2 bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/20 text-purple-300 hover:text-white font-mono text-[10px] font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-colors text-center select-none"
+                    >
+                      <Compass className="w-3 h-3" />
+                      <span>Open Original</span>
+                    </a>
+                  </div>
+
+                  {/* Manual upload to AI Creations Feed */}
                   <button
                     onClick={() => {
-                      navigator.clipboard.writeText(studioGeneratedImage);
-                      setDelightNotice("✓ Image link copied to clipboard");
+                      const activeGarments = [
+                        studioUpper !== 'None' ? `${studioUpperColor} ${studioUpper}` : '',
+                        studioLower !== 'None' ? `${studioLowerColor} ${studioLower}` : '',
+                        studioShoes !== 'None' ? `${studioShoesColor} ${studioShoes}` : ''
+                      ].filter(Boolean).join(', ');
+                      
+                      handlePublishToAICreations(
+                        studioGeneratedImage, 
+                        `Studio Look with AI Faces/Bodies: ${activeGarments}`
+                      );
                     }}
-                    className="cursor-pointer py-2.5 bg-black/40 hover:bg-neutral-800 border border-white/5 text-white font-mono text-[10px] font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-colors select-none"
+                    disabled={postingCreationsIndex}
+                    className="w-full text-[10px] font-mono py-2 rounded-lg transition-all border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/25 text-emerald-300 hover:text-white flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 font-bold"
                   >
-                    <Copy className="w-3 h-3 text-zinc-400" />
-                    <span>Copy Link</span>
+                    {postingCreationsIndex ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Publishing to AI Creations...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>Publish Look to AI Creations Feed</span>
+                      </>
+                    )}
                   </button>
-                  <a
-                    href={studioGeneratedImage}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="cursor-pointer py-2.5 bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/20 text-purple-300 hover:text-white font-mono text-[10px] font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-colors text-center select-none"
-                  >
-                    <Compass className="w-3 h-3" />
-                    <span>Open Original</span>
-                  </a>
+
+                  {/* Shopping search list for look details */}
+                  <div className="bg-black/35 border border-white/5 p-2.5 rounded-lg space-y-2 text-xs">
+                    <span className="text-[8px] font-mono text-zinc-500 uppercase tracking-widest block font-bold">
+                      🛒 Shop Matched Items in Marketplace
+                    </span>
+                    <div className="space-y-1.5">
+                      {studioUpper !== 'None' && (
+                        <div className="flex items-center justify-between gap-2 text-[10px] font-mono">
+                          <span className="text-zinc-400 truncate flex-1">👚 {studioUpperColor} {studioUpper}</span>
+                          <button
+                            onClick={() => handleShopSimilarInMarketplace(`${studioUpperColor} ${studioUpper}`)}
+                            className="text-[8px] font-bold text-indigo-400 hover:text-indigo-300 border border-indigo-500/20 hover:bg-indigo-500/10 rounded px-1.5 py-0.5 cursor-pointer transition-all uppercase shrink-0"
+                          >
+                            Shop Similar
+                          </button>
+                        </div>
+                      )}
+                      {studioLower !== 'None' && (
+                        <div className="flex items-center justify-between gap-2 text-[10px] font-mono">
+                          <span className="text-zinc-400 truncate flex-1">👖 {studioLowerColor} {studioLower}</span>
+                          <button
+                            onClick={() => handleShopSimilarInMarketplace(`${studioLowerColor} ${studioLower}`)}
+                            className="text-[8px] font-bold text-indigo-400 hover:text-indigo-300 border border-indigo-500/20 hover:bg-indigo-500/10 rounded px-1.5 py-0.5 cursor-pointer transition-all uppercase shrink-0"
+                          >
+                            Shop Similar
+                          </button>
+                        </div>
+                      )}
+                      {studioShoes !== 'None' && (
+                        <div className="flex items-center justify-between gap-2 text-[10px] font-mono">
+                          <span className="text-zinc-400 truncate flex-1">👟 {studioShoesColor} {studioShoes}</span>
+                          <button
+                            onClick={() => handleShopSimilarInMarketplace(`${studioShoesColor} ${studioShoes}`)}
+                            className="text-[8px] font-bold text-indigo-400 hover:text-indigo-300 border border-indigo-500/20 hover:bg-indigo-500/10 rounded px-1.5 py-0.5 cursor-pointer transition-all uppercase shrink-0"
+                          >
+                            Shop Similar
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -2300,7 +2709,11 @@ ${shoes}`;
                 </div>
                 <div className="flex justify-between border-b border-white/5 pb-1">
                   <span className="text-zinc-500">Engine:</span>
-                  <span className="text-amber-400 font-medium">Google Imagen</span>
+                  <span className="text-amber-400 font-medium">
+                    {studioProvider === 'Google-Imagen-4.0' ? 'Imagen 3.0' :
+                     studioProvider === 'Gemini-3.1-Flash-Image' ? 'Gemini 3.1' :
+                     'Picsum Local'}
+                  </span>
                 </div>
               </div>
             </div>

@@ -2,32 +2,35 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Trash2, Shield, Settings, AlertTriangle, RefreshCw, CheckCircle, Sparkles, Sparkle, BarChart2,
-  Search, ShoppingBag, Shirt, Clock, Info, Store, SlidersHorizontal, LogOut, 
+  Search, ShoppingBag, ShoppingCart, Shirt, Clock, Info, Store, SlidersHorizontal, LogOut, 
   ChevronRight, Compass, Eye, Cpu, Database, Activity, CloudSun, User,
   Bell, PenSquare, X, ChevronDown, Award, Check,
-  Home, Users, Heart, Layers, MessageSquare, Mail, Crown, MoreVertical, Moon, Menu
+  Home, Users, Heart, Layers, MessageSquare, Mail, Crown, MoreVertical, Moon, Menu,
+  Camera, Upload
 } from 'lucide-react';
-import { WardrobeItem } from '../types';
+import { WardrobeItem, ProfileService, type StyleProfile, type StylistHistoryEntry } from '../platform';
 import { EmptyStateLibrary } from './EmptyStateLibrary';
 import { 
   UnifiedFashionOS, 
-  UnifiedState,
-  UnifiedOutfit
-} from '../features/ai-core/UnifiedFashionOS';
+  type UnifiedState,
+  type UnifiedOutfit,
+  VisualSuggestion
+} from '../engine';
 import { db } from '../firebase';
 import { updateDoc, doc } from 'firebase/firestore';
 import { OutfitCard } from './OutfitCard';
 import { WardrobeGrid } from './WardrobeGrid';
 import { HomeFeed } from './HomeFeed';
+import { SellerDashboard } from './SellerDashboard';
 import { LookVisionMainDashboard } from './LookVisionMainDashboard';
 import { StyleBadge } from './StyleBadge';
 import { SystemHealthPanel } from './SystemHealthPanel';
 import { FeedbackButtons } from './FeedbackButtons';
-import { ProfileService, StyleProfile, StylistHistoryEntry } from '../features/wardrobe/profileService';
 import { FounderDashboard } from './FounderDashboard';
 import { FloatingAIChat } from './FloatingAIChat';
 import { SartorialControlCenter } from './SartorialControlCenter';
 import { AIEngineStudio } from './AIEngineStudio';
+import { AIFashionMVPSuite } from './AIFashionMVPSuite';
 import { CognitivePassport } from './CognitivePassport';
 import { SystemSettingsAudit } from './SystemSettingsAudit';
 import { ArchitectureMap } from './ArchitectureMap';
@@ -40,6 +43,7 @@ import { CommunityScreen } from './screens/CommunityScreen';
 import { MarketplaceScreen } from './screens/MarketplaceScreen';
 import { ProductDetailScreen } from './screens/ProductDetailScreen';
 import { CreatorWorkspaceScreen } from './screens/CreatorWorkspaceScreen';
+import { VirtualStudioTryOn } from './VirtualStudioTryOn';
 
 export interface LookVisionTheme {
   id: string;
@@ -112,6 +116,20 @@ export const LOOK_VISION_THEMES: LookVisionTheme[] = [
     badgeBg: 'bg-indigo-950/40 text-indigo-200 border-indigo-500/20',
     sidebarBg: 'bg-[#07070c] border-r border-white/5',
     cardBg: 'bg-[#0e0e1a]/40 border border-white/5 shadow-md',
+  },
+  {
+    id: 'solar-day',
+    name: 'Solar Day',
+    bg: 'bg-[#fcfbf9] text-stone-900',
+    text: 'text-stone-900',
+    accent: 'text-stone-900 border-stone-300 bg-stone-100 hover:bg-stone-200',
+    accentBg: 'bg-stone-950 text-white hover:bg-stone-800',
+    glassBg: 'bg-[#fcfbf9]/80 backdrop-blur-xl',
+    glassBorder: 'border-stone-200',
+    glowClass: 'shadow-[0_0_20px_rgba(0,0,0,0.03)]',
+    badgeBg: 'bg-stone-100 text-stone-800 border-stone-200',
+    sidebarBg: 'bg-[#f5f4f0] border-r border-stone-200',
+    cardBg: 'bg-white border border-stone-200/80 shadow-sm',
   }
 ];
 
@@ -502,11 +520,19 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
   const [state, setState] = useState<UnifiedState>(() => UnifiedFashionOS.getState());
   
   // Design Sandbox & Figma Mockup Overlay states
-  const [isQASandboxOpen, setIsQASandboxOpen] = useState(false);
-  const [isMockOverlayActive, setIsMockOverlayActive] = useState(false);
-  const [mockOverlayOpacity, setMockOverlayOpacity] = useState(1.0);
-  const [showGridLines, setShowGridLines] = useState(false);
-  const [showPaddingBadges, setShowPaddingBadges] = useState(false);
+  const [isMockOverlayActive, setIsMockOverlayActive] = useState(() => {
+    return localStorage.getItem('lookvision_is_mock_overlay_active') === 'true';
+  });
+  const [mockOverlayOpacity, setMockOverlayOpacity] = useState(() => {
+    const val = localStorage.getItem('lookvision_mock_overlay_opacity');
+    return val ? parseFloat(val) : 1.0;
+  });
+  const [showGridLines, setShowGridLines] = useState(() => {
+    return localStorage.getItem('lookvision_show_grid_lines') === 'true';
+  });
+  const [showPaddingBadges, setShowPaddingBadges] = useState(() => {
+    return localStorage.getItem('lookvision_show_padding_badges') === 'true';
+  });
   const [mockImageUrl, setMockImageUrl] = useState(() => {
     return localStorage.getItem('lookvision_mock_image_url') || '/given_ui_reference.jpg';
   });
@@ -517,6 +543,26 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
     return (localStorage.getItem('lookvision_mock_image_fit') as any) || 'cover';
   });
   const hasRestoredRef = useRef(false);
+
+  useEffect(() => {
+    const handleUpdateSandboxSettings = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail) {
+        const d = customEvent.detail;
+        if (d.isMockOverlayActive !== undefined) setIsMockOverlayActive(d.isMockOverlayActive);
+        if (d.mockOverlayOpacity !== undefined) setMockOverlayOpacity(d.mockOverlayOpacity);
+        if (d.showGridLines !== undefined) setShowGridLines(d.showGridLines);
+        if (d.showPaddingBadges !== undefined) setShowPaddingBadges(d.showPaddingBadges);
+        if (d.mockImageUrl !== undefined) setMockImageUrl(d.mockImageUrl);
+        if (d.mockBlendMode !== undefined) setMockBlendMode(d.mockBlendMode);
+        if (d.mockImageFit !== undefined) setMockImageFit(d.mockImageFit);
+      }
+    };
+    window.addEventListener('lookvision_update_sandbox_settings', handleUpdateSandboxSettings);
+    return () => {
+      window.removeEventListener('lookvision_update_sandbox_settings', handleUpdateSandboxSettings);
+    };
+  }, []);
   const [activeSubTab, setActiveSubTab] = useState<'HOME' | 'AI_STUDIO' | 'WARDROBE' | 'DASHBOARD' | 'PROFILE' | 'SYSTEM_ROOM' | 'OUTFIT_GEN' | 'VIRTUAL_TRY' | 'COLLECTIONS' | 'HISTORY' | 'MESSAGES' | 'FAVORITES' | 'MARKETPLACE_ROOM' | 'COMMUNITY_ROOM' | 'DISCOVER' | 'CREATOR_WORKSPACE' | 'PRODUCT_DETAIL'>(() => {
     const saved = localStorage.getItem('last_active_place_subtab');
     if (saved && ['HOME', 'AI_STUDIO', 'WARDROBE', 'DASHBOARD', 'PROFILE', 'SYSTEM_ROOM', 'OUTFIT_GEN', 'VIRTUAL_TRY', 'COLLECTIONS', 'HISTORY', 'MESSAGES', 'FAVORITES', 'MARKETPLACE_ROOM', 'COMMUNITY_ROOM', 'DISCOVER', 'CREATOR_WORKSPACE', 'PRODUCT_DETAIL'].includes(saved)) {
@@ -538,6 +584,17 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
   const [gCategory, setGCategory] = useState<any>('Casual');
   const [gImage, setGImage] = useState(''); // Photographer URL
   
+  // Custom camera & AI scanning states
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [isCameraActive, setIsCameraActive] = useState(false);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const [isScanningVisual, setIsScanningVisual] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
+  const [scanConfidence, setScanConfidence] = useState<number | null>(null);
+  const [gPrimaryColor, setGPrimaryColor] = useState('Neutral Gray');
+  const [gSeason, setGSeason] = useState<'Spring' | 'Summer' | 'Autumn' | 'Winter' | 'All-Season'>('All-Season');
+  const [scanningLogs, setScanningLogs] = useState<string[]>([]);
+  
   const [schedTitle, setSchedTitle] = useState('');
   const [schedTime, setSchedTime] = useState('Morning light');
   const [schedOccasion, setSchedOccasion] = useState('Quiet stroll');
@@ -548,7 +605,6 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
 
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const [isQuickActionsOpen, setIsQuickActionsOpen] = useState(false);
   const [wardrobeSubView, setWardrobeSubView] = useState<'CLOSET' | 'COLLECTIONS'>('CLOSET');
 
   // One line memory continuity state
@@ -563,6 +619,9 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
   // Selected Product detail page state for boutique
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
 
+  // Seller Dashboard portal modal state
+  const [isSellerDashboardOpen, setIsSellerDashboardOpen] = useState(false);
+
   // GENTLE TOMORROW Tomorrow room state
   const [tomorrowOutfit, setTomorrowOutfitState] = useState<{ items: WardrobeItem[]; note: string; timeAtmosphere?: string } | null>(() => {
     const saved = localStorage.getItem('tomorrow_outfit');
@@ -575,9 +634,199 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
   const [tomorrowNote, setTomorrowNote] = useState(() => localStorage.getItem('draft_tomorrow_note') || '');
   const [tempTomorrowItems, setTempTomorrowItems] = useState<WardrobeItem[]>([]);
 
+  // Start the user's camera stream for scanning
+  const startScanningCamera = async () => {
+    setScanError(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' }
+      });
+      setCameraStream(stream);
+      setIsCameraActive(true);
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      }, 100);
+    } catch (err: any) {
+      console.warn("Camera access failed. Trying user facingMode fallback...", err);
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'user' }
+        });
+        setCameraStream(stream);
+        setIsCameraActive(true);
+        setTimeout(() => {
+          if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+          }
+        }, 100);
+      } catch (fallbackErr: any) {
+        console.error("Camera access completely blocked:", fallbackErr);
+        setScanError("Failed to access camera stream. Make sure you gave permission, or select an image file instead.");
+      }
+    }
+  };
+
+  // Stop the user's camera stream safely
+  const stopScanningCamera = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+      setCameraStream(null);
+    }
+    setIsCameraActive(false);
+  };
+
+  // Capture current frame from video onto hidden canvas & execute multi-modal AI scan
+  const captureAndScanGarment = async () => {
+    if (!videoRef.current) return;
+    setScanError(null);
+    setIsScanningVisual(true);
+    setScanningLogs(["Calibrating camera lens profiles...", "Capturing image matrix..."]);
+
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = videoRef.current.videoWidth || 640;
+      canvas.height = videoRef.current.videoHeight || 480;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error("Could not construct 2D canvas context");
+
+      ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+      const base64DataUrl = canvas.toDataURL('image/jpeg', 0.85);
+      const pureBase64 = base64DataUrl.split(',')[1];
+
+      // Stop camera now that frame is captured
+      stopScanningCamera();
+      
+      // Update local state with the captured picture
+      setGImage(base64DataUrl);
+
+      // Trigger the AI Multi-modal classification engine
+      await executeAIScan(base64DataUrl, pureBase64, "captured-camera.jpg");
+    } catch (err: any) {
+      console.error("Capture failed:", err);
+      setScanError(err.message || "Failed to capture image frame from video feed.");
+      setIsScanningVisual(false);
+    }
+  };
+
+  // Convert uploaded file to base64 & run the scan
+  const handleUploadedFileScan = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setScanError(null);
+    setIsScanningVisual(true);
+    setScanningLogs(["Ingesting source file...", "Validating resolution & format..."]);
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const base64DataUrl = event.target?.result as string;
+        if (!base64DataUrl) throw new Error("File reading yielded null result");
+        const pureBase64 = base64DataUrl.split(',')[1];
+
+        setGImage(base64DataUrl);
+        await executeAIScan(base64DataUrl, pureBase64, file.name);
+      } catch (err: any) {
+        console.error("File loading failed:", err);
+        setScanError(err.message || "Failed to process selected file.");
+        setIsScanningVisual(false);
+      }
+    };
+    reader.onerror = () => {
+      setScanError("Failed to read the file.");
+      setIsScanningVisual(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Execute the visual suggestion analyze garment pipeline
+  const executeAIScan = async (base64DataUrl: string, pureBase64: string, fileName: string) => {
+    // Staggered telemetry logs for immersive visual scan feel
+    const logTimeline = [
+      "Contacting LookVision core cognitive pipeline...",
+      "Segmenting garment layout & contours...",
+      "Extracting RGB color vectors...",
+      "Matching fabric texture coordinates...",
+      "Analyzing formality indexes..."
+    ];
+
+    let logIdx = 0;
+    const interval = setInterval(() => {
+      if (logIdx < logTimeline.length) {
+        setScanningLogs(prev => [...prev, logTimeline[logIdx]]);
+        logIdx++;
+      } else {
+        clearInterval(interval);
+      }
+    }, 450);
+
+    try {
+      const result = await VisualSuggestion.analyzeGarment(base64DataUrl, pureBase64, fileName);
+      clearInterval(interval);
+      
+      setScanningLogs(prev => [...prev, "Analysis complete. Matching coordinates populated!"]);
+      
+      if (result) {
+        setGTitle(result.name || "Custom Piece");
+        setGDesc(result.description || "Parsed via live AI scan.");
+        setGCategory(result.category || 'Casual');
+        setGPrimaryColor(result.primaryColor || 'Neutral Gray');
+        setGSeason(result.season || 'All-Season');
+        setScanConfidence(result.confidence || 0.95);
+        
+        // Auto toast feedback
+        window.dispatchEvent(new CustomEvent('lookvision_show_toast', { 
+          detail: `Detected: ${result.name} (${result.primaryColor}, ${result.category})` 
+        }));
+      }
+    } catch (err: any) {
+      clearInterval(interval);
+      console.error("AI scanning pipeline failed:", err);
+      setScanError("Gemini Vision pipeline failed or timed out. Details are pre-filled below so you can proceed manually.");
+      // Set some smart guess fallbacks from the file name so the user experience doesn't break
+      const guessedName = fileName.replace(/\.[^/.]+$/, "").split('-').join(' ').split('_').join(' ');
+      setGTitle(guessedName.charAt(0).toUpperCase() + guessedName.slice(1));
+      setGDesc("Manual description needed.");
+    } finally {
+      setIsScanningVisual(false);
+    }
+  };
+
+  // Clean up camera stream if component unmounts
+  useEffect(() => {
+    return () => {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [cameraStream]);
+
   // 3. Search query state
   const [searchQuery, setSearchQuery] = useState('');
   const [currentTheme, setCurrentTheme] = useState<string>(() => localStorage.getItem('look_vision_theme') || 'cosmic-dream');
+
+  // Synchronize document body color dynamically to prevent any "Preview Splitting"
+  useEffect(() => {
+    const THEME_BG_COLORS: Record<string, string> = {
+      'classic-noir': '#09090b',
+      'cyber-couture': '#03020c',
+      'nordic-editorial': '#0d0c0b',
+      'cosmic-dream': '#05050a',
+      'solar-day': '#fcfbf9',
+    };
+    const bgColor = THEME_BG_COLORS[currentTheme] || '#05050a';
+    document.body.style.backgroundColor = bgColor;
+    document.body.style.color = currentTheme === 'solar-day' ? '#1c1b1a' : '#ffffff';
+    document.body.style.transition = 'background-color 0.4s ease, color 0.4s ease';
+    
+    if (currentTheme === 'solar-day') {
+      document.documentElement.classList.add('light-theme');
+    } else {
+      document.documentElement.classList.remove('light-theme');
+    }
+  }, [currentTheme]);
 
   // Requirement D & E: Gentle Packing & Seasonal Weight states
   const [tomorrowFrozen, setTomorrowFrozenState] = useState<boolean>(() => {
@@ -804,6 +1053,17 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
     window.addEventListener('lookvision_view_product', handleGlobalViewProduct);
     return () => {
       window.removeEventListener('lookvision_view_product', handleGlobalViewProduct);
+    };
+  }, []);
+
+  // Centralized Custom Seller Dashboard opening event handler
+  useEffect(() => {
+    const handleGlobalOpenSellerDashboard = () => {
+      setIsSellerDashboardOpen(true);
+    };
+    window.addEventListener('lookvision_open_seller_dashboard', handleGlobalOpenSellerDashboard);
+    return () => {
+      window.removeEventListener('lookvision_open_seller_dashboard', handleGlobalOpenSellerDashboard);
     };
   }, []);
 
@@ -1635,7 +1895,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
       >
         
         {/* A. LEFT NAVIGATION SIDEBAR (Continuous from top to bottom) */}
-        <aside className="w-64 shrink-0 p-4 flex flex-col justify-between hidden lg:flex bg-[#07070c] border-r border-white/5 select-none h-full z-40">
+        <aside className={`w-64 shrink-0 p-4 flex flex-col justify-between hidden lg:flex select-none h-full z-40 ${themeObj.sidebarBg}`}>
           <div className="space-y-5 overflow-y-auto no-scrollbar flex-1 pb-4 pr-1">
             
             {/* AIStyleHub / LookVision Logo */}
@@ -1811,7 +2071,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
                 animate={{ x: 0 }}
                 exit={{ x: '-100%' }}
                 transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                className="relative w-64 max-w-[85vw] h-full bg-[#07070c] border-r border-white/5 flex flex-col justify-between p-4 z-50"
+                className={`relative w-64 max-w-[85vw] h-full flex flex-col justify-between p-4 z-50 ${themeObj.sidebarBg}`}
               >
                 {/* Close Button */}
                 <button 
@@ -1985,7 +2245,11 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
         <div className="flex-1 flex flex-col overflow-hidden h-full">
           
           {/* 1. TOP BAR NAVIGATION (Sits at the top of the right area) */}
-          <header className="h-16 flex items-center shrink-0 bg-[#07070c] border-b border-white/5 z-40 relative">
+          <header className={`h-16 flex items-center shrink-0 z-40 relative ${
+            currentTheme === 'solar-day' 
+              ? 'bg-[#f5f4f0] border-b border-stone-200 text-stone-900' 
+              : 'bg-[#07070c] border-b border-white/5 text-white'
+          }`}>
             {/* Mobile Menu & Logo: Shown only if sidebar is hidden */}
             <div className="pl-6 lg:hidden flex items-center gap-3 shrink-0">
               <button
@@ -2099,16 +2363,18 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
                 {/* Shopping Bag Icon button */}
                 <button 
                   onClick={() => {
-                    setActiveSubTab('HOME');
-                    // Let's open the orders drawer inside HomeFeed by sending a custom event!
+                    // Navigate to MARKETPLACE_ROOM instead of HOME
+                    setActiveSubTab('MARKETPLACE_ROOM');
+                    localStorage.setItem('last_active_place_subtab', 'MARKETPLACE_ROOM');
+                    // Dispatch custom event to open orders drawer inside Marketplace screen
                     setTimeout(() => {
-                      window.dispatchEvent(new CustomEvent('lookvision_open_orders'));
-                    }, 50);
+                      window.dispatchEvent(new CustomEvent('lookvision_open_marketplace_orders'));
+                    }, 100);
                   }}
                   className="p-2 rounded-full hover:bg-white/5 text-white/70 hover:text-white transition-all cursor-pointer relative"
                   title="Shopping Orders"
                 >
-                  <ShoppingBag className="w-4 h-4" />
+                  <ShoppingCart className="w-4 h-4" />
                 </button>
 
                 {/* Create with AI Button */}
@@ -2786,38 +3052,283 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
 
                     {addStep === 'IMAGE' && (
                       <div className="space-y-6 max-w-sm mx-auto py-4 text-center animate-fade-in select-none">
+                        <style>{`
+                          @keyframes scanSweep {
+                            0% { top: 0%; opacity: 0.8; }
+                            50% { top: 100%; opacity: 0.8; }
+                            100% { top: 0%; opacity: 0.8; }
+                          }
+                        `}</style>
+
                         <span className="text-[10px] font-mono text-white/30 uppercase tracking-[0.2em] block font-light">
-                          Ceremony of Placing — The Photograph
+                          Ceremony of Placing — LOOKVISION AI SCANNER
                         </span>
-                        <input
-                          type="text"
-                          placeholder="Paste image URL (or leave empty for fallback)..."
-                          value={gImage}
-                          onChange={(e) => setGImage(e.target.value)}
-                          className="w-full bg-transparent border-b border-white/10 py-3 text-sm text-center text-white placeholder-white/20 focus:outline-none focus:border-white transition-all font-light"
-                        />
-                        <div className="flex justify-center gap-6 pt-2 font-mono text-[10px]">
-                          <button
-                            onClick={() => setAddStep('NAME')}
-                            className="text-white hover:text-white/80 uppercase tracking-widest bg-white/5 px-6 py-3 border border-white/10 cursor-pointer font-light"
-                          >
-                            [ Next ]
-                          </button>
-                          <button
-                            onClick={() => {
-                              localStorage.removeItem('draft_add_step');
-                              localStorage.removeItem('draft_g_title');
-                              localStorage.removeItem('draft_g_desc');
-                              setGImage('');
-                              setGTitle('');
-                              setGDesc('');
-                              setAddStep('CLOSED');
-                            }}
-                            className="text-white/30 hover:text-white/60 uppercase tracking-widest py-3 cursor-pointer font-light"
-                          >
-                            [ Cancel ]
-                          </button>
-                        </div>
+
+                        {scanError && (
+                          <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] font-mono rounded text-left animate-fade-in">
+                            {scanError}
+                          </div>
+                        )}
+
+                        {/* A. Live Ingestion Camera Viewfinder */}
+                        {isCameraActive ? (
+                          <div className="space-y-4 animate-fade-in">
+                            <div className="relative aspect-video w-full bg-neutral-950 border border-white/15 overflow-hidden rounded-lg flex items-center justify-center">
+                              <video
+                                ref={videoRef}
+                                autoPlay
+                                playsInline
+                                muted
+                                className="w-full h-full object-cover transform scale-x-[-1]"
+                              />
+                              {/* Glowing Scan HUD Overlays */}
+                              <div className="absolute inset-4 border border-violet-500/20 pointer-events-none" />
+                              <div className="absolute top-2 left-2 text-[8px] font-mono text-violet-400 tracking-widest bg-black/40 px-1.5 py-0.5 rounded uppercase">
+                                [ LOOKVISION LENS STAGE ]
+                              </div>
+                              <div className="absolute bottom-2 right-2 text-[8px] font-mono text-emerald-400 tracking-widest bg-black/40 px-1.5 py-0.5 rounded uppercase">
+                                Live Ingestion Feed
+                              </div>
+                              {/* Laser Sweep Line */}
+                              <div 
+                                className="absolute left-0 w-full h-[2px] bg-emerald-500/80 shadow-[0_0_10px_rgba(16,185,129,0.8)] pointer-events-none"
+                                style={{
+                                  animation: 'scanSweep 3s ease-in-out infinite'
+                                }}
+                              />
+                            </div>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={captureAndScanGarment}
+                                className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-mono text-[10px] py-3 uppercase tracking-wider transition-all cursor-pointer font-bold"
+                              >
+                                [ Capture & AI Scan ]
+                              </button>
+                              <button
+                                onClick={stopScanningCamera}
+                                className="px-4 border border-white/10 hover:border-white/30 text-white/60 hover:text-white font-mono text-[10px] py-3 uppercase tracking-wider transition-all cursor-pointer"
+                              >
+                                [ Cancel ]
+                              </button>
+                            </div>
+                          </div>
+                        ) : null}
+
+                        {/* B. Active Scan Loading State */}
+                        {!isCameraActive && gImage && isScanningVisual && (
+                          <div className="space-y-4 animate-fade-in">
+                            <div className="relative aspect-square max-w-[240px] mx-auto bg-neutral-950 border border-white/15 overflow-hidden rounded-lg">
+                              <img 
+                                src={gImage} 
+                                referrerPolicy="no-referrer"
+                                className="w-full h-full object-cover opacity-60" 
+                                alt="Placing garment" 
+                              />
+                              {/* Laser Sweep Line */}
+                              <div 
+                                className="absolute left-0 w-full h-[2px] bg-violet-500 shadow-[0_0_12px_rgba(168,85,247,0.9)] pointer-events-none"
+                                style={{
+                                  animation: 'scanSweep 2.2s ease-in-out infinite'
+                                }}
+                              />
+                              <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                                <div className="text-center space-y-2 px-4">
+                                  <RefreshCw className="w-6 h-6 text-violet-400 animate-spin mx-auto" />
+                                  <p className="text-[9px] font-mono text-violet-300 tracking-widest uppercase animate-pulse">
+                                    Cognitive Extraction...
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {/* Scanning Real-time Telemetry Terminal Logs */}
+                            <div className="bg-black/50 border border-white/5 p-3 rounded text-left font-mono text-[8.5px] leading-relaxed text-zinc-400 max-h-[100px] overflow-y-auto no-scrollbar">
+                              <p className="text-violet-400/80 font-bold mb-1 border-b border-white/5 pb-1">[ SCANNER PROCESS TELEMETRY ]</p>
+                              {scanningLogs.map((log, index) => (
+                                <p key={index} className="truncate">
+                                  <span className="text-white/20 select-none mr-1.5">&gt;</span>{log}
+                                </p>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* C. Successful Scan Coordinates Match (Review step) */}
+                        {!isCameraActive && gImage && !isScanningVisual && (
+                          <div className="space-y-4 animate-fade-in">
+                            <div className="relative aspect-square max-w-[200px] mx-auto bg-neutral-950 border border-white/15 overflow-hidden rounded-lg">
+                              <img 
+                                src={gImage} 
+                                referrerPolicy="no-referrer"
+                                className="w-full h-full object-cover" 
+                                alt="Placing garment" 
+                              />
+                              {scanConfidence && (
+                                <div className="absolute bottom-2 right-2 bg-emerald-500/95 text-black font-mono text-[8px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider flex items-center gap-1">
+                                  <Check className="w-2.5 h-2.5 stroke-[3px]" /> Match {Math.round(scanConfidence * 100)}%
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Metadata details panel */}
+                            <div className="bg-white/5 border border-white/5 p-4 rounded-lg text-left space-y-3 font-mono text-[10px]">
+                              <p className="text-violet-400 font-bold uppercase border-b border-white/5 pb-1">[ INGESTED SPECIFICATIONS ]</p>
+                              <div className="grid grid-cols-3 gap-2 py-0.5">
+                                <span className="text-white/30 uppercase">Label:</span>
+                                <input
+                                  type="text"
+                                  value={gTitle}
+                                  onChange={(e) => setGTitle(e.target.value)}
+                                  className="col-span-2 text-white bg-transparent border-b border-white/5 focus:border-white/20 focus:outline-none font-serif italic truncate"
+                                />
+                              </div>
+                              <div className="grid grid-cols-3 gap-2 py-0.5">
+                                <span className="text-white/30 uppercase">Class:</span>
+                                <select 
+                                  value={gCategory}
+                                  onChange={(e) => setGCategory(e.target.value as any)}
+                                  className="col-span-2 text-zinc-300 bg-neutral-900 border border-white/5 focus:outline-none rounded px-1 py-0.5"
+                                >
+                                  {['Casual', 'Formal', 'Sportswear', 'Outerwear', 'Accessories'].map(cat => (
+                                    <option key={cat} value={cat}>{cat}</option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div className="grid grid-cols-3 gap-2 py-0.5">
+                                <span className="text-white/30 uppercase">Primary:</span>
+                                <input
+                                  type="text"
+                                  value={gPrimaryColor}
+                                  onChange={(e) => setGPrimaryColor(e.target.value)}
+                                  className="col-span-2 text-zinc-300 bg-transparent border-b border-white/5 focus:border-white/20 focus:outline-none truncate"
+                                />
+                              </div>
+                              <div className="grid grid-cols-3 gap-2 py-0.5">
+                                <span className="text-white/30 uppercase">Season:</span>
+                                <select 
+                                  value={gSeason}
+                                  onChange={(e) => setGSeason(e.target.value as any)}
+                                  className="col-span-2 text-zinc-300 bg-neutral-900 border border-white/5 focus:outline-none rounded px-1 py-0.5"
+                                >
+                                  {['Spring', 'Summer', 'Autumn', 'Winter', 'All-Season'].map(s => (
+                                    <option key={s} value={s}>{s}</option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div className="pt-2 border-t border-white/5">
+                                <span className="text-white/30 uppercase block mb-1">Extracted Note:</span>
+                                <textarea
+                                  value={gDesc}
+                                  onChange={(e) => setGDesc(e.target.value)}
+                                  rows={2}
+                                  className="w-full text-zinc-400 bg-transparent border border-white/5 focus:border-white/20 focus:outline-none p-1.5 rounded font-serif italic text-[9px] leading-relaxed resize-none"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="flex gap-2 font-mono text-[10px] pt-1">
+                              <button
+                                onClick={() => setAddStep('NOTE')}
+                                className="flex-1 bg-white text-black hover:bg-neutral-200 uppercase tracking-widest py-3 cursor-pointer font-bold"
+                              >
+                                [ Proceed to Ceremony ]
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setGImage('');
+                                  setGTitle('');
+                                  setGDesc('');
+                                  setScanConfidence(null);
+                                }}
+                                className="px-3 border border-white/10 hover:border-white/30 text-white/50 hover:text-white uppercase tracking-wider py-3 cursor-pointer font-light"
+                              >
+                                [ Clear ]
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* D. Default Scanner Standby & Input controls */}
+                        {!isCameraActive && !gImage && (
+                          <div className="space-y-6 animate-fade-in">
+                            {/* Ingestion Drag & Drop Zone */}
+                            <label className="group relative border border-dashed border-white/10 hover:border-violet-500/40 bg-neutral-900/30 p-8 rounded-xl flex flex-col items-center justify-center cursor-pointer transition-all">
+                              <input 
+                                type="file" 
+                                accept="image/*" 
+                                onChange={handleUploadedFileScan}
+                                className="hidden" 
+                              />
+                              <Upload className="w-8 h-8 text-white/20 group-hover:text-violet-400 transition-colors mb-3 animate-pulse" />
+                              <span className="text-[10px] font-mono text-zinc-400 group-hover:text-white tracking-widest uppercase block mb-1">
+                                Drop clothing photo or Browse
+                              </span>
+                              <span className="text-[8px] font-mono text-zinc-600 uppercase tracking-wider">
+                                PNG, JPG or HEIC format up to 10MB
+                              </span>
+                            </label>
+
+                            <div className="flex items-center justify-center gap-3">
+                              <div className="h-[1px] bg-white/5 flex-grow" />
+                              <span className="text-[9px] font-mono text-zinc-600 uppercase tracking-widest">or</span>
+                              <div className="h-[1px] bg-white/5 flex-grow" />
+                            </div>
+
+                            {/* Camera activation button */}
+                            <button
+                              type="button"
+                              onClick={startScanningCamera}
+                              className="w-full border border-white/10 hover:border-violet-500/30 bg-white/5 hover:bg-violet-500/5 text-zinc-300 hover:text-white font-mono text-[10px] py-4 rounded-lg uppercase tracking-widest transition-all cursor-pointer flex items-center justify-center gap-2"
+                            >
+                              <Camera className="w-3.5 h-3.5" /> [ Launch Live Ingestion Camera ]
+                            </button>
+
+                            <div className="flex items-center justify-center gap-3">
+                              <div className="h-[1px] bg-white/5 flex-grow" />
+                              <span className="text-[9px] font-mono text-zinc-600 uppercase tracking-widest">or</span>
+                              <div className="h-[1px] bg-white/5 flex-grow" />
+                            </div>
+
+                            {/* Original URL fallback input */}
+                            <div className="space-y-2">
+                              <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest block text-left">
+                                Paste Photograph URL (Original Mode)
+                              </span>
+                              <input
+                                type="text"
+                                placeholder="Paste clothing URL..."
+                                value={gImage}
+                                onChange={(e) => setGImage(e.target.value)}
+                                className="w-full bg-transparent border-b border-white/10 py-3 text-sm text-center text-white placeholder-white/20 focus:outline-none focus:border-white transition-all font-light"
+                              />
+                            </div>
+
+                            <div className="flex justify-center gap-6 pt-2 font-mono text-[10px]">
+                              {gImage && (
+                                <button
+                                  onClick={() => setAddStep('NAME')}
+                                  className="text-white hover:text-white/80 uppercase tracking-widest bg-white/5 px-6 py-3 border border-white/10 cursor-pointer font-light"
+                                >
+                                  [ Next ]
+                                </button>
+                              )}
+                              <button
+                                onClick={() => {
+                                  localStorage.removeItem('draft_add_step');
+                                  localStorage.removeItem('draft_g_title');
+                                  localStorage.removeItem('draft_g_desc');
+                                  setGImage('');
+                                  setGTitle('');
+                                  setGDesc('');
+                                  setAddStep('CLOSED');
+                                }}
+                                className="text-white/30 hover:text-white/60 uppercase tracking-widest py-3 cursor-pointer font-light"
+                              >
+                                [ Cancel ]
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -2883,19 +3394,20 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
                               const cleanNote = gDesc.trim() || 'Still feels right.';
                               triggerQuietPause(async () => {
                                 if (onAddGarment) {
-                                  await onAddGarment(gTitle, cleanNote, 'Casual', { imageUrl: fallbackUrl });
+                                  await onAddGarment(gTitle, cleanNote, gCategory, { imageUrl: fallbackUrl, season: gSeason, primaryColor: gPrimaryColor });
                                 } else {
                                   const items = [...state.unifiedStyleMemory.wardrobe_items];
                                   items.push({
                                     id: `local-${Date.now()}`,
                                     title: gTitle,
                                     description: cleanNote,
-                                    category: 'Casual',
+                                    category: gCategory,
                                     status: 'In Closet',
                                     userId: 'simulated-guest',
                                     createdAt: new Date(),
                                     imageUrl: fallbackUrl,
-                                    primaryColor: 'Neutrals'
+                                    primaryColor: gPrimaryColor,
+                                    season: gSeason
                                   });
                                   UnifiedFashionOS.syncWardrobeItems(items);
                                 }
@@ -3178,7 +3690,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
 
               {/* ROOM 3: AI DESIGN STUDIO */}
               {activeSubTab === 'AI_STUDIO' && (
-                <AIEngineStudio wardrobe={activeWardrobeList} />
+                <AIEngineStudio wardrobe={activeWardrobeList} onAddGarment={onAddGarment} />
               )}
 
               {/* ROOM 3: TOMORROW (PLANNER) */}
@@ -3738,14 +4250,14 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
             {/* ROOM: OUTFIT GENERATOR (Fully connected and interactive) */}
             {activeSubTab === 'OUTFIT_GEN' && (
               <div className="max-w-6xl mx-auto py-2 px-4 animate-fade-in">
-                <AIEngineStudio wardrobe={activeWardrobeList} initialSubTab="GENERATOR" />
+                <AIFashionMVPSuite wardrobe={activeWardrobeList} onAddGarment={onAddGarment} />
               </div>
             )}
 
             {/* ROOM: VIRTUAL TRY-ON (Fully connected and interactive) */}
             {activeSubTab === 'VIRTUAL_TRY' && (
               <div className="max-w-6xl mx-auto py-2 px-4 animate-fade-in">
-                <AIEngineStudio wardrobe={activeWardrobeList} initialSubTab="TRY_ON" />
+                <VirtualStudioTryOn wardrobe={activeWardrobeList} onAddGarment={onAddGarment} />
               </div>
             )}
 
@@ -3799,6 +4311,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
             {/* ROOM: MARKETPLACE SCREEN (Premium boutique showroom catalog) */}
             {activeSubTab === 'MARKETPLACE_ROOM' && (
               <MarketplaceScreen 
+                user={user}
                 userWardrobe={activeWardrobeList} 
                 onNavigateToTab={(tab) => handleNavigate(tab as any)} 
                 onAddGarment={onAddGarment} 
@@ -3806,12 +4319,14 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
                   setSelectedProduct(prod);
                   handleNavigate('PRODUCT_DETAIL');
                 }}
+                onOpenSellerDashboard={() => setIsSellerDashboardOpen(true)}
               />
             )}
 
             {/* ROOM: PRODUCT DETAIL SCREEN (AI compat score, sizing & try-on) */}
             {activeSubTab === 'PRODUCT_DETAIL' && selectedProduct && (
               <ProductDetailScreen 
+                user={user}
                 product={selectedProduct} 
                 userWardrobe={activeWardrobeList} 
                 onBack={() => handleNavigate('MARKETPLACE_ROOM')} 
@@ -3837,7 +4352,11 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
 
       {/* C. RIGHT SIDEBAR PERSISTENT PANEL */}
       {activeSubTab !== 'HOME' && (
-      <aside className="w-80 shrink-0 bg-[#07070c] border-l border-white/5 p-4 flex flex-col gap-5 overflow-y-auto no-scrollbar hidden xl:flex text-left">
+      <aside className={`w-80 shrink-0 p-4 flex flex-col gap-5 overflow-y-auto no-scrollbar hidden xl:flex text-left ${
+        currentTheme === 'solar-day' 
+          ? 'bg-[#f5f4f0] border-l border-stone-200 text-stone-900' 
+          : 'bg-[#07070c] border-l border-white/5 text-white'
+      }`}>
         
         {/* 1. Quick Actions */}
         <div className="space-y-3">
@@ -4014,19 +4533,26 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
           </div>
           <div className="grid grid-cols-3 gap-2">
             {[
-              { title: 'Summer Edit', items: '32 Items', img: 'https://images.unsplash.com/photo-1509319117193-57bab727e09d?q=80&w=200&auto=format&fit=crop' },
-              { title: 'Monochrome Luxe', items: '18 Items', img: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=200&auto=format&fit=crop' },
-              { title: 'Cyber Core', items: '24 Items', img: 'https://images.unsplash.com/photo-1544441893-675973e31985?q=80&w=200&auto=format&fit=crop' }
+              { title: 'Summer Resort Edit', displayTitle: 'Summer Edit', items: '32 Items', img: 'https://images.unsplash.com/photo-1509319117193-57bab727e09d?q=80&w=200&auto=format&fit=crop' },
+              { title: 'Monochrome Tailoring', displayTitle: 'Monochrome Luxe', items: '18 Items', img: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=200&auto=format&fit=crop' },
+              { title: 'Cyberpunk Techwear', displayTitle: 'Cyber Core', items: '24 Items', img: 'https://images.unsplash.com/photo-1544441893-675973e31985?q=80&w=200&auto=format&fit=crop' }
             ].map((pick, pIdx) => (
               <div 
                 key={pIdx} 
-                onClick={() => setActiveSubTab('AI_STUDIO')}
+                onClick={() => {
+                  setActiveSubTab('HOME');
+                  setTimeout(() => {
+                    window.dispatchEvent(new CustomEvent('lookvision_open_editor_sandbox', {
+                      detail: { title: pick.title }
+                    }));
+                  }, 50);
+                }}
                 className="rounded-xl overflow-hidden bg-[#0d0d18] border border-white/5 cursor-pointer relative aspect-[3/4] group"
               >
                 <img src={pick.img} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt="" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent flex flex-col justify-end p-2 text-left" />
                 <div className="absolute bottom-1.5 left-1.5 right-1.5 text-left">
-                  <span className="block text-[8.5px] font-bold text-white leading-tight truncate">{pick.title}</span>
+                  <span className="block text-[8.5px] font-bold text-white leading-tight truncate">{pick.displayTitle}</span>
                   <span className="block text-[7px] text-white/50">{pick.items}</span>
                 </div>
               </div>
@@ -4159,249 +4685,36 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
       </div>
     )}
 
-    {/* --- VISUAL QA CONTROL CENTER GLASS PANEL --- */}
-    <div className="fixed bottom-4 left-4 z-50">
-      <div className={`transition-all duration-300 ${isQASandboxOpen ? 'w-80 h-[500px] p-4' : 'w-48 h-10 p-2'} bg-black/95 backdrop-blur-xl border border-violet-500/30 rounded-2xl shadow-2xl flex flex-col justify-between overflow-hidden text-left`}>
-        {/* Panel Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-2.5 h-2.5 rounded-full bg-violet-500 animate-pulse" />
-            <span className="text-[10.5px] font-mono uppercase tracking-wider text-white font-bold">📐 Design Sandbox</span>
-          </div>
-          <button 
-            onClick={() => setIsQASandboxOpen(!isQASandboxOpen)}
-            className="text-[9px] font-mono uppercase text-violet-400 hover:text-white px-2 py-0.5 rounded bg-white/5 border border-white/10 transition-colors"
+    {/* Custom Premium Toast Notifications Overlay */}
+    <div className="fixed bottom-6 right-6 z-[9999] flex flex-col gap-2 max-w-sm pointer-events-none select-none">
+      <AnimatePresence>
+        {toasts.map(toast => (
+          <motion.div
+            key={toast.id}
+            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.95 }}
+            transition={{ duration: 0.25, ease: 'easeOut' }}
+            className="pointer-events-auto flex items-center gap-2.5 px-4 py-3 bg-[#0c0c14]/95 border border-white/10 rounded-2xl shadow-xl backdrop-blur-md"
           >
-            {isQASandboxOpen ? 'Hide' : 'Expand'}
-          </button>
-        </div>
-
-        {/* Extended Body */}
-        {isQASandboxOpen ? (
-          <div className="flex-grow flex flex-col justify-between mt-3 space-y-3 border-t border-white/5 pt-3 overflow-y-auto no-scrollbar">
-            
-            {/* Opacity slider */}
-            <div className="space-y-1">
-              <div className="flex justify-between items-center text-[9.5px] font-mono text-white/60">
-                <span>Figma Mock Overlay</span>
-                <span className="text-violet-400 font-bold">{isMockOverlayActive ? 'ACTIVE' : 'INACTIVE'}</span>
-              </div>
-              <div className="flex gap-2 items-center">
-                <button 
-                  onClick={() => setIsMockOverlayActive(!isMockOverlayActive)}
-                  className={`px-3 py-1 text-[9px] font-mono uppercase rounded transition-all cursor-pointer ${
-                    isMockOverlayActive ? 'bg-violet-600 text-white font-bold' : 'bg-white/5 text-white/50 hover:bg-white/10'
-                  }`}
-                >
-                  {isMockOverlayActive ? 'Disable' : 'Enable'}
-                </button>
-                <input 
-                  type="range"
-                  min="0.1"
-                  max="1"
-                  step="0.05"
-                  value={mockOverlayOpacity}
-                  onChange={(e) => setMockOverlayOpacity(parseFloat(e.target.value))}
-                  disabled={!isMockOverlayActive}
-                  className="flex-1 accent-violet-500 cursor-pointer disabled:opacity-30"
-                />
-                <span className="text-[9.5px] font-mono text-white/30 w-8 text-right">{Math.round(mockOverlayOpacity * 100)}%</span>
-              </div>
-            </div>
-
-            {/* Helper toggles */}
-            <div className="grid grid-cols-2 gap-2">
-              <button 
-                onClick={() => setShowGridLines(!showGridLines)}
-                disabled={!isMockOverlayActive}
-                className={`py-1 text-[8.5px] font-mono uppercase rounded border transition-all cursor-pointer ${
-                  showGridLines ? 'bg-pink-950/40 border-pink-500/50 text-pink-300' : 'bg-white/5 border-white/5 text-white/40 hover:bg-white/10 disabled:opacity-30'
-                }`}
-              >
-                Pixel Grid
-              </button>
-              <button 
-                onClick={() => setShowPaddingBadges(!showPaddingBadges)}
-                disabled={!isMockOverlayActive}
-                className={`py-1 text-[8.5px] font-mono uppercase rounded border transition-all cursor-pointer ${
-                  showPaddingBadges ? 'bg-pink-950/40 border-pink-500/50 text-pink-300' : 'bg-white/5 border-white/5 text-white/40 hover:bg-white/10 disabled:opacity-30'
-                }`}
-              >
-                Padding Badges
-              </button>
-            </div>
-
-            {/* URL Input & File Upload for Reference Image */}
-            <div className="space-y-1.5 border-t border-white/5 pt-2">
-              <span className="text-[8.5px] font-mono uppercase text-white/40 block font-bold">Mock Image Source</span>
-              
-              <div className="flex gap-1.5">
-                <input 
-                  type="text"
-                  placeholder="Paste layout image URL (https://...)"
-                  value={mockImageUrl}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setMockImageUrl(val);
-                    localStorage.setItem('lookvision_mock_image_url', val);
-                  }}
-                  className="flex-grow bg-white/5 border border-white/10 rounded px-2 py-1 text-[9.5px] font-mono text-white placeholder-white/20 focus:outline-none focus:border-violet-500/50"
-                />
-                {mockImageUrl && (
-                  <button 
-                    onClick={() => {
-                      setMockImageUrl('');
-                      localStorage.removeItem('lookvision_mock_image_url');
-                    }}
-                    className="px-2 bg-red-950/40 hover:bg-red-900/40 border border-red-500/20 text-red-400 text-[8.5px] rounded font-mono uppercase cursor-pointer"
-                  >
-                    Clear
-                  </button>
-                )}
-              </div>
-
-              {/* Base64 File Uploader */}
-              <div className="relative">
-                <input 
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      const reader = new FileReader();
-                      reader.onload = (event) => {
-                        const base64 = event.target?.result as string;
-                        if (base64) {
-                          setMockImageUrl(base64);
-                          try {
-                            localStorage.setItem('lookvision_mock_image_url', base64);
-                          } catch (err) {
-                            console.warn("Storage full, base64 cached in state only:", err);
-                          }
-                        }
-                      };
-                      reader.readAsDataURL(file);
-                    }
-                  }}
-                  className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10"
-                />
-                <div className="w-full py-1.5 border border-dashed border-violet-500/20 hover:border-violet-500/40 bg-violet-950/5 hover:bg-violet-950/10 rounded text-center text-[9px] font-mono text-violet-300 uppercase cursor-pointer transition-all">
-                  ↑ Drag or Upload Layout Image
-                </div>
-              </div>
-            </div>
-
-            {/* Blend Mode & Fit Controls */}
-            {mockImageUrl && (
-              <div className="space-y-1.5 border-t border-white/5 pt-2 grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <span className="text-[8px] font-mono uppercase text-white/40 block font-bold">Blend Mode</span>
-                  <div className="flex flex-col gap-1">
-                    {(['normal', 'difference', 'multiply', 'screen', 'overlay'] as const).map((mode) => (
-                      <button 
-                        key={mode}
-                        onClick={() => {
-                          setMockBlendMode(mode);
-                          localStorage.setItem('lookvision_mock_blend_mode', mode);
-                        }}
-                        className={`text-[8px] font-mono uppercase py-0.5 rounded text-left px-1.5 transition-all cursor-pointer ${
-                          mockBlendMode === mode ? 'bg-violet-500/20 border border-violet-500/30 text-violet-300 font-bold' : 'text-white/40 hover:text-white/70'
-                        }`}
-                      >
-                        {mode}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <span className="text-[8px] font-mono uppercase text-white/40 block font-bold">Image Fit</span>
-                  <div className="flex flex-col gap-1">
-                    {(['cover', 'contain', 'fill'] as const).map((fit) => (
-                      <button 
-                        key={fit}
-                        onClick={() => {
-                          setMockImageFit(fit);
-                          localStorage.setItem('lookvision_mock_image_fit', fit);
-                        }}
-                        className={`text-[8px] font-mono uppercase py-0.5 rounded text-left px-1.5 transition-all cursor-pointer ${
-                          mockImageFit === fit ? 'bg-violet-500/20 border border-violet-500/30 text-violet-300 font-bold' : 'text-white/40 hover:text-white/70'
-                        }`}
-                      >
-                        {fit}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Gap Analysis checklist */}
-            <div className="bg-[#0b0b14] border border-white/5 rounded-xl p-2 space-y-1 text-left">
-              <span className="text-[8px] font-mono uppercase text-white/30 block font-bold">Layout Matching Integrity Checklist:</span>
-              <div className="space-y-0.5 text-[8px] font-mono text-white/70">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-emerald-400">✓</span>
-                  <span>Sidebar locked to #07070c / white/5 borders</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-emerald-400">✓</span>
-                  <span>Premium Dark-slate bg #05050a / #06060c</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-emerald-400">✓</span>
-                  <span>Three-Column Home Grid Layout alignment</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-emerald-400">✓</span>
-                  <span>Header Search and Icons identical</span>
-                </div>
-              </div>
-            </div>
-
-            <p className="text-[7.5px] font-mono text-neutral-500 text-center uppercase tracking-wider">
-              LookVision CAD Engine v4.0.1
+            <div className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse shrink-0" />
+            <p className="text-[11px] font-sans font-medium text-zinc-100 leading-normal">
+              {toast.message}
             </p>
-
-          </div>
-        ) : (
-          <div className="flex items-center justify-between text-[9px] text-white/40 font-mono mt-0.5 w-full">
-            <span>QA Sandbox Off</span>
-            <button 
-              onClick={() => {
-                setIsQASandboxOpen(true);
-                setIsMockOverlayActive(true);
-              }} 
-              className="text-violet-400 hover:text-white uppercase font-bold"
-            >
-              Open QA Sandbox
-            </button>
-          </div>
-        )}
-
-        {/* Custom Premium Toast Notifications Overlay */}
-        <div className="absolute bottom-6 right-6 z-[9999] flex flex-col gap-2 max-w-sm pointer-events-none select-none">
-          <AnimatePresence>
-            {toasts.map(toast => (
-              <motion.div
-                key={toast.id}
-                initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                transition={{ duration: 0.25, ease: 'easeOut' }}
-                className="pointer-events-auto flex items-center gap-2.5 px-4 py-3 bg-[#0c0c14]/95 border border-white/10 rounded-2xl shadow-xl backdrop-blur-md"
-              >
-                <div className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse shrink-0" />
-                <p className="text-[11px] font-sans font-medium text-zinc-100 leading-normal">
-                  {toast.message}
-                </p>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </div>
-
-      </div>
+          </motion.div>
+        ))}
+      </AnimatePresence>
     </div>
+
+    {/* Real-time Seller Onboarding and Dashboard System */}
+    <AnimatePresence>
+      {isSellerDashboardOpen && (
+        <SellerDashboard 
+          user={user} 
+          onClose={() => setIsSellerDashboardOpen(false)} 
+        />
+      )}
+    </AnimatePresence>
   </div>
   );
 };

@@ -1,4 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
+import { AIRequestPipeline } from '../efficiency/aiRequestPipeline';
 
 export interface RawTrendData {
   term: string;
@@ -82,43 +83,59 @@ export class GeminiGroundingAdapter implements TrendSourceAdapter {
       return [];
     }
 
-    try {
-      const ai = new GoogleGenAI({
-        apiKey,
-        httpOptions: { headers: { 'User-Agent': 'aistudio-build' } }
-      });
-
-      // Query Gemini with Search Grounding enabled to extract live search terms
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.5-flash',
-        contents: `What are exactly 5 highly-specific, active avant-garde, streetwear, or high-fashion clothing trends, pieces, cuts, or style micro-trends trending right now in ${region} for June 2026? 
+    const promptText = `What are exactly 5 highly-specific, active avant-garde, streetwear, or high-fashion clothing trends, pieces, cuts, or style micro-trends trending right now in ${region} for June 2026? 
           Return ONLY a JSON list matching this structure:
           [
             {"term": "Sartorial Baggy Linen Blazer", "category": "Outerwear", "volumeLabel": "Top Trend", "growthIndicator": "+180% spikes"}
-          ]`,
-        config: {
-          tools: [{ googleSearch: {} }], // Enable Search Grounding!
-          responseMimeType: 'application/json',
-          maxOutputTokens: 4096,
+          ]`;
+
+    const pipelineKey = `trends:${region.toLowerCase()}`;
+
+    try {
+      const { result } = await AIRequestPipeline.executeTextPipeline<RawTrendData[]>(
+        pipelineKey,
+        {
+          cacheType: 'TREND_ANALYSIS',
+          promptText,
+          ttlMs: 4 * 60 * 60 * 1000 // Trends can be cached for 4 hours
+        },
+        async () => {
+          const ai = new GoogleGenAI({
+            apiKey,
+            httpOptions: { headers: { 'User-Agent': 'aistudio-build' } }
+          });
+
+          // Query Gemini with Search Grounding enabled to extract live search terms
+          const response = await ai.models.generateContent({
+            model: 'gemini-3.5-flash',
+            contents: promptText,
+            config: {
+              tools: [{ googleSearch: {} }], // Enable Search Grounding!
+              responseMimeType: 'application/json',
+              maxOutputTokens: 4096,
+            }
+          });
+
+          const text = response.text?.trim();
+          if (!text) throw new Error('Empty response from grounding search.');
+
+          const parsed = JSON.parse(text);
+          if (Array.isArray(parsed)) {
+            return parsed.map((item: any) => ({
+              term: item.term || 'Oversized Silk Shells',
+              category: item.category || 'Aesthetic Wardrobe',
+              source: this.name,
+              volumeLabel: item.volumeLabel || 'Trending High',
+              growthIndicator: item.growthIndicator || '+95% spikes',
+              confidence: 0.95,
+              extractedAt: new Date().toISOString()
+            }));
+          }
+          return [];
         }
-      });
+      );
 
-      const text = response.text?.trim();
-      if (!text) throw new Error('Empty response from grounding search.');
-
-      const parsed = JSON.parse(text);
-      if (Array.isArray(parsed)) {
-        return parsed.map((item: any) => ({
-          term: item.term || 'Oversized Silk Shells',
-          category: item.category || 'Aesthetic Wardrobe',
-          source: this.name,
-          volumeLabel: item.volumeLabel || 'Trending High',
-          growthIndicator: item.growthIndicator || '+95% spikes',
-          confidence: 0.95,
-          extractedAt: new Date().toISOString()
-        }));
-      }
-      return [];
+      return result;
     } catch (err: any) {
       console.error('[GeminiGroundingAdapter] Search Grounding failed:', err.message);
       return [];

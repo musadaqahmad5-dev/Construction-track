@@ -4,8 +4,8 @@ import {
   Activity, Clock, Coins, Award, Shirt, Calendar, 
   ArrowUpRight, Check, Trash2, Sliders, Eye, TrendingUp, Info
 } from 'lucide-react';
-import { WardrobeItem } from '../types';
-import { UnifiedFashionOS } from '../features/ai-core/UnifiedFashionOS';
+import { WardrobeItem } from '../platform';
+import { UnifiedFashionOS } from '../engine';
 
 interface SartorialControlCenterProps {
   wardrobe: WardrobeItem[];

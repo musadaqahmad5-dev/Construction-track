@@ -19,8 +19,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { db, auth } from '../firebase';
 import { collection, getDocs, query, orderBy, limit, addDoc, serverTimestamp, onSnapshot } from 'firebase/firestore';
-import { UnifiedFashionOS, SubscriptionTier } from '../features/ai-core/UnifiedFashionOS';
-import { ErrorRegistry } from '../features/reliability/errorRegistry';
+import { UnifiedFashionOS, type SubscriptionTier, ErrorRegistry } from '../engine';
 
 interface TelemetryEvent {
   id: string;

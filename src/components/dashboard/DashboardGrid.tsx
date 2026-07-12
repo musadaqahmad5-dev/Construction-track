@@ -144,9 +144,20 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
         
         {/* Header Block */}
         <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Calendar className="w-4.5 h-4.5 text-violet-400 fill-violet-400/10" />
-            <h3 className="text-xs font-bold font-sans uppercase tracking-widest text-violet-400">AI Creations</h3>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4.5 h-4.5 text-violet-400 fill-violet-400/10" />
+              <h3 className="text-xs font-bold font-sans uppercase tracking-widest text-violet-400">AI Creations</h3>
+            </div>
+            
+            {/* Create with AI direct link button */}
+            <button
+              onClick={() => setActiveSubTab && setActiveSubTab('AI_STUDIO')}
+              className="bg-violet-600 hover:bg-violet-500 text-white px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider flex items-center gap-1.5 cursor-pointer transition-all shadow-md shadow-violet-600/15"
+            >
+              <Sparkle className="w-2.5 h-2.5 fill-white" />
+              <span>Create with AI</span>
+            </button>
           </div>
           <p className="text-[10.5px] text-zinc-400 font-sans font-light">AI generated looks by our community</p>
 

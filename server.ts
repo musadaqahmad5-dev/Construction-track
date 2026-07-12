@@ -7,15 +7,18 @@ import { getFirestore } from "firebase-admin/firestore";
 import Stripe from "stripe";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
-import { FashionAI } from "./src/features/ai/fashionAI";
-import { FashionOrchestrator } from "./src/core/FashionOrchestrator";
-import { ImageGenerationRegistry } from "./src/features/image-generation/imageGenerationProvider";
-import { FashionPromptBuilder } from "./src/features/image-generation/promptBuilder";
-import { ImageStorage } from "./src/features/image-generation/imageStorage";
-import { TrendAggregator } from "./src/features/live-trends/trendAggregator";
-import { CatalogSync } from "./src/features/catalog/catalogSync";
-import { RealityAudit } from "./src/features/reality/realityAudit";
-import { UnifiedFashionOS } from "./src/features/ai-core/UnifiedFashionOS";
+import { 
+  FashionAI,
+  FashionOrchestrator,
+  ImageGenerationRegistry,
+  FashionPromptBuilder,
+  ImageStorage,
+  TrendAggregator,
+  CatalogSync,
+  RealityAudit,
+  UnifiedFashionOS,
+  AIRequestPipeline
+} from "./src/engine";
 import { handler as recommendMvpHandler } from "./netlify/functions/recommend-mvp";
 
 function parseTopOutfits(primary: any, alternatives: any[]): any[] {
@@ -884,6 +887,156 @@ async function startServer() {
       res.status(500).json({ error: "Failed to compile reality audit: " + err.message });
     }
   });
+
+  // Intelligent Request Pipeline Cost & Performance Report Route
+  app.get("/api/system/pipeline-report", async (req, res) => {
+    try {
+      const report = AIRequestPipeline.generateCostOptimizationReport();
+      res.json({ success: true, report });
+    } catch (err: any) {
+      console.error("[API ERROR] Failed to fetch pipeline report:", err);
+      res.status(500).json({ error: "Failed to load optimization analytics: " + err.message });
+    }
+  });
+
+  // Intelligent Request Pipeline Cache and Stats Reset Route
+  app.post("/api/system/pipeline-reset", async (req, res) => {
+    try {
+      AIRequestPipeline.clearMetrics();
+      res.json({ success: true, message: "Request pipeline statistics and local cache flushes completed." });
+    } catch (err: any) {
+      console.error("[API ERROR] Failed to reset pipeline statistics:", err);
+      res.status(500).json({ error: "Failed to clear request pipeline state: " + err.message });
+    }
+  });
+
+  // --- AUTOMATED PERIODIC AI CREATION SCHEDULER (Every 1 Hour, Generates 2 Images) ---
+  const AUTO_FASHION_CONCEPTS = [
+    {
+      theme: 'Cyberpunk Haute-Couture',
+      vibe: 'neon glow, matte black, high-contrast violet accessories, tactical straps',
+      gender: 'female' as const,
+      formality: 'Semi-formal' as const,
+      season: 'Winter',
+      setting: 'under elevated neon lights in Tokyo, rain-slicked asphalt reflecting violet light',
+      garments: [
+        { title: 'Asymmetric Neo-Trench Coat', category: 'outerwear', primaryColor: 'matte black' },
+        { title: 'Cybernetic Tech-Shell Dress', category: 'dress', primaryColor: 'glowing purple' }
+      ]
+    },
+    {
+      theme: 'Desert Minimalist Wanderer',
+      vibe: 'warm sand, loose layering, breathable linen, earth tones, soft shadows',
+      gender: 'unisex' as const,
+      formality: 'Casual' as const,
+      season: 'Summer',
+      setting: 'a minimalist concrete pavilion in the Mojave desert at warm golden hour',
+      garments: [
+        { title: 'Oversized Silk Linen Draped Kimono', category: 'outerwear', primaryColor: 'warm sand' },
+        { title: 'Loose Fit Wide Leg Trousers', category: 'pants', primaryColor: 'cream' }
+      ]
+    },
+    {
+      theme: 'Nordic Avant-Garde Tailoring',
+      vibe: 'monochromatic, textured charcoal wool, sharp architectural angles, sleek lines',
+      gender: 'male' as const,
+      formality: 'Formal' as const,
+      season: 'Autumn',
+      setting: 'an ultra-minimalist museum gallery with floor-to-ceiling concrete and cold sky backdrop',
+      garments: [
+        { title: 'Double Breasted Structured Blazer', category: 'top', primaryColor: 'charcoal grey' },
+        { title: 'Architectural Pleated Wool Pants', category: 'pants', primaryColor: 'deep slate' }
+      ]
+    },
+    {
+      theme: 'Ethereal Silk Couture',
+      vibe: 'flowing, high-shine satin, pearlescent, breeze-catching drapes, romantic mood',
+      gender: 'female' as const,
+      formality: 'Formal' as const,
+      season: 'Spring',
+      setting: 'a high-end sun-drenched studio overlooking the Mediterranean sea',
+      garments: [
+        { title: 'Pearlescent Floor-Length Silk Gown', category: 'dress', primaryColor: 'pearl white' },
+        { title: 'Sheer Organza Trench Duster', category: 'outerwear', primaryColor: 'translucent blush' }
+      ]
+    },
+    {
+      theme: 'Metropolitan Tech-Streetwear',
+      vibe: 'reflective grey nylon, industrial utility pockets, oversized silhouette',
+      gender: 'unisex' as const,
+      formality: 'Casual' as const,
+      season: 'Autumn',
+      setting: 'against a textured brutalist concrete facade with cool high-contrast overcast sky',
+      garments: [
+        { title: 'Reflective Modular Shell Windbreaker', category: 'outerwear', primaryColor: 'metallic silver' },
+        { title: 'Loose Drawstring Cargo Pants', category: 'pants', primaryColor: 'slate grey' }
+      ]
+    },
+    {
+      theme: 'Classic Sartorial Elegance',
+      vibe: 'timeless tweed, refined double-breasted coat, modern English styling',
+      gender: 'male' as const,
+      formality: 'Formal' as const,
+      season: 'Winter',
+      setting: 'a luxurious wood-paneled library with warm soft lamp light',
+      garments: [
+        { title: 'Heavy Tweed Heritage Overcoat', category: 'outerwear', primaryColor: 'deep forest green' },
+        { title: 'Slim Fit Cashmere Turtleneck', category: 'top', primaryColor: 'cream white' }
+      ]
+    }
+  ];
+
+  async function runPeriodicFashionUploads() {
+    console.log("[Auto-Scheduler] Starting periodic automated fashion generation (2 images)...");
+    try {
+      // Pick 2 random distinct concepts
+      const shuffled = [...AUTO_FASHION_CONCEPTS].sort(() => 0.5 - Math.random());
+      const selectedConcepts = shuffled.slice(0, 2);
+
+      for (const concept of selectedConcepts) {
+        try {
+          const prompt = FashionPromptBuilder.buildOutfitPrompt(concept);
+          console.log(`[Auto-Scheduler] Generating image with theme: ${concept.theme}`);
+          
+          // Use Gemini provider if API key exists, otherwise picsum provider as configured in registry
+          const providerName = process.env.GEMINI_API_KEY ? 'Google-Imagen-4.0' : 'Fashion-Picsum-Deterministic';
+          const result = await ImageGenerationRegistry.generate(prompt, { aspectRatio: '3:4' }, providerName);
+
+          if (result.success && result.imageUrl) {
+            console.log(`[Auto-Scheduler] Successfully generated image. Saving to Firestore under 'generatedLooks'...`);
+            await ImageStorage.persistLook(result.imageUrl, {
+              prompt,
+              provider: result.provider,
+              vibe: concept.theme,
+              season: concept.season,
+              userId: 'sartorial-ai-autobot'
+            });
+            console.log(`[Auto-Scheduler] Successfully uploaded custom AI look: ${concept.theme}`);
+          } else {
+            console.error(`[Auto-Scheduler] Image generation failed for concept: ${concept.theme}. Error: ${result.error}`);
+          }
+        } catch (innerErr: any) {
+          console.error(`[Auto-Scheduler] Error generating look for concept ${concept.theme}:`, innerErr);
+        }
+      }
+    } catch (err: any) {
+      console.error("[Auto-Scheduler] Failed to execute periodic fashion uploads:", err);
+    }
+  }
+
+  // Run once immediately on startup so there are fresh AI creations in the database right away
+  setTimeout(() => {
+    runPeriodicFashionUploads().catch(err => {
+      console.error("[Auto-Scheduler] Error in startup seed generation:", err);
+    });
+  }, 5000);
+
+  // Repeat every 1 hour (3600000 ms)
+  setInterval(() => {
+    runPeriodicFashionUploads().catch(err => {
+      console.error("[Auto-Scheduler] Error in interval automated generation:", err);
+    });
+  }, 60 * 60 * 1000);
 
   // Vite development integration or static serving
   if (process.env.NODE_ENV !== "production") {

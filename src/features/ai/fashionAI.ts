@@ -10,6 +10,7 @@ import { StyleProfileMemory } from '../style-memory/styleProfile';
 import { VectorProfileMemory } from '../user-profile-memory/vectorProfileMemory';
 import { OutfitHistory } from '../style-memory/outfitHistory';
 import { GenerationHistory } from '../image-generation/generationHistory';
+import { AIRequestPipeline, RuleEngine } from '../efficiency/aiRequestPipeline';
 
 // Interfaces for Visual analysis (Task 3)
 export interface GarmentVisionResult {
@@ -158,41 +159,66 @@ export class FashionAI {
       };
     }
 
+    const { systemInstruction, prompt } = FashionPromptBuilder.buildRecommendationPrompt(
+      wardrobe,
+      weatherCtx,
+      styleMemory,
+      agenda
+    );
+
+    const pipelineKey = `recommend:${userId || 'anon'}:${condition}:${tempRange}:${vibe}:${agenda}:${wardrobe.length}`;
+
     try {
-      // 4. Construct Prompt
-      const { systemInstruction, prompt } = FashionPromptBuilder.buildRecommendationPrompt(
-        wardrobe,
-        weatherCtx,
-        styleMemory,
-        agenda
+      const { result } = await AIRequestPipeline.executeTextPipeline<OutfitRecommendationResult>(
+        pipelineKey,
+        {
+          cacheType: 'STYLE_RECOMMENDATIONS',
+          promptText: prompt,
+          ttlMs: 5 * 60 * 1000, // 5 min TTL
+          localResolver: () => {
+            const local = RuleEngine.resolveStyleLocally(condition, tempRange, vibe, agenda, wardrobe);
+            if (local && local.resolved) {
+              return {
+                resolved: true,
+                suggestion: {
+                  todaySuggestion: local.suggestion,
+                  tomorrowSuggestion: [],
+                  confidence: 0.95,
+                  reasoning: local.reasoning
+                } as OutfitRecommendationResult,
+                reasoning: local.reasoning
+              };
+            }
+            return null;
+          }
+        },
+        async () => {
+          const response = await ai.models.generateContent({
+            model: 'gemini-3.5-flash',
+            contents: prompt,
+            config: {
+              systemInstruction,
+              responseMimeType: "application/json",
+              maxOutputTokens: 8192
+            }
+          });
+
+          const responseText = response.text;
+          if (!responseText) {
+            throw new Error("Empty text returned from Gemini API");
+          }
+
+          const parsed = JSON.parse(responseText.trim());
+          return {
+            todaySuggestion: Array.isArray(parsed.todaySuggestion) ? parsed.todaySuggestion : fallbackResult.todaySuggestion,
+            tomorrowSuggestion: Array.isArray(parsed.tomorrowSuggestion) ? parsed.tomorrowSuggestion : fallbackResult.tomorrowSuggestion,
+            confidence: typeof parsed.confidence === 'number' ? parsed.confidence : fallbackResult.confidence,
+            reasoning: typeof parsed.reasoning === 'string' ? parsed.reasoning : fallbackResult.reasoning
+          };
+        }
       );
 
-      // 5. Query Gemini Flash (Highly efficient, perfect for text orchestration)
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.5-flash',
-        contents: prompt,
-        config: {
-          systemInstruction,
-          responseMimeType: "application/json",
-          maxOutputTokens: 8192
-        }
-      });
-
-      const responseText = response.text;
-      if (!responseText) {
-        throw new Error("Empty text returned from Gemini API");
-      }
-
-      // 6. Parse result and structure safely
-      const parsed = JSON.parse(responseText.trim());
-      
-      return {
-        todaySuggestion: Array.isArray(parsed.todaySuggestion) ? parsed.todaySuggestion : fallbackResult.todaySuggestion,
-        tomorrowSuggestion: Array.isArray(parsed.tomorrowSuggestion) ? parsed.tomorrowSuggestion : fallbackResult.tomorrowSuggestion,
-        confidence: typeof parsed.confidence === 'number' ? parsed.confidence : fallbackResult.confidence,
-        reasoning: typeof parsed.reasoning === 'string' ? parsed.reasoning : fallbackResult.reasoning
-      };
-
+      return result;
     } catch (err) {
       console.error("Gemini Outfit Recommendation failed. Falling back to OutfitReasoner.", err);
       return {
@@ -220,20 +246,32 @@ export class FashionAI {
 - [Offline] Configure your Gemini API secret key to enable advanced style strategies.`;
     }
 
+    const { systemInstruction, prompt } = FashionPromptBuilder.buildSingleGarmentStrategyPrompt(
+      title,
+      category,
+      description
+    );
+
+    const pipelineKey = `strategy:${title.toLowerCase()}:${category.toLowerCase()}:${description.toLowerCase()}`;
+
     try {
-      const { systemInstruction, prompt } = FashionPromptBuilder.buildSingleGarmentStrategyPrompt(
-        title,
-        category,
-        description
+      const { result } = await AIRequestPipeline.executeTextPipeline<string>(
+        pipelineKey,
+        {
+          cacheType: 'STYLE_RECOMMENDATIONS',
+          promptText: prompt,
+          ttlMs: 24 * 60 * 60 * 1000 // Strategies can live for 24 hours in cache!
+        },
+        async () => {
+          const response = await ai.models.generateContent({
+            model: 'gemini-3.5-flash',
+            contents: prompt,
+            config: { systemInstruction, maxOutputTokens: 4096 }
+          });
+          return response.text?.trim() || "No advice formulated.";
+        }
       );
-
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.5-flash',
-        contents: prompt,
-        config: { systemInstruction, maxOutputTokens: 4096 }
-      });
-
-      return response.text?.trim() || "No advice formulated.";
+      return result;
     } catch (err) {
       console.error("Gemini Single Strategy generation failed.", err);
       return `**Styling tips for ${title}:**

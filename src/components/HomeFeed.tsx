@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   Sparkles, 
   ShoppingBag, 
+  ShoppingCart,
+  Users,
   Search, 
   SlidersHorizontal,
   ChevronRight,
@@ -25,14 +27,18 @@ import {
   TrendingUp,
   UserCheck
 } from 'lucide-react';
-import { FeedItem } from '../features/feed/feedTypes';
-import { AIEngine, LOCAL_SHOP_ITEMS } from '../features/feed/AIEngine';
+import { 
+  FeedItem, 
+  LOCAL_SHOP_ITEMS, 
+  useOnlineStatus, 
+  useStyleProfile, 
+  type WardrobeItem, 
+  type Seller 
+} from '../platform';
+import { AIEngine } from '../engine';
 import { LazyFeedCard } from './LazyFeedCard';
 import { MarketplaceModule } from './MarketplaceModule';
 import { AIFashionMVPSuite } from './AIFashionMVPSuite';
-import { useOnlineStatus } from '../hooks/useOnlineStatus';
-import { useStyleProfile } from '../hooks/useStyleProfile';
-import { WardrobeItem, Seller } from '../types';
 import { WardrobeGrid } from './WardrobeGrid';
 import { db, auth } from '../firebase';
 import { collection, onSnapshot, query, where, limit, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
@@ -830,7 +836,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
       let token: string | null = null;
       if (auth.currentUser) {
         token = await auth.currentUser.getIdToken();
-      } else if (typeof localStorage !== 'undefined' && localStorage.getItem('auth_guest_active') === 'true') {
+      } else {
         token = 'guest-token';
       }
 
@@ -1160,7 +1166,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
       </div>
 
       {/* 1.1 AI STYLIST CORE MVP SUITE (PHASE 2) */}
-      <AIFashionMVPSuite />
+      <AIFashionMVPSuite wardrobe={wardrobe} onAddGarment={onAddGarment} />
 
       {/* Visual Quick Onboarding Entry Grid */}
       <div className="grid grid-cols-2 gap-3 pb-2 pt-1">
@@ -1175,10 +1181,10 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
           className="group cursor-pointer bg-white/[0.01] hover:bg-white/[0.04] text-left p-4.5 rounded-2xl border border-white/[0.04] hover:border-white/15 transition-all text-white flex flex-col justify-between h-[120px] shadow-sm text-left"
         >
           <div className="flex justify-between items-start w-full">
-            <div className="p-2 bg-emerald-500/10 text-emerald-400 rounded-xl">
-              <ShoppingBag className="w-5 h-5" />
+            <div className="p-2 bg-indigo-500/10 text-indigo-400 rounded-xl">
+              <Users className="w-5 h-5" />
             </div>
-            <span className="text-[9px] font-mono uppercase bg-emerald-400/10 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/15">Active</span>
+            <span className="text-[9px] font-mono uppercase bg-indigo-400/10 text-indigo-300 px-2 py-0.5 rounded border border-indigo-500/15">Active</span>
           </div>
           <div>
             <span className="block text-xs font-serif font-medium tracking-wide">👥 Community Fits</span>
@@ -1263,7 +1269,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
           className="cursor-pointer bg-white/[0.02] hover:bg-white/[0.07] text-white/80 border border-white/5 py-2.5 rounded-xl text-[9px] font-mono uppercase tracking-wider flex items-center justify-center gap-1 transition-colors"
           id="btn-open-orders-history"
         >
-          <ShoppingBag className="w-3.5 h-3.5 text-emerald-400 opacity-80" />
+          <ShoppingCart className="w-3.5 h-3.5 text-emerald-400 opacity-80" />
           <span>Orders ({buyerOrders.length})</span>
         </button>
 
@@ -1569,7 +1575,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
             {[
               { id: 'COMMUNITY', label: 'Community Fits' },
               { id: 'BRANDS', label: 'Brands & Boutiques' },
-              { id: 'AI_INVENT', label: 'AI Invent' }
+              { id: 'AI_INVENT', label: 'AI Creations - Homefeed' }
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -1616,7 +1622,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
         {activeFeedFilter === 'AI_INVENT' && (
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 bg-purple-500/5 border border-purple-500/10 p-3 rounded-xl">
             <p className="text-[10px] font-mono text-purple-300">
-              ✓ Styled by AI. Co-create garment combinations using our high-fidelity Imagen models.
+              ✓ <strong>AI Creations - Homefeed:</strong> Our custom AI-generated real view clothes close to market available images or same, tailored based on your instructions.
             </p>
             <button
               onClick={() => {
@@ -2244,7 +2250,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
                 ) : buyerOrders.length === 0 ? (
                   <div className="py-20 text-center space-y-4">
                     <div className="w-12 h-12 border border-white/10 rounded-full flex items-center justify-center mx-auto text-white/20">
-                      <ShoppingBag className="w-5 h-5" />
+                      <ShoppingCart className="w-5 h-5" />
                     </div>
                     <div className="space-y-1 max-w-[200px] mx-auto">
                       <p className="text-xs font-mono text-white/40 uppercase tracking-widest font-bold">No reservations</p>

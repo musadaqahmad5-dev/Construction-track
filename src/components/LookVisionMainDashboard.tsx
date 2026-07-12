@@ -8,7 +8,6 @@ import { HeroSection } from './dashboard/HeroSection';
 import { DashboardGrid } from './dashboard/DashboardGrid';
 import { EditorsPicks } from './dashboard/EditorsPicks';
 import { SidebarWidgets } from './dashboard/SidebarWidgets';
-import { QuickActions } from './dashboard/QuickActions';
 
 interface LookVisionMainDashboardProps {
   wardrobe: WardrobeItem[];
@@ -292,7 +291,7 @@ export const LookVisionMainDashboard: React.FC<LookVisionMainDashboardProps> = (
           />
 
           {/* 3. EDITOR'S PICKS BOTTOM HORIZONTAL CAROUSEL */}
-          <EditorsPicks setActiveSubTab={setActiveSubTab} />
+          <EditorsPicks setActiveSubTab={setActiveSubTab} onAddGarment={onAddGarment} />
 
         </div>
 

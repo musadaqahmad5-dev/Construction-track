@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, Suspense } from 'react';
-import { FeedItem } from '../features/feed/feedTypes';
+import { FeedItem } from '../platform';
 
 // Dynamically import FeedCard to code split major modules like try-on and checkout embedded inside it
 import { FeedCard } from './FeedCard';

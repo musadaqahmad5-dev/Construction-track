@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { UnifiedFashionOS } from '../features/ai-core/UnifiedFashionOS';
-import { BillingService } from '../features/monetization/billingService';
+import { UnifiedFashionOS, BillingService } from '../engine';
 
 interface SaaSPricingUpsellProps {
   featureName: string;

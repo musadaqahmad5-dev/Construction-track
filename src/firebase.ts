@@ -1,7 +1,9 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
 import { 
-  getFirestore, 
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
   collection, 
   addDoc, 
   query, 
@@ -28,8 +30,12 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 
-// Initialize Firestore on the project's standard database
-export const db = getFirestore(app);
+// Initialize Firestore with robust multi-tab offline persistence
+export const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({
+    tabManager: persistentMultipleTabManager()
+  })
+});
 
 import { ErrorRegistry } from './features/reliability/errorRegistry';
 
@@ -77,28 +83,3 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
 
   throw new Error(JSON.stringify(errInfo));
 }
-
-// Temporary Startup Firestore Write Verification Test
-async function runStartupWriteTest() {
-  try {
-    const testDocRef = doc(db, 'test', 'write-test-doc');
-    console.log('[Firebase Write Test] Initiating write of "Fashion AI Firebase Connected" to collection: test, document: write-test-doc...');
-    await setDoc(testDocRef, {
-      message: "Fashion AI Firebase Connected",
-      testedAt: new Date().toISOString()
-    });
-    console.log('[Firebase Write Test] Write completed successfully. Now verifying read back...');
-    
-    const snap = await getDoc(testDocRef);
-    if (snap.exists() && snap.data()?.message === "Fashion AI Firebase Connected") {
-      console.log('[Firebase Write Test] Verification SUCCESS! Document retrieved successfully from Firestore:', snap.data());
-    } else {
-      console.error('[Firebase Write Test] Verification FAILED! Retrieved document was invalid or missing.');
-    }
-  } catch (error) {
-    console.error('[Firebase Write Test] Critical error during write/read verification:', error);
-  }
-}
-
-// Execute the test immediately at startup
-runStartupWriteTest();

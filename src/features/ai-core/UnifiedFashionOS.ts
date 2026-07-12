@@ -2,6 +2,9 @@ import { WardrobeItem } from '../../types';
 import { SYSTEM_CONFIG } from './SystemConfig';
 import { AnalyticsEngine, AnalyticsHealth } from '../../core/AnalyticsEngine';
 import { StorageHardening, StorageHealth } from '../../core/StorageHardening';
+import { DetailedOutfitScore, StylingExplainer, OutfitScoringEngine, ExplainableAIEngine } from '../efficiency/fashionIntelligence';
+import { StyleDNAEngine } from '../../engine/sharedEngines';
+import { PersonalFashionMemoryEngine } from '../../engine/personalMemory';
 
 // ========================================================
 // TYPE DEFINITIONS FOR UNIFIED_STYLE_MEMORY & SYSTEM MODULES
@@ -37,6 +40,9 @@ export interface UnifiedOutfit {
   schema_version?: string;
   created_at?: string;
   updated_at?: string;
+  scoring?: DetailedOutfitScore;
+  explanations?: StylingExplainer[];
+  stylistNarrative?: string;
 }
 
 export interface FeedbackSignal {
@@ -2043,17 +2049,38 @@ export class UnifiedFashionOS {
     const name = `${firstComboItem.top.title} & ${firstComboItem.bottom.title}`;
     const timestampStr = new Date().toISOString();
 
+    const currentVibe = getStyleIdentity(firstComboItem);
+    const mockDna = StyleDNAEngine.computeDNA('user-1', finalItems);
+    const computedScores = OutfitScoringEngine.computeDetailedScore(finalItems, {
+      vibe: currentVibe,
+      agenda: occasion,
+      condition: 'Clear Sky',
+      tempRange: '19°C',
+      dna: mockDna
+    });
+
+    const computedExplanations = finalItems.map(item => ({
+      itemTitle: item.title || 'Selected Garment',
+      why: ExplainableAIEngine.generateNarrativeExplanation(item, occasion, 'Clear Sky', computedScores),
+      colorFit: `Matching cohesive tonal palette for ${item.primaryColor || 'neutral'} color shade.`,
+      weatherSuitability: 'Excellent fabric density and warmth ratio.',
+      occasionScore: 94
+    }));
+
     const suggested: UnifiedOutfit = {
       id: `out-${Date.now()}`,
       name,
       items: finalItems,
-      suitabilityScore: Math.round(finalSynthesizedSet[0].finalRankScore),
+      suitabilityScore: computedScores.overallScore,
       occasion,
       generatedAt: timestampStr.split('T')[0],
-      vibeTags: [getStyleIdentity(firstComboItem).toLowerCase()],
+      vibeTags: [currentVibe.toLowerCase()],
       schema_version: '1.2.0',
       created_at: timestampStr,
-      updated_at: timestampStr
+      updated_at: timestampStr,
+      scoring: computedScores,
+      explanations: computedExplanations,
+      stylistNarrative: `This style coordinate is formulated using your active Style DNA parameters. The ${finalItems[0]?.title || 'garment'} acts as a strong anchor, scoring ${computedScores.styleScore}% style affinity.`
     };
 
     if (this.state.activeSuggestion) {
@@ -2639,6 +2666,31 @@ export class UnifiedFashionOS {
       }
     } catch (e) {
       console.error('AnalyticsEngine routing error:', e);
+    }
+
+    // Real-Time Personal Fashion Memory Update Pipeline
+    try {
+      const uId = (this.state.unifiedStyleMemory as any).metadata?.userId || 'user-1';
+      if (eventType === 'outfit_saved') {
+        PersonalFashionMemoryEngine.logEvent(uId, 'SAVED_OUTFIT', { outfit: params || this.state.activeSuggestion });
+      } else if (eventType === 'feedback_logged') {
+        const sig = params?.signal;
+        if (sig === 'WORN_CONFIRMED') {
+          PersonalFashionMemoryEngine.logEvent(uId, 'LIKED_OUTFIT', { outfit: params || this.state.activeSuggestion });
+        } else if (sig === 'IGNORED_SUGGESTION') {
+          PersonalFashionMemoryEngine.logEvent(uId, 'IGNORED_RECOMMENDATION', { outfitName: params?.pairing });
+        } else {
+          PersonalFashionMemoryEngine.logEvent(uId, 'REJECTED_RECOMMENDATION', { outfitName: params?.pairing, item: params });
+        }
+      } else if (eventType === 'checkout_completed') {
+        PersonalFashionMemoryEngine.logEvent(uId, 'MARKETPLACE_PURCHASE', { product: params });
+      } else if (eventType === 'image_generated') {
+        PersonalFashionMemoryEngine.logEvent(uId, 'DOWNLOADED_IMAGE', { prompt: params?.prompt });
+      } else if (eventType === 'wardrobe_added') {
+        PersonalFashionMemoryEngine.logEvent(uId, 'WARDROBE_CHANGES', { wardrobe: this.state.unifiedStyleMemory.wardrobe_items });
+      }
+    } catch (e) {
+      console.warn('PersonalFashionMemoryEngine event logging error:', e);
     }
 
     const timestampStr = new Date().toISOString();

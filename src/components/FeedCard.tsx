@@ -26,14 +26,11 @@ import {
   Cpu,
   Share2
 } from 'lucide-react';
-import { FeedItem } from '../features/feed/feedTypes';
+import { FeedItem, useOnlineStatus, useStyleProfile } from '../platform';
 import { ImageWithFade } from './AIStyleHub';
-import { useOnlineStatus } from '../hooks/useOnlineStatus';
-import { useStyleProfile } from '../hooks/useStyleProfile';
 import { auth, db, signInWithGoogle, handleFirestoreError, OperationType } from '../firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { UnifiedFashionOS } from '../features/ai-core/UnifiedFashionOS';
-import { BillingService } from '../features/monetization/billingService';
+import { UnifiedFashionOS, BillingService } from '../engine';
 
 interface FeedCardProps {
   item: FeedItem;

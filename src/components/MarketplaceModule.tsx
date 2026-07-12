@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Sparkles, Camera, MapPin, Tag, DollarSign, CheckCircle2, ShoppingBag } from 'lucide-react';
-import { FeedItem } from '../features/feed/feedTypes';
+import { FeedItem } from '../platform';
 
 interface MarketplaceModuleProps {
   onAddShopPost: (post: Omit<FeedItem, 'id' | 'likesCount' | 'bookmarksCount' | 'createdAt'>) => void;

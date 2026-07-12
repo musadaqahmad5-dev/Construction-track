@@ -1,7 +1,6 @@
 import React from 'react';
 import { ChevronRight, ChevronDown, Heart } from 'lucide-react';
 import { TrendingPanel } from './TrendingPanel';
-import { QuickActions } from './QuickActions';
 
 interface SidebarWidgetsProps {
   setActiveSubTab?: (tab: any) => void;
@@ -14,10 +13,7 @@ export const SidebarWidgets: React.FC<SidebarWidgetsProps> = ({
 }) => {
   return (
     <div className="xl:col-span-1 space-y-4">
-      {/* A. QUICK ACTIONS */}
-      <QuickActions setActiveSubTab={setActiveSubTab} />
-
-      {/* B. TRENDING TAGS */}
+      {/* A. TRENDING TAGS */}
       <TrendingPanel setPromptInput={setPromptInput} />
 
       {/* C. TRY VIRTUAL TRY-ON */}

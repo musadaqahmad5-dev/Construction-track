@@ -5,8 +5,8 @@ import {
   HelpCircle, Calendar, Plus, RefreshCw, Trash2, Sliders, Play, Award, 
   UserCheck2, Sparkle
 } from 'lucide-react';
-import { WardrobeItem, ClothingCategory } from '../types';
-import { UnifiedFashionOS, UnifiedState } from '../features/ai-core/UnifiedFashionOS';
+import { WardrobeItem, ClothingCategory } from '../platform';
+import { UnifiedFashionOS, type UnifiedState } from '../engine';
 
 interface OnboardingFlowProps {
   onComplete: () => void;

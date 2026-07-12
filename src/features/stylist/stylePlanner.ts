@@ -26,16 +26,28 @@ export class StylePlanner {
       if (auth.currentUser) {
         const token = await auth.currentUser.getIdToken();
         headers['Authorization'] = `Bearer ${token}`;
-      } else if (typeof localStorage !== 'undefined' && localStorage.getItem('auth_guest_active') === 'true') {
+      } else {
         headers['Authorization'] = 'Bearer guest-token';
       }
+
+      // Strip heavy base64 image data from wardrobe items
+      const cleanedClosetItems = Array.isArray(closetItems)
+        ? closetItems.map(item => {
+            const { imageUrl, ...rest } = item;
+            const cleaned: any = { ...rest };
+            if (imageUrl && !imageUrl.startsWith('data:')) {
+              cleaned.imageUrl = imageUrl;
+            }
+            return cleaned;
+          })
+        : [];
 
       const response = await fetch('/api/ai/recommend', {
         method: 'POST',
         headers,
         body: JSON.stringify({
           userId,
-          wardrobe: closetItems,
+          wardrobe: cleanedClosetItems,
           condition: weatherCondition,
           tempRange: temperatureRange,
           vibe: styleVibe,

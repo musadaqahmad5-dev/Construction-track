@@ -9,7 +9,7 @@ import {
   Trash2, ShieldCheck, AlertTriangle, Play, HelpCircle,
   Camera, Scissors, Truck, DollarSign, TrendingUp, Sliders, Layers3
 } from 'lucide-react';
-import { UnifiedFashionOS } from '../features/ai-core/UnifiedFashionOS';
+import { UnifiedFashionOS } from '../engine';
 
 interface ArchitectureMapProps {
   user: any;

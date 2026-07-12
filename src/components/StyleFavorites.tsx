@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Heart, Plus, Trash2, FolderOpen, ExternalLink, Bookmark, Sparkles, Share2, Sliders, Check } from 'lucide-react';
-import { WardrobeItem } from '../types';
-import { UnifiedFashionOS } from '../features/ai-core/UnifiedFashionOS';
+import { WardrobeItem } from '../platform';
+import { UnifiedFashionOS } from '../engine';
 
 interface StyleFavoritesProps {
   wardrobe: WardrobeItem[];

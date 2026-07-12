@@ -340,6 +340,12 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({ user, onClose,
         imageUrl: finalImg,
         vibeTags: [prodCategory.toLowerCase(), sellerProfile.category.toLowerCase().split(' ')[0], 'curated'],
         ownerId: user.uid,
+        storeType: sellerProfile.storeType || 'LOCAL_BOUTIQUE',
+        shopLocation: sellerProfile.location || '',
+        instagramUrl: sellerProfile.instagramUrl || '',
+        whatsAppNumber: sellerProfile.whatsAppNumber || '',
+        websiteLink: sellerProfile.websiteLink || '',
+        verified: sellerProfile.verified !== undefined ? sellerProfile.verified : true,
         createdAt: editingProduct ? editingProduct.createdAt : serverTimestamp()
       };
 

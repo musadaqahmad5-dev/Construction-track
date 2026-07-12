@@ -47,7 +47,7 @@ export class ImagenProvider implements ImageGenerationProvider {
 
       // Imagen model generate request as per @google/genai guidelines
       const response = await ai.models.generateImages({
-        model: 'imagen-4.0-generate-001',
+        model: 'imagen-3.0-generate-002',
         prompt,
         config: {
           numberOfImages: 1,
@@ -213,6 +213,16 @@ export class ImageGenerationRegistry {
   }
 
   static getProvider(name: string): ImageGenerationProvider {
+    const norm = name ? name.toLowerCase() : '';
+    if (norm === 'imagen' || norm === 'google-imagen-4.0' || norm.includes('imagen')) {
+      return this.providers.get('Google-Imagen-4.0')!;
+    }
+    if (norm === 'gemini' || norm === 'gemini-3.1-flash-image' || norm.includes('gemini')) {
+      return this.providers.get('Gemini-3.1-Flash-Image')!;
+    }
+    if (norm === 'picsum' || norm === 'fashion-picsum-deterministic' || norm.includes('picsum')) {
+      return this.providers.get('Fashion-Picsum-Deterministic')!;
+    }
     return this.providers.get(name) || this.providers.get('Fashion-Picsum-Deterministic')!;
   }
 
