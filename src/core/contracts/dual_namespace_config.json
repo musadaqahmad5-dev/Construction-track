@@ -1,0 +1,91 @@
+{
+  "system_architect_version": "1.0.0",
+  "orchestration_mode": "ZeroTrustGateway",
+  "namespaces": {
+    "community-user-data": {
+      "focus": "Privacy, Security, User-Body-Data",
+      "security": {
+        "access_control": {
+          "level": "Strict",
+          "authentication": "OAuth2 + Mutual TLS (mTLS)",
+          "authorization_policy": "LeastPrivilege",
+          "allowed_roles": ["authorized_user", "identity_moderator"],
+          "encryption": {
+            "at_rest": "AES-256-GCM (Customer Managed Keys)",
+            "in_transit": "TLS 1.3 with PFS (Perfect Forward Secrecy)"
+          },
+          "security_triggers": {
+            "max_request_rate_per_sec": 500,
+            "anomaly_threshold_percentage": 90,
+            "policy_action": "DenyAll"
+          }
+        },
+        "privacy": {
+          "zero_data_retention": true,
+          "headers": {
+            "X-Content-Type-Options": "nosniff",
+            "X-Frame-Options": "DENY",
+            "X-XSS-Protection": "1; mode=block",
+            "Content-Security-Policy": "default-src 'self'",
+            "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",
+            "Pragma": "no-cache",
+            "Expires": "0",
+            "X-Zero-Data-Retention-Policy": "Active",
+            "X-Anonymize-Body-Metrics": "Enabled"
+          }
+        }
+      },
+      "resource_limits": {
+        "cpu_limit": "2",
+        "memory_limit": "4Gi",
+        "ephemeral_storage": "512Mi"
+      }
+    },
+    "ai-creation-workload": {
+      "focus": "High Compute, GPU/Scaling, Sci-fi/Avatar styles",
+      "scaling": {
+        "auto_scaling": {
+          "enabled": true,
+          "minScale": 1,
+          "maxScale": 5,
+          "target_cpu_utilization_percentage": 75,
+          "target_memory_utilization_percentage": 80
+        },
+        "scaling_triggers": {
+          "memory_threshold_percentage": 85,
+          "cpu_threshold_percentage": 80,
+          "action": "scale_up",
+          "increment_replicas": 1
+        }
+      },
+      "compute": {
+        "gpu": {
+          "accelerator": "NVIDIA-A100-SXM4-80GB",
+          "count": 1,
+          "driver_version": "535.104.05"
+        },
+        "memory_limits": {
+          "cpu_memory": "32Gi",
+          "gpu_memory": "80Gi",
+          "request_cpu": "8",
+          "limit_cpu": "16"
+        },
+        "style_profiles": [
+          "sci-fi",
+          "avatar",
+          "high-fidelity-cyberpunk",
+          "3d-textile-mesh"
+        ]
+      }
+    }
+  },
+  "gateway_integration": {
+    "gateway_name": "ZeroTrustGateway",
+    "enforcement": "StrictEnforce",
+    "mtls_required": true,
+    "audit_logging": {
+      "enabled": true,
+      "destination": "cloud-audit-logs"
+    }
+  }
+}

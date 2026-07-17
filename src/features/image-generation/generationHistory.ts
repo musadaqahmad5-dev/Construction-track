@@ -36,7 +36,7 @@ export class GenerationHistory {
             id: doc.id,
             imageUrl: data.imageUrl || '',
             prompt: data.prompt || '',
-            provider: data.provider || 'Google-Imagen-4.0',
+            provider: data.provider || 'Gemini-3.1-Flash-Image',
             vibe: data.vibe || 'Creative',
             season: data.season || 'All-Season',
             createdAt: data.createdAt?.toDate()?.toISOString() || new Date().toISOString(),
@@ -52,21 +52,23 @@ export class GenerationHistory {
     }
 
     // 2. Local Registry Query
-    try {
-      const stored = localStorage.getItem('fashion_looks_registry');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        return parsed.map((item: any) => ({
-          id: item.id || `local_${Math.random()}`,
-          imageUrl: item.imageUrl || '',
-          prompt: item.prompt || '',
-          provider: item.provider || 'Picsum',
-          vibe: item.vibe || 'Creative',
-          createdAt: item.createdAt || new Date().toISOString(),
-        }));
+    if (typeof localStorage !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('fashion_looks_registry');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          return parsed.map((item: any) => ({
+            id: item.id || `local_${Math.random()}`,
+            imageUrl: item.imageUrl || '',
+            prompt: item.prompt || '',
+            provider: item.provider || 'Picsum',
+            vibe: item.vibe || 'Creative',
+            createdAt: item.createdAt || new Date().toISOString(),
+          }));
+        }
+      } catch (err) {
+        console.warn('[GenerationHistory] Local registry read failed:', err);
       }
-    } catch (err) {
-      console.error('[GenerationHistory] Local registry read failed:', err);
     }
 
     return [];

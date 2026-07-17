@@ -463,7 +463,7 @@ export class DuplicateLookDetectionEngine {
         const lookFeatures = FashionVisualFeatureExtractor.extractFeatures(look.id, lookPromptText);
         const sim = OutfitSimilarityEngine.compareOutfits(targetFeatures, lookFeatures);
         
-        if (sim.overallMatchScore >= 90) {
+        if (sim.overallMatchScore >= 98) {
           // Find if there is a valid image in the items
           const itemWithImage = look.items.find(it => it.imageUrl);
           const url = itemWithImage?.imageUrl || "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=1000";
@@ -484,7 +484,7 @@ export class DuplicateLookDetectionEngine {
     for (const look of this.mockCommunityLooks) {
       const lookFeatures = FashionVisualFeatureExtractor.extractFeatures(look.imageUrl, look.prompt + " " + look.title);
       const sim = OutfitSimilarityEngine.compareOutfits(targetFeatures, lookFeatures);
-      if (sim.overallMatchScore >= 88) {
+      if (sim.overallMatchScore >= 98) {
         return {
           isDuplicate: true,
           matchedLookImageUrl: look.imageUrl,

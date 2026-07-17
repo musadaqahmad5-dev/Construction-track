@@ -61,3 +61,54 @@ export {
   type CommunityPost
 } from './products';
 
+// 6. Unified Enterprise Product Layer Systems
+export {
+  ProductIdentity,
+  ProductStatus,
+  type ProductConfig,
+  type ProductLifecycleContext,
+  type ProductEvent,
+  type ProductTelemetryMetrics,
+  type ProductHealthReport,
+  type ProductDiagnosticsTrace,
+  type IProduct,
+  ProductRegistry,
+  ProductLifecycleManager,
+  ProductController,
+  ProductConfigurationManager,
+  ProductPermissionsManager,
+  ProductRoutingEngine,
+  ProductStateManager,
+  ProductAnalyticsTracker,
+  ProductHealthMonitor,
+  ProductTelemetrySystem,
+  ProductDiagnosticsEngine,
+  ProductEventBroker,
+  ProductAuditLogger,
+  ProductMemoryBridge
+} from './enterpriseProductLayer';
+
+export {
+  type ProductManifest,
+  ProductCapabilities,
+  type CrossProductMessage,
+  CrossProductCommunicationEngine,
+  CrossProductDiscovery,
+  CrossProductRecommendation,
+  type ResourceAllocation,
+  SharedResourceAllocator,
+  type ProductTransaction,
+  ProductRevenueTracker,
+  type ProductUsageSummary,
+  ProductUsageStatisticsEngine,
+  ProductFeatureFlagsEngine,
+  ProductMigrationEngine,
+  type IProductPlugin,
+  ProductExtensionSystem,
+  ProductDependencyInjectionContainer,
+  ProductManifestRegistry,
+  EnterpriseProductSDK
+} from './enterpriseProductSDK';
+
+
+

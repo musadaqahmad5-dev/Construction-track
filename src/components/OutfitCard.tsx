@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { Sparkles, HelpCircle } from 'lucide-react';
 import { WardrobeItem } from '../types';
-import { StyleBadge } from './StyleBadge';
+
 import { FeedbackButtons } from './FeedbackButtons';
 
 interface OutfitCardProps {

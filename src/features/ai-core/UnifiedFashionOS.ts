@@ -59,6 +59,11 @@ export interface ScheduledEvent {
   occasion: string;
   assignedOutfitId?: string;
   isCompleted: boolean;
+  date?: string;
+  notes?: string;
+  assignedItems?: WardrobeItem[];
+  aiGeneratedOutfitName?: string;
+  weather?: string;
 }
 
 export interface SystemGovernorReport {
@@ -2511,13 +2516,51 @@ export class UnifiedFashionOS {
       title,
       time,
       occasion,
-      isCompleted: false
+      isCompleted: false,
+      date: new Date().toISOString().split('T')[0] // default to today
     };
     
     this.state.schedulerEvents = [...this.state.schedulerEvents, newEvent];
     this.trackEvent('planner_used', { agendaItem: title });
     this.logAction('ADD_EVENT', `Registered scheduled calendar task "${title}"`);
     this.notify();
+  }
+
+  public static addCustomScheduledEvent(event: Omit<ScheduledEvent, 'id'>) {
+    const newEvent: ScheduledEvent = {
+      ...event,
+      id: `evt-${Date.now()}`
+    };
+    this.state.schedulerEvents = [...this.state.schedulerEvents, newEvent];
+    this.trackEvent('planner_used', { agendaItem: event.title });
+    this.logAction('ADD_EVENT', `Registered scheduled calendar task "${event.title}"`);
+    this.notify();
+  }
+
+  public static updateScheduledEvent(id: string, updatedFields: Partial<ScheduledEvent>) {
+    this.state.schedulerEvents = this.state.schedulerEvents.map(evt => {
+      if (evt.id === id) {
+        return { ...evt, ...updatedFields };
+      }
+      return evt;
+    });
+    this.logAction('UPDATE_EVENT', `Updated calendar event ID ${id}`);
+    this.notify();
+  }
+
+  public static duplicateScheduledEvent(id: string) {
+    const original = this.state.schedulerEvents.find(evt => evt.id === id);
+    if (original) {
+      const duplicate: ScheduledEvent = {
+        ...original,
+        id: `evt-dup-${Date.now()}`,
+        title: `${original.title} (Copy)`,
+        isCompleted: false
+      };
+      this.state.schedulerEvents = [...this.state.schedulerEvents, duplicate];
+      this.logAction('DUPLICATE_EVENT', `Duplicated calendar event ID ${id}`);
+      this.notify();
+    }
   }
 
   public static completeEvent(id: string, assignedOutfitName?: string) {

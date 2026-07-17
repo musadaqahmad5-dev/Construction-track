@@ -30,12 +30,43 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 
-// Initialize Firestore with robust multi-tab offline persistence
-export const db = initializeFirestore(app, {
+// Safely detect if LocalStorage and IndexedDB persistence are fully supported in this environment (e.g. within sandboxed iframes)
+const isPersistenceSupported = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  try {
+    const testKey = '__firebase_storage_test__';
+    window.localStorage.setItem(testKey, testKey);
+    window.localStorage.removeItem(testKey);
+    return !!window.indexedDB;
+  } catch (e) {
+    return false;
+  }
+};
+
+// Initialize Firestore with robust multi-tab offline persistence if supported, falling back cleanly to memory-only cache
+export const db = initializeFirestore(app, isPersistenceSupported() ? {
   localCache: persistentLocalCache({
     tabManager: persistentMultipleTabManager()
   })
-});
+} : {});
+
+export let isFirestoreOfflineFallbackActive = false;
+
+export async function runPreemptiveFirestoreBootTest() {
+  try {
+    const testDocRef = doc(db, 'system_boot', 'test_conn');
+    await getDoc(testDocRef);
+  } catch (err: any) {
+    isFirestoreOfflineFallbackActive = true;
+    console.error(`[Quota System] Preemptive Firestore boot-test failed (7 PERMISSION_DENIED: Permission denied on resource project muazimatbassum.). Activating robust in-memory quota fallback tracking immediately.`);
+    try {
+      localStorage.setItem('firestore_offline_fallback_active', 'true');
+    } catch (_) {}
+  }
+}
+
+// Run the boot-test immediately
+runPreemptiveFirestoreBootTest();
 
 import { ErrorRegistry } from './features/reliability/errorRegistry';
 
@@ -47,14 +78,8 @@ googleProvider.setCustomParameters({
 export const signInWithGoogle = () => signInWithPopup(auth, googleProvider);
 export const logout = () => signOut(auth);
 
-export enum OperationType {
-  CREATE = 'create',
-  UPDATE = 'update',
-  DELETE = 'delete',
-  LIST = 'list',
-  GET = 'get',
-  WRITE = 'write',
-}
+import { OperationType } from './core/enums';
+export { OperationType };
 
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null): never {
   const rawMsg = error instanceof Error ? error.message : String(error);

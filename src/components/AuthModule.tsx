@@ -262,7 +262,31 @@ export const AuthModule: React.FC<AuthModuleProps> = ({ onGuestMode }) => {
                 </p>
               </div>
             ) : (
-              <div>{error}</div>
+              <div className="space-y-3">
+                <div>{error}</div>
+                {window.self !== window.top && (
+                  <div className={`mt-4 text-left p-4 rounded border text-xs leading-relaxed space-y-3 ${isSolar ? 'bg-stone-100 border-stone-200 text-stone-800' : 'bg-neutral-900/60 border-white/10 text-neutral-300'}`}>
+                    <p className="font-semibold uppercase tracking-wider text-center text-amber-500 flex items-center justify-center gap-1">
+                      ⚠️ Sandbox Environment Detected
+                    </p>
+                    <p className="text-[11px]">
+                      Authentication popups are often restricted by security policies inside preview frames.
+                    </p>
+                    <p className="text-[11px]">
+                      Please open the application in a standalone browser tab to sign in or register securely:
+                    </p>
+                    <div className="text-center pt-1">
+                      <button
+                        type="button"
+                        onClick={() => window.open(window.location.href, '_blank')}
+                        className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-mono text-[10px] uppercase tracking-wider rounded transition-colors cursor-pointer font-bold"
+                      >
+                        Open in New Tab ↗
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         )}

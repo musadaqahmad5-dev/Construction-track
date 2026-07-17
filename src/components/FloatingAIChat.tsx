@@ -38,6 +38,21 @@ export const FloatingAIChat: React.FC<FloatingAIChatProps> = ({ wardrobe }) => {
     }
   }, [messages, isOpen]);
 
+  useEffect(() => {
+    const handleToggleChat = () => {
+      setIsOpen(prev => !prev);
+    };
+    const handleOpenChat = () => {
+      setIsOpen(true);
+    };
+    window.addEventListener('lookvision_toggle_ai_chat', handleToggleChat);
+    window.addEventListener('lookvision_open_ai_chat', handleOpenChat);
+    return () => {
+      window.removeEventListener('lookvision_toggle_ai_chat', handleToggleChat);
+      window.removeEventListener('lookvision_open_ai_chat', handleOpenChat);
+    };
+  }, []);
+
   const handleSendMessage = async (textToSend: string) => {
     if (!textToSend.trim() || isLoading) return;
 

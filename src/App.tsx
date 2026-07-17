@@ -6,6 +6,7 @@ import { WardrobeItem, ClothingCategory } from './types';
 import { WardrobeService } from './features/wardrobe/wardrobeService';
 import { AuthModule } from './components/AuthModule';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { WifiOff } from 'lucide-react';
 import { motion } from 'motion/react';
 import { AIStyleHub } from './components/AIStyleHub';
@@ -119,21 +120,8 @@ export default function App() {
     return () => clearInterval(tm);
   }, []);
 
-  // Offline State Tracking
-  const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
-
-  useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-    
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
+  // Offline State Tracking using custom unified hook
+  const isOnline = useOnlineStatus();
 
   // Soft staged loading timer steps mapping to physical space appearance
   useEffect(() => {

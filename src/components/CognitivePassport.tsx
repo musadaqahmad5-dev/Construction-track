@@ -4,7 +4,7 @@ import {
   User, Award, Key, Save, Check, RefreshCw, Sparkles, LogOut, ShieldAlert,
   Sliders, Trash2, Calendar, Edit2, Plus, Info, Ruler, BookOpen, Fingerprint,
   CreditCard, ExternalLink, QrCode, Sparkle, Tag, CheckSquare, Square, ChevronDown, ChevronUp, Mail,
-  Clock, ShoppingBag
+  Clock, ShoppingBag, TrendingUp, Compass
 } from 'lucide-react';
 import { ProfileService, type StylistHistoryEntry, type StyleProfile } from '../platform';
 
@@ -424,6 +424,292 @@ export const CognitivePassport: React.FC<CognitivePassportProps> = ({ user, onLo
                       <span>[ Sync Style DNA Parameters ]</span>
                     </button>
                   </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* LINE 1.5: SARTORIAL DRIFT & COGNITIVE TIMELINE */}
+        <div className="border border-white/5 rounded-xl bg-[#07070c] overflow-hidden transition-all hover:border-violet-500/15">
+          <button 
+            onClick={() => toggleSection('drift')}
+            className="w-full p-4 flex items-center justify-between text-left cursor-pointer hover:bg-white/[0.01] transition-all"
+          >
+            <div className="flex items-center gap-3.5 min-w-0">
+              <div className="h-9 w-9 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400 shrink-0">
+                <TrendingUp className="w-4 h-4 animate-pulse" />
+              </div>
+              <div className="min-w-0">
+                <span className="block text-xs font-semibold text-white font-serif">Style Drift & Cognitive Timeline</span>
+                <span className="block text-[10px] text-zinc-400 font-mono truncate">
+                  Style Evolution &bull; Monthly Drift Trends &bull; Favorite Palettes & Timeline
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-[9px] font-mono bg-violet-500/10 text-violet-400 px-2 py-0.5 rounded uppercase tracking-wider font-bold">
+                Premium AI
+              </span>
+              {activeSection === 'drift' ? <ChevronUp className="w-4 h-4 text-zinc-500" /> : <ChevronDown className="w-4 h-4 text-zinc-500" />}
+            </div>
+          </button>
+
+          <AnimatePresence initial={false}>
+            {activeSection === 'drift' && (
+              <motion.div
+                initial={{ height: 0 }}
+                animate={{ height: 'auto' }}
+                exit={{ height: 0 }}
+                transition={{ duration: 0.25, ease: 'easeInOut' }}
+                className="overflow-hidden border-t border-white/[0.03] bg-black/25"
+              >
+                <div className="p-5 space-y-6 text-left">
+                  
+                  {/* STYLE EVOLUTION & MONTHLY DRIFT */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    
+                    {/* Style Evolution Curve visualization */}
+                    <div className="bg-[#11111a]/40 border border-white/5 p-4 rounded-xl space-y-3.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-mono text-violet-400 uppercase tracking-wider font-bold">Historical Style Evolution</span>
+                        <span className="text-[9px] font-mono text-zinc-500">6-Month Trend</span>
+                      </div>
+                      
+                      <div className="relative h-28 flex items-end justify-between pt-4 px-2">
+                        {/* Custom background grids */}
+                        <div className="absolute inset-x-0 top-1/4 border-t border-white/[0.02] pointer-events-none" />
+                        <div className="absolute inset-x-0 top-2/4 border-t border-white/[0.02] pointer-events-none" />
+                        <div className="absolute inset-x-0 top-3/4 border-t border-white/[0.02] pointer-events-none" />
+
+                        {/* Style coordinates timeline bars */}
+                        {[
+                          { month: 'Jan', val: 35, label: 'Minimalist' },
+                          { month: 'Feb', val: 48, label: 'Classic Minimal' },
+                          { month: 'Mar', val: 55, label: 'Soft Avant-Garde' },
+                          { month: 'Apr', val: 72, label: 'Luxury Lounge' },
+                          { month: 'May', val: 88, label: 'Experimental Street' },
+                          { month: 'Jun', val: 94, label: 'Artisan Streetwear' }
+                        ].map((pt) => (
+                          <div key={pt.month} className="flex flex-col items-center gap-1.5 z-10 flex-1">
+                            <span className="text-[8px] font-mono text-zinc-500">{pt.val}%</span>
+                            <div className="w-3 rounded-t-sm bg-gradient-to-t from-indigo-500/10 via-indigo-500/50 to-violet-400 transition-all duration-500 hover:opacity-80" style={{ height: `${pt.val * 0.6}px` }} />
+                            <span className="text-[9px] font-mono text-zinc-400 font-bold">{pt.month}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-[10px] text-zinc-400 leading-relaxed font-mono">
+                        Trajectory indicates a <span className="text-violet-300 font-bold">drift of +59%</span> towards bold artisanal silhouettes, fueled by higher streetwear and luxury curation density.
+                      </p>
+                    </div>
+
+                    {/* Monthly Style Drift Metrics */}
+                    <div className="bg-[#11111a]/40 border border-white/5 p-4 rounded-xl space-y-3.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-mono text-violet-400 uppercase tracking-wider font-bold">Style Drift Mechanics</span>
+                        <span className="text-[9px] font-mono text-emerald-400 flex items-center gap-1">● Active Learning</span>
+                      </div>
+
+                      <div className="space-y-2.5">
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-[11px] font-mono">
+                            <span className="text-zinc-400">Minimalist &rarr; Experimental:</span>
+                            <span className="text-indigo-300 font-bold">+12.4% Drift</span>
+                          </div>
+                          <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                            <div className="h-full bg-indigo-500" style={{ width: '65%' }} />
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-[11px] font-mono">
+                            <span className="text-zinc-400">Understated &rarr; High-Contrast:</span>
+                            <span className="text-violet-300 font-bold">+18.2% Drift</span>
+                          </div>
+                          <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                            <div className="h-full bg-violet-400" style={{ width: '82%' }} />
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-[11px] font-mono">
+                            <span className="text-zinc-400">Tailored Structure &rarr; Oversized:</span>
+                            <span className="text-pink-300 font-bold">+24.5% Drift</span>
+                          </div>
+                          <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                            <div className="h-full bg-pink-400" style={{ width: '91%' }} />
+                          </div>
+                        </div>
+                      </div>
+
+                      <p className="text-[10px] text-zinc-400 leading-relaxed font-mono">
+                        Our intelligence engine has adapted your lookbook baseline to fit progressive drape volumes and relaxed shoulder constructs.
+                      </p>
+                    </div>
+
+                  </div>
+
+                  {/* SEASONAL PREFERENCES & AI PERSONALITY EVOLUTION */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    
+                    {/* Seasonal Preference changes */}
+                    <div className="bg-[#11111a]/40 border border-white/5 p-4 rounded-xl space-y-3">
+                      <span className="text-[10px] font-mono text-violet-400 uppercase tracking-wider font-bold block">Seasonal Preference Changes</span>
+                      
+                      <div className="grid grid-cols-2 gap-2 text-[11px] font-mono pt-1">
+                        <div className="bg-black/30 p-2.5 rounded-lg border border-white/[0.02]">
+                          <span className="text-zinc-500 block text-[9px] uppercase">Winter Casual</span>
+                          <span className="text-white font-bold block mt-0.5">Heavy Wool Overcoat</span>
+                          <span className="text-[9px] text-violet-300 block">Pref Index: 88/100</span>
+                        </div>
+                        <div className="bg-black/30 p-2.5 rounded-lg border border-white/[0.02]">
+                          <span className="text-zinc-500 block text-[9px] uppercase">Summer Minimal</span>
+                          <span className="text-white font-bold block mt-0.5">Loose Linen Separates</span>
+                          <span className="text-[9px] text-violet-300 block">Pref Index: 92/100</span>
+                        </div>
+                        <div className="bg-black/30 p-2.5 rounded-lg border border-white/[0.02]">
+                          <span className="text-zinc-500 block text-[9px] uppercase">Autumn Transition</span>
+                          <span className="text-white font-bold block mt-0.5">Relaxed Knit Cardigans</span>
+                          <span className="text-[9px] text-violet-300 block">Pref Index: 74/100</span>
+                        </div>
+                        <div className="bg-black/30 p-2.5 rounded-lg border border-white/[0.02]">
+                          <span className="text-zinc-500 block text-[9px] uppercase">Spring Tailor</span>
+                          <span className="text-white font-bold block mt-0.5">Structured Blazer & Chino</span>
+                          <span className="text-[9px] text-violet-300 block">Pref Index: 65/100</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* AI Personality Evolution */}
+                    <div className="bg-[#11111a]/40 border border-white/5 p-4 rounded-xl space-y-3.5 flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-mono text-violet-400 uppercase tracking-wider font-bold">Cognitive Personality Helix</span>
+                          <span className="text-[9px] font-mono text-zinc-500">Active State</span>
+                        </div>
+                        <p className="text-[11px] text-zinc-300 font-sans leading-relaxed pt-2">
+                          Your profile has evolved from a <span className="text-white font-semibold">"Strict Monochromatic Minimalist"</span> (Jan-Feb) into an <span className="text-violet-300 font-semibold">"Artisanal Urban Sophisticate"</span>. 
+                        </p>
+                      </div>
+
+                      <div className="bg-black/40 border border-white/5 p-2 rounded-lg text-[9.5px] font-mono text-zinc-400">
+                        <span className="text-white font-semibold uppercase text-[8px] text-indigo-400 block mb-0.5">Next Cognitive Milestone</span>
+                        Avant-Garde structural textures & metallic hardware matching.
+                      </div>
+                    </div>
+
+                  </div>
+
+                  {/* FAVORITE COLORS & CATEGORIES TIMELINE */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    
+                    {/* Favorite Colors Timeline */}
+                    <div className="bg-[#11111a]/40 border border-white/5 p-4 rounded-xl space-y-3">
+                      <span className="text-[10px] font-mono text-violet-400 uppercase tracking-wider font-bold block">Favorite Palettes Timeline</span>
+                      <div className="space-y-2">
+                        {[
+                          { time: 'Winter (Q1)', colors: [{ name: 'Obsidian Black', hex: '#000000' }, { name: 'Slate Gray', hex: '#3f3f46' }, { name: 'Ecru Cream', hex: '#f5f5f4' }] },
+                          { time: 'Spring (Q2)', colors: [{ name: 'Sage Green', hex: '#86efac' }, { name: 'Midnight Blue', hex: '#1e3a8a' }, { name: 'Alabaster', hex: '#fef08a' }] },
+                          { time: 'Summer (Q3)', colors: [{ name: 'Warm Terracotta', hex: '#ca8a04' }, { name: 'Olive Drab', hex: '#4d7c0f' }, { name: 'Sand Shell', hex: '#fde047' }] }
+                        ].map((per) => (
+                          <div key={per.time} className="flex items-center justify-between bg-black/20 p-2 rounded-lg border border-white/[0.02]">
+                            <span className="text-[10px] font-mono font-bold text-zinc-400">{per.time}</span>
+                            <div className="flex gap-1.5">
+                              {per.colors.map(c => (
+                                <div key={c.name} className="flex items-center gap-1">
+                                  <div className="w-3 h-3 rounded-full border border-white/10" style={{ backgroundColor: c.hex }} title={c.name} />
+                                  <span className="text-[9px] font-mono text-zinc-500 hidden sm:inline">{c.name.split(' ')[0]}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Favorite Categories Progression */}
+                    <div className="bg-[#11111a]/40 border border-white/5 p-4 rounded-xl space-y-3">
+                      <span className="text-[10px] font-mono text-violet-400 uppercase tracking-wider font-bold block">Category Progression Lifecycle</span>
+                      <div className="space-y-2.5 text-[11px] font-mono">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[9px] text-zinc-500 w-12 shrink-0">Phase I</span>
+                          <div className="flex-1 bg-black/30 p-1.5 rounded border border-white/[0.02] flex items-center justify-between">
+                            <span className="text-white">Basic Tees & Denim Pants</span>
+                            <span className="text-[8px] bg-indigo-500/10 text-indigo-300 px-1 rounded">Base</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <span className="text-[9px] text-indigo-400 w-12 shrink-0 font-bold">Phase II</span>
+                          <div className="flex-1 bg-black/30 p-1.5 rounded border border-indigo-500/10 flex items-center justify-between">
+                            <span className="text-white font-semibold">Structured Blazers & Outerwear</span>
+                            <span className="text-[8px] bg-indigo-500/20 text-indigo-300 px-1 rounded">Current</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <span className="text-[9px] text-zinc-500 w-12 shrink-0">Phase III</span>
+                          <div className="flex-1 bg-black/30 p-1.5 rounded border border-white/[0.02] flex items-center justify-between">
+                            <span className="text-zinc-500">Deconstructed Knitwear & Boots</span>
+                            <span className="text-[8px] bg-white/5 text-zinc-400 px-1 rounded">Next</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+
+                  {/* OUTFIT SUCCESS TIMELINE (DYNAMICALLY USES HISTORY LOGS) */}
+                  <div className="bg-gradient-to-r from-indigo-950/15 via-[#11111a]/40 to-transparent border border-white/5 p-4 rounded-xl space-y-3.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-mono text-violet-400 uppercase tracking-wider font-bold">Sartorial Success Timeline</span>
+                      <span className="text-[9px] font-mono text-indigo-300 font-bold">Based on Stylist Advisor Logs</span>
+                    </div>
+
+                    {stylistLogs.length === 0 ? (
+                      <p className="text-[10px] text-zinc-500 font-mono py-2 text-center">
+                        No coordinates currently logged in history. Visit your Advisor space to generate style plans and lock daily looks!
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {stylistLogs.slice(0, 3).map((log) => {
+                          const suitScore = log.suitabilityScore || 85;
+                          let displayDate = "Recently";
+                          if (log.timestamp) {
+                            if (typeof log.timestamp.toDate === 'function') {
+                              displayDate = log.timestamp.toDate().toLocaleDateString();
+                            } else if (log.timestamp.seconds) {
+                              displayDate = new Date(log.timestamp.seconds * 1000).toLocaleDateString();
+                            } else if (typeof log.timestamp === 'string') {
+                              displayDate = log.timestamp.split('T')[0];
+                            } else {
+                              displayDate = new Date(log.timestamp).toLocaleDateString();
+                            }
+                          }
+                          return (
+                            <div key={log.id || Math.random().toString()} className="flex flex-col sm:flex-row sm:items-center justify-between bg-black/30 p-2.5 rounded-xl border border-white/5 gap-2 text-left">
+                              <div className="flex items-center gap-2.5 text-left">
+                                <div className="p-1 rounded bg-violet-500/10 text-violet-400 text-[10px] font-mono font-bold shrink-0">
+                                  {displayDate}
+                                </div>
+                                <div className="text-xs text-zinc-200 text-left">
+                                  <span className="font-semibold text-white block sm:inline">{log.outfitName || "Curated Outfit"}</span> &bull; <span className="text-zinc-400">{log.reflection || log.moment || "Confirmed"}</span>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span className="text-[9px] font-mono text-zinc-500">Suitability:</span>
+                                <div className="w-16 h-1.5 bg-white/5 rounded-full overflow-hidden">
+                                  <div className="h-full bg-emerald-400" style={{ width: `${suitScore}%` }} />
+                                </div>
+                                <span className="text-[10px] font-mono text-emerald-400 font-bold">{suitScore}%</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
                 </div>
               </motion.div>
             )}

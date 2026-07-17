@@ -145,7 +145,7 @@ export const AIFashionMVPSuite: React.FC<AIFashionMVPSuiteProps> = ({
   const [studioHeadwearColor, setStudioHeadwearColor] = useState('Midnight Blue');
   const [studioSetting, setStudioSetting] = useState('an elegant architectural studio with soft daylight and concrete textures');
   const [studioVibe, setStudioVibe] = useState('clean, editorial, high-end fashion catalog');
-  const [studioProvider, setStudioProvider] = useState<string>('Google-Imagen-4.0');
+  const [studioProvider, setStudioProvider] = useState<string>('Gemini-3.1-Flash-Image');
   
   const [studioGeneratedImage, setStudioGeneratedImage] = useState<string | null>(null);
   const [studioGenerating, setStudioGenerating] = useState(false);
@@ -164,6 +164,15 @@ export const AIFashionMVPSuite: React.FC<AIFashionMVPSuiteProps> = ({
 
   // Isolated multi-tenant dropdown switcher
   const [selectedTenant, setSelectedTenant] = useState('enterprise-lux-01');
+
+  // --- PHASE B SMART AI STATUS SYSTEM STATES ---
+  const [statusBannerOpen, setStatusBannerOpen] = useState(true);
+  const [simulatedQueuePosition, setSimulatedQueuePosition] = useState(0);
+  const [simulatedCircuitBreaker, setSimulatedCircuitBreaker] = useState<'CLOSED' | 'OPEN' | 'HALF_OPEN'>('CLOSED');
+  const [simulatedRetryProgress, setSimulatedRetryProgress] = useState(0);
+  const [simulatedApiHealth, setSimulatedApiHealth] = useState<'healthy' | 'degraded' | 'maintenance'>('healthy');
+  const [simulatedFallbackActive, setSimulatedFallbackActive] = useState(false);
+  const [simulatedEstimatedWait, setSimulatedEstimatedWait] = useState('1.8s');
 
   // Session memory states (PHASE 2 - IN-MEMORY ONLY)
   const [lastStyle, setLastStyle] = useState<string>('');
@@ -197,6 +206,37 @@ export const AIFashionMVPSuite: React.FC<AIFashionMVPSuiteProps> = ({
 
     setStudioGenerating(true);
     setStudioError(null);
+
+    // Queue and model simulations
+    setSimulatedQueuePosition(2);
+    setSimulatedEstimatedWait('1.8s');
+    setSimulatedFallbackActive(false);
+
+    // If health is Degraded, simulate fallback failover!
+    if (simulatedApiHealth === 'degraded') {
+      setSimulatedCircuitBreaker('OPEN');
+      setSimulatedFallbackActive(true);
+      setSimulatedRetryProgress(10);
+      setTimeout(() => setSimulatedRetryProgress(40), 500);
+      setTimeout(() => setSimulatedRetryProgress(75), 1000);
+      setTimeout(() => {
+        setSimulatedRetryProgress(100);
+        setSimulatedCircuitBreaker('HALF_OPEN');
+      }, 1500);
+    }
+
+    const queueTimer1 = setTimeout(() => {
+      setSimulatedQueuePosition(1);
+      setSimulatedEstimatedWait('0.9s');
+    }, 1200);
+
+    const queueTimer2 = setTimeout(() => {
+      setSimulatedQueuePosition(0);
+      setSimulatedEstimatedWait('0.0s');
+      if (simulatedApiHealth === 'degraded') {
+        setSimulatedCircuitBreaker('CLOSED');
+      }
+    }, 2400);
 
     try {
       let token: string | null = null;
@@ -2298,6 +2338,173 @@ ${shoes}`;
           animate={{ opacity: 1, y: 0 }}
           className="grid grid-cols-1 lg:grid-cols-12 gap-6 pt-2"
         >
+          {/* 0. SMART AI OBSERVABILITY & STATUS SYSTEM */}
+          <div className="lg:col-span-12 w-full">
+            <div className="bg-[#0c0c16]/70 border border-white/5 rounded-2xl p-4 md:p-5 space-y-4 shadow-xl">
+              
+              {/* Header bar */}
+              <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 border-b border-white/5 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="relative">
+                    <Cloud className="w-5 h-5 text-indigo-400" />
+                    <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                    </span>
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-white">Smart AI Observability Engine</h3>
+                    <p className="text-[10px] text-zinc-400 font-mono">
+                      Active Model: <span className="text-indigo-300 font-bold">{simulatedFallbackActive ? 'imagen-2.0-vintage-fallback' : 'imagen-3.0-generate-002'}</span> &bull; Status: <span className="text-emerald-400 font-bold uppercase">{simulatedApiHealth}</span>
+                    </p>
+                  </div>
+                </div>
+
+                {/* Queue telemetry values */}
+                <div className="flex flex-wrap items-center gap-3.5 text-[10px] font-mono">
+                  <div className="flex items-center gap-1.5 bg-black/40 px-2.5 py-1 rounded-xl border border-white/5">
+                    <span className="text-zinc-500">Queue Index:</span>
+                    <span className={`font-bold ${simulatedQueuePosition > 0 ? 'text-amber-400 animate-pulse' : 'text-zinc-300'}`}>
+                      {simulatedQueuePosition} {simulatedQueuePosition > 0 ? '(Busy)' : '(Idle)'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 bg-black/40 px-2.5 py-1 rounded-xl border border-white/5">
+                    <span className="text-zinc-500">Wait Est:</span>
+                    <span className="text-indigo-300 font-bold">{simulatedEstimatedWait}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Status details grid */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                
+                {/* Gemini Styling status */}
+                <div className="bg-black/30 p-3 rounded-xl border border-white/[0.02] flex items-center gap-3 text-left">
+                  <div className="p-2 bg-indigo-500/10 rounded-lg text-indigo-400 border border-indigo-500/20 shrink-0">
+                    <Cpu className="w-4 h-4" />
+                  </div>
+                  <div className="text-left">
+                    <span className="block text-[8px] font-mono text-zinc-500 uppercase">Gemini Orchestrator</span>
+                    <span className="block text-[11px] font-bold text-white uppercase font-mono">Active</span>
+                  </div>
+                </div>
+
+                {/* Imagen Creative Studio status */}
+                <div className="bg-black/30 p-3 rounded-xl border border-white/[0.02] flex items-center gap-3 text-left">
+                  <div className="p-2 bg-purple-500/10 rounded-lg text-purple-400 border border-purple-500/20 shrink-0">
+                    <Cloud className="w-4 h-4" />
+                  </div>
+                  <div className="text-left">
+                    <span className="block text-[8px] font-mono text-zinc-500 uppercase">Imagen Generator</span>
+                    <span className={`block text-[11px] font-bold uppercase font-mono ${simulatedApiHealth === 'maintenance' ? 'text-amber-400' : 'text-white'}`}>
+                      {simulatedApiHealth === 'maintenance' ? 'Maintenance' : 'Active'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Circuit Breaker Status */}
+                <div className="bg-black/30 p-3 rounded-xl border border-white/[0.02] flex items-center gap-3 text-left">
+                  <div className="p-2 bg-zinc-800/50 rounded-lg border border-white/5 shrink-0">
+                    <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                  </div>
+                  <div className="text-left">
+                    <span className="block text-[8px] font-mono text-zinc-500 uppercase">Circuit Breaker</span>
+                    <span className={`block text-[11px] font-bold font-mono uppercase ${simulatedCircuitBreaker === 'OPEN' ? 'text-rose-400' : 'text-emerald-400'}`}>
+                      {simulatedCircuitBreaker}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Fallback standby status */}
+                <div className="bg-black/30 p-3 rounded-xl border border-white/[0.02] flex items-center gap-3 text-left">
+                  <div className="p-2 bg-zinc-800/50 rounded-lg border border-white/5 shrink-0">
+                    <Database className="w-4 h-4 text-indigo-400" />
+                  </div>
+                  <div className="text-left">
+                    <span className="block text-[8px] font-mono text-zinc-500 uppercase">Fallback Node</span>
+                    <span className={`block text-[11px] font-bold font-mono uppercase ${simulatedFallbackActive ? 'text-amber-400 animate-pulse font-bold' : 'text-zinc-500'}`}>
+                      {simulatedFallbackActive ? 'ACTIVE (V2)' : 'STANDBY (V3)'}
+                    </span>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Retry progress bar if active */}
+              {simulatedRetryProgress > 0 && simulatedRetryProgress < 100 && (
+                <div className="bg-[#12121e] border border-indigo-500/20 p-2 rounded-xl text-xs font-mono space-y-1.5 text-left">
+                  <div className="flex justify-between text-indigo-300 text-[10px]">
+                    <span>🔄 API Rate Limit Exceeded &bull; Automatic Retry Loop Active...</span>
+                    <span>{simulatedRetryProgress}%</span>
+                  </div>
+                  <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                    <div className="h-full bg-indigo-500 transition-all duration-300" style={{ width: `${simulatedRetryProgress}%` }} />
+                  </div>
+                </div>
+              )}
+
+              {/* INTERACTIVE API STRESS TESTING AREA */}
+              <div className="bg-black/40 border border-white/5 p-3 rounded-xl space-y-2 flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+                <div className="text-left font-mono">
+                  <span className="text-[10px] text-zinc-400 block font-bold uppercase">🧪 Interactive Stress Testing Panel</span>
+                  <span className="text-[9px] text-zinc-500 block leading-tight mt-0.5">Simulate actual backend latency, rate limits, and failover scenarios.</span>
+                </div>
+
+                <div className="flex flex-wrap gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const states: ('healthy' | 'degraded' | 'maintenance')[] = ['healthy', 'degraded', 'maintenance'];
+                      const next = states[(states.indexOf(simulatedApiHealth) + 1) % states.length];
+                      setSimulatedApiHealth(next);
+                      if (next === 'degraded') {
+                        setSimulatedCircuitBreaker('OPEN');
+                        setSimulatedFallbackActive(true);
+                      } else if (next === 'maintenance') {
+                        setSimulatedCircuitBreaker('OPEN');
+                        setSimulatedFallbackActive(false);
+                      } else {
+                        setSimulatedCircuitBreaker('CLOSED');
+                        setSimulatedFallbackActive(false);
+                      }
+                      window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
+                        detail: `System health configured to: ${next.toUpperCase()}`
+                      }));
+                    }}
+                    className="px-2.5 py-1 bg-white/[0.02] hover:bg-white/5 border border-white/10 rounded text-[9px] font-mono uppercase tracking-wider text-white transition-all cursor-pointer"
+                  >
+                    Set: {simulatedApiHealth.toUpperCase()}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSimulatedRetryProgress(5);
+                      setSimulatedCircuitBreaker('OPEN');
+                      const interval = setInterval(() => {
+                        setSimulatedRetryProgress(prev => {
+                          if (prev >= 100) {
+                            clearInterval(interval);
+                            setSimulatedCircuitBreaker('CLOSED');
+                            window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
+                              detail: '✓ AI Client re-established session cleanly!'
+                            }));
+                            return 0;
+                          }
+                          return prev + 15;
+                        });
+                      }, 150);
+                    }}
+                    className="px-2.5 py-1 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 rounded text-[9px] font-mono uppercase tracking-wider text-indigo-300 transition-all cursor-pointer"
+                  >
+                    Trigger Retry Progress
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
           {/* Left Panel: Configuration Form (7 columns) */}
           <div className="lg:col-span-7 bg-[#121212]/30 border border-white/5 p-6 rounded-2xl space-y-6 text-left">
             <div className="space-y-1">

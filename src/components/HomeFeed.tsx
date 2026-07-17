@@ -566,7 +566,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
             id: docSnap.id,
             imageUrl: data.imageUrl || '',
             prompt: data.prompt || '',
-            provider: data.provider || 'Google-Imagen-4.0',
+            provider: data.provider || 'Gemini-3.1-Flash-Image',
             vibe: data.vibe || 'Creative',
             season: data.season || 'All-Season',
             createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : (data.createdAt || new Date().toISOString())
@@ -909,7 +909,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
             id: lookId,
             imageUrl: getGarmentImage(top || bottom || data.style_title || ''),
             prompt: promptText,
-            provider: "Google-Imagen-4.0",
+            provider: "Gemini-3.1-Flash-Image",
             vibe: data.user_profile?.style || "Curated",
             season: data.user_profile?.occasion || "All-Season",
             createdAt: new Date().toISOString()

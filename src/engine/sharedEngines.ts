@@ -507,7 +507,9 @@ export class AIGenerationEngine {
     config: any,
     provider?: string
   ): Promise<{ imageUrl: string; provider: string; cacheHit: boolean; costSavedUsd: number }> {
-    const fp = PromptOptimizationEngine.fingerprintPrompt(prompt);
+    // Generate a unique fingerprint for each request to allow refreshing and unique images, salting it with seed/nonce
+    const runSeed = config?.seed || String(Math.floor(Math.random() * 1000000000));
+    const fp = PromptOptimizationEngine.fingerprintPrompt(prompt + "_seed_" + runSeed);
     
     // Check local recent executions to block immediate regenerations
     const previous = this.recentRuns.get(fp);
@@ -515,35 +517,37 @@ export class AIGenerationEngine {
       console.log(`[AIGenerationEngine] Prevented duplicate external generation via active prompt fingerprinted cache match.`);
       return {
         imageUrl: previous.url,
-        provider: provider || 'Google-Imagen-4.0',
+        provider: provider || 'Gemini-3.1-Flash-Image',
         cacheHit: true,
         costSavedUsd: 0.015
       };
     }
 
-    // PART 4: Enterprise Duplicate Look Detection and Visual Reusability
-    try {
-      const duplicateMatch = DuplicateLookDetectionEngine.detectDuplicate(prompt, config?.vibe || '');
-      if (duplicateMatch && duplicateMatch.isDuplicate) {
-        console.log(`[AIGenerationEngine] Visual intelligence found identical look in ${duplicateMatch.source}. Reusing look: "${duplicateMatch.matchedLookTitle}" to prevent redundant external AI requests.`);
-        
-        // Track the saved API call to show in metrics
-        try {
-          const uId = 'user-1';
-          const { PersonalFashionMemoryEngine } = await import('./personalMemory');
-          const memory = PersonalFashionMemoryEngine.getMemory(uId);
-          memory.apiCallsSaved += 1;
-        } catch {}
+    // PART 4: Enterprise Duplicate Look Detection and Visual Reusability (run only if explicit deduplicate flag is passed)
+    if (config?.deduplicate) {
+      try {
+        const duplicateMatch = DuplicateLookDetectionEngine.detectDuplicate(prompt, config?.vibe || '');
+        if (duplicateMatch && duplicateMatch.isDuplicate) {
+          console.log(`[AIGenerationEngine] Visual intelligence found identical look in ${duplicateMatch.source}. Reusing look: "${duplicateMatch.matchedLookTitle}" to prevent redundant external AI requests.`);
+          
+          // Track the saved API call to show in metrics
+          try {
+            const uId = 'user-1';
+            const { PersonalFashionMemoryEngine } = await import('./personalMemory');
+            const memory = PersonalFashionMemoryEngine.getMemory(uId);
+            memory.apiCallsSaved += 1;
+          } catch {}
 
-        return {
-          imageUrl: duplicateMatch.matchedLookImageUrl,
-          provider: 'VisionIntelligence-Deduplication',
-          cacheHit: true,
-          costSavedUsd: 0.015
-        };
+          return {
+            imageUrl: duplicateMatch.matchedLookImageUrl,
+            provider: 'VisionIntelligence-Deduplication',
+            cacheHit: true,
+            costSavedUsd: 0.015
+          };
+        }
+      } catch (e) {
+        console.warn('[AIGenerationEngine] Duplicate look detection check bypassed:', e);
       }
-    } catch (e) {
-      console.warn('[AIGenerationEngine] Duplicate look detection check bypassed:', e);
     }
 
     // Call request pipeline

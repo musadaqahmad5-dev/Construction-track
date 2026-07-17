@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Trash2, Shield, Settings, AlertTriangle, RefreshCw, CheckCircle, Sparkles, Sparkle, BarChart2,
@@ -6,9 +6,10 @@ import {
   ChevronRight, Compass, Eye, Cpu, Database, Activity, CloudSun, User,
   Bell, PenSquare, X, ChevronDown, Award, Check,
   Home, Users, Heart, Layers, MessageSquare, Mail, Crown, MoreVertical, Moon, Menu,
-  Camera, Upload
+  Camera, Upload, Calendar
 } from 'lucide-react';
 import { WardrobeItem, ProfileService, type StyleProfile, type StylistHistoryEntry } from '../platform';
+import { getGarmentImage } from '../features/feed/AIEngine';
 import { EmptyStateLibrary } from './EmptyStateLibrary';
 import { 
   UnifiedFashionOS, 
@@ -23,7 +24,7 @@ import { WardrobeGrid } from './WardrobeGrid';
 import { HomeFeed } from './HomeFeed';
 import { SellerDashboard } from './SellerDashboard';
 import { LookVisionMainDashboard } from './LookVisionMainDashboard';
-import { StyleBadge } from './StyleBadge';
+
 import { SystemHealthPanel } from './SystemHealthPanel';
 import { FeedbackButtons } from './FeedbackButtons';
 import { FounderDashboard } from './FounderDashboard';
@@ -44,6 +45,7 @@ import { MarketplaceScreen } from './screens/MarketplaceScreen';
 import { ProductDetailScreen } from './screens/ProductDetailScreen';
 import { CreatorWorkspaceScreen } from './screens/CreatorWorkspaceScreen';
 import { VirtualStudioTryOn } from './VirtualStudioTryOn';
+import { OutfitPlanner } from './OutfitPlanner';
 
 export interface LookVisionTheme {
   id: string;
@@ -230,33 +232,6 @@ export const ImageWithFade: React.FC<{ src: string; alt: string }> = ({ src, alt
     </div>
   );
 };
-
-// 6. MONOCHROME PHOTOGRAPHY RULE: Curate beautiful monochrome visual fallbacks automatically
-export function getGarmentImage(title: string): string {
-  const lower = title.toLowerCase();
-  if (lower.includes('tee') || lower.includes('t-shirt') || lower.includes('cotton classic') || lower.includes('cotton')) {
-    return 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?q=80&w=600&auto=format&fit=crop';
-  }
-  if (lower.includes('coat') || lower.includes('overcoat') || lower.includes('jacket') || lower.includes('trench') || lower.includes('outerwear')) {
-    return 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=600&auto=format&fit=crop';
-  }
-  if (lower.includes('chino') || lower.includes('pant') || lower.includes('trouser') || lower.includes('jean') || lower.includes('denim')) {
-    return 'https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?q=80&w=600&auto=format&fit=crop';
-  }
-  if (lower.includes('beanie') || lower.includes('ribbed') || lower.includes('hat') || lower.includes('knit')) {
-    return 'https://images.unsplash.com/photo-1576871337622-98d48d4aa53e?q=80&w=600&auto=format&fit=crop';
-  }
-  if (lower.includes('hoodie') || lower.includes('sweatshirt') || lower.includes('sweater')) {
-    return 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?q=80&w=600&auto=format&fit=crop';
-  }
-  if (lower.includes('shoes') || lower.includes('sneaker') || lower.includes('boot') || lower.includes('sandal')) {
-    return 'https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?q=80&w=600&auto=format&fit=crop';
-  }
-  if (lower.includes('blazer') || lower.includes('formal') || lower.includes('suit')) {
-    return 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?q=80&w=600&auto=format&fit=crop';
-  }
-  return 'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?q=80&w=600&auto=format&fit=crop';
-}
 
 export function hasArchiveQualities(item: WardrobeItem): boolean {
   const hasPrivateNote = !!(item.privateNote && item.privateNote.trim() !== "");
@@ -563,14 +538,20 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
       window.removeEventListener('lookvision_update_sandbox_settings', handleUpdateSandboxSettings);
     };
   }, []);
-  const [activeSubTab, setActiveSubTab] = useState<'HOME' | 'AI_STUDIO' | 'WARDROBE' | 'DASHBOARD' | 'PROFILE' | 'SYSTEM_ROOM' | 'OUTFIT_GEN' | 'VIRTUAL_TRY' | 'COLLECTIONS' | 'HISTORY' | 'MESSAGES' | 'FAVORITES' | 'MARKETPLACE_ROOM' | 'COMMUNITY_ROOM' | 'DISCOVER' | 'CREATOR_WORKSPACE' | 'PRODUCT_DETAIL'>(() => {
-    const saved = localStorage.getItem('last_active_place_subtab');
-    if (saved && ['HOME', 'AI_STUDIO', 'WARDROBE', 'DASHBOARD', 'PROFILE', 'SYSTEM_ROOM', 'OUTFIT_GEN', 'VIRTUAL_TRY', 'COLLECTIONS', 'HISTORY', 'MESSAGES', 'FAVORITES', 'MARKETPLACE_ROOM', 'COMMUNITY_ROOM', 'DISCOVER', 'CREATOR_WORKSPACE', 'PRODUCT_DETAIL'].includes(saved)) {
+  const [activeSubTab, setActiveSubTab] = useState<'PRODUCT_HOME' | 'PRODUCT_AI_CREATIONS' | 'PRODUCT_COMMUNITY' | 'PRODUCT_MARKETPLACE' | 'ECOSYSTEM_GENERATE' | 'ECOSYSTEM_CREATE' | 'HOME' | 'AI_STUDIO' | 'WARDROBE' | 'DASHBOARD' | 'PROFILE' | 'SYSTEM_ROOM' | 'OUTFIT_GEN' | 'VIRTUAL_TRY' | 'COLLECTIONS' | 'HISTORY' | 'MESSAGES' | 'FAVORITES' | 'MARKETPLACE_ROOM' | 'COMMUNITY_ROOM' | 'DISCOVER' | 'CREATOR_WORKSPACE' | 'PRODUCT_DETAIL' | 'PLANNER'>(() => {
+    let saved = localStorage.getItem('last_active_place_subtab');
+    if (saved === 'HOME') saved = 'PRODUCT_HOME';
+    else if (saved === 'COMMUNITY_ROOM') saved = 'PRODUCT_COMMUNITY';
+    else if (saved === 'MARKETPLACE_ROOM') saved = 'PRODUCT_MARKETPLACE';
+    else if (saved === 'AI_STUDIO') saved = 'PRODUCT_AI_CREATIONS';
+    else if (saved === 'OUTFIT_GEN') saved = 'ECOSYSTEM_GENERATE';
+
+    if (saved && ['PRODUCT_HOME', 'PRODUCT_AI_CREATIONS', 'PRODUCT_COMMUNITY', 'PRODUCT_MARKETPLACE', 'ECOSYSTEM_GENERATE', 'ECOSYSTEM_CREATE', 'HOME', 'AI_STUDIO', 'WARDROBE', 'DASHBOARD', 'PROFILE', 'SYSTEM_ROOM', 'OUTFIT_GEN', 'VIRTUAL_TRY', 'COLLECTIONS', 'HISTORY', 'MESSAGES', 'FAVORITES', 'MARKETPLACE_ROOM', 'COMMUNITY_ROOM', 'DISCOVER', 'CREATOR_WORKSPACE', 'PRODUCT_DETAIL', 'PLANNER'].includes(saved)) {
       return saved as any;
     }
-    return 'HOME';
+    return 'PRODUCT_HOME';
   });
-  const [activeCockpitSubTab, setActiveCockpitSubTab] = useState<'HOME' | 'AI_STUDIO' | 'WARDROBE' | 'DASHBOARD' | 'PROFILE' | 'SYSTEM_ROOM' | 'OUTFIT_GEN' | 'VIRTUAL_TRY' | 'COLLECTIONS' | 'HISTORY' | 'MESSAGES' | 'FAVORITES' | 'MARKETPLACE_ROOM' | 'COMMUNITY_ROOM' | 'DISCOVER' | 'CREATOR_WORKSPACE' | 'PRODUCT_DETAIL'>('HOME');
+  const [activeCockpitSubTab, setActiveCockpitSubTab] = useState<'PRODUCT_HOME' | 'PRODUCT_AI_CREATIONS' | 'PRODUCT_COMMUNITY' | 'PRODUCT_MARKETPLACE' | 'ECOSYSTEM_GENERATE' | 'ECOSYSTEM_CREATE' | 'HOME' | 'AI_STUDIO' | 'WARDROBE' | 'DASHBOARD' | 'PROFILE' | 'SYSTEM_ROOM' | 'OUTFIT_GEN' | 'VIRTUAL_TRY' | 'COLLECTIONS' | 'HISTORY' | 'MESSAGES' | 'FAVORITES' | 'MARKETPLACE_ROOM' | 'COMMUNITY_ROOM' | 'DISCOVER' | 'CREATOR_WORKSPACE' | 'PRODUCT_DETAIL' | 'PLANNER'>('PRODUCT_HOME');
   const [showFounderConsole, setShowFounderConsole] = useState(false);
   
   // Ceremony of Addition Form Steps States (Restore draft silently)
@@ -938,7 +919,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
 
   const activeWardrobeList = wardrobe && wardrobe.length > 0 ? wardrobe : state.unifiedStyleMemory.wardrobe_items;
 
-  const displayedWardrobeList = (() => {
+  const displayedWardrobeList = useMemo(() => {
     let list = activeWardrobeList || [];
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
@@ -951,24 +932,29 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
     } else {
       return list.filter(item => !item.placedElsewhere);
     }
-  })();
+  }, [activeWardrobeList, searchQuery]);
+
+  const placedElsewhereItems = useMemo(() => {
+    return (activeWardrobeList || []).filter(item => item.placedElsewhere);
+  }, [activeWardrobeList]);
 
   // URL Router & Synchronization - Merged for ultimate stability
   useEffect(() => {
     const handleLocationChange = () => {
       const path = window.location.pathname;
       let mappedTab: any = null;
-      if (path === '/home' || path === '/' || path === '') mappedTab = 'HOME';
-      else if (path === '/ai-studio') mappedTab = 'AI_STUDIO';
+      if (path === '/home' || path === '/' || path === '') mappedTab = 'PRODUCT_HOME';
+      else if (path === '/ai-studio' || path === '/ai-creations') mappedTab = 'PRODUCT_AI_CREATIONS';
       else if (path === '/wardrobe') mappedTab = 'WARDROBE';
       else if (path === '/dashboard') mappedTab = 'DASHBOARD';
       else if (path === '/profile') mappedTab = 'PROFILE';
       else if (path === '/settings' || path === '/presence') mappedTab = 'SYSTEM_ROOM';
-      else if (path === '/marketplace') mappedTab = 'MARKETPLACE_ROOM';
-      else if (path === '/community') mappedTab = 'COMMUNITY_ROOM';
+      else if (path === '/marketplace') mappedTab = 'PRODUCT_MARKETPLACE';
+      else if (path === '/community') mappedTab = 'PRODUCT_COMMUNITY';
       else if (path === '/discover' || path === '/explore') mappedTab = 'DISCOVER';
       else if (path === '/creator' || path === '/creator-workspace') mappedTab = 'CREATOR_WORKSPACE';
       else if (path === '/product-detail') mappedTab = 'PRODUCT_DETAIL';
+      else if (path === '/generate' || path === '/fashion-ai') mappedTab = 'ECOSYSTEM_GENERATE';
       
       if (mappedTab) {
         setActiveSubTab(mappedTab);
@@ -985,17 +971,18 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
 
   useEffect(() => {
     let targetPath = '';
-    if (activeSubTab === 'HOME') targetPath = '/home';
-    else if (activeSubTab === 'AI_STUDIO') targetPath = '/ai-studio';
+    if (activeSubTab === 'PRODUCT_HOME' || activeSubTab === 'HOME') targetPath = '/home';
+    else if (activeSubTab === 'PRODUCT_AI_CREATIONS' || activeSubTab === 'AI_STUDIO' || activeSubTab === 'ECOSYSTEM_CREATE') targetPath = '/ai-studio';
     else if (activeSubTab === 'WARDROBE') targetPath = '/wardrobe';
     else if (activeSubTab === 'DASHBOARD') targetPath = '/dashboard';
     else if (activeSubTab === 'PROFILE') targetPath = '/profile';
     else if (activeSubTab === 'SYSTEM_ROOM') targetPath = '/settings';
-    else if (activeSubTab === 'MARKETPLACE_ROOM') targetPath = '/marketplace';
-    else if (activeSubTab === 'COMMUNITY_ROOM') targetPath = '/community';
+    else if (activeSubTab === 'PRODUCT_MARKETPLACE' || activeSubTab === 'MARKETPLACE_ROOM') targetPath = '/marketplace';
+    else if (activeSubTab === 'PRODUCT_COMMUNITY' || activeSubTab === 'COMMUNITY_ROOM') targetPath = '/community';
     else if (activeSubTab === 'DISCOVER') targetPath = '/discover';
     else if (activeSubTab === 'CREATOR_WORKSPACE') targetPath = '/creator';
     else if (activeSubTab === 'PRODUCT_DETAIL') targetPath = '/product-detail';
+    else if (activeSubTab === 'ECOSYSTEM_GENERATE' || activeSubTab === 'OUTFIT_GEN') targetPath = '/generate';
 
     if (targetPath && window.location.pathname !== targetPath) {
       window.history.pushState(null, '', targetPath);
@@ -1859,8 +1846,24 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
   }
 
   const handleNavigate = (targetTab: any) => {
-    setActiveSubTab(targetTab);
-    localStorage.setItem('last_active_place_subtab', targetTab);
+    let resolvedTab = targetTab;
+    if (targetTab === 'OUTFITS' || targetTab === 'OUTFITS_ROOM' || targetTab === 'TRY_ON_STUDIO') {
+      resolvedTab = 'VIRTUAL_TRY';
+    }
+    // Map legacy names to new architecture-aware names
+    if (resolvedTab === 'HOME') {
+      resolvedTab = 'PRODUCT_HOME';
+    } else if (resolvedTab === 'COMMUNITY_ROOM') {
+      resolvedTab = 'PRODUCT_COMMUNITY';
+    } else if (resolvedTab === 'MARKETPLACE_ROOM') {
+      resolvedTab = 'PRODUCT_MARKETPLACE';
+    } else if (resolvedTab === 'AI_STUDIO') {
+      resolvedTab = 'PRODUCT_AI_CREATIONS';
+    } else if (resolvedTab === 'OUTFIT_GEN') {
+      resolvedTab = 'ECOSYSTEM_GENERATE';
+    }
+    setActiveSubTab(resolvedTab);
+    localStorage.setItem('last_active_place_subtab', resolvedTab);
   };
 
   const activeSubTabForRendering = activeSubTab;
@@ -1874,17 +1877,14 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
     };
 
     const navigationItems = [
-      { id: 'HOME', label: 'Home', icon: Home, route: 'HOME', filter: 'AI_INVENT' },
-      { id: 'DISCOVER', label: 'Discover', icon: Compass, route: 'DISCOVER' },
-      { id: 'AI_CREATE', label: 'AI Create', icon: Sparkles, route: 'AI_STUDIO', badge: 'NEW' },
-      { id: 'MY_WARDROBE', label: 'My Wardrobe', icon: Layers, route: 'WARDROBE' },
-      { id: 'COMMUNITY', label: 'Community', icon: Users, route: 'COMMUNITY_ROOM' },
-      { id: 'MARKETPLACE', label: 'Marketplace', icon: ShoppingBag, route: 'MARKETPLACE_ROOM' },
-      { id: 'TRY_ON_STUDIO', label: 'Try-On Studio', icon: Shirt, route: 'VIRTUAL_TRY' },
-      { id: 'COLLECTIONS', label: 'Collections', icon: Store, route: 'COLLECTIONS' },
-      { id: 'FAVORITES', label: 'Favorites', icon: Heart, route: 'FAVORITES' },
-      { id: 'MESSAGES', label: 'Messages', icon: Mail, route: 'MESSAGES', badge: '3' },
+      { id: 'HOME', label: 'Home Hub', icon: Home, route: 'PRODUCT_HOME' },
+      { id: 'PROFILE', label: 'My Profile', icon: User, route: 'PROFILE' },
+      { id: 'PLANNER', label: 'Outfit Planner', icon: Calendar, route: 'PLANNER' },
+      { id: 'AUTHENTICATION', label: user && !user.isAnonymous && !user.uid.startsWith('guest-') ? 'Sign Out' : 'Sign In', icon: LogOut, action: 'AUTHENTICATION' },
+      { id: 'AI_MEMORY', label: 'AI Memory', icon: Cpu, route: 'DASHBOARD' },
       { id: 'NOTIFICATIONS', label: 'Notifications', icon: Bell, action: 'NOTIFICATIONS', badge: '8' },
+      { id: 'SEARCH', label: 'Focus Search', icon: Search, action: 'SEARCH' },
+      { id: 'AI_ASSISTANT', label: 'AI Assistant', icon: Sparkles, action: 'AI_ASSISTANT' },
       { id: 'SETTINGS', label: 'Settings', icon: Settings, route: 'SYSTEM_ROOM' }
     ];
 
@@ -1908,32 +1908,19 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
             </div>
 
             {/* Navigation options */}
-            <div className="space-y-0.5">
+            <div className="space-y-0.5" role="tablist" aria-label="Sidebar Navigation">
               {navigationItems.map((tab) => {
                 const Icon = tab.icon;
                 
                 // Determine active state selection matching look vision layout
                 let isSelected = false;
-                const currentFilter = localStorage.getItem('last_active_feed_filter');
-                if (tab.id === 'HOME' && activeSubTabForRendering === 'HOME' && currentFilter !== 'BRANDS' && currentFilter !== 'COMMUNITY') {
+                if (tab.id === 'HOME' && (activeSubTabForRendering === 'PRODUCT_HOME' || activeSubTabForRendering === 'HOME')) {
                   isSelected = true;
-                } else if (tab.id === 'DISCOVER' && activeSubTabForRendering === 'DISCOVER') {
+                } else if (tab.id === 'PROFILE' && activeSubTabForRendering === 'PROFILE') {
                   isSelected = true;
-                } else if (tab.id === 'AI_CREATE' && activeSubTabForRendering === 'AI_STUDIO') {
+                } else if (tab.id === 'PLANNER' && activeSubTabForRendering === 'PLANNER') {
                   isSelected = true;
-                } else if (tab.id === 'MY_WARDROBE' && activeSubTabForRendering === 'WARDROBE') {
-                  isSelected = true;
-                } else if ((tab.id === 'COMMUNITY' || tab.id === 'COMMUNITY_ROOM') && activeSubTabForRendering === 'COMMUNITY_ROOM') {
-                  isSelected = true;
-                } else if ((tab.id === 'MARKETPLACE' || tab.id === 'MARKETPLACE_ROOM') && activeSubTabForRendering === 'MARKETPLACE_ROOM') {
-                  isSelected = true;
-                } else if (tab.id === 'TRY_ON_STUDIO' && activeSubTabForRendering === 'VIRTUAL_TRY') {
-                  isSelected = true;
-                } else if (tab.id === 'COLLECTIONS' && activeSubTabForRendering === 'COLLECTIONS') {
-                  isSelected = true;
-                } else if (tab.id === 'FAVORITES' && activeSubTabForRendering === 'FAVORITES') {
-                  isSelected = true;
-                } else if (tab.id === 'MESSAGES' && activeSubTabForRendering === 'MESSAGES') {
+                } else if (tab.id === 'AI_MEMORY' && activeSubTabForRendering === 'DASHBOARD') {
                   isSelected = true;
                 } else if (tab.id === 'NOTIFICATIONS' && isNotificationsOpen) {
                   isSelected = true;
@@ -1945,21 +1932,25 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
                   <button
                     key={tab.id}
                     id={`app-${tab.id.toLowerCase().replace('_', '-')}`}
+                    role="tab"
+                    aria-selected={isSelected}
                     onClick={() => {
                       triggerQuietPause(() => {
                         if (tab.action === 'NOTIFICATIONS') {
                           setIsNotificationsOpen(!isNotificationsOpen);
+                        } else if (tab.action === 'SEARCH') {
+                          const sInput = document.querySelector('input[placeholder="Search styles..."]') as HTMLInputElement;
+                          if (sInput) {
+                            sInput.focus();
+                            sInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                          }
+                          window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: 'Search input focused.' }));
+                        } else if (tab.action === 'AI_ASSISTANT') {
+                          window.dispatchEvent(new CustomEvent('lookvision_open_ai_chat'));
+                        } else if (tab.action === 'AUTHENTICATION') {
+                          if (onLogout) onLogout();
                         } else if (tab.route) {
                           handleNavigate(tab.route as any);
-                          if (tab.filter) {
-                            localStorage.setItem('last_active_feed_filter', tab.filter);
-                            window.dispatchEvent(new CustomEvent('lookvision_switch_feed_filter', { detail: tab.filter }));
-                          } else {
-                            if (tab.id === 'HOME') {
-                              localStorage.setItem('last_active_feed_filter', 'AI_INVENT');
-                              window.dispatchEvent(new CustomEvent('lookvision_switch_feed_filter', { detail: 'AI_INVENT' }));
-                            }
-                          }
                         } else {
                           window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: `${tab.label} is loaded.` }));
                         }
@@ -2093,31 +2084,16 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
                   </div>
 
                   {/* Navigation Links */}
-                  <div className="space-y-0.5">
+                  <div className="space-y-0.5" role="tablist" aria-label="Mobile Navigation">
                     {navigationItems.map((tab) => {
                       const Icon = tab.icon;
                       
                       let isSelected = false;
-                      const currentFilter = localStorage.getItem('last_active_feed_filter');
-                      if (tab.id === 'HOME' && activeSubTabForRendering === 'HOME' && currentFilter !== 'BRANDS' && currentFilter !== 'COMMUNITY') {
+                      if (tab.id === 'HOME' && (activeSubTabForRendering === 'PRODUCT_HOME' || activeSubTabForRendering === 'HOME')) {
                         isSelected = true;
-                      } else if (tab.id === 'DISCOVER' && activeSubTabForRendering === 'DISCOVER') {
+                      } else if (tab.id === 'PROFILE' && activeSubTabForRendering === 'PROFILE') {
                         isSelected = true;
-                      } else if (tab.id === 'AI_CREATE' && activeSubTabForRendering === 'AI_STUDIO') {
-                        isSelected = true;
-                      } else if (tab.id === 'MY_WARDROBE' && activeSubTabForRendering === 'WARDROBE') {
-                        isSelected = true;
-                      } else if ((tab.id === 'COMMUNITY' || tab.id === 'COMMUNITY_ROOM') && activeSubTabForRendering === 'COMMUNITY_ROOM') {
-                        isSelected = true;
-                      } else if ((tab.id === 'MARKETPLACE' || tab.id === 'MARKETPLACE_ROOM') && activeSubTabForRendering === 'MARKETPLACE_ROOM') {
-                        isSelected = true;
-                      } else if (tab.id === 'TRY_ON_STUDIO' && activeSubTabForRendering === 'VIRTUAL_TRY') {
-                        isSelected = true;
-                      } else if (tab.id === 'COLLECTIONS' && activeSubTabForRendering === 'COLLECTIONS') {
-                        isSelected = true;
-                      } else if (tab.id === 'FAVORITES' && activeSubTabForRendering === 'FAVORITES') {
-                        isSelected = true;
-                      } else if (tab.id === 'MESSAGES' && activeSubTabForRendering === 'MESSAGES') {
+                      } else if (tab.id === 'AI_MEMORY' && activeSubTabForRendering === 'DASHBOARD') {
                         isSelected = true;
                       } else if (tab.id === 'NOTIFICATIONS' && isNotificationsOpen) {
                         isSelected = true;
@@ -2129,22 +2105,26 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
                         <button
                           key={tab.id}
                           id={`mob-app-${tab.id.toLowerCase().replace('_', '-')}`}
+                          role="tab"
+                          aria-selected={isSelected}
                           onClick={() => {
                             setIsMobileSidebarOpen(false); // Close sidebar drawer on click
                             triggerQuietPause(() => {
                               if (tab.action === 'NOTIFICATIONS') {
                                 setIsNotificationsOpen(!isNotificationsOpen);
+                              } else if (tab.action === 'SEARCH') {
+                                const sInput = document.querySelector('input[placeholder="Search styles..."]') as HTMLInputElement;
+                                if (sInput) {
+                                  sInput.focus();
+                                  sInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                }
+                                window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: 'Search input focused.' }));
+                              } else if (tab.action === 'AI_ASSISTANT') {
+                                window.dispatchEvent(new CustomEvent('lookvision_open_ai_chat'));
+                              } else if (tab.action === 'AUTHENTICATION') {
+                                if (onLogout) onLogout();
                               } else if (tab.route) {
                                 handleNavigate(tab.route as any);
-                                if (tab.filter) {
-                                  localStorage.setItem('last_active_feed_filter', tab.filter);
-                                  window.dispatchEvent(new CustomEvent('lookvision_switch_feed_filter', { detail: tab.filter }));
-                                } else {
-                                  if (tab.id === 'HOME') {
-                                    localStorage.setItem('last_active_feed_filter', 'AI_INVENT');
-                                    window.dispatchEvent(new CustomEvent('lookvision_switch_feed_filter', { detail: 'AI_INVENT' }));
-                                  }
-                                }
                               } else {
                                 window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: `${tab.label} is loaded.` }));
                               }
@@ -2265,22 +2245,47 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
             {/* Right header column (aligned with main workspace content and right sidebar) */}
             <div className="flex-grow h-full flex items-center justify-between px-6">
               {/* Left: Wider, Elegant Search Input */}
-              <div className="flex-1 max-w-xl relative hidden md:block select-none">
+              <div className="flex-1 max-w-xs relative hidden md:block select-none">
                 <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40" />
                 <input 
                   type="text" 
-                  placeholder="Search styles, users, collections..." 
+                  placeholder="Search styles..." 
                   value={searchQuery}
                   onChange={(e) => {
                     setSearchQuery(e.target.value);
-                    // Dispatch query to HomeFeed if active
                     window.dispatchEvent(new CustomEvent('lookvision_set_search_query', { detail: e.target.value }));
                   }}
-                  className="w-full bg-white/[0.02] hover:bg-white/[0.04] border border-white/5 rounded-xl py-2 pl-10 pr-16 text-xs text-white placeholder-white/30 focus:outline-none focus:border-violet-500/30 transition-all font-light"
+                  className="w-full bg-white/[0.02] hover:bg-white/[0.04] border border-white/5 rounded-xl py-2 pl-10 pr-4 text-xs text-white placeholder-white/30 focus:outline-none focus:border-violet-500/30 transition-all font-light"
                 />
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 px-1.5 py-0.5 bg-white/5 border border-white/10 rounded text-[9px] font-mono text-white/40 tracking-wider">
-                  ⌘ K
-                </div>
+              </div>
+
+              {/* Centered Segmented Public Sections Tab Bar */}
+              <div className="flex items-center bg-[#050508]/60 backdrop-blur-md border border-white/5 p-1 rounded-xl mx-4 select-none">
+                {[
+                  { id: 'PRODUCT_COMMUNITY', label: 'Community', icon: Users },
+                  { id: 'PRODUCT_AI_CREATIONS', label: 'AI Creations', icon: Sparkles },
+                  { id: 'PRODUCT_MARKETPLACE', label: 'Marketplace', icon: ShoppingBag }
+                ].map(item => {
+                  const Icon = item.icon;
+                  const isActive = activeSubTabForRendering === item.id ||
+                                   (item.id === 'PRODUCT_COMMUNITY' && activeSubTabForRendering === 'COMMUNITY_ROOM') ||
+                                   (item.id === 'PRODUCT_AI_CREATIONS' && (activeSubTabForRendering === 'AI_STUDIO' || activeSubTabForRendering === 'ECOSYSTEM_CREATE')) ||
+                                   (item.id === 'PRODUCT_MARKETPLACE' && activeSubTabForRendering === 'MARKETPLACE_ROOM');
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => handleNavigate(item.id as any)}
+                      className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-mono tracking-wider transition-all duration-200 cursor-pointer ${
+                        isActive 
+                          ? 'bg-[#181135] text-[#b6a1ff] font-semibold border border-[#2b1c63]/40 shadow-sm' 
+                          : 'text-zinc-500 hover:text-white'
+                      }`}
+                    >
+                      <Icon className="w-3.5 h-3.5" />
+                      <span>{item.label}</span>
+                    </button>
+                  );
+                })}
               </div>
 
               {/* Right: Actions and Profile dropdown */}
@@ -2437,7 +2442,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
           )}
 
           {/* Active Workspaces Render Block */}
-          {activeSubTab === 'HOME' ? (
+          {(activeSubTab === 'PRODUCT_HOME' || activeSubTab === 'HOME') ? (
             <div className="space-y-6 animate-fade-in w-full">
               <LookVisionMainDashboard 
                 wardrobe={activeWardrobeList}
@@ -2453,7 +2458,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
           ) : null}
 
           {/* Unhidden sub-tab container (renders when not in HOME sub-tab) */}
-          <div className={activeSubTab === 'HOME' ? "hidden pointer-events-none opacity-0 h-0 overflow-hidden select-none" : "block select-text max-w-4xl mx-auto"}>
+          <div className={(activeSubTab === 'PRODUCT_HOME' || activeSubTab === 'HOME') ? "hidden pointer-events-none opacity-0 h-0 overflow-hidden select-none" : "block select-text max-w-4xl mx-auto"}>
           {/* Old Redundant Switcher - hidden since Left Sidebar handles navigation */}
           <div className="hidden pointer-events-none opacity-0 h-0 overflow-hidden select-none">
             {[
@@ -2499,7 +2504,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
             >
               
               {/* ROOM 1: TODAY LOOK = EDITORIAL SPREAD */}
-              {activeSubTab === 'HOME' && (
+              {(activeSubTab === 'PRODUCT_HOME' || activeSubTab === 'HOME') && (
                 <div className="space-y-16 max-w-sm mx-auto">
                   
                   {!state.activeSuggestion ? (
@@ -3608,7 +3613,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
               )}
 
               {/* Seen again faint rows (Requirement 5) */}
-              {activeSubTab === 'WARDROBE' && activeWardrobeList.filter(item => item.placedElsewhere).length > 0 && (
+              {activeSubTab === 'WARDROBE' && placedElsewhereItems.length > 0 && (
                 <div className="pt-24 border-t border-white/[0.04] space-y-8 select-none max-w-sm mx-auto">
                   <div className="text-center">
                     <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-white/30 block font-light">
@@ -3616,7 +3621,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
                     </span>
                   </div>
                   <div className="grid grid-cols-2 gap-8 pb-8">
-                    {activeWardrobeList.filter(item => item.placedElsewhere).map((item) => (
+                    {placedElsewhereItems.map((item) => (
                       <div 
                         key={item.id} 
                         onClick={() => {
@@ -3689,7 +3694,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
               )}
 
               {/* ROOM 3: AI DESIGN STUDIO */}
-              {activeSubTab === 'AI_STUDIO' && (
+              {(activeSubTab === 'PRODUCT_AI_CREATIONS' || activeSubTab === 'ECOSYSTEM_CREATE' || activeSubTab === 'AI_STUDIO') && (
                 <AIEngineStudio wardrobe={activeWardrobeList} onAddGarment={onAddGarment} />
               )}
 
@@ -4079,6 +4084,10 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
                 />
               )}
 
+              {activeSubTab === 'PLANNER' && (
+                <OutfitPlanner wardrobe={activeWardrobeList} themeObj={themeObj} />
+              )}
+
               {/* ROOM 6: PRESENCE */}
               {(activeSubTab as string) === 'PRESENCE_LEGACY' && (
                 <div className={`${showFounderConsole ? 'max-w-4xl' : 'max-w-md'} mx-auto py-8 text-center animate-fade-in select-none`}>
@@ -4248,7 +4257,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
             )}
 
             {/* ROOM: OUTFIT GENERATOR (Fully connected and interactive) */}
-            {activeSubTab === 'OUTFIT_GEN' && (
+            {(activeSubTab === 'ECOSYSTEM_GENERATE' || activeSubTab === 'OUTFIT_GEN') && (
               <div className="max-w-6xl mx-auto py-2 px-4 animate-fade-in">
                 <AIFashionMVPSuite wardrobe={activeWardrobeList} onAddGarment={onAddGarment} />
               </div>
@@ -4299,7 +4308,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
             )}
 
             {/* ROOM: COMMUNITY SCREEN (Social styles & style challenge feed) */}
-            {activeSubTab === 'COMMUNITY_ROOM' && (
+            {(activeSubTab === 'PRODUCT_COMMUNITY' || activeSubTab === 'COMMUNITY_ROOM') && (
               <CommunityScreen 
                 user={user} 
                 userWardrobe={activeWardrobeList} 
@@ -4309,7 +4318,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
             )}
 
             {/* ROOM: MARKETPLACE SCREEN (Premium boutique showroom catalog) */}
-            {activeSubTab === 'MARKETPLACE_ROOM' && (
+            {(activeSubTab === 'PRODUCT_MARKETPLACE' || activeSubTab === 'MARKETPLACE_ROOM') && (
               <MarketplaceScreen 
                 user={user}
                 userWardrobe={activeWardrobeList} 

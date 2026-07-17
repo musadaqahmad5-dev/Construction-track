@@ -7,6 +7,18 @@ export interface LookMetadata {
   vibe?: string;
   season?: string;
   userId?: string;
+  qualityScores?: {
+    promptQuality: number;
+    fashionQuality: number;
+    avatarQuality: number;
+    luxuryQuality: number;
+    realismQuality: number;
+    compositionQuality: number;
+    creativityQuality: number;
+    variationQuality: number;
+    wowScore: number;
+  };
+  criticFeedback?: string;
 }
 
 export class ImageStorage {
@@ -29,6 +41,8 @@ export class ImageStorage {
           season: metadata.season || 'All-Season',
           userId: defaultUserId,
           createdAt: serverTimestamp(),
+          qualityScores: metadata.qualityScores || null,
+          criticFeedback: metadata.criticFeedback || null
         });
         
         console.log(`[Image Storage] Successfully logged look to Firestore with ID: ${docRef.id}`);

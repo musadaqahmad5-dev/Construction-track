@@ -33,6 +33,10 @@ export interface HabitMetrics {
   laundryFidelityScore: number;  // 0-100
   shoppingFidelityScore: number; // 0-100
   seasonalAdaptationScore: number;// 0-100
+  dailyCoefficients: Record<string, number>;
+  commonPathSeq: string[];
+  peakUsageHour: number;
+  peakUsageRatio: number;
 }
 
 export interface EvolutionTimelineEvent {
@@ -78,6 +82,14 @@ export interface LearningCycleReport {
   weights: LearningWeightOptimization;
   styleDrift: StyleDriftInfo;
   forecast: PersonalizedForecast;
+  styleDriftVectors: Array<{
+    category: string;
+    driftDirection: 'UP' | 'DOWN' | 'STABLE';
+    driftValue: number;
+    explanation: string;
+    stability: number;
+    velocity: number;
+  }>;
 }
 
 // ============================================================================
@@ -199,7 +211,11 @@ export class EnterpriseLearningEngine {
       formalHabitScore: 85,
       laundryFidelityScore: 96,
       shoppingFidelityScore: 82,
-      seasonalAdaptationScore: 93
+      seasonalAdaptationScore: 93,
+      dailyCoefficients: { mon: 0.82, tue: 0.88, wed: 0.91, thu: 0.85, fri: 0.79, sat: 0.92, sun: 0.94 },
+      commonPathSeq: ['Office Selection', 'Laundry Cycle', 'Capsule Rotation'],
+      peakUsageHour: 8,
+      peakUsageRatio: 87
     };
   }
 
@@ -335,13 +351,27 @@ export class EnterpriseLearningEngine {
       predictedPurchasesCount: 3
     };
 
+    const styleDriftVectors: Array<{
+      category: string;
+      driftDirection: 'UP' | 'DOWN' | 'STABLE';
+      driftValue: number;
+      explanation: string;
+      stability: number;
+      velocity: number;
+    }> = [
+      { category: "Color Contrast", driftDirection: 'UP', driftValue: 14, explanation: "Shifting steadily towards high-contrast monochromatics and deep blacks.", stability: 92, velocity: 1.2 },
+      { category: "Fabric Density", driftDirection: 'STABLE', driftValue: 2, explanation: "Thermal density indexes remain anchored to mid-heavy autumn weights.", stability: 98, velocity: 0.1 },
+      { category: "Form Geometry", driftDirection: 'DOWN', driftValue: -8, explanation: "Regular tight tailored items are drifting out of favored status rapidly.", stability: 85, velocity: 0.9 }
+    ];
+
     return {
       cycleId: `cycle-seed-${Date.now()}`,
       timestamp: Date.now(),
       metrics,
       weights,
       styleDrift,
-      forecast
+      forecast,
+      styleDriftVectors
     };
   }
 

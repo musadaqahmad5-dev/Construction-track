@@ -238,6 +238,121 @@ export {
   type EnterpriseResourceMetrics
 } from './resourceIntelligenceEngine';
 
+// 20. Enterprise Observability & Diagnostics Engine
+export {
+  EnterpriseObservabilityEngine,
+  type TraceEvent,
+  type RootCauseReport,
+  type DiagnosticsSummary,
+  type EngineRelationship
+} from './observabilityEngine';
+
+// 21. Enterprise System Coordination & Intelligence Hub
+export {
+  EnterpriseSystemCoordinationEngine,
+  type EngineStatus,
+  type StateConsistencyMetric,
+  type SystemCoordinationSummary,
+  type SynchronizationEvent
+} from './systemCoordinationEngine';
+
+// 22. Enterprise Architectural Validation Engine
+export {
+  EnterpriseValidationEngine,
+  type ValidationIssue,
+  type EnterpriseReadinessReport,
+  type ComponentAudit
+} from './enterpriseValidationEngine';
+
+// 23. Enterprise Product Intelligence Engine
+export {
+  EnterpriseProductIntelligenceEngine,
+  type UserJourneyStep,
+  type FeatureReadinessMetric,
+  type ProductQualityMetrics,
+  type MissingUXDetection,
+  type ProductIntelligenceReport
+} from './productIntelligenceEngine';
+
+// 24. Enterprise Unified Fashion Intelligence Brain
+export {
+  type FashionVibe,
+  type FashionDNAScore,
+  type GarmentNode,
+  type OutfitComposition,
+  type ColorHarmonyReport,
+  type OccasionType,
+  type OccasionSuitability,
+  type BodyType,
+  type BodyShape,
+  type BodyMetricsInput,
+  type BodyCompatibilityScore,
+  type FabricType,
+  type FabricMetrics,
+  type TrendWeights,
+  type FashionQualityReport,
+  type FashionCriticReport,
+  type UnifiedFashionDirectorOutput,
+  FashionDNAEngine,
+  OutfitCompositionEngine,
+  ColorHarmonyEngine as UnifiedColorHarmonyEngine,
+  OccasionIntelligenceEngine as UnifiedOccasionIntelligenceEngine,
+  BodyCompatibilityEngine,
+  FabricIntelligenceEngine,
+  TrendIntelligenceEngine,
+  FashionVocabularyEngine,
+  StylingRecommendationEngine,
+  FashionQualityEngine,
+  FashionCriticEngine,
+  AIFashionDirector
+} from './fashionIntelligenceEngine';
+
+// 25. Enterprise Centralized Vision Intelligence Layer
+export {
+  type GarmentCategory,
+  type DetectedGarment,
+  type GarmentAttributes,
+  type ExtractedColor,
+  type VisualColorPalette,
+  type StyleClass,
+  type StyleClassificationScore,
+  type VisualBodyAnalysis,
+  type VisionCompatibilityReport,
+  type VisualAssetFingerprint,
+  type UnifiedVisionReport,
+  GarmentDetectionEngine,
+  GarmentAttributeEngine,
+  ColorExtractionEngine,
+  StyleClassificationEngine,
+  BodyAnalysisEngine,
+  FashionCompatibilityEngine,
+  PromptExtractionEngine,
+  MarketplaceMetadataGenerator,
+  FashionAssetFingerprintEngine,
+  VisionDirector
+} from './visionAnalysisEngine';
+
+// 26. Architectural Infrastructure Stability & Decision Logic
+export { StabilityEngine, type SecurityAlert } from './stabilityEngine';
+export { DecisionInferenceEngine, type NamespaceMetrics, type DecisionAction } from './DecisionInferenceEngine';
+export { GeneratorBridge, type GeneratorType, type GeneratorBridgeResult } from './GeneratorBridge';
+export { 
+  ComplianceGuard, 
+  EvidenceCompiler, 
+  GdprErasureRequest, 
+  type SOC2EvidencePackage 
+} from './complianceGuard';
+export {
+  OptimizationEngine,
+  PredictionCache,
+  TelemetryIngestion,
+  type TelemetryPayload
+} from './optimizationEngine';
+
+
+
+
+
 
 
 

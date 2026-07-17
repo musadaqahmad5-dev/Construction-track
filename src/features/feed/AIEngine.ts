@@ -1,6 +1,32 @@
 import { FeedItem, FeedItemType } from './feedTypes';
 import { WardrobeItem } from '../../types';
-import { getGarmentImage } from '../../components/AIStyleHub';
+
+// 6. MONOCHROME PHOTOGRAPHY RULE: Curate beautiful monochrome visual fallbacks automatically
+export function getGarmentImage(title: string): string {
+  const lower = title.toLowerCase();
+  if (lower.includes('tee') || lower.includes('t-shirt') || lower.includes('cotton classic') || lower.includes('cotton')) {
+    return 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?q=80&w=600&auto=format&fit=crop';
+  }
+  if (lower.includes('coat') || lower.includes('overcoat') || lower.includes('jacket') || lower.includes('trench') || lower.includes('outerwear')) {
+    return 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=600&auto=format&fit=crop';
+  }
+  if (lower.includes('chino') || lower.includes('pant') || lower.includes('trouser') || lower.includes('jean') || lower.includes('denim')) {
+    return 'https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?q=80&w=600&auto=format&fit=crop';
+  }
+  if (lower.includes('beanie') || lower.includes('ribbed') || lower.includes('hat') || lower.includes('knit')) {
+    return 'https://images.unsplash.com/photo-1576871337622-98d48d4aa53e?q=80&w=600&auto=format&fit=crop';
+  }
+  if (lower.includes('hoodie') || lower.includes('sweatshirt') || lower.includes('sweater')) {
+    return 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?q=80&w=600&auto=format&fit=crop';
+  }
+  if (lower.includes('shoes') || lower.includes('sneaker') || lower.includes('boot') || lower.includes('sandal')) {
+    return 'https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?q=80&w=600&auto=format&fit=crop';
+  }
+  if (lower.includes('blazer') || lower.includes('formal') || lower.includes('suit')) {
+    return 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?q=80&w=600&auto=format&fit=crop';
+  }
+  return 'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?q=80&w=600&auto=format&fit=crop';
+}
 
 // Base marketplace items representing real clothing from local shops
 export const LOCAL_SHOP_ITEMS: Partial<FeedItem>[] = [

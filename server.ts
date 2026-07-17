@@ -843,11 +843,20 @@ async function startServer() {
           provider: result.provider,
           vibe,
           season,
-          userId: user.uid
+          userId: user.uid,
+          qualityScores: result.qualityScores,
+          criticFeedback: result.criticFeedback
         });
       }
 
-      res.json({ success: result.success, imageUrl: result.imageUrl, provider: result.provider, error: result.error });
+      res.json({ 
+        success: result.success, 
+        imageUrl: result.imageUrl, 
+        provider: result.provider, 
+        error: result.error,
+        qualityScores: result.qualityScores,
+        criticFeedback: result.criticFeedback
+      });
     } catch (err: any) {
       console.error("[API ERROR] Image generation failed:", err);
       res.status(500).json({ error: "Failed to generate fashion image: " + err.message });
@@ -999,7 +1008,7 @@ async function startServer() {
           console.log(`[Auto-Scheduler] Generating image with theme: ${concept.theme}`);
           
           // Use Gemini provider if API key exists, otherwise picsum provider as configured in registry
-          const providerName = process.env.GEMINI_API_KEY ? 'Google-Imagen-4.0' : 'Fashion-Picsum-Deterministic';
+          const providerName = process.env.GEMINI_API_KEY ? 'Gemini-3.1-Flash-Image' : 'Fashion-Picsum-Deterministic';
           const result = await ImageGenerationRegistry.generate(prompt, { aspectRatio: '3:4' }, providerName);
 
           if (result.success && result.imageUrl) {
@@ -1009,7 +1018,9 @@ async function startServer() {
               provider: result.provider,
               vibe: concept.theme,
               season: concept.season,
-              userId: 'sartorial-ai-autobot'
+              userId: 'sartorial-ai-autobot',
+              qualityScores: result.qualityScores,
+              criticFeedback: result.criticFeedback
             });
             console.log(`[Auto-Scheduler] Successfully uploaded custom AI look: ${concept.theme}`);
           } else {

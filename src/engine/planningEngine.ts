@@ -228,6 +228,15 @@ export class EnterprisePlanningEngine {
     return Array.from(this.activePlans.values());
   }
 
+  static deletePlan(planId: string): void {
+    this.activePlans.delete(planId);
+  }
+
+  static autoReplan(): void {
+    this.activePlans.clear();
+    this.getTemplates().forEach(p => this.activePlans.set(p.id, p));
+  }
+
   // CREATE CUSTOM STRATEGIC GOAL/PLAN
   static createPlan(params: {
     goal: GoalType;

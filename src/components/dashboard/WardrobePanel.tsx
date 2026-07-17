@@ -152,7 +152,7 @@ export const WardrobePanel: React.FC<WardrobePanelProps> = ({
       </div>
 
       <button 
-        onClick={() => setActiveSubTab && setActiveSubTab('AI_STUDIO')}
+        onClick={() => setActiveSubTab && setActiveSubTab('PRODUCT_AI_CREATIONS')}
         className="w-full py-3 bg-[#0d0d18]/80 hover:bg-violet-950/20 border border-violet-500/15 hover:border-violet-500/30 rounded-xl text-[10px] font-sans font-bold uppercase tracking-widest text-violet-400 hover:text-violet-300 flex items-center justify-center gap-2 transition-colors cursor-pointer"
       >
         <span>View More Generative Concepts</span>

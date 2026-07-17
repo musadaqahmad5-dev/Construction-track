@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   Sparkles, ShieldCheck, RefreshCw, Layers, Sliders, Play, 
   Trash2, User, Eye, Check, ChevronRight, Activity, ArrowRight,
-  Shirt, Compass, Info, CheckCircle, Scale, Wind, Thermometer
+  Shirt, Compass, Info, CheckCircle, Scale, Wind, Thermometer,
+  ZoomIn, ZoomOut, Maximize2, Move, HelpCircle, Save, Layers2, ArrowUp, ArrowDown
 } from 'lucide-react';
 import { WardrobeItem } from '../types';
 
@@ -75,7 +76,6 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
   const [drapeStiffness, setDrapeStiffness] = useState<number>(45); // %
   const [fabricElasticity, setFabricElasticity] = useState<number>(60); // %
   const [windInfluence, setWindInfluence] = useState<number>(20); // %
-  const [asymmetricBias, setAsymmetricBias] = useState<number>(0); // %
 
   // Selection slot state (combining multiple wardrobe garments simultaneously)
   const [selectedTop, setSelectedTop] = useState<WardrobeItem | null>(null);
@@ -93,6 +93,42 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
   const [renderedImageUrl, setRenderedImageUrl] = useState<string | null>(null);
   const [fitHistory, setFitHistory] = useState<FittingSession[]>([]);
 
+  // --- PHASE B PREMIUM CANVAS STATES ---
+  const [zoom, setZoom] = useState<number>(1.0);
+  const [pan, setPan] = useState<{ x: number, y: number }>({ x: 0, y: 0 });
+  const [activeLayer, setActiveLayer] = useState<string | null>(null);
+  const [layerOrder, setLayerOrder] = useState<string[]>(['shoes', 'bottom', 'top', 'outerwear']);
+  const [showSnapGuides, setShowSnapGuides] = useState<boolean>(true);
+  const [isSnapped, setIsSnapped] = useState<Record<string, boolean>>({});
+  const [comparisonMode, setComparisonMode] = useState<boolean>(false);
+  const [comparisonSplit, setComparisonSplit] = useState<number>(50); // percentage 0-100
+  const [isDraggingCanvas, setIsDraggingCanvas] = useState<boolean>(false);
+  const [dragStart, setDragStart] = useState<{ x: number, y: number }>({ x: 0, y: 0 });
+
+  // Custom named outfit groupings stored locally
+  const [outfitGroups, setOutfitGroups] = useState<{ id: string, name: string, items: string[] }[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('virtual_fit_groups') || '[]');
+    } catch {
+      return [];
+    }
+  });
+  const [newGroupName, setNewGroupName] = useState<string>('');
+
+  // Transforms for each garment layer: x, y in pixels, scale factor, rotation in degrees
+  const [transforms, setTransforms] = useState<Record<string, { x: number, y: number, scale: number, rotate: number }>>({
+    top: { x: 0, y: 0, scale: 1.0, rotate: 0 },
+    outerwear: { x: 0, y: 0, scale: 1.0, rotate: 0 },
+    bottom: { x: 0, y: 0, scale: 1.0, rotate: 0 },
+    shoes: { x: 0, y: 0, scale: 1.0, rotate: 0 }
+  });
+
+  // Tracking active pointer interaction
+  const [draggedElement, setDraggedElement] = useState<string | null>(null);
+  const [elementDragStart, setElementDragStart] = useState<{ mouseX: number, mouseY: number, elemX: number, elemY: number }>({ mouseX: 0, mouseY: 0, elemX: 0, elemY: 0 });
+  const [interactionMode, setInteractionMode] = useState<'drag' | 'rotate' | 'scale' | null>(null);
+  const [elementInteractionStart, setElementInteractionStart] = useState<{ mouseX: number, mouseY: number, startVal: number }>({ mouseX: 0, mouseY: 0, startVal: 0 });
+
   // Load fitting history from localstorage on mount
   useEffect(() => {
     const saved = localStorage.getItem('virtual_fit_studio_history');
@@ -105,7 +141,7 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
     }
   }, []);
 
-  // Compute live mechanical body-mesh tension levels (Heatmap visualization details)
+  // Compute live mechanical body-mesh tension levels
   const getTensionScore = (measurement: number, standard: number) => {
     const ratio = measurement / standard;
     if (sizeSelected === 'S') return ratio * 1.15;
@@ -118,35 +154,24 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
   const tensionWaist = getTensionScore(waist, 66);
   const tensionHips = getTensionScore(hips, 92);
 
-  // Helper colors for tension status on heatmap
   const getTensionColorClass = (score: number) => {
-    if (score > 1.1) return { color: 'text-rose-500', bg: 'bg-rose-500/20', border: 'border-rose-500/30', glow: 'shadow-rose-500/40', label: 'High Strain (Tight)' };
-    if (score < 0.85) return { color: 'text-sky-400', bg: 'bg-sky-400/20', border: 'border-sky-400/30', glow: 'shadow-sky-400/40', label: 'Loose Fit' };
-    return { color: 'text-emerald-400', bg: 'bg-emerald-500/20', border: 'border-emerald-500/30', glow: 'shadow-emerald-500/40', label: 'Optimal Ease (Perfect)' };
+    if (score > 1.1) return { color: 'text-rose-500', bg: 'bg-rose-500/20', border: 'border-rose-500/30', label: 'High Strain (Tight)' };
+    if (score < 0.85) return { color: 'text-sky-400', bg: 'bg-sky-400/20', border: 'border-sky-400/30', label: 'Loose Fit' };
+    return { color: 'text-emerald-400', bg: 'bg-emerald-500/20', border: 'border-emerald-500/30', label: 'Optimal Ease (Perfect)' };
   };
 
   const bustStatus = getTensionColorClass(tensionBust);
   const waistStatus = getTensionColorClass(tensionWaist);
   const hipsStatus = getTensionColorClass(tensionHips);
 
-  // Filter wardrobe by categories specifically for slot selection
-  const topItems = wardrobe.filter(i => 
-    i.category === 'Casual' || i.category === 'Formal' || i.category === 'Sportswear'
-  );
-  const outerwearItems = wardrobe.filter(i => i.category === 'Outerwear');
-  const bottomItems = wardrobe.filter(i => 
-    i.category === 'Sportswear' || i.category === 'Casual' || i.category === 'Formal'
-  );
-
   const selectGarmentForSlot = (item: WardrobeItem) => {
-    // Categorize correctly based on descriptions or tags
     const descLower = item.description.toLowerCase();
     const titleLower = item.title.toLowerCase();
     
     const isBottom = descLower.includes('pants') || descLower.includes('trouser') || 
                      descLower.includes('skirt') || descLower.includes('jean') || 
                      titleLower.includes('pants') || titleLower.includes('skirt') || 
-                     titleLower.includes('jean');
+                     titleLower.includes('jean') || (item.category as string) === 'Lower Garment' || (item.category as string) === 'Trousers' || (item.category as string) === 'Pants' || (item.category as string) === 'Skirts';
 
     const isOuter = item.category === 'Outerwear' || descLower.includes('coat') || 
                     descLower.includes('jacket') || descLower.includes('blazer') ||
@@ -154,7 +179,7 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
 
     const isShoe = descLower.includes('shoe') || descLower.includes('sneaker') || 
                    descLower.includes('boot') || titleLower.includes('shoe') || 
-                   titleLower.includes('sneaker');
+                   titleLower.includes('sneaker') || (item.category as string) === 'Footwear' || (item.category as string) === 'Shoes';
 
     if (isShoe) {
       setSelectedShoes(selectedShoes?.id === item.id ? null : item);
@@ -166,6 +191,10 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
       setSelectedTop(selectedTop?.id === item.id ? null : item);
     }
 
+    // Activate the newly loaded layer for immediate premium transforms adjustment
+    const layerKey = isShoe ? 'shoes' : isOuter ? 'outerwear' : isBottom ? 'bottom' : 'top';
+    setActiveLayer(layerKey);
+
     window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
       detail: `✓ Loaded "${item.title}" into physical try-on stack.`
     }));
@@ -176,12 +205,20 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
     setSelectedOuterwear(null);
     setSelectedBottom(null);
     setSelectedShoes(null);
+    setActiveLayer(null);
+    setIsSnapped({});
+    setTransforms({
+      top: { x: 0, y: 0, scale: 1.0, rotate: 0 },
+      outerwear: { x: 0, y: 0, scale: 1.0, rotate: 0 },
+      bottom: { x: 0, y: 0, scale: 1.0, rotate: 0 },
+      shoes: { x: 0, y: 0, scale: 1.0, rotate: 0 }
+    });
     window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
-      detail: 'Cleared avatar dress stack.'
+      detail: 'Cleared avatar dress stack & premium transforms.'
     }));
   };
 
-  // Compile full 3D simulation physical render
+  // Compile full simulated volumetric look
   const runAIFitRender = () => {
     if (!selectedTop && !selectedOuterwear && !selectedBottom) {
       window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
@@ -195,10 +232,10 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
 
     const steps = [
       { t: 800, text: '🟢 Calibrating physical dimensions (Height: ' + height + 'cm, Waist: ' + waist + 'cm)...' },
-      { t: 1800, text: '🪐 Wrapping 3D garment patterns (Elasticity: ' + fabricElasticity + '%)...' },
-      { t: 2800, text: '⚡ Simulating fabric gravity & stress shear fields...' },
-      { t: 3800, text: '🪐 Composing background photorealism with preset studio lighting...' },
-      { t: 4800, text: '✓ Reconstructing virtual textures to high-fidelity output...' }
+      { t: 1600, text: '🪐 Wrapping 3D garment patterns (Elasticity: ' + fabricElasticity + '%)...' },
+      { t: 2400, text: '⚡ Simulating fabric gravity & stress shear fields...' },
+      { t: 3200, text: '🪐 Composing background photorealism with preset studio lighting...' },
+      { t: 4000, text: '✓ Reconstructing virtual textures to high-fidelity output...' }
     ];
 
     steps.forEach((step) => {
@@ -208,15 +245,6 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
     });
 
     setTimeout(() => {
-      // Pick a beautiful Unsplash fit representation based on active parameters
-      const selectedBack = BACKDROP_PRESETS.find(b => b.id === selectedBackdrop) || BACKDROP_PRESETS[0];
-      
-      const designKeywords = [
-        selectedTop?.title,
-        selectedOuterwear?.title,
-        selectedBottom?.title
-      ].filter(Boolean).join(' and ');
-
       const urls = [
         'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=600&auto=format&fit=crop',
         'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=600&auto=format&fit=crop',
@@ -224,7 +252,6 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
         'https://images.unsplash.com/photo-1529139574466-a303027c1d8b?q=80&w=600&auto=format&fit=crop'
       ];
       
-      // Select a photo
       const selectedPhoto = urls[Math.floor(Math.random() * urls.length)];
       setRenderedImageUrl(selectedPhoto);
       setIsRendering(false);
@@ -253,7 +280,7 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
         detail: `✓ Successfully rendered high-fidelity fit composition!`
       }));
 
-    }, 5500);
+    }, 4500);
   };
 
   const handleDeleteHistorySession = (id: string, e: React.MouseEvent) => {
@@ -266,6 +293,270 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
     }));
   };
 
+  // --- PREMIUM POINTER TRANSFORM HANDLERS ---
+  const handleItemPointerDown = (layer: string, e: React.PointerEvent) => {
+    e.stopPropagation();
+    setActiveLayer(layer);
+    setDraggedElement(layer);
+    setInteractionMode('drag');
+    setElementDragStart({
+      mouseX: e.clientX,
+      mouseY: e.clientY,
+      elemX: transforms[layer]?.x || 0,
+      elemY: transforms[layer]?.y || 0
+    });
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  const handleInteractionPointerDown = (layer: string, mode: 'rotate' | 'scale', e: React.PointerEvent) => {
+    e.stopPropagation();
+    setActiveLayer(layer);
+    setDraggedElement(layer);
+    setInteractionMode(mode);
+    setElementInteractionStart({
+      mouseX: e.clientX,
+      mouseY: e.clientY,
+      startVal: mode === 'rotate' ? (transforms[layer]?.rotate || 0) : (transforms[layer]?.scale || 1.0)
+    });
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!draggedElement) return;
+
+    if (interactionMode === 'drag') {
+      const deltaX = (e.clientX - elementDragStart.mouseX) / zoom;
+      const deltaY = (e.clientY - elementDragStart.mouseY) / zoom;
+      let newX = elementDragStart.elemX + deltaX;
+      let newY = elementDragStart.elemY + deltaY;
+
+      // Premium Snapping check
+      let snapped = false;
+      if (showSnapGuides) {
+        if (Math.abs(newX) < 15) {
+          newX = 0;
+          snapped = true;
+        }
+        if (Math.abs(newY) < 15) {
+          newY = 0;
+          snapped = true;
+        }
+      }
+
+      setIsSnapped(prev => ({ ...prev, [draggedElement]: snapped }));
+      setTransforms(prev => ({
+        ...prev,
+        [draggedElement]: {
+          ...prev[draggedElement],
+          x: newX,
+          y: newY
+        }
+      }));
+    } else if (interactionMode === 'rotate') {
+      const deltaX = e.clientX - elementInteractionStart.mouseX;
+      const newRotate = elementInteractionStart.startVal + deltaX * 1.5;
+      setTransforms(prev => ({
+        ...prev,
+        [draggedElement]: {
+          ...prev[draggedElement],
+          rotate: newRotate
+        }
+      }));
+    } else if (interactionMode === 'scale') {
+      const deltaY = elementInteractionStart.mouseY - e.clientY; 
+      const newScale = Math.max(0.4, Math.min(3.0, elementInteractionStart.startVal + deltaY * 0.006));
+      setTransforms(prev => ({
+        ...prev,
+        [draggedElement]: {
+          ...prev[draggedElement],
+          scale: newScale
+        }
+      }));
+    }
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (draggedElement) {
+      try { e.currentTarget.releasePointerCapture(e.pointerId); } catch {}
+    }
+    setDraggedElement(null);
+    setInteractionMode(null);
+  };
+
+  const handleCanvasPointerDown = (e: React.PointerEvent) => {
+    const isBg = (e.target as HTMLElement).classList.contains('canvas-bg-target');
+    if (isBg) {
+      setIsDraggingCanvas(true);
+      setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+      e.currentTarget.setPointerCapture(e.pointerId);
+    }
+  };
+
+  const handleCanvasPointerMove = (e: React.PointerEvent) => {
+    if (isDraggingCanvas) {
+      setPan({
+        x: e.clientX - dragStart.x,
+        y: e.clientY - dragStart.y
+      });
+    } else {
+      handlePointerMove(e);
+    }
+  };
+
+  const handleCanvasPointerUp = (e: React.PointerEvent) => {
+    if (isDraggingCanvas) {
+      setIsDraggingCanvas(false);
+      try { e.currentTarget.releasePointerCapture(e.pointerId); } catch {}
+    } else {
+      handlePointerUp(e);
+    }
+  };
+
+  const handleResetCanvas = () => {
+    setZoom(1.0);
+    setPan({ x: 0, y: 0 });
+    setTransforms({
+      top: { x: 0, y: 0, scale: 1.0, rotate: 0 },
+      outerwear: { x: 0, y: 0, scale: 1.0, rotate: 0 },
+      bottom: { x: 0, y: 0, scale: 1.0, rotate: 0 },
+      shoes: { x: 0, y: 0, scale: 1.0, rotate: 0 }
+    });
+    setIsSnapped({});
+    setActiveLayer(null);
+    window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
+      detail: 'Canvas workspace and transforms reset to default.'
+    }));
+  };
+
+  const adjustZoom = (factor: number) => {
+    setZoom(prev => Math.max(0.5, Math.min(2.5, prev + factor)));
+  };
+
+  const moveLayerOrder = (layer: string, direction: 'forward' | 'back') => {
+    const idx = layerOrder.indexOf(layer);
+    if (idx === -1) return;
+    const newOrder = [...layerOrder];
+    if (direction === 'forward' && idx < newOrder.length - 1) {
+      newOrder[idx] = newOrder[idx + 1];
+      newOrder[idx + 1] = layer;
+    } else if (direction === 'back' && idx > 0) {
+      newOrder[idx] = newOrder[idx - 1];
+      newOrder[idx - 1] = layer;
+    }
+    setLayerOrder(newOrder);
+    window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
+      detail: `Layer hierarchy updated: ${layer} moved ${direction}.`
+    }));
+  };
+
+  const handleSaveOutfitGroup = () => {
+    const activeItems = [selectedTop, selectedOuterwear, selectedBottom, selectedShoes].filter(Boolean);
+    if (activeItems.length === 0) {
+      window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
+        detail: '✕ Cannot save an empty closet stack.'
+      }));
+      return;
+    }
+    const name = newGroupName.trim() || `Atelier Group #${outfitGroups.length + 1}`;
+    const newGroup = {
+      id: 'group-' + Date.now(),
+      name,
+      items: activeItems.map(i => i!.title)
+    };
+    const updated = [newGroup, ...outfitGroups];
+    setOutfitGroups(updated);
+    localStorage.setItem('virtual_fit_groups', JSON.stringify(updated));
+    setNewGroupName('');
+    window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
+      detail: `✓ Saved outfit group "${name}" successfully!`
+    }));
+  };
+
+  const handleDeleteOutfitGroup = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const updated = outfitGroups.filter(g => g.id !== id);
+    setOutfitGroups(updated);
+    localStorage.setItem('virtual_fit_groups', JSON.stringify(updated));
+    window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
+      detail: 'Deleted outfit group.'
+    }));
+  };
+
+  // Render individual absolute-positioned draggable garment on the mannequin canvas
+  const renderCanvasGarment = (layerKey: string, item: WardrobeItem | null) => {
+    if (!item) return null;
+
+    const t = transforms[layerKey] || { x: 0, y: 0, scale: 1.0, rotate: 0 };
+    const isFocused = activeLayer === layerKey;
+    const isSnappedLayer = isSnapped[layerKey];
+
+    // Align with mannequin core anchor points (custom top coordinates based on category)
+    let positioningClass = "top-[28%] left-[28%] w-[44%] h-[32%]"; // top
+    if (layerKey === 'outerwear') positioningClass = "top-[25%] left-[25%] w-[50%] h-[38%]";
+    if (layerKey === 'bottom') positioningClass = "top-[54%] left-[29%] w-[42%] h-[38%]";
+    if (layerKey === 'shoes') positioningClass = "top-[88%] left-[32%] w-[36%] h-[10%]";
+
+    return (
+      <div
+        key={layerKey}
+        className={`absolute pointer-events-auto transition-shadow duration-150 select-none ${positioningClass} ${isFocused ? 'ring-1 ring-indigo-500/50' : ''}`}
+        style={{
+          transform: `translate(${t.x}px, ${t.y}px) scale(${t.scale}) rotate(${t.rotate}deg)`,
+          transformOrigin: 'center center',
+          zIndex: 10 + layerOrder.indexOf(layerKey)
+        }}
+        onPointerDown={(e) => handleItemPointerDown(layerKey, e)}
+      >
+        <div className="w-full h-full relative flex items-center justify-center">
+          {item.imageUrl ? (
+            <img
+              src={item.imageUrl}
+              alt={item.title}
+              className="max-w-full max-h-full object-contain filter drop-shadow-[0_8px_16px_rgba(0,0,0,0.6)]"
+              draggable={false}
+              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+            />
+          ) : (
+            <div 
+              className="w-16 h-16 rounded-xl flex items-center justify-center border border-white/10 shadow-lg"
+              style={{ backgroundColor: `${item.primaryColor || '#4f46e5'}25`, borderColor: `${item.primaryColor || '#4f46e5'}50` }}
+            >
+              <Shirt className="w-8 h-8" style={{ color: item.primaryColor || '#4f46e5' }} />
+            </div>
+          )}
+
+          {/* High-fidelity Snap indicators */}
+          {isSnappedLayer && showSnapGuides && (
+            <div className="absolute inset-0 border border-emerald-500/60 rounded-xl bg-emerald-500/10 animate-pulse pointer-events-none" />
+          )}
+
+          {/* Draggable bounds, Rotation, Scale triggers */}
+          {isFocused && (
+            <div className="absolute -inset-3 border border-indigo-500/80 rounded-lg pointer-events-none">
+              {/* Rotation Handle */}
+              <div
+                className="absolute -top-7 left-1/2 -translate-x-1/2 w-5 h-5 bg-indigo-500 rounded-full border border-white cursor-alias pointer-events-auto flex items-center justify-center shadow-lg hover:scale-115 duration-200"
+                onPointerDown={(e) => handleInteractionPointerDown(layerKey, 'rotate', e)}
+                title="Drag to Rotate"
+              >
+                <RefreshCw className="w-3 h-3 text-white" />
+              </div>
+
+              {/* Resize Handle */}
+              <div
+                className="absolute -bottom-2.5 -right-2.5 w-5 h-5 bg-indigo-500 rounded-full border border-white cursor-se-resize pointer-events-auto flex items-center justify-center shadow-lg hover:scale-115 duration-200"
+                onPointerDown={(e) => handleInteractionPointerDown(layerKey, 'scale', e)}
+                title="Drag to Resize"
+              >
+                <Scale className="w-3 h-3 text-white" />
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6 animate-fade-in text-white py-1">
       
@@ -273,28 +564,62 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
       <div className="bg-[#07070c] border border-white/5 rounded-2xl p-5 shadow-xl relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="text-left z-10 max-w-2xl">
           <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-indigo-400 block font-bold mb-1">
-            Volumetric Model Room
+            Volumetric Model Room & Atelier Canvas
           </span>
           <h2 className="font-serif font-light tracking-[-0.03em] text-2xl text-white">
             Virtual Studio Try-On
           </h2>
           <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
-            Create an interactive volumetric model avatar representing your exact measurements. Simulate physical fabric drape physics, view real-time sizing stress heatmaps, and render multi-layered photorealistic fashion previews distinct from flat prompt-to-image operations.
+            Configure volumetric avatar dimensions and interactive fabric physics. Drag, rotate, resize, and stack garments directly on the real-time canvas. Use snap guides, zoom controls, and a comparative sliding mirror to design coordinates seamlessly.
           </p>
         </div>
 
-        <div className="flex gap-2 shrink-0 z-10">
+        <div className="flex flex-wrap gap-2 shrink-0 z-10">
+          <button 
+            onClick={handleResetCanvas}
+            className="px-3.5 py-1.5 border border-white/5 hover:border-indigo-500/20 rounded-xl text-[10px] font-mono uppercase tracking-wider text-zinc-400 hover:text-white transition-all cursor-pointer bg-white/[0.02]"
+          >
+            Reset Canvas
+          </button>
           <button 
             onClick={handleClearFitStack}
-            className="px-3.5 py-1.5 border border-white/5 hover:border-white/10 rounded-xl text-[10px] font-mono uppercase tracking-wider text-zinc-400 hover:text-white transition-all cursor-pointer bg-white/[0.02]"
+            className="px-3.5 py-1.5 border border-rose-500/10 hover:border-rose-500/30 rounded-xl text-[10px] font-mono uppercase tracking-wider text-rose-400 hover:text-rose-300 transition-all cursor-pointer bg-rose-500/5"
           >
             Reset Stack
           </button>
         </div>
 
-        {/* Artistic background accents */}
+        {/* Background accent */}
         <div className="absolute -right-20 -bottom-20 w-60 h-60 rounded-full bg-indigo-500/5 blur-[80px]" />
       </div>
+
+      {/* COMPANION INTERACTIVES BANNER */}
+      {activeLayer && (
+        <div className="bg-gradient-to-r from-indigo-500/10 to-transparent border-l-2 border-indigo-500 p-3 rounded-r-xl flex items-center justify-between text-left">
+          <div className="flex items-center gap-2">
+            <Move className="w-4 h-4 text-indigo-400 animate-pulse" />
+            <span className="text-xs font-mono text-zinc-300">
+              Active Layer Selected: <span className="text-white font-bold uppercase">{activeLayer}</span> &bull; Drag on mannequin to position. Use handle anchors to scale / rotate.
+            </span>
+          </div>
+          <div className="flex gap-2">
+            <button 
+              onClick={() => moveLayerOrder(activeLayer, 'forward')}
+              className="p-1 hover:bg-white/5 rounded text-zinc-400 hover:text-white"
+              title="Bring Forward"
+            >
+              <ArrowUp className="w-3.5 h-3.5" />
+            </button>
+            <button 
+              onClick={() => moveLayerOrder(activeLayer, 'back')}
+              className="p-1 hover:bg-white/5 rounded text-zinc-400 hover:text-white"
+              title="Send Backward"
+            >
+              <ArrowDown className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* MAIN COCKPIT GRID */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
@@ -324,7 +649,6 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
 
             {/* Sliders for Height, Bust, Waist, Hips */}
             <div className="space-y-3.5 pt-1">
-              {/* Height */}
               <div className="space-y-1.5">
                 <div className="flex justify-between text-[11px] font-mono">
                   <span className="text-zinc-400">Model Height:</span>
@@ -340,7 +664,6 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
                 />
               </div>
 
-              {/* Bust */}
               <div className="space-y-1.5">
                 <div className="flex justify-between text-[11px] font-mono">
                   <span className="text-zinc-400">Chest/Bust Circ:</span>
@@ -356,7 +679,6 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
                 />
               </div>
 
-              {/* Waist */}
               <div className="space-y-1.5">
                 <div className="flex justify-between text-[11px] font-mono">
                   <span className="text-zinc-400">Waist Circ:</span>
@@ -372,7 +694,6 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
                 />
               </div>
 
-              {/* Hips */}
               <div className="space-y-1.5">
                 <div className="flex justify-between text-[11px] font-mono">
                   <span className="text-zinc-400">Hips Circ:</span>
@@ -429,7 +750,6 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
             </div>
 
             <div className="space-y-3">
-              {/* Stiffness */}
               <div className="space-y-1">
                 <div className="flex justify-between text-[11px] font-mono">
                   <span className="text-zinc-400">Drape Stiffness:</span>
@@ -445,7 +765,6 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
                 />
               </div>
 
-              {/* Elasticity */}
               <div className="space-y-1">
                 <div className="flex justify-between text-[11px] font-mono">
                   <span className="text-zinc-400">Fabric Elasticity:</span>
@@ -461,7 +780,6 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
                 />
               </div>
 
-              {/* Wind influence */}
               <div className="space-y-1">
                 <div className="flex justify-between text-[11px] font-mono">
                   <span className="text-zinc-400">Wind Shear Dynamics:</span>
@@ -481,143 +799,223 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
 
         </div>
 
-        {/* COLUMN 2: SPATIAL CANVAS & HEATMAPS VISUALS (lg:col-span-4) */}
+        {/* COLUMN 2: SPATIAL CANVAS WITH COMPONENT TRANSLATORS (lg:col-span-4) */}
         <div className="lg:col-span-4 space-y-6 text-left">
           
-          {/* THE TRY-ON SIMULATION SPACE */}
+          {/* THE TRY-ON SIMULATION CANVAS */}
           <div className="bg-[#070712] border border-white/5 rounded-2xl p-4 flex flex-col justify-between aspect-[3/4.4] relative overflow-hidden shadow-2xl">
             
-            {/* Header elements over tryon viewport */}
-            <div className="z-10 flex justify-between items-center w-full">
-              <span className="text-[8px] font-mono uppercase bg-black/60 text-indigo-400 border border-white/5 px-2 py-0.5 rounded leading-none flex items-center gap-1">
-                <Activity className="w-3 h-3 text-indigo-400 animate-pulse" /> 3D Physical Space
-              </span>
+            {/* Header controls over tryon workspace */}
+            <div className="z-20 flex justify-between items-center w-full bg-black/40 p-2 rounded-xl border border-white/5 gap-1">
+              <div className="flex items-center gap-1.5">
+                <Activity className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />
+                <span className="text-[9px] font-mono uppercase text-indigo-300 leading-none">Canvas Hub</span>
+              </div>
 
-              {/* Sizing dropdown selector */}
-              <div className="flex items-center gap-1.5 bg-black/40 border border-white/5 p-0.5 rounded-lg text-[9px] font-mono">
-                {(['S', 'M', 'L', 'XL'] as const).map(sz => (
-                  <button
-                    key={sz}
-                    onClick={() => setSizeSelected(sz)}
-                    className={`px-1.5 py-0.5 rounded uppercase tracking-wider cursor-pointer ${sizeSelected === sz ? 'bg-indigo-600/30 text-indigo-200 font-bold' : 'text-zinc-500 hover:text-zinc-300'}`}
+              {/* Toolbar Zoom & Pan Controls */}
+              <div className="flex items-center gap-1 bg-black/60 p-0.5 rounded border border-white/10">
+                <button 
+                  onClick={() => adjustZoom(0.15)} 
+                  className="p-1 hover:bg-white/5 text-zinc-400 hover:text-white rounded"
+                  title="Zoom In"
+                >
+                  <ZoomIn className="w-3 h-3" />
+                </button>
+                <button 
+                  onClick={() => adjustZoom(-0.15)} 
+                  className="p-1 hover:bg-white/5 text-zinc-400 hover:text-white rounded"
+                  title="Zoom Out"
+                >
+                  <ZoomOut className="w-3 h-3" />
+                </button>
+                <button 
+                  onClick={handleResetCanvas} 
+                  className="p-1 hover:bg-white/5 text-zinc-400 hover:text-white rounded font-mono text-[8px]"
+                  title="Reset Workspace"
+                >
+                  1:1
+                </button>
+                <button 
+                  onClick={() => setShowSnapGuides(!showSnapGuides)} 
+                  className={`p-1 rounded font-mono text-[8px] ${showSnapGuides ? 'text-emerald-400 bg-emerald-500/10' : 'text-zinc-500 hover:text-zinc-300'}`}
+                  title="Toggle Snap Guides"
+                >
+                  SNAP
+                </button>
+                {renderedImageUrl && (
+                  <button 
+                    onClick={() => setComparisonMode(!comparisonMode)} 
+                    className={`p-1 rounded font-mono text-[8px] ${comparisonMode ? 'text-violet-400 bg-violet-500/10 font-bold' : 'text-zinc-500 hover:text-zinc-300'}`}
+                    title="Toggle Slide Compare Mode"
                   >
-                    {sz}
+                    MIRROR
                   </button>
-                ))}
+                )}
               </div>
             </div>
 
-            {/* LIVE SILHOUETTE AVATAR CANVAS DRAWING */}
-            <div className="absolute inset-0 z-0 flex items-center justify-center p-8 bg-gradient-to-b from-[#090915] to-[#040409]">
+            {/* LIVE SILHOUETTE AVATAR & DRAGGABLE GARMENTS */}
+            <div 
+              className="absolute inset-0 z-0 flex items-center justify-center p-8 bg-gradient-to-b from-[#090915] to-[#040409] select-none touch-none canvas-bg-target"
+              onPointerDown={handleCanvasPointerDown}
+              onPointerMove={handleCanvasPointerMove}
+              onPointerUp={handleCanvasPointerUp}
+            >
               
-              {/* Silhouette Backdrop glow based on preset */}
-              <div className="absolute w-44 h-44 rounded-full bg-indigo-500/10 blur-[50px] animate-pulse pointer-events-none" />
-
-              {/* Physical Mannequin Vector */}
-              <svg 
-                viewBox="0 0 100 150" 
-                className="w-44 h-auto text-zinc-800 transition-all duration-300"
-                style={{ 
-                  filter: 'drop-shadow(0px 10px 20px rgba(0,0,0,0.6))',
-                  transform: `scale(${1 + (height - 170)/200})`
-                }}
-              >
-                {/* Mannequin skin shade fill */}
-                <defs>
-                  <linearGradient id="skinGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor={SKIN_TONES.find(t => t.name === skinTone)?.hex || '#eecda3'} />
-                    <stop offset="100%" stopColor="#111" stopOpacity="0.8" />
-                  </linearGradient>
-                </defs>
-
-                {/* Body shape paths reacting dynamically to metrics */}
-                {/* Head */}
-                <circle cx="50" cy="18" r="8" fill="url(#skinGrad)" />
-                
-                {/* Neck */}
-                <path d="M47 25 L53 25 L52 30 L48 30 Z" fill="url(#skinGrad)" />
-                
-                {/* Torso & Shoulders (reacting to bust & waist width) */}
-                <path 
-                  d={`M32 34 Q50 32 68 34 L${60 + (bust-85)/10} 58 Q50 56 ${40 - (bust-85)/10} 58 L${42 - (waist-65)/12} 80 Q50 82 ${58 + (waist-65)/12} 80 L${62 + (hips-90)/10} 100 Q50 101 ${38 - (hips-90)/10} 100 Z`} 
-                  fill="url(#skinGrad)" 
-                />
-
-                {/* Left Leg */}
-                <path d="M40 100 L42 144 L37 144 L38 100 Z" fill="url(#skinGrad)" />
-                
-                {/* Right Leg */}
-                <path d="M60 100 L58 144 L63 144 L62 100 Z" fill="url(#skinGrad)" />
-
-                {/* Overlay fitted garment wireframes on the vector if active */}
-                {selectedTop && (
-                  <path 
-                    d={`M31 34 Q50 33 69 34 L${61 + (bust-85)/10} 59 L${41 - (bust-85)/10} 59 L${41 - (waist-65)/12} 78 L${59 + (waist-65)/12} 78 Z`} 
-                    fill={selectedTop.primaryColor || '#4f46e5'} 
-                    fillOpacity="0.55" 
-                    stroke="rgba(255,255,255,0.2)"
-                    strokeWidth="0.5"
-                    className="animate-pulse"
+              {/* SLIDING COMPARISON PANEL OVERLAY */}
+              {comparisonMode && renderedImageUrl ? (
+                <div className="absolute inset-0 z-10 overflow-hidden bg-black flex items-center justify-center pointer-events-auto">
+                  {/* Sliding range control */}
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={comparisonSplit}
+                    onChange={(e) => setComparisonSplit(Number(e.target.value))}
+                    className="absolute inset-x-0 top-1/2 -translate-y-1/2 z-40 opacity-0 cursor-ew-resize w-full h-12"
                   />
-                )}
+                  
+                  {/* Slide Guide Line */}
+                  <div 
+                    className="absolute top-0 bottom-0 z-30 w-0.5 bg-indigo-500 shadow-[0_0_12px_rgba(99,102,241,0.8)] pointer-events-none"
+                    style={{ left: `${comparisonSplit}%` }}
+                  >
+                    <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-7 h-7 rounded-full bg-indigo-500 border-2 border-white flex items-center justify-center text-white text-[10px] font-bold shadow-2xl">
+                      ↔
+                    </div>
+                  </div>
 
-                {selectedOuterwear && (
-                  <path 
-                    d="M28 34 L72 34 L65 75 L35 75 Z" 
-                    fill={selectedOuterwear.primaryColor || '#db2777'} 
-                    fillOpacity="0.4" 
-                    stroke="rgba(255,255,255,0.3)" 
-                    strokeWidth="0.5"
-                  />
-                )}
+                  {/* Left Layer: Draggable items preview */}
+                  <div 
+                    className="absolute inset-y-0 left-0 overflow-hidden"
+                    style={{ width: `${comparisonSplit}%` }}
+                  >
+                    <div className="w-full h-full min-w-[320px] bg-gradient-to-b from-[#090915] to-[#040409] flex items-center justify-center pointer-events-none">
+                      {/* Scaled Mannequin background inside crop window */}
+                      <div 
+                        style={{ 
+                          transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+                          transformOrigin: 'center center',
+                        }}
+                        className="w-44 h-72 relative"
+                      >
+                        {/* Static mannequin vector */}
+                        <svg viewBox="0 0 100 150" className="w-full h-full text-zinc-800 opacity-60">
+                          <circle cx="50" cy="18" r="8" fill="#eecda3" />
+                          <path d="M47 25 L53 25 L52 30 L48 30 Z" fill="#eecda3" />
+                          <path d="M32 34 Q50 32 68 34 L62 58 Q50 56 38 58 L40 80 Q50 82 60 80 L62 100 Q50 101 38 100 Z" fill="#eecda3" />
+                          <path d="M40 100 L42 144 L37 144 L38 100 Z" fill="#eecda3" />
+                          <path d="M60 100 L58 144 L63 144 L62 100 Z" fill="#eecda3" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
 
-                {selectedBottom && (
-                  <path 
-                    d={`M38 -${hips-90}/10 80 L${62 + (hips-90)/10} 80 L58 128 L42 128 Z`} 
-                    fill={selectedBottom.primaryColor || '#059669'} 
-                    fillOpacity="0.5" 
-                    stroke="rgba(255,255,255,0.2)" 
-                    strokeWidth="0.5"
-                  />
-                )}
+                  {/* Right Layer: Volumetric Photorealistic output */}
+                  <div 
+                    className="absolute inset-y-0 right-0 overflow-hidden pointer-events-none"
+                    style={{ left: `${comparisonSplit}%` }}
+                  >
+                    <div className="absolute inset-0 w-full h-full min-w-[320px] bg-zinc-950">
+                      <img 
+                        src={renderedImageUrl} 
+                        alt="Simulated Look Lookbook" 
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  </div>
 
-                {/* Interactive heatmap dots showing mechanical stress points */}
-                <circle cx="50" cy="46" r="3" className={`fill-current ${bustStatus.color} animate-ping`} />
-                <circle cx="50" cy="46" r="2.5" className={`fill-current ${bustStatus.color}`} />
+                </div>
+              ) : (
+                /* NORMAL PREMIUM DRAGGABLE VIEWPORT */
+                <div
+                  style={{
+                    transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+                    transformOrigin: 'center center',
+                  }}
+                  className="w-full h-full flex items-center justify-center relative pointer-events-none"
+                >
+                  <div className="absolute w-44 h-44 rounded-full bg-indigo-500/10 blur-[50px] animate-pulse" />
 
-                <circle cx="50" cy="68" r="3" className={`fill-current ${waistStatus.color} animate-ping`} />
-                <circle cx="50" cy="68" r="2.5" className={`fill-current ${waistStatus.color}`} />
+                  {/* Physical Mannequin Vector */}
+                  <svg 
+                    viewBox="0 0 100 150" 
+                    className="w-44 h-auto text-zinc-800 transition-all duration-300 select-none"
+                    style={{ 
+                      filter: 'drop-shadow(0px 10px 20px rgba(0,0,0,0.6))',
+                      transform: `scale(${1 + (height - 172)/200})`
+                    }}
+                  >
+                    <defs>
+                      <linearGradient id="skinGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor={SKIN_TONES.find(t => t.name === skinTone)?.hex || '#eecda3'} />
+                        <stop offset="100%" stopColor="#111" stopOpacity="0.8" />
+                      </linearGradient>
+                    </defs>
 
-                <circle cx="50" cy="90" r="3" className={`fill-current ${hipsStatus.color} animate-ping`} />
-                <circle cx="50" cy="90" r="2.5" className={`fill-current ${hipsStatus.color}`} />
-              </svg>
+                    {/* Body shape paths */}
+                    <circle cx="50" cy="18" r="8" fill="url(#skinGrad)" />
+                    <path d="M47 25 L53 25 L52 30 L48 30 Z" fill="url(#skinGrad)" />
+                    <path 
+                      d={`M32 34 Q50 32 68 34 L${60 + (bust-88)/10} 58 Q50 56 ${40 - (bust-88)/10} 58 L${42 - (waist-64)/12} 80 Q50 82 ${58 + (waist-64)/12} 80 L${62 + (hips-92)/10} 100 Q50 101 ${38 - (hips-92)/10} 100 Z`} 
+                      fill="url(#skinGrad)" 
+                    />
+                    <path d="M40 100 L42 144 L37 144 L38 100 Z" fill="url(#skinGrad)" />
+                    <path d="M60 100 L58 144 L63 144 L62 100 Z" fill="url(#skinGrad)" />
+
+                    {/* Interactive Stress Points Heatmap Indicators */}
+                    <circle cx="50" cy="46" r="3.5" className={`fill-current ${bustStatus.color} animate-ping`} />
+                    <circle cx="50" cy="46" r="2" className={`fill-current ${bustStatus.color}`} />
+
+                    <circle cx="50" cy="68" r="3.5" className={`fill-current ${waistStatus.color} animate-ping`} />
+                    <circle cx="50" cy="68" r="2" className={`fill-current ${waistStatus.color}`} />
+
+                    <circle cx="50" cy="90" r="3.5" className={`fill-current ${hipsStatus.color} animate-ping`} />
+                    <circle cx="50" cy="90" r="2" className={`fill-current ${hipsStatus.color}`} />
+                  </svg>
+
+                  {/* ACTIVE RENDERS IN ORDER OF THE SELECTED LAYER HIERARCHY */}
+                  {layerOrder.map(layerKey => {
+                    if (layerKey === 'top') return renderCanvasGarment('top', selectedTop);
+                    if (layerKey === 'outerwear') return renderCanvasGarment('outerwear', selectedOuterwear);
+                    if (layerKey === 'bottom') return renderCanvasGarment('bottom', selectedBottom);
+                    if (layerKey === 'shoes') return renderCanvasGarment('shoes', selectedShoes);
+                    return null;
+                  })}
+
+                  {/* Interactive snap line indicators */}
+                  {showSnapGuides && Object.values(isSnapped).some(Boolean) && (
+                    <div className="absolute inset-y-0 left-1/2 w-0.5 border-l border-dashed border-emerald-500/40 pointer-events-none z-30" />
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Overlay heat strain dashboard */}
-            <div className="z-10 space-y-2 bg-black/75 backdrop-blur-md p-3 rounded-2xl border border-white/5 text-[10px] font-mono">
+            <div className="z-10 space-y-2 bg-black/75 backdrop-blur-md p-3 rounded-2xl border border-white/5 text-[10px] font-mono mt-auto select-none pointer-events-auto">
               <div className="flex justify-between items-center text-zinc-500 uppercase tracking-widest text-[8px] border-b border-white/5 pb-1 mb-1.5">
-                <span>Fit stress heatmap</span>
+                <span>Fit stress metrics</span>
                 <span>Size {sizeSelected}</span>
               </div>
               
               <div className="flex justify-between items-center">
                 <span className="text-zinc-400">Chest Stress:</span>
-                <span className={`font-bold ${bustStatus.color}`}>{Math.floor(tensionBust * 100)}% • {bustStatus.label}</span>
+                <span className={`font-bold ${bustStatus.color}`}>{Math.floor(tensionBust * 100)}% &bull; {bustStatus.label}</span>
               </div>
 
               <div className="flex justify-between items-center">
                 <span className="text-zinc-400">Waist Compression:</span>
-                <span className={`font-bold ${waistStatus.color}`}>{Math.floor(tensionWaist * 100)}% • {waistStatus.label}</span>
+                <span className={`font-bold ${waistStatus.color}`}>{Math.floor(tensionWaist * 100)}% &bull; {waistStatus.label}</span>
               </div>
 
               <div className="flex justify-between items-center">
                 <span className="text-zinc-400">Hip Stretch:</span>
-                <span className={`font-bold ${hipsStatus.color}`}>{Math.floor(tensionHips * 100)}% • {hipsStatus.label}</span>
+                <span className={`font-bold ${hipsStatus.color}`}>{Math.floor(tensionHips * 100)}% &bull; {hipsStatus.label}</span>
               </div>
             </div>
 
             {/* Backdrops selector bar at bottom */}
-            <div className="z-10 mt-2 flex gap-1 bg-black/60 p-1.5 rounded-xl border border-white/5">
+            <div className="z-10 mt-2 flex gap-1 bg-black/60 p-1.5 rounded-xl border border-white/5 pointer-events-auto">
               {BACKDROP_PRESETS.map(b => (
                 <button
                   key={b.id}
@@ -643,7 +1041,6 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
                 <Layers className="w-4 h-4 text-emerald-400" />
                 <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-white">3. Active Fit Stack</h3>
               </div>
-              {/* Reset shortcut */}
               {(selectedTop || selectedOuterwear || selectedBottom || selectedShoes) && (
                 <button onClick={handleClearFitStack} className="text-[9px] font-mono uppercase text-rose-400 hover:text-rose-300">
                   Clear All
@@ -653,7 +1050,10 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
 
             <div className="space-y-2">
               {/* TOP SLOT */}
-              <div className="flex justify-between items-center bg-[#11111a] border border-white/5 p-2 rounded-xl text-xs">
+              <div 
+                onClick={() => setSelectedTop(null)}
+                className={`flex justify-between items-center bg-[#11111a] border p-2 rounded-xl text-xs cursor-pointer ${activeLayer === 'top' ? 'border-indigo-500' : 'border-white/5'}`}
+              >
                 <div>
                   <span className="block text-[8px] font-mono text-zinc-500 uppercase">Top Layer:</span>
                   <span className="text-[11px] font-semibold text-white tracking-wide truncate max-w-[140px] block">
@@ -661,7 +1061,7 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
                   </span>
                 </div>
                 {selectedTop ? (
-                  <button onClick={() => setSelectedTop(null)} className="p-1 hover:bg-rose-500/10 text-rose-400 rounded-lg">
+                  <button className="p-1 hover:bg-rose-500/10 text-rose-400 rounded-lg">
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 ) : (
@@ -670,7 +1070,10 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
               </div>
 
               {/* OUTERWEAR SLOT */}
-              <div className="flex justify-between items-center bg-[#11111a] border border-white/5 p-2 rounded-xl text-xs">
+              <div 
+                onClick={() => setSelectedOuterwear(null)}
+                className={`flex justify-between items-center bg-[#11111a] border p-2 rounded-xl text-xs cursor-pointer ${activeLayer === 'outerwear' ? 'border-indigo-500' : 'border-white/5'}`}
+              >
                 <div>
                   <span className="block text-[8px] font-mono text-zinc-500 uppercase">Outerwear Layer:</span>
                   <span className="text-[11px] font-semibold text-white tracking-wide truncate max-w-[140px] block">
@@ -678,7 +1081,7 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
                   </span>
                 </div>
                 {selectedOuterwear ? (
-                  <button onClick={() => setSelectedOuterwear(null)} className="p-1 hover:bg-rose-500/10 text-rose-400 rounded-lg">
+                  <button className="p-1 hover:bg-rose-500/10 text-rose-400 rounded-lg">
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 ) : (
@@ -687,7 +1090,10 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
               </div>
 
               {/* BOTTOM SLOT */}
-              <div className="flex justify-between items-center bg-[#11111a] border border-white/5 p-2 rounded-xl text-xs">
+              <div 
+                onClick={() => setSelectedBottom(null)}
+                className={`flex justify-between items-center bg-[#11111a] border p-2 rounded-xl text-xs cursor-pointer ${activeLayer === 'bottom' ? 'border-indigo-500' : 'border-white/5'}`}
+              >
                 <div>
                   <span className="block text-[8px] font-mono text-zinc-500 uppercase">Bottom Layer:</span>
                   <span className="text-[11px] font-semibold text-white tracking-wide truncate max-w-[140px] block">
@@ -695,7 +1101,7 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
                   </span>
                 </div>
                 {selectedBottom ? (
-                  <button onClick={() => setSelectedBottom(null)} className="p-1 hover:bg-rose-500/10 text-rose-400 rounded-lg">
+                  <button className="p-1 hover:bg-rose-500/10 text-rose-400 rounded-lg">
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 ) : (
@@ -704,7 +1110,10 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
               </div>
 
               {/* SHOES SLOT */}
-              <div className="flex justify-between items-center bg-[#11111a] border border-white/5 p-2 rounded-xl text-xs">
+              <div 
+                onClick={() => setSelectedShoes(null)}
+                className={`flex justify-between items-center bg-[#11111a] border p-2 rounded-xl text-xs cursor-pointer ${activeLayer === 'shoes' ? 'border-indigo-500' : 'border-white/5'}`}
+              >
                 <div>
                   <span className="block text-[8px] font-mono text-zinc-500 uppercase">Footwear:</span>
                   <span className="text-[11px] font-semibold text-white tracking-wide truncate max-w-[140px] block">
@@ -712,7 +1121,7 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
                   </span>
                 </div>
                 {selectedShoes ? (
-                  <button onClick={() => setSelectedShoes(null)} className="p-1 hover:bg-rose-500/10 text-rose-400 rounded-lg">
+                  <button className="p-1 hover:bg-rose-500/10 text-rose-400 rounded-lg">
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 ) : (
@@ -720,6 +1129,53 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
                 )}
               </div>
             </div>
+          </div>
+
+          {/* OUTFIT GROUPER MODULE */}
+          <div className="bg-[#07070c] border border-white/5 rounded-2xl p-4 space-y-3 shadow-lg">
+            <div className="flex items-center gap-2 border-b border-white/5 pb-2">
+              <Layers2 className="w-4 h-4 text-indigo-400" />
+              <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-white">Outfit Grouping</h3>
+            </div>
+            
+            <p className="text-[10px] text-zinc-400 leading-relaxed font-mono">
+              Bundle your active stack coordinates as a custom atelier bundle.
+            </p>
+
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Bundle Name..."
+                value={newGroupName}
+                onChange={(e) => setNewGroupName(e.target.value)}
+                className="flex-1 bg-[#11111a] border border-white/5 text-[11px] px-3 py-1.5 rounded-xl text-white outline-none focus:border-indigo-500/40"
+              />
+              <button 
+                onClick={handleSaveOutfitGroup}
+                className="px-3 bg-indigo-600 hover:bg-indigo-500 text-white font-mono text-[10px] uppercase font-bold rounded-xl cursor-pointer"
+              >
+                Bundle
+              </button>
+            </div>
+
+            {outfitGroups.length > 0 && (
+              <div className="space-y-1.5 pt-2 max-h-24 overflow-y-auto">
+                {outfitGroups.map(g => (
+                  <div key={g.id} className="flex justify-between items-center bg-[#11111a]/40 p-1.5 rounded border border-white/5 text-[10px]">
+                    <div className="truncate max-w-[150px]">
+                      <span className="text-white block truncate">{g.name}</span>
+                      <span className="text-[8px] text-zinc-500 font-mono truncate">{g.items.join(' + ')}</span>
+                    </div>
+                    <button 
+                      onClick={(e) => handleDeleteOutfitGroup(g.id, e)}
+                      className="p-1 hover:bg-rose-500/10 text-rose-400 rounded"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* AI PHOTO RENDERING ROOM */}
@@ -733,7 +1189,6 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
               Combine your active volumetric measurements, selected drape stiffness vectors, and active multi-layered garments into a custom photorealistic render.
             </p>
 
-            {/* RENDER BUTTON OR PROGRESS WINDOW */}
             {isRendering ? (
               <div className="bg-black/50 border border-white/5 p-3 rounded-xl space-y-3">
                 <div className="flex justify-between items-center">
@@ -768,7 +1223,7 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
                       <CheckCircle className="w-3 h-3" /> Output Rendered
                     </span>
                     <button 
-                      onClick={() => setRenderedImageUrl(null)} 
+                      onClick={() => { setRenderedImageUrl(null); setComparisonMode(false); }} 
                       className="text-[8px] font-mono uppercase text-zinc-500 hover:text-white"
                     >
                       Close Output
@@ -845,8 +1300,8 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
                   <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent pointer-events-none" />
 
                   {/* Layer category badge overlay */}
-                  <div className="absolute top-2 left-2">
-                    <span className="text-[7.5px] font-mono bg-black/70 backdrop-blur border border-white/10 text-zinc-400 px-1.5 py-0.5 rounded uppercase">
+                  <div className="absolute top-2 left-2 bg-black/60 border border-white/5 p-1 rounded">
+                    <span className="text-[7.5px] font-mono text-zinc-400 px-1.5 py-0.5 rounded uppercase">
                       {item.category}
                     </span>
                   </div>
@@ -860,7 +1315,7 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
 
                   {/* Title & Desc */}
                   <div className="relative z-10">
-                    <span className="text-[7px] font-mono text-zinc-500 uppercase tracking-widest block font-bold mb-0.5">{item.size || 'M'} • {item.primaryColor || 'Color'}</span>
+                    <span className="text-[7px] font-mono text-zinc-500 uppercase tracking-widest block font-bold mb-0.5">{item.size || 'M'} &bull; {item.primaryColor || 'Color'}</span>
                     <h4 className="text-[10px] font-bold text-white truncate">{item.title}</h4>
                   </div>
                 </div>
@@ -884,7 +1339,6 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
                 key={sess.id}
                 className="group bg-[#11111a] border border-white/5 rounded-2xl overflow-hidden relative aspect-[3/4] hover:border-violet-500/20 hover:scale-[1.01] transition-all duration-300 shadow-xl flex flex-col justify-between"
               >
-                {/* Simulated background */}
                 <div className="absolute inset-0 z-0">
                   <img
                     src={sess.renderUrl}
@@ -896,7 +1350,6 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
 
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent z-0 pointer-events-none" />
 
-                {/* Delete history session button */}
                 <button
                   onClick={(e) => handleDeleteHistorySession(sess.id, e)}
                   className="absolute top-3 right-3 p-1.5 bg-black/70 backdrop-blur-md hover:bg-rose-500/20 text-zinc-400 hover:text-rose-400 border border-white/10 rounded-full transition-all cursor-pointer z-10"
@@ -907,12 +1360,12 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
                 {/* Info Overlay */}
                 <div className="absolute bottom-0 left-0 right-0 p-3 z-10 space-y-1.5">
                   <div>
-                    <span className="text-[8px] font-mono text-indigo-400 uppercase tracking-widest block font-semibold mb-0.5">{sess.timestamp} • Size {sess.sizeSelected}</span>
+                    <span className="text-[8px] font-mono text-indigo-400 uppercase tracking-widest block font-semibold mb-0.5">{sess.timestamp} &bull; Size {sess.sizeSelected}</span>
                     <h4 className="text-[11px] font-bold text-white truncate">
                       {Object.values(sess.fittedItems).map(i => i?.title).filter(Boolean).join(' + ')}
                     </h4>
                     <p className="text-[8px] font-mono text-zinc-500 truncate mt-0.5">
-                      Height: {sess.avatar.height}cm • Waist: {sess.avatar.waist}cm
+                      Height: {sess.avatar.height}cm &bull; Waist: {sess.avatar.waist}cm
                     </p>
                   </div>
                 </div>

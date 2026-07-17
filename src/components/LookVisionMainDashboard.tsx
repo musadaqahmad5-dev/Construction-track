@@ -4,8 +4,7 @@ import { collection, onSnapshot, query, limit } from 'firebase/firestore';
 import { WardrobeItem } from '../types';
 
 // Import modular dashboard subcomponents
-import { HeroSection } from './dashboard/HeroSection';
-import { DashboardGrid } from './dashboard/DashboardGrid';
+import { PlatformEcosystemLauncher } from './dashboard/PlatformEcosystemLauncher';
 import { EditorsPicks } from './dashboard/EditorsPicks';
 import { SidebarWidgets } from './dashboard/SidebarWidgets';
 
@@ -17,7 +16,7 @@ interface LookVisionMainDashboardProps {
   onLogout?: () => void;
   onReset?: () => void;
   onLoadSamples?: () => void;
-  setActiveSubTab?: (tab: 'HOME' | 'AI_STUDIO' | 'WARDROBE' | 'DASHBOARD' | 'PROFILE' | 'SYSTEM_ROOM') => void;
+  setActiveSubTab?: (tab: any) => void;
 }
 
 export const LookVisionMainDashboard: React.FC<LookVisionMainDashboardProps> = ({
@@ -247,7 +246,7 @@ export const LookVisionMainDashboard: React.FC<LookVisionMainDashboardProps> = (
     if (!promptInput.trim()) return;
     if (setActiveSubTab) {
       localStorage.setItem('prompt_generation_draft', promptInput);
-      setActiveSubTab('AI_STUDIO');
+      setActiveSubTab('PRODUCT_AI_CREATIONS');
     }
   };
 
@@ -258,39 +257,13 @@ export const LookVisionMainDashboard: React.FC<LookVisionMainDashboardProps> = (
         {/* Left/Center Main Content Column */}
         <div className="xl:col-span-3 space-y-4">
           
-          {/* 1. HERO HEADER AREA */}
-          <HeroSection
-            promptInput={promptInput}
-            setPromptInput={setPromptInput}
-            handleGenerate={handleGenerate}
+          {/* Platform Ecosystem Launcher */}
+          <PlatformEcosystemLauncher
+            user={user}
             setActiveSubTab={setActiveSubTab}
           />
-
-          {/* 2. DYNAMIC THREE-COLUMN WORKSPACE GRID */}
-          <DashboardGrid
-            aiCreationsTab={aiCreationsTab}
-            setAiCreationsTab={setAiCreationsTab}
-            aiLooks={aiLooks}
-            seedAiLooks={seedAiLooks}
-            onAddGarment={onAddGarment}
-            setActiveSubTab={setActiveSubTab}
-
-            communityTab={communityTab}
-            setCommunityTab={setCommunityTab}
-            communityPosts={communityPosts}
-            seedCommunityFits={seedCommunityFits}
-            toggleBookmark={toggleBookmark}
-            bookmarkedPosts={bookmarkedPosts}
-
-            marketplaceTab={marketplaceTab}
-            setMarketplaceTab={setMarketplaceTab}
-            seedMarketplaceProducts={seedMarketplaceProducts}
-
-            likedPosts={likedPosts}
-            toggleLike={toggleLike}
-          />
-
-          {/* 3. EDITOR'S PICKS BOTTOM HORIZONTAL CAROUSEL */}
+          
+          {/* CURATOR'S PICKS BOTTOM HORIZONTAL CAROUSEL */}
           <EditorsPicks setActiveSubTab={setActiveSubTab} onAddGarment={onAddGarment} />
 
         </div>

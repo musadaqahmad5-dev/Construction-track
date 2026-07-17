@@ -152,7 +152,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
             
             {/* Create with AI direct link button */}
             <button
-              onClick={() => setActiveSubTab && setActiveSubTab('AI_STUDIO')}
+              onClick={() => setActiveSubTab && setActiveSubTab('PRODUCT_AI_CREATIONS')}
               className="bg-violet-600 hover:bg-violet-500 text-white px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider flex items-center gap-1.5 cursor-pointer transition-all shadow-md shadow-violet-600/15"
             >
               <Sparkle className="w-2.5 h-2.5 fill-white" />
@@ -271,7 +271,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
         {/* Bottom Footer Button */}
         <div className="border-t border-white/5 pt-4 mt-5 flex justify-center">
           <button 
-            onClick={() => setActiveSubTab && setActiveSubTab('AI_STUDIO')}
+            onClick={() => setActiveSubTab && setActiveSubTab('PRODUCT_AI_CREATIONS')}
             className="text-violet-400 hover:text-violet-300 font-sans font-bold text-[11px] uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer bg-transparent border-none py-1"
           >
             <span>View more AI looks</span>

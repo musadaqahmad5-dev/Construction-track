@@ -115,3 +115,41 @@ ABAC (Attribute-Based Access Control) boundaries are enforced at the Firestore s
    `request.auth.uid == resource.data.userId`
 2. **Schema Hardening**: Custom validation constraints ensure only legitimate categories and statuses are written.
 3. **Temporal Control**: All updates verify that `createdAt` remains immutable and that `updatedAt` relies on server-managed timestamps.
+
+---
+
+## 6. Official LOOK VISION Product Architecture (Locked)
+
+The platform is permanently locked to a Product-centric ecosystem hierarchy:
+
+```
+LOOK VISION (Platform)
+│
+├── Products
+│   ├── Community (PRODUCT_COMMUNITY)
+│   ├── AI Creations (PRODUCT_AI_CREATIONS)
+│   └── Marketplace (PRODUCT_MARKETPLACE)
+│
+├── Ecosystems
+│   ├── Community
+│   │   └── Generate (Fashion AI) (ECOSYSTEM_GENERATE)
+│   ├── AI Creations
+│   │   └── Create with AI (Creative AI) (ECOSYSTEM_CREATE)
+│   └── Marketplace
+│       └── Commerce Ecosystem (PRODUCT_MARKETPLACE)
+│
+└── Engines
+    ├── Fashion AI Engine -> Powers generative style coordinate workflows
+    ├── Creative AI Engine -> Powers fantasy/concept avatar generation
+    └── Commerce Engine -> Powers boutiques and boutique showroom items
+```
+
+### 6.1 Routing and Identity Specifications
+All internal routes are mapped explicitly in `AIStyleHub.tsx`:
+* `PRODUCT_HOME` (replaces legacy `HOME` / Morning table)
+* `PRODUCT_COMMUNITY` (replaces legacy `COMMUNITY_ROOM` / Community feed)
+* `PRODUCT_AI_CREATIONS` (replaces legacy `AI_STUDIO` / Creative Studio)
+* `PRODUCT_MARKETPLACE` (replaces legacy `MARKETPLACE_ROOM` / Boutique catalogs)
+* `ECOSYSTEM_GENERATE` (replaces legacy `OUTFIT_GEN` / Fashion AI Engine)
+* `ECOSYSTEM_CREATE` (replaces legacy `AI_STUDIO` / Creative AI Engine)
+

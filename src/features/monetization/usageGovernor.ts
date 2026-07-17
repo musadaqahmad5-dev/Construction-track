@@ -17,16 +17,29 @@ export class UsageGovernor {
   static {
     auth.onAuthStateChanged((user) => {
       if (user) {
+        try {
+          const cachedImages = localStorage.getItem(`quota_images_${user.uid}`);
+          const cachedRecs = localStorage.getItem(`quota_recs_${user.uid}`);
+          if (cachedImages) this.imagesUsed = parseInt(cachedImages, 10) || 0;
+          if (cachedRecs) this.recommendationsUsed = parseInt(cachedRecs, 10) || 0;
+        } catch (_) {}
+
         onSnapshot(doc(db, "users", user.uid), (docSnap) => {
           if (docSnap.exists()) {
             const data = docSnap.data();
             const quotaUsed = data?.quotaUsed || {};
             this.imagesUsed = typeof quotaUsed.images === 'number' ? quotaUsed.images : 0;
             this.recommendationsUsed = typeof quotaUsed.recommendations === 'number' ? quotaUsed.recommendations : 0;
+            try {
+              localStorage.setItem(`quota_images_${user.uid}`, String(this.imagesUsed));
+              localStorage.setItem(`quota_recs_${user.uid}`, String(this.recommendationsUsed));
+            } catch (_) {}
           } else {
             this.imagesUsed = 0;
             this.recommendationsUsed = 0;
           }
+        }, (err) => {
+          console.warn("[Quota System] Usage governor sync paused. Activating robust in-memory quota fallback tracking immediately:", err);
         });
       } else {
         this.imagesUsed = 0;
@@ -58,6 +71,12 @@ export class UsageGovernor {
 
   static incrementUsage() {
     this.recommendationsUsed += 1;
+    const user = auth.currentUser;
+    if (user) {
+      try {
+        localStorage.setItem(`quota_recs_${user.uid}`, String(this.recommendationsUsed));
+      } catch (_) {}
+    }
   }
 }
 

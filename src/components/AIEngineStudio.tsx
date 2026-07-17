@@ -1,104 +1,78 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Sparkles, Heart, MessageCircle, RefreshCw, 
   Search, SlidersHorizontal, Eye, Copy, Check, X, Bookmark,
-  Cpu, Layers, Maximize2, Share2, Terminal, Info, ChevronRight, Play
+  Cpu, Layers, Maximize2, Share2, Terminal, Info, ChevronRight, Play,
+  Compass, User, Folder, Stars, ListFilter, Trash2, Archive, Plus
 } from 'lucide-react';
 import { WardrobeItem } from '../types';
 import { db } from '../firebase';
 import { collection, query, onSnapshot, limit, addDoc, serverTimestamp } from 'firebase/firestore';
+
+// Premium AI Creations Platform subcomponents
+import { AICreation, AICreationCreator, AICreationTab } from './ai-creations/types';
+import { INITIAL_CREATIONS, MOCK_CREATORS } from './ai-creations/data';
+import { CreationCard } from './ai-creations/CreationCard';
+import { ImageExperienceModal } from './ai-creations/ImageExperienceModal';
+import { PortfolioSection } from './ai-creations/PortfolioSection';
+import { DiscoverySection } from './ai-creations/DiscoverySection';
+import { PromptIntelligenceEngine } from '../features/image-generation/PromptIntelligenceEngine';
+import { GenerationIntelligenceEngine } from '../features/image-generation/GenerationIntelligenceEngine';
 
 interface AIEngineStudioProps {
   wardrobe: WardrobeItem[];
   onAddGarment?: (title: string, description: string, category: any, extraOptions?: any) => Promise<void>;
 }
 
-interface AILook {
-  id: string;
-  title: string;
-  prompt: string;
-  imageUrl: string;
-  provider: string;
-  vibe: string;
-  season: string;
-  createdAt: string;
-  likesCount?: number;
-  commentsCount?: number;
-}
-
-const SEED_CREATIONS: AILook[] = [
-  {
-    id: 'seed-c-1',
-    title: 'Cyberpunk Tech Shell',
-    prompt: 'Neon cybernetic futuristic jacket, loose fitting, modular tactical pockets, glowing purple lining, Unreal Engine 5.4 Path Tracer render on Male Athletic Mannequin',
-    imageUrl: 'https://images.unsplash.com/photo-1548883354-7622d03aca27?q=80&w=500&auto=format&fit=crop',
-    provider: 'Unreal Engine 5.4 Render',
-    vibe: 'Cyberpunk',
-    season: 'Winter',
-    createdAt: new Date().toISOString(),
-    likesCount: 245,
-    commentsCount: 18
-  },
-  {
-    id: 'seed-c-2',
-    title: 'Nordic Minimalist Coat',
-    prompt: 'Minimalist double breasted wool trench overcoat, heavy charcoal, with flowing cream silk trouser, CLO 3D CAD drape solve on Female Runway Avatar',
-    imageUrl: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=500&auto=format&fit=crop',
-    provider: 'CLO 3D CAD Cloth Engine',
-    vibe: 'Minimalist',
-    season: 'Autumn',
-    createdAt: new Date(Date.now() - 3600000).toISOString(),
-    likesCount: 182,
-    commentsCount: 12
-  },
-  {
-    id: 'seed-c-3',
-    title: 'Desert Linen Wanderer',
-    prompt: 'Ethereal organic beige linen draped shawl, wide cropped raw linen pants, earth tones, Marvelous Designer simulation on Gravitational Mannequin',
-    imageUrl: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=500&auto=format&fit=crop',
-    provider: 'Marvelous Designer Solver',
-    vibe: 'Desert',
-    season: 'Summer',
-    createdAt: new Date(Date.now() - 7200000).toISOString(),
-    likesCount: 310,
-    commentsCount: 25
-  },
-  {
-    id: 'seed-c-4',
-    title: 'Deconstructed Slate Blazer',
-    prompt: 'Deconstructed asymmetric tailored charcoal jacket, loose threads, matte black buttoning, Octane Holographic Shader render on Xenon Cyberspace Body',
-    imageUrl: 'https://images.unsplash.com/photo-1509631179647-0177331693ae?q=80&w=500&auto=format&fit=crop',
-    provider: 'Octane Holographic Render',
-    vibe: 'Avant-Garde',
-    season: 'All-Season',
-    createdAt: new Date(Date.now() - 10800000).toISOString(),
-    likesCount: 420,
-    commentsCount: 37
-  }
-];
-
 export const AIEngineStudio: React.FC<AIEngineStudioProps> = ({ 
   wardrobe, 
   onAddGarment 
 }) => {
-  // Main Tab: DESIGN_LAB (3D Avatar Creator) vs CREATIONS_FEED (Showroom)
-  const [activeTab, setActiveTab] = useState<'DESIGN_LAB' | 'CREATIONS_FEED'>('DESIGN_LAB');
+  // Navigation: GALLERY, DISCOVERY, PORTFOLIO, 3D_LAB
+  const [activeTab, setActiveTab] = useState<AICreationTab>('DISCOVERY');
 
-  const [dbLooks, setDbLooks] = useState<AILook[]>([]);
+  const [dbLooks, setDbLooks] = useState<AICreation[]>([]);
   const [loadingLooks, setLoadingLooks] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedVibe, setSelectedVibe] = useState("All");
-  const [selectedSeason, setSelectedSeason] = useState("All");
-
-  // Local likes tracking
-  const [likedMap, setLikedMap] = useState<Record<string, boolean>>({});
   
-  // Selected Look Modal State
-  const [selectedLook, setSelectedLook] = useState<AILook | null>(null);
-  const [copiedPromptId, setCopiedPromptId] = useState<string | null>(null);
+  // Advanced Filter state variables
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [selectedStyle, setSelectedStyle] = useState<string>('All');
+  const [selectedModel, setSelectedModel] = useState<string>('All');
+  const [selectedResolution, setSelectedResolution] = useState<string>('All');
+  const [activeFilter, setActiveFilter] = useState<string>('Trending'); // Newest, Trending, Most Liked, etc.
 
-  // --- 3D DESIGN LAB INTERACTIVE STATES ---
+  // Core portfolio / social state variables
+  const [likedMap, setLikedMap] = useState<Record<string, boolean>>(() => {
+    const saved = localStorage.getItem('lookvision_liked_creations');
+    return saved ? JSON.parse(saved) : {};
+  });
+
+  const [followingMap, setFollowingMap] = useState<Record<string, boolean>>(() => {
+    const saved = localStorage.getItem('lookvision_following_creators');
+    return saved ? JSON.parse(saved) : {};
+  });
+
+  const [customCollections, setCustomCollections] = useState<string[]>(() => {
+    const saved = localStorage.getItem('lookvision_custom_collections_list');
+    return saved ? JSON.parse(saved) : ['Favorites', 'Streetwear', 'Luxury', 'Formal', 'Minimal', 'Experimental', 'Editorial'];
+  });
+
+  const [savedCollections, setSavedCollections] = useState<Record<string, string[]>>(() => {
+    const saved = localStorage.getItem('lookvision_saved_collections_map');
+    return saved ? JSON.parse(saved) : {
+      'Favorites': ['look-c-3', 'look-c-5'],
+      'Streetwear': ['look-c-1'],
+      'Luxury': ['look-c-5'],
+      'Minimal': ['look-c-2', 'look-c-6']
+    };
+  });
+
+  // Selected Look modal
+  const [selectedLook, setSelectedLook] = useState<AICreation | null>(null);
+
+  // --- 3D INTERACTIVE WORKBENCH STATES (Preserving 3D model engine states exactly) ---
   const [avatarType, setAvatarType] = useState<'RUNWAY_F' | 'ATHLETIC_M' | 'CYBORG_X' | 'MANNEQUIN_D'>('RUNWAY_F');
   const [garmentMesh, setGarmentMesh] = useState<'ARCHITECTURAL_GOWN' | 'TECH_PARKA' | 'DECONSTRUCTED_BLAZER' | 'BIOMORPHIC_VEST'>('TECH_PARKA');
   const [renderEngine, setRenderEngine] = useState<'UNREAL_5' | 'CLO3D' | 'MARVELOUS' | 'OCTANE'>('UNREAL_5');
@@ -106,11 +80,12 @@ export const AIEngineStudio: React.FC<AIEngineStudioProps> = ({
   const [vibePreset, setVibePreset] = useState<'Cyberpunk' | 'Minimalist' | 'Avant-Garde' | 'Desert' | 'Future-Punk'>('Cyberpunk');
   const [customDetails, setCustomDetails] = useState('');
 
-  // Generation status
+  // Generation status variables
   const [isRendering, setIsRendering] = useState(false);
   const [renderLogs, setRenderLogs] = useState<string[]>([]);
-  const [generatedLookResult, setGeneratedLookResult] = useState<AILook | null>(null);
+  const [generatedLookResult, setGeneratedLookResult] = useState<AICreation | null>(null);
 
+  // Synchronize Firestore and map to the new premium object schema
   useEffect(() => {
     if (!db) {
       setLoadingLooks(false);
@@ -120,43 +95,152 @@ export const AIEngineStudio: React.FC<AIEngineStudioProps> = ({
     setLoadingLooks(true);
     const q = query(collection(db, 'generatedLooks'), limit(50));
     const unsub = onSnapshot(q, (snapshot) => {
-      const looks: AILook[] = [];
+      const looks: AICreation[] = [];
+      
       snapshot.forEach((docSnap) => {
         const data = docSnap.data();
+        const docId = docSnap.id;
+        
+        // Dynamic seed generator based on DocId hash
+        const seedVal = data.seed || String(Math.floor(Math.sin(docId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)) * 100000000) + 12000000000);
+        
+        // Style resolution mapped
+        const resolution = data.resolution || (data.provider === 'CLO 3D CAD Cloth Solve' ? '2048x2048' : '1024x1024');
+        const aspectRatio = data.aspectRatio || '1:1';
+        
         looks.push({
-          id: docSnap.id,
+          id: docId,
           title: data.vibe || data.theme || 'Sartorial AI Concept',
           prompt: data.prompt || '',
+          negativePrompt: data.negativePrompt || 'blurry, distorted, low quality, bad stitching, text watermark',
           imageUrl: data.imageUrl || '',
-          provider: data.provider || 'Imagen 4.0',
-          vibe: data.vibe || 'Creative',
-          season: data.season || 'All-Season',
+          imageUrlBefore: data.imageUrlBefore || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800',
+          model: data.provider || 'Imagen 4.0 Ultra',
+          style: data.vibe || data.theme || 'Streetwear',
+          resolution,
+          aspectRatio,
           createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : (data.createdAt || new Date().toISOString()),
-          likesCount: Math.floor(Math.random() * 200) + 50,
-          commentsCount: Math.floor(Math.random() * 30) + 5
+          seed: seedVal,
+          likesCount: data.likesCount || Math.floor(Math.random() * 150) + 50,
+          viewsCount: data.viewsCount || Math.floor(Math.random() * 600) + 120,
+          savesCount: data.savesCount || Math.floor(Math.random() * 80) + 10,
+          commentsCount: data.commentsCount || Math.floor(Math.random() * 20) + 2,
+          creator: MOCK_CREATORS.currentUser,
+          status: 'Published',
+          tags: ['curated', 'generative', (data.vibe || 'couture').toLowerCase()],
+          colorPalette: ['#0c0c16', '#21153b', '#fafafa'],
+          variations: [
+            data.imageUrl || 'https://images.unsplash.com/photo-1548883354-7622d03aca27?q=80&w=800',
+            'https://images.unsplash.com/photo-1509631179647-0177331693ae?q=80&w=800'
+          ]
         });
       });
+      
       // Sort newest first
       looks.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setDbLooks(looks);
       setLoadingLooks(false);
     }, (err) => {
-      console.warn("Error fetching generatedLooks, using fallback seeds:", err);
+      console.warn("Error fetching generatedLooks, using premium fallback dataset:", err);
       setLoadingLooks(false);
     });
 
     return () => unsub();
   }, []);
 
-  const handleCopyPrompt = (look: AILook) => {
-    navigator.clipboard.writeText(look.prompt);
-    setCopiedPromptId(look.id);
-    setTimeout(() => setCopiedPromptId(null), 2000);
-    window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
-      detail: '✓ Prompt copied to clipboard!'
-    }));
-  };
+  // Save changes locally to retain persistent user engagement
+  useEffect(() => {
+    localStorage.setItem('lookvision_liked_creations', JSON.stringify(likedMap));
+  }, [likedMap]);
 
+  useEffect(() => {
+    localStorage.setItem('lookvision_following_creators', JSON.stringify(followingMap));
+  }, [followingMap]);
+
+  useEffect(() => {
+    localStorage.setItem('lookvision_custom_collections_list', JSON.stringify(customCollections));
+  }, [customCollections]);
+
+  useEffect(() => {
+    localStorage.setItem('lookvision_saved_collections_map', JSON.stringify(savedCollections));
+  }, [savedCollections]);
+
+  // Merge pre-loaded high-fashion seed creations with user generated db looks
+  const allCreations = useMemo(() => {
+    const combined = [...dbLooks, ...INITIAL_CREATIONS];
+    // Remove duplicate IDs
+    const unique: Record<string, AICreation> = {};
+    combined.forEach(item => {
+      unique[item.id] = item;
+    });
+    return Object.values(unique);
+  }, [dbLooks]);
+
+  // Filter styles list
+  const stylesList = useMemo(() => {
+    return ['All', ...Array.from(new Set(allCreations.map(c => c.style).filter(Boolean)))];
+  }, [allCreations]);
+
+  // Filter models list
+  const modelsList = useMemo(() => {
+    return ['All', ...Array.from(new Set(allCreations.map(c => c.model).filter(Boolean)))];
+  }, [allCreations]);
+
+  // Resolutions List
+  const resolutionsList = useMemo(() => {
+    return ['All', ...Array.from(new Set(allCreations.map(c => c.resolution).filter(Boolean)))];
+  }, [allCreations]);
+
+  // Advanced search & filtering computations
+  const filteredCreations = useMemo(() => {
+    let result = [...allCreations];
+
+    // Search query query parsing
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      result = result.filter(item => 
+        item.title.toLowerCase().includes(q) ||
+        item.prompt.toLowerCase().includes(q) ||
+        item.creator.name.toLowerCase().includes(q) ||
+        item.style.toLowerCase().includes(q) ||
+        item.model.toLowerCase().includes(q) ||
+        item.resolution.toLowerCase().includes(q) ||
+        item.tags.some(t => t.toLowerCase().includes(q))
+      );
+    }
+
+    // Style dropdown filter
+    if (selectedStyle !== 'All') {
+      result = result.filter(item => item.style === selectedStyle);
+    }
+
+    // Model dropdown filter
+    if (selectedModel !== 'All') {
+      result = result.filter(item => item.model === selectedModel);
+    }
+
+    // Resolution dropdown filter
+    if (selectedResolution !== 'All') {
+      result = result.filter(item => item.resolution === selectedResolution);
+    }
+
+    // Sorting conditions
+    if (activeFilter === 'Newest') {
+      result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    } else if (activeFilter === 'Trending') {
+      result.sort((a, b) => b.likesCount - a.likesCount);
+    } else if (activeFilter === 'Most Liked') {
+      result.sort((a, b) => (b.likesCount + (likedMap[b.id] ? 1 : 0)) - (a.likesCount + (likedMap[a.id] ? 1 : 0)));
+    } else if (activeFilter === 'Most Viewed') {
+      result.sort((a, b) => b.viewsCount - a.viewsCount);
+    } else if (activeFilter === 'Most Saved') {
+      result.sort((a, b) => b.savesCount - a.savesCount);
+    }
+
+    return result;
+  }, [allCreations, searchQuery, selectedStyle, selectedModel, selectedResolution, activeFilter, likedMap]);
+
+  // Social trigger handles
   const handleToggleLike = (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     setLikedMap(prev => ({
@@ -165,34 +249,97 @@ export const AIEngineStudio: React.FC<AIEngineStudioProps> = ({
     }));
   };
 
-  const handleRemixLook = async (look: AILook) => {
-    if (!onAddGarment) {
-      window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
-        detail: '✕ Wardrobe integration is not active in this session.'
-      }));
-      return;
-    }
+  const handleToggleFollow = (creatorId: string) => {
+    setFollowingMap(prev => ({
+      ...prev,
+      [creatorId]: !prev[creatorId]
+    }));
+    const isNowFollowing = !followingMap[creatorId];
+    window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
+      detail: isNowFollowing ? '✓ Added artist to your favorites!' : '✓ Removed artist from favorites'
+    }));
+  };
 
-    try {
-      await onAddGarment(
-        look.title,
-        look.prompt,
-        'Outerwear',
-        { imageUrl: look.imageUrl }
-      );
-      window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
-        detail: `✓ "${look.title}" added to your 3D assets workspace!`
-      }));
-      setSelectedLook(null);
-    } catch (err) {
-      console.error(err);
-      window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
-        detail: '✕ Failed to import garment. Try again.'
-      }));
+  // Organize look into structured collection groups
+  const handleSaveToCollection = (id: string, collectionName: string) => {
+    setSavedCollections(prev => {
+      const currentList = prev[collectionName] || [];
+      const updated = currentList.includes(id) 
+        ? currentList.filter(item => item !== id)
+        : [...currentList, id];
+      return {
+        ...prev,
+        [collectionName]: updated
+      };
+    });
+
+    window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
+      detail: `✓ Collection "${collectionName}" synchronized!`
+    }));
+  };
+
+  const handleAddCustomCollectionName = (colName: string) => {
+    if (!customCollections.includes(colName)) {
+      setCustomCollections(prev => [...prev, colName]);
     }
   };
 
-  // --- 3D SOLVER AND COMPILATION SIMULATOR ---
+  // Remix preset preloading
+  const handleRemixLook = (creation: AICreation) => {
+    setActiveTab('3D_LAB');
+    setCustomDetails(creation.prompt);
+    setSelectedLook(null);
+    window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
+      detail: '✦ Preloaded design prompt into 3D Parameter workbench!'
+    }));
+  };
+
+  const handleGenerateVariations = (creation: AICreation) => {
+    window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
+      detail: '✦ Solved visual variation! Pre-rendered asset appended.'
+    }));
+  };
+
+  // Portfolio navigation triggers
+  const handleVisitCreatorProfile = (creatorId: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setActiveTab('PORTFOLIO');
+    setSelectedLook(null);
+  };
+
+  // Creative actions
+  const handleDeleteLook = (id: string) => {
+    // Hide or filter out look
+    setDbLooks(prev => prev.filter(look => look.id !== id));
+    setSelectedLook(null);
+    window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
+      detail: '✓ AI Concept permanently deleted'
+    }));
+  };
+
+  const handleArchiveLook = (id: string) => {
+    setDbLooks(prev => prev.map(look => look.id === id ? { ...look, status: 'Archived' } : look));
+    setSelectedLook(null);
+    window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
+      detail: '✓ AI Concept moved to offline archives'
+    }));
+  };
+
+  const handleDuplicateLook = (creation: AICreation) => {
+    const clone: AICreation = {
+      ...creation,
+      id: `clone-look-${Date.now()}`,
+      title: `${creation.title} (Clone)`,
+      createdAt: new Date().toISOString()
+    };
+    setDbLooks(prev => [clone, ...prev]);
+    setSelectedLook(clone);
+    window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
+      detail: '✓ AI Concept duplicated successfully'
+    }));
+  };
+
+  // --- 3D SOLVER AND COMPILATION SIMULATOR (Fully Preserved Generation Pipeline) ---
   const handleExecute3DRender = async () => {
     if (isRendering) return;
 
@@ -238,7 +385,7 @@ export const AIEngineStudio: React.FC<AIEngineStudioProps> = ({
       `[4.2s] Finalizing color grading & HDR post-process. Creating snapshot...`
     ];
 
-    // Stream logs
+    // Stream logs synchronously
     for (let i = 0; i < steps.length; i++) {
       await new Promise(resolve => setTimeout(resolve, 550));
       setRenderLogs(prev => [...prev, steps[i]]);
@@ -270,17 +417,33 @@ export const AIEngineStudio: React.FC<AIEngineStudioProps> = ({
 
     const finalPrompt = `Highly advanced 3D render of a ${title}. Mesh geometry: ${meshNames[garmentMesh]} mapped meticulously on ${avatarNames[avatarType]}. Developed using ${engineNames[renderEngine]} under ${physicsNames[drapePhysics]} tension. ${customDetails ? `Custom parameters: ${customDetails}` : ''}`;
 
-    const newLook: AILook = {
+    // Automatically perform all professional prompt engineering internally!
+    const enhancedResult = PromptIntelligenceEngine.optimize(finalPrompt);
+    const productionResult = GenerationIntelligenceEngine.process(enhancedResult, finalPrompt);
+    const optimizedFinalPrompt = productionResult.prompt;
+    const optimizedNegativePrompt = productionResult.negativePrompt;
+
+    const newLook: AICreation = {
       id: `sim-look-${Date.now()}`,
       title,
-      prompt: finalPrompt,
+      prompt: optimizedFinalPrompt,
+      negativePrompt: optimizedNegativePrompt,
       imageUrl,
-      provider: engineNames[renderEngine],
-      vibe: vibePreset,
-      season: 'All-Season',
+      imageUrlBefore: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800',
+      model: engineNames[renderEngine],
+      style: vibePreset,
+      resolution: '1024x1024',
+      aspectRatio: '1:1',
       createdAt: new Date().toISOString(),
+      seed: String(Math.floor(Math.random() * 900000) + 100000),
       likesCount: 150,
-      commentsCount: 6
+      viewsCount: 520,
+      savesCount: 12,
+      commentsCount: 6,
+      creator: MOCK_CREATORS.currentUser,
+      status: 'Published',
+      tags: ['interactive', vibePreset.toLowerCase()],
+      colorPalette: ['#12121c', '#ececf2']
     };
 
     // Save to Firestore if available
@@ -289,11 +452,14 @@ export const AIEngineStudio: React.FC<AIEngineStudioProps> = ({
         await addDoc(collection(db, 'generatedLooks'), {
           vibe: vibePreset,
           theme: vibePreset,
-          prompt: finalPrompt,
+          prompt: optimizedFinalPrompt,
+          negativePrompt: optimizedNegativePrompt,
           imageUrl,
           provider: engineNames[renderEngine],
           season: 'All-Season',
-          createdAt: serverTimestamp()
+          createdAt: serverTimestamp(),
+          qualityScores: productionResult.qualityScores,
+          criticFeedback: productionResult.criticFeedback
         });
         window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
           detail: '✓ Concept published to the Global Creations Feed!'
@@ -307,74 +473,250 @@ export const AIEngineStudio: React.FC<AIEngineStudioProps> = ({
     setIsRendering(false);
   };
 
-  // Compute final lists for creations feed
-  const displayLooks = dbLooks.length > 0 ? dbLooks : SEED_CREATIONS;
-  const vibesList = ['All', ...Array.from(new Set(displayLooks.map(l => l.vibe).filter(Boolean)))];
-  const seasonsList = ['All', ...Array.from(new Set(displayLooks.map(l => l.season).filter(Boolean)))];
-
-  const filteredLooks = displayLooks.filter(look => {
-    const matchesSearch = look.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          look.prompt.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesVibe = selectedVibe === 'All' || look.vibe === selectedVibe;
-    const matchesSeason = selectedSeason === 'All' || look.season === selectedSeason;
-    return matchesSearch && matchesVibe && matchesSeason;
-  });
-
   return (
     <div className="space-y-8 select-none animate-fade-in text-white py-2">
       
-      {/* HEADER SECTION */}
+      {/* ATELIER NAVIGATION BANNER */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 pb-4 border-b border-white/5">
         <div className="text-left">
           <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-violet-400 block font-bold">
             Interactive AI Atelier
           </span>
           <h2 className="font-serif font-light tracking-[-0.03em] text-3xl text-white mt-1">
-            AI Creations Studio
+            Atelier AI Creations
           </h2>
           <p className="text-xs text-white/40 font-serif italic mt-1">
-            "Construct high-concept garments on virtual bodies or browse continuous designs generated by fashion creators."
+            "Enter a luxury portfolio showcasing high-fashion generative meshes, verified digital garments, and interactive cloth solvers."
           </p>
         </div>
 
-        {/* Tab switcher: Design Lab vs creations feed */}
-        <div className="flex bg-[#07070c] border border-white/5 p-1 rounded-xl">
-          <button
-            onClick={() => setActiveTab('DESIGN_LAB')}
-            className={`flex items-center gap-1.5 px-4 py-2 text-xs font-mono font-semibold uppercase tracking-wider rounded-lg transition-all cursor-pointer ${
-              activeTab === 'DESIGN_LAB'
-                ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-500/10'
-                : 'text-zinc-500 hover:text-white'
-            }`}
-          >
-            <Cpu className="w-3.5 h-3.5" />
-            <span>3D Design Lab</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('CREATIONS_FEED')}
-            className={`flex items-center gap-1.5 px-4 py-2 text-xs font-mono font-semibold uppercase tracking-wider rounded-lg transition-all cursor-pointer ${
-              activeTab === 'CREATIONS_FEED'
-                ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-500/10'
-                : 'text-zinc-500 hover:text-white'
-            }`}
-          >
-            <Layers className="w-3.5 h-3.5" />
-            <span>Creations Feed</span>
-          </button>
+        {/* Tab switch mechanism */}
+        <div className="flex bg-[#07070c] border border-white/5 p-1 rounded-xl shadow-inner shrink-0">
+          {[
+            { id: 'DISCOVERY', label: 'Discovery Feed', icon: Compass },
+            { id: 'GALLERY', label: 'Continuous Showroom', icon: Layers },
+            { id: 'PORTFOLIO', label: 'My Portfolio', icon: User },
+            { id: '3D_LAB', label: '3D Solver Lab', icon: Cpu }
+          ].map(tab => {
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`flex items-center gap-1.5 px-4 py-2 text-xs font-mono font-semibold uppercase tracking-wider rounded-lg transition-all cursor-pointer ${
+                  activeTab === tab.id
+                    ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-500/10'
+                    : 'text-zinc-500 hover:text-white'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* RENDER ACTIVE TAB */}
+      {/* CORE EXPERIENCE RENDER SWITCH */}
       <AnimatePresence mode="wait">
-        {activeTab === 'DESIGN_LAB' ? (
+        
+        {/* TAB 1: DISCOVERY FEED */}
+        {activeTab === 'DISCOVERY' && (
           <motion.div
-            key="design_lab"
+            key="discovery"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+          >
+            <DiscoverySection
+              creations={allCreations}
+              likedMap={likedMap}
+              onSelectCreation={setSelectedLook}
+              onLikeCreation={handleToggleLike}
+              onSaveCreation={(id, e) => handleSaveToCollection(id, 'Favorites')}
+              onVisitCreator={handleVisitCreatorProfile}
+              onFollowCreator={handleToggleFollow}
+              followingCreators={followingMap}
+            />
+          </motion.div>
+        )}
+
+        {/* TAB 2: CONTINUOUS SHOWROOM (REBUILT GALLERY VIEW) */}
+        {activeTab === 'GALLERY' && (
+          <motion.div
+            key="gallery"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            className="space-y-6 text-left"
+          >
+            {/* Search, Sorting & Filters bar */}
+            <div className="bg-[#07070c] border border-white/5 rounded-2xl p-4 shadow-xl space-y-4">
+              <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
+                
+                {/* Text search */}
+                <div className="relative w-full md:max-w-md">
+                  <Search className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="Search by prompt, style, tag, creator..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full bg-[#11111a] border border-white/5 rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-violet-500/50 transition-colors"
+                  />
+                </div>
+
+                {/* Sorting choices & Advanced filters toggle */}
+                <div className="flex items-center gap-3 w-full md:w-auto overflow-x-auto no-scrollbar shrink-0">
+                  <div className="flex bg-[#11111a] border border-white/5 p-1 rounded-xl">
+                    {['Trending', 'Newest', 'Most Liked', 'Most Viewed', 'Most Saved'].map(sortOpt => (
+                      <button
+                        key={sortOpt}
+                        onClick={() => setActiveFilter(sortOpt)}
+                        className={`px-3 py-1.5 text-[10px] font-mono uppercase tracking-wider rounded-lg transition-all cursor-pointer ${
+                          activeFilter === sortOpt ? 'bg-zinc-800 text-violet-300 font-bold' : 'text-zinc-500 hover:text-zinc-300'
+                        }`}
+                      >
+                        {sortOpt}
+                      </button>
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                    className={`p-2 rounded-xl border flex items-center justify-center gap-1.5 font-mono text-[10px] uppercase tracking-widest transition-all cursor-pointer ${
+                      showAdvancedFilters ? 'bg-violet-600/10 border-violet-500 text-violet-300' : 'bg-[#11111a] border-white/5 text-zinc-400 hover:text-white'
+                    }`}
+                  >
+                    <ListFilter className="w-4 h-4" />
+                    <span>Filters</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Advanced Parameter Selectors */}
+              <AnimatePresence>
+                {showAdvancedFilters && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-white/[0.04] overflow-hidden"
+                  >
+                    {/* Style selector */}
+                    <div className="space-y-1.5 text-left">
+                      <label className="text-[9px] font-mono uppercase text-zinc-500 tracking-wider">Style preset</label>
+                      <select
+                        value={selectedStyle}
+                        onChange={(e) => setSelectedStyle(e.target.value)}
+                        className="w-full bg-[#11111a] border border-white/5 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-violet-500/50 cursor-pointer"
+                      >
+                        <option value="All">All styles (Streetwear, Luxury, Fantasy, etc.)</option>
+                        {stylesList.filter(s => s !== 'All').map(s => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Model selector */}
+                    <div className="space-y-1.5 text-left">
+                      <label className="text-[9px] font-mono uppercase text-zinc-500 tracking-wider">AI Generator Model</label>
+                      <select
+                        value={selectedModel}
+                        onChange={(e) => setSelectedModel(e.target.value)}
+                        className="w-full bg-[#11111a] border border-white/5 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-violet-500/50 cursor-pointer"
+                      >
+                        <option value="All">All models (Imagen, Flux, Midjourney)</option>
+                        {modelsList.filter(m => m !== 'All').map(m => (
+                          <option key={m} value={m}>{m}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Resolution selector */}
+                    <div className="space-y-1.5 text-left">
+                      <label className="text-[9px] font-mono uppercase text-zinc-500 tracking-wider">Asset Resolution</label>
+                      <select
+                        value={selectedResolution}
+                        onChange={(e) => setSelectedResolution(e.target.value)}
+                        className="w-full bg-[#11111a] border border-white/5 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-violet-500/50 cursor-pointer"
+                      >
+                        <option value="All">All resolutions</option>
+                        {resolutionsList.filter(r => r !== 'All').map(r => (
+                          <option key={r} value={r}>{r}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Continuous creations grid */}
+            {loadingLooks ? (
+              <div className="flex flex-col items-center justify-center py-24 space-y-3">
+                <RefreshCw className="w-8 h-8 text-violet-400 animate-spin" />
+                <span className="text-zinc-500 text-xs font-mono">Synchronizing continuous showroom...</span>
+              </div>
+            ) : filteredCreations.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 border border-dashed border-white/5 rounded-2xl bg-[#07070c]/50">
+                <span className="text-zinc-400 text-xs font-sans">No matching AI Creations found.</span>
+                <button 
+                  onClick={() => { setSearchQuery(""); setSelectedStyle("All"); setSelectedModel("All"); setSelectedResolution("All"); }}
+                  className="mt-3 text-[10px] text-violet-400 hover:text-white font-mono uppercase tracking-wider underline cursor-pointer"
+                >
+                  Clear Filters
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                {filteredCreations.map((look) => (
+                  <CreationCard
+                    key={look.id}
+                    creation={look}
+                    onSelect={setSelectedLook}
+                    onLike={handleToggleLike}
+                    isLiked={!!likedMap[look.id]}
+                    onSave={(id, e) => handleSaveToCollection(id, 'Favorites')}
+                    isSaved={savedCollections['Favorites']?.includes(look.id)}
+                    onVisitCreator={handleVisitCreatorProfile}
+                  />
+                ))}
+              </div>
+            )}
+          </motion.div>
+        )}
+
+        {/* TAB 3: USER PORTFOLIO */}
+        {activeTab === 'PORTFOLIO' && (
+          <motion.div
+            key="portfolio"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+          >
+            <PortfolioSection
+              creator={MOCK_CREATORS.currentUser}
+              creations={allCreations}
+              likedMap={likedMap}
+              savedCollections={savedCollections}
+              onSelectCreation={setSelectedLook}
+              onLikeCreation={handleToggleLike}
+              onSaveCreation={(id, e) => handleSaveToCollection(id, 'Favorites')}
+              onVisitCreator={handleVisitCreatorProfile}
+            />
+          </motion.div>
+        )}
+
+        {/* TAB 4: 3D SOLVER DESIGN LAB (Preserved Interactive Generator) */}
+        {activeTab === '3D_LAB' && (
+          <motion.div
+            key="3d_lab"
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -15 }}
             className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start text-left"
           >
-            
             {/* Left 7 Columns: Parameter Sandbox */}
             <div className="lg:col-span-7 bg-[#07070c] border border-white/5 rounded-3xl p-6 space-y-6 shadow-2xl relative overflow-hidden">
               <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
@@ -482,7 +824,7 @@ export const AIEngineStudio: React.FC<AIEngineStudioProps> = ({
               {/* 4. DESIGN VIBE PRESETS */}
               <div className="space-y-3">
                 <label className="text-[10px] font-mono uppercase text-zinc-400 tracking-wider block">
-                  5. Style Concept Direction
+                  5. Style Direction
                 </label>
                 <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
                   {['Cyberpunk', 'Minimalist', 'Avant-Garde', 'Desert', 'Future-Punk'].map(v => (
@@ -505,7 +847,7 @@ export const AIEngineStudio: React.FC<AIEngineStudioProps> = ({
               {/* CUSTOM DETAILS */}
               <div className="space-y-2">
                 <label className="text-[10px] font-mono uppercase text-zinc-400 tracking-wider block">
-                  6. Fine Detail Engineering Details
+                  6. Fine Detail Engineering details
                 </label>
                 <textarea
                   placeholder="e.g., iridescent liquid nylon fibers, asymmetrical laser-cut vents, chrome rivets..."
@@ -654,7 +996,16 @@ export const AIEngineStudio: React.FC<AIEngineStudioProps> = ({
                       {/* Import and Share Buttons */}
                       <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/5">
                         <button
-                          onClick={() => handleRemixLook(generatedLookResult)}
+                          onClick={() => {
+                            if (onAddGarment) {
+                              onAddGarment(
+                                generatedLookResult.title,
+                                generatedLookResult.prompt,
+                                'Outerwear',
+                                { imageUrl: generatedLookResult.imageUrl }
+                              );
+                            }
+                          }}
                           className="flex items-center justify-center gap-1.5 bg-white text-black font-sans font-bold text-[10px] uppercase py-2 rounded-xl transition-all hover:bg-zinc-200 active:scale-95 cursor-pointer"
                         >
                           <Share2 className="w-3 h-3 text-black" />
@@ -662,7 +1013,7 @@ export const AIEngineStudio: React.FC<AIEngineStudioProps> = ({
                         </button>
                         <button
                           onClick={() => {
-                            setActiveTab('CREATIONS_FEED');
+                            setActiveTab('GALLERY');
                             window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
                               detail: '✦ Navigated to continuous showroom!'
                             }));
@@ -695,264 +1046,31 @@ export const AIEngineStudio: React.FC<AIEngineStudioProps> = ({
             </div>
 
           </motion.div>
-        ) : (
-          <motion.div
-            key="creations"
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -15 }}
-            className="space-y-6 text-left animate-fade-in"
-          >
-            {/* SEARCH & FILTERS CONTROLS */}
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center bg-[#07070c] border border-white/5 rounded-2xl p-4 shadow-xl">
-              <div className="md:col-span-4 relative">
-                <Search className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  placeholder="Search prompts or themes..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-[#11111a] border border-white/5 rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-violet-500/50 transition-colors"
-                />
-              </div>
-
-              {/* Vibe Filter */}
-              <div className="md:col-span-4 flex items-center gap-2">
-                <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider shrink-0">Vibe:</span>
-                <div className="flex gap-1.5 overflow-x-auto no-scrollbar py-1">
-                  {vibesList.map(vibe => (
-                    <button
-                      key={vibe}
-                      onClick={() => setSelectedVibe(vibe)}
-                      className={`px-3 py-1 rounded-full text-[10px] font-medium transition-all shrink-0 cursor-pointer ${
-                        selectedVibe === vibe
-                          ? 'bg-violet-600/20 text-violet-300 border border-violet-500/30'
-                          : 'bg-[#11111a] text-zinc-400 border border-white/5 hover:text-white'
-                      }`}
-                    >
-                      {vibe}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Season Filter */}
-              <div className="md:col-span-4 flex items-center gap-2">
-                <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider shrink-0">Season:</span>
-                <div className="flex gap-1.5 overflow-x-auto no-scrollbar py-1">
-                  {seasonsList.map(season => (
-                    <button
-                      key={season}
-                      onClick={() => setSelectedSeason(season)}
-                      className={`px-3 py-1 rounded-full text-[10px] font-medium transition-all shrink-0 cursor-pointer ${
-                        selectedSeason === season
-                          ? 'bg-violet-600/20 text-violet-300 border border-violet-500/30'
-                          : 'bg-[#11111a] text-zinc-400 border border-white/5 hover:text-white'
-                      }`}
-                    >
-                      {season}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* CREATIONS GRID */}
-            {loadingLooks ? (
-              <div className="flex flex-col items-center justify-center py-24 space-y-3">
-                <RefreshCw className="w-8 h-8 text-violet-400 animate-spin" />
-                <span className="text-zinc-500 text-xs font-mono">Synchronizing Sarto-Intelligence Feed...</span>
-              </div>
-            ) : filteredLooks.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 border border-dashed border-white/5 rounded-2xl bg-[#07070c]/50">
-                <span className="text-zinc-400 text-xs font-sans">No matching AI Creations found.</span>
-                <button 
-                  onClick={() => { setSearchQuery(""); setSelectedVibe("All"); setSelectedSeason("All"); }}
-                  className="mt-3 text-[10px] text-violet-400 hover:text-white font-mono uppercase tracking-wider underline cursor-pointer"
-                >
-                  Clear Filters
-                </button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                {filteredLooks.map((look) => (
-                  <motion.div
-                    key={look.id}
-                    layoutId={`look-card-${look.id}`}
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    onClick={() => setSelectedLook(look)}
-                    className="group bg-[#080810]/60 border border-white/5 rounded-2xl overflow-hidden relative aspect-[3/4.2] hover:border-violet-500/20 hover:scale-[1.01] transition-all duration-300 shadow-xl cursor-pointer flex flex-col justify-between"
-                  >
-                    {/* Background Image */}
-                    <div className="absolute inset-0 bg-zinc-950 z-0">
-                      <img
-                        src={look.imageUrl}
-                        alt={look.title}
-                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                        onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?q=80&w=200&auto=format&fit=crop"; }}
-                      />
-                    </div>
-
-                    {/* Gradient Overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent z-0" />
-
-                    {/* Verfied AI Stamp Overlay */}
-                    <div className="absolute top-3 left-3 z-10">
-                      <span className="text-[8px] font-sans font-bold bg-black/70 backdrop-blur-md text-violet-300 px-2 py-0.5 rounded-full border border-white/10 flex items-center gap-1 shadow-sm">
-                        <Sparkles className="w-2.5 h-2.5 text-violet-400" /> {look.provider.split(' ')[0] || 'AI'}
-                      </span>
-                    </div>
-
-                    {/* Heart Option Overlay */}
-                    <button
-                      onClick={(e) => handleToggleLike(look.id, e)}
-                      className="absolute top-3 right-3 p-1.5 bg-black/70 backdrop-blur-md hover:bg-rose-500/20 text-white hover:text-rose-400 border border-white/10 rounded-full transition-all cursor-pointer z-10 active:scale-90"
-                    >
-                      <Heart className={`w-3.5 h-3.5 ${likedMap[look.id] ? 'fill-rose-500 text-rose-500' : ''}`} />
-                    </button>
-
-                    {/* Bottom Info Block */}
-                    <div className="absolute bottom-0 left-0 right-0 p-3.5 space-y-2 z-10 text-left">
-                      <div>
-                        <span className="text-[8px] font-mono text-violet-400 uppercase tracking-widest block font-semibold mb-0.5">{look.vibe} • {look.season}</span>
-                        <h4 className="text-[12px] font-bold text-white truncate">{look.title}</h4>
-                        <p className="text-[9px] font-sans text-zinc-400 line-clamp-2 mt-0.5 leading-relaxed font-light">{look.prompt}</p>
-                      </div>
-
-                      {/* Footer Row */}
-                      <div className="flex justify-between items-center text-[9px] font-mono text-zinc-400 pt-1.5 border-t border-white/5">
-                        <div className="flex items-center gap-2">
-                          <span className="flex items-center gap-1">
-                            <Heart className={`w-3 h-3 ${likedMap[look.id] ? 'fill-rose-500 text-rose-500' : ''}`} />
-                            <span>{likedMap[look.id] ? (look.likesCount || 100) + 1 : (look.likesCount || 100)}</span>
-                          </span>
-                          <span className="flex items-center gap-1 text-zinc-500">
-                            <MessageCircle className="w-3 h-3" />
-                            <span>{look.commentsCount || 12}</span>
-                          </span>
-                        </div>
-
-                        <span className="text-[8px] text-zinc-500">View Detail</span>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            )}
-          </motion.div>
         )}
+
       </AnimatePresence>
 
-      {/* DETAIL MODAL OVERLAY */}
+      {/* FULLSCREEN DETAIL MODAL VIEW (IMAGE EXPERIENCE) */}
       <AnimatePresence>
         {selectedLook && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md text-left">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-[#07070c] border border-white/5 w-full max-w-3xl rounded-3xl overflow-hidden shadow-2xl relative grid grid-cols-1 md:grid-cols-2"
-            >
-              {/* Close Button */}
-              <button
-                onClick={() => setSelectedLook(null)}
-                className="absolute top-4 right-4 p-2 bg-black/60 hover:bg-white/10 text-white rounded-full transition-all border border-white/10 z-20 cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-
-              {/* Left Column: Image Canvas */}
-              <div className="aspect-[3/4] bg-zinc-950 relative">
-                <img
-                  src={selectedLook.imageUrl}
-                  alt={selectedLook.title}
-                  className="w-full h-full object-cover"
-                  onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?q=80&w=200&auto=format&fit=crop"; }}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
-                <div className="absolute bottom-4 left-4 z-10 flex gap-2">
-                  <span className="text-[9px] font-mono uppercase bg-violet-600/35 text-violet-200 px-2.5 py-1 rounded-full border border-violet-500/30 font-bold backdrop-blur-sm">
-                    {selectedLook.vibe}
-                  </span>
-                  <span className="text-[9px] font-mono uppercase bg-black/60 text-zinc-300 px-2.5 py-1 rounded-full border border-white/10 font-bold backdrop-blur-sm">
-                    {selectedLook.season}
-                  </span>
-                </div>
-              </div>
-
-              {/* Right Column: Spec Info & Actions */}
-              <div className="p-6 flex flex-col justify-between h-full bg-[#090910]">
-                <div className="space-y-5">
-                  <div className="space-y-1">
-                    <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-indigo-400 font-bold">
-                      Design Detail
-                    </span>
-                    <h3 className="text-xl font-bold font-sans text-white tracking-wide leading-tight">
-                      {selectedLook.title}
-                    </h3>
-                  </div>
-
-                  <div className="space-y-2">
-                    <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider block">Prompt Specification:</span>
-                    <div className="bg-[#11111a] border border-white/5 rounded-xl p-3.5 relative group">
-                      <p className="text-[11px] text-zinc-300 font-sans leading-relaxed select-text">
-                        {selectedLook.prompt}
-                      </p>
-                      <button
-                        onClick={() => handleCopyPrompt(selectedLook)}
-                        className="absolute right-2.5 bottom-2.5 p-1.5 bg-black/50 hover:bg-violet-600/25 border border-white/5 rounded-lg text-zinc-400 hover:text-white transition-all cursor-pointer"
-                        title="Copy prompt"
-                      >
-                        {copiedPromptId === selectedLook.id ? (
-                          <Check className="w-3.5 h-3.5 text-emerald-400" />
-                        ) : (
-                          <Copy className="w-3.5 h-3.5" />
-                        )}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4 text-xs font-mono text-zinc-400 border-t border-b border-white/5 py-3">
-                    <div>
-                      <span className="text-[9px] text-zinc-600 uppercase block">AI Generator:</span>
-                      <span className="text-white text-[11px] font-bold tracking-wide">{selectedLook.provider}</span>
-                    </div>
-                    <div>
-                      <span className="text-[9px] text-zinc-600 uppercase block">Created On:</span>
-                      <span className="text-white text-[11px]">{new Date(selectedLook.createdAt).toLocaleDateString()}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-3 pt-6">
-                  {onAddGarment ? (
-                    <button
-                      onClick={() => handleRemixLook(selectedLook)}
-                      className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white font-sans font-bold text-xs uppercase py-3 rounded-xl tracking-wider flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-indigo-500/20 active:scale-[0.98] transition-all"
-                    >
-                      <RefreshCw className="w-4 h-4" />
-                      <span>Export to 3D Workspace</span>
-                    </button>
-                  ) : (
-                    <div className="text-center text-[10px] font-mono text-zinc-500">
-                      Connect closet account to download styles
-                    </div>
-                  )}
-
-                  <button
-                    onClick={() => handleToggleLike(selectedLook.id)}
-                    className="w-full bg-[#11111a] hover:bg-[#161622] border border-white/5 text-zinc-300 hover:text-white font-sans font-semibold text-xs py-3 rounded-xl tracking-wider flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-[0.98]"
-                  >
-                    <Heart className={`w-4 h-4 ${likedMap[selectedLook.id] ? 'fill-rose-500 text-rose-500' : ''}`} />
-                    <span>
-                      {likedMap[selectedLook.id] ? 'Liked Outfit' : 'Like Concept'}
-                    </span>
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </div>
+          <ImageExperienceModal
+            creation={selectedLook}
+            onClose={() => setSelectedLook(null)}
+            onLike={(id) => handleToggleLike(id)}
+            isLiked={!!likedMap[selectedLook.id]}
+            onSave={handleSaveToCollection}
+            isSaved={savedCollections['Favorites']?.includes(selectedLook.id)}
+            onRemix={handleRemixLook}
+            onGenerateVariations={handleGenerateVariations}
+            onFollowCreator={handleToggleFollow}
+            isFollowingCreator={!!followingMap[selectedLook.creator.id]}
+            onVisitCreator={handleVisitCreatorProfile}
+            onDelete={handleDeleteLook}
+            onArchive={handleArchiveLook}
+            onDuplicate={handleDuplicateLook}
+            onAddCustomCollection={handleAddCustomCollectionName}
+            customCollections={customCollections}
+          />
         )}
       </AnimatePresence>
 

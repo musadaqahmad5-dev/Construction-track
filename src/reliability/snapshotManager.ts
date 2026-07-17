@@ -12,9 +12,10 @@ export class SnapshotManager {
   private static STORAGE_KEY = 'fashion_platform_snapshots';
 
   static getSnapshots(): PlatformSnapshot[] {
-    const raw = localStorage.getItem(this.STORAGE_KEY);
-    if (!raw) return [];
+    if (typeof localStorage === 'undefined') return [];
     try {
+      const raw = localStorage.getItem(this.STORAGE_KEY);
+      if (!raw) return [];
       return JSON.parse(raw);
     } catch {
       return [];
@@ -22,7 +23,10 @@ export class SnapshotManager {
   }
 
   static saveSnapshots(snapshots: PlatformSnapshot[]): void {
-    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(snapshots));
+    if (typeof localStorage === 'undefined') return;
+    try {
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(snapshots));
+    } catch {}
   }
 
   /**

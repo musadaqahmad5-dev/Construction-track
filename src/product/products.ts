@@ -9,27 +9,27 @@ import {
 } from '../engine/sharedEngines';
 import { FashionKnowledgeGraphEngine } from '../engine/fashionKnowledgeGraph';
 import { WardrobeItem } from '../types';
+import { 
+  HomeGenerateRequest, 
+  HomeGenerateResult, 
+  AICreationRequest, 
+  AICreationResult, 
+  MarketplaceProductItem, 
+  CommunityPost 
+} from '../core/contracts';
+
+export type { 
+  HomeGenerateRequest, 
+  HomeGenerateResult, 
+  AICreationRequest, 
+  AICreationResult, 
+  MarketplaceProductItem, 
+  CommunityPost 
+};
 
 // ============================================================================
 // PRODUCT 1: HOME GENERATE (Personal Fashion vs AI Model inspiration)
 // ============================================================================
-export interface HomeGenerateRequest {
-  userId: string;
-  userPhotoUrl?: string; // Mode A if provided, otherwise Mode B
-  gender: 'male' | 'female' | 'unisex';
-  vibe: string;
-  season: string;
-  customDetails?: string;
-}
-
-export interface HomeGenerateResult {
-  imageUrl: string;
-  mode: 'PERSONAL_FASHION_TRYON' | 'AI_MODEL_INSPIRATION';
-  isPrivate: boolean;
-  modelFaceUsed: string;
-  avatarShape: string;
-  promptFingerprint: string;
-}
 
 export class HomeGenerateProduct {
   static async generateFashion(req: HomeGenerateRequest): Promise<HomeGenerateResult> {
@@ -85,24 +85,6 @@ export class HomeGenerateProduct {
 // ============================================================================
 // PRODUCT 2: AI CREATIONS (Professional High-Concept Artworks)
 // ============================================================================
-export interface AICreationRequest {
-  creatorId: string;
-  meshPreset: string;
-  vibePreset: string;
-  renderEngine: string;
-  drapePhysics: string;
-  customDetails?: string;
-}
-
-export interface AICreationResult {
-  creationId: string;
-  imageUrl: string;
-  title: string;
-  prompt: string;
-  provider: string;
-  isPrivateOnly: boolean; // Never published automatically
-  approvalRequiredToExport: boolean;
-}
 
 export class AICreationsProduct {
   private static localCreations = new Map<string, AICreationResult>();
@@ -162,15 +144,6 @@ export class AICreationsProduct {
 // ============================================================================
 // PRODUCT 3: MARKETPLACE (Pure Commerce Interface & Recommendation Linking)
 // ============================================================================
-export interface MarketplaceProductItem {
-  id: string;
-  title: string;
-  category: string;
-  price: number;
-  seller: string;
-  brand: string;
-  imageUrl: string;
-}
 
 export class MarketplaceProduct {
   // Pure authentic catalog list
@@ -201,14 +174,6 @@ export class MarketplaceProduct {
 // ============================================================================
 // PRODUCT 4: COMMUNITY (Intentionally Shared Content with User Approval)
 // ============================================================================
-export interface CommunityPost {
-  postId: string;
-  userId: string;
-  imageUrl: string;
-  description: string;
-  sharedAt: string;
-  approved: boolean;
-}
 
 export class CommunityProduct {
   private static posts: CommunityPost[] = [];
