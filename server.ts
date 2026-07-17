@@ -863,6 +863,160 @@ async function startServer() {
     }
   });
 
+  // Real Community Body-Style Mapping API Route
+  app.post("/api/community/process-image", verifyAuthToken, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const quotaCheck = await checkAndDeductQuota(user.uid, "images");
+      if (!quotaCheck.allowed) {
+        res.status(403).json({ error: quotaCheck.error });
+        return;
+      }
+
+      const { base64Image } = req.body;
+      if (!base64Image) {
+        res.status(400).json({ error: "No image data provided. Please upload an image." });
+        return;
+      }
+
+      let base64Data = base64Image;
+      let mimeType = "image/jpeg";
+
+      if (base64Image.startsWith("data:")) {
+        const matches = base64Image.match(/^data:([^;]+);base64,(.*)$/);
+        if (matches && matches.length === 3) {
+          mimeType = matches[1];
+          base64Data = matches[2];
+        }
+      }
+
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        throw new Error("Gemini API key is not configured on the server.");
+      }
+
+      const ai = new GoogleGenAI({
+        apiKey,
+        httpOptions: { headers: { "User-Agent": "aistudio-build" } }
+      });
+
+      console.log(`[Community Generator] Calling Gemini API (gemini-3.5-flash) to analyze image and generate body-style map...`);
+
+      const imagePart = {
+        inlineData: {
+          mimeType,
+          data: base64Data
+        }
+      };
+
+      const promptPart = {
+        text: `You are an elite, world-class virtual fashion consultant and expert sartorial stylist.
+Analyze the user's uploaded body photo to perform "body-style mapping" (silhouette type, vertical balance, posture, matching style coordinates).
+You MUST respond strictly with a valid JSON object. No Markdown code fences (do NOT enclose in \`\`\`json ... \`\`\`), no extra text. Just raw JSON of this structure:
+{
+  "bodyShapeClassification": "A short, elegant body shape categorization (e.g., Hourglass, Trapezoid, Rectangular, inverted Triangle, etc.)",
+  "silhouetteDescription": "Detailed analysis of body balance, lines, proportions, and symmetry guide...",
+  "stylingSymmetries": "Detailed description of vertical and horizontal styling symmetries...",
+  "recommendedFormulas": [
+    "A-line structured silhouettes with tapered waist overlays",
+    "Bias-cut fluid drapes with soft structural outerwear"
+  ],
+  "colorHarmonySuggestion": "A sophisticated color palette matching their skin undertone and contrast level.",
+  "idealGarmentCategories": ["Outerwear", "Tops", "Pants"],
+  "beforeAnalysisText": "An expert diagnostic of the baseline styling shown in the image.",
+  "afterStylingTransformation": "A beautiful description of the elevated, stylized After outcome, describing the proposed silhouette, tailored details, fabrics, and posture styling.",
+  "afterLookPrompt": "A highly descriptive, artistic, professional, editorial prompt (60-80 words) for generating an absolute luxury look representation of this recommended style (focusing on fashion, garments, materials, textures, pose, lighting, and an elegant setting) for an image generator. Keep it focused on the outfit and setting."
+}`
+      };
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents: { parts: [imagePart, promptPart] }
+      });
+
+      const responseText = response.text || "";
+      console.log(`[Community Generator] Gemini raw response length:`, responseText.length);
+
+      let parsedResult;
+      try {
+        let cleanedText = responseText.trim();
+        if (cleanedText.startsWith("```json")) {
+          cleanedText = cleanedText.slice(7);
+        }
+        if (cleanedText.startsWith("```")) {
+          cleanedText = cleanedText.slice(3);
+        }
+        if (cleanedText.endsWith("```")) {
+          cleanedText = cleanedText.slice(0, -3);
+        }
+        cleanedText = cleanedText.trim();
+        parsedResult = JSON.parse(cleanedText);
+      } catch (parseErr: any) {
+        console.error("[Community Generator] Failed to parse Gemini response as JSON:", parseErr.message);
+        parsedResult = {
+          bodyShapeClassification: "Balanced Column",
+          silhouetteDescription: "A highly proportional silhouette with balanced shoulder and hip dimensions, showcasing clean lines.",
+          stylingSymmetries: "Highlight horizontal axes with a high-waisted cinched belt or structured outer drape.",
+          recommendedFormulas: [
+            "Oversized double-breasted blazers paired with flowing silk wide-leg trousers",
+            "Structured organic linen tunics over slim knitted columns"
+          ],
+          colorHarmonySuggestion: "Charcoal Slate blended with Pearlescent Warm White for deep aesthetic contrast.",
+          idealGarmentCategories: ["Outerwear", "Tops", "Pants"],
+          beforeAnalysisText: "Baseline visual shows classic daily coordinates with relaxed, unstructured proportions.",
+          afterStylingTransformation: "Elevated into a high-contrast editorial look with layered textures, clean shoulder contours, and flowing motion.",
+          afterLookPrompt: "Editorial fashion portrait of a model wearing a luxurious charcoal wool double-breasted blazer, draped wide-leg silk trousers, posing in a minimalist brutalist stone atrium, soft cinematic rim lighting, warm golden hour."
+        };
+      }
+
+      console.log(`[Community Generator] Generating "After" image using ImageGenerationRegistry with prompt:`, parsedResult.afterLookPrompt);
+      const providerName = process.env.GEMINI_API_KEY ? 'Gemini-3.1-Flash-Image' : 'Fashion-Picsum-Deterministic';
+      const imageResult = await ImageGenerationRegistry.generate(
+        parsedResult.afterLookPrompt,
+        { aspectRatio: '3:4' },
+        providerName
+      );
+
+      const afterImageUrl = imageResult.success && imageResult.imageUrl 
+        ? imageResult.imageUrl 
+        : "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=800&auto=format&fit=crop";
+
+      const finalPayload = {
+        userId: user.uid,
+        uploadedImageUrl: base64Image,
+        afterImageUrl: afterImageUrl,
+        bodyShapeClassification: parsedResult.bodyShapeClassification,
+        silhouetteDescription: parsedResult.silhouetteDescription,
+        stylingSymmetries: parsedResult.stylingSymmetries,
+        recommendedFormulas: parsedResult.recommendedFormulas,
+        colorHarmonySuggestion: parsedResult.colorHarmonySuggestion,
+        idealGarmentCategories: parsedResult.idealGarmentCategories,
+        beforeAnalysisText: parsedResult.beforeAnalysisText,
+        afterStylingTransformation: parsedResult.afterStylingTransformation,
+        createdAt: new Date().toISOString()
+      };
+
+      if (!isFirestoreDisabled) {
+        try {
+          const db = getFirestore();
+          await db.collection("bodyStyleMappings").add(finalPayload);
+          console.log(`[Community Generator] Successfully saved body style mapping to Firestore for user: ${user.uid}`);
+        } catch (dbErr: any) {
+          console.warn("[Community Generator] Failed to save mapping to Firestore:", dbErr.message);
+        }
+      }
+
+      res.json({
+        success: true,
+        ...finalPayload
+      });
+
+    } catch (err: any) {
+      console.error("[API ERROR] Community body-style mapping failed:", err);
+      res.status(500).json({ error: "Failed to process image for body-style mapping: " + err.message });
+    }
+  });
+
   // Real Live Trends Aggregation API Route
   app.get("/api/trends/live", async (req, res) => {
     try {

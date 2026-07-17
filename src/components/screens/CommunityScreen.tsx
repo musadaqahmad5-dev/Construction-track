@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { WardrobeItem } from '../../types';
 import { db, auth } from '../../firebase';
+import { CommunityGenerator } from '../CommunityGenerator';
 import { 
   collection, 
   addDoc, 
@@ -455,7 +456,7 @@ export const CommunityScreen: React.FC<CommunityScreenProps> = ({
   onNavigateToTab
 }) => {
   // Discovery Tabs: Large editorial feed, Trending fashion, Newest creations, Luxury collections, Editor's Picks, Weekly highlights
-  const [activeTab, setActiveTab] = useState<'EDITORIAL_FEED' | 'TRENDING' | 'NEWEST' | 'COLLECTIONS' | 'EDITORS_PICKS' | 'WEEKLY_HIGHLIGHTS'>('EDITORIAL_FEED');
+  const [activeTab, setActiveTab] = useState<'EDITORIAL_FEED' | 'TRENDING' | 'NEWEST' | 'COLLECTIONS' | 'EDITORS_PICKS' | 'WEEKLY_HIGHLIGHTS' | 'COMMUNITY_GENERATOR'>('EDITORIAL_FEED');
   
   // Real Firestore and Fallback Preset Posts State
   const [cloudPosts, setCloudPosts] = useState<CommunityPost[]>([]);
@@ -997,7 +998,8 @@ SCENE COORDS:
             { id: 'NEWEST', label: 'Newest Creations', icon: Star },
             { id: 'COLLECTIONS', label: 'Luxury Collections', icon: Layers },
             { id: 'EDITORS_PICKS', label: "Editor's Picks", icon: Award },
-            { id: 'WEEKLY_HIGHLIGHTS', label: 'Weekly Highlights', icon: Star }
+            { id: 'WEEKLY_HIGHLIGHTS', label: 'Weekly Highlights', icon: Star },
+            { id: 'COMMUNITY_GENERATOR', label: 'Body Style Mapping', icon: Sparkles }
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -1260,7 +1262,14 @@ SCENE COORDS:
 
       {/* 4. MAIN DISCOVERY FEED GRID (MASONRY LAYOUT - IMAGES ARE THE HERO) */}
       <main className="max-w-7xl mx-auto">
-        {filteredFeed.length === 0 ? (
+        {activeTab === 'COMMUNITY_GENERATOR' ? (
+          <CommunityGenerator
+            user={user}
+            userWardrobe={userWardrobe}
+            onAddGarment={onAddGarment}
+            onNavigateToTab={onNavigateToTab}
+          />
+        ) : filteredFeed.length === 0 ? (
           <div className="p-16 border border-dashed border-white/5 rounded-3xl text-center bg-[#07070c]/20 select-none max-w-lg mx-auto my-12">
             <Compass className="w-10 h-10 text-zinc-600 mx-auto mb-4 animate-pulse" />
             <p className="text-xs font-mono text-zinc-400 uppercase tracking-widest">No campaign coordinates found</p>
