@@ -14,7 +14,7 @@ export interface StorageHealth {
 export class StorageHardening {
   private static corruptionsRecoveredCount = 0;
   private static lastBackupTime: string | null = null;
-  public static CURRENT_SCHEMA_VERSION = '1.2.0';
+  public static CURRENT_SCHEMA_VERSION = '2.4.0-telemetry';
 
   /**
    * Safe JSON parse with automatic corruption detection and recovery

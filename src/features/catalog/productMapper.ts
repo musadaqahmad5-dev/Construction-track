@@ -25,7 +25,7 @@ export class ProductMapper {
       category: 'Outerwear',
       price: parseFloat(variant?.price?.amount || '0.00'),
       currency: variant?.price?.currencyCode || 'USD',
-      imageUrl: variant?.image?.url || 'https://picsum.photos/seed/clothing/400/400',
+      imageUrl: variant?.image?.url || 'https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=600&auto=format&fit=crop',
       sku: variant?.sku || 'SKU-SHOPIFY',
       source: 'Shopify Storefront'
     };
@@ -42,7 +42,7 @@ export class ProductMapper {
       category: 'Casual',
       price: parseFloat(wooProduct.price || '0.00'),
       currency: 'USD',
-      imageUrl: wooProduct.images?.[0]?.src || 'https://picsum.photos/seed/clothing/400/400',
+      imageUrl: wooProduct.images?.[0]?.src || 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?q=80&w=600&auto=format&fit=crop',
       sku: wooProduct.sku || 'SKU-WOO',
       source: 'WooCommerce'
     };

@@ -4,12 +4,15 @@ import {
   Users, Heart, Bookmark, MessageSquare, Send, Plus, Award, 
   Tag, Sparkles, Image as ImageIcon, Check, Info, Flame, Eye, 
   TrendingUp, Compass, Shield, RefreshCw, Star, Share2, 
-  ChevronRight, CheckCircle2, Copy, FolderPlus, PlusCircle, 
-  X, HelpCircle, Layers, Grid, SlidersHorizontal, ArrowUpRight
+  ChevronRight, ChevronLeft, CheckCircle2, Copy, FolderPlus, PlusCircle, 
+  X, HelpCircle, Layers, Grid, SlidersHorizontal, ArrowUpRight,
+  Loader2, Upload
 } from 'lucide-react';
 import { WardrobeItem } from '../../types';
 import { db, auth } from '../../firebase';
 import { CommunityGenerator } from '../CommunityGenerator';
+import { FashionInstructorWorkspace } from './FashionInstructorWorkspace';
+import { ImageGenerationRegistry } from '../../features/image-generation/imageGenerationProvider';
 import { 
   collection, 
   addDoc, 
@@ -84,7 +87,7 @@ interface SceneBlueprint {
   camera: string;
 }
 
-interface CommunityPost {
+export interface CommunityPost {
   id: string;
   lookId?: string;
   userId?: string;
@@ -166,7 +169,7 @@ function generateDeterministicSceneBlueprint(seed: string): SceneBlueprint {
   };
 }
 
-const PRESET_MOCK_LOOKS: CommunityPost[] = [
+export const PRESET_MOCK_LOOKS: CommunityPost[] = [
   {
     id: 'p-preset-1',
     author: {
@@ -456,7 +459,212 @@ export const CommunityScreen: React.FC<CommunityScreenProps> = ({
   onNavigateToTab
 }) => {
   // Discovery Tabs: Large editorial feed, Trending fashion, Newest creations, Luxury collections, Editor's Picks, Weekly highlights
-  const [activeTab, setActiveTab] = useState<'EDITORIAL_FEED' | 'TRENDING' | 'NEWEST' | 'COLLECTIONS' | 'EDITORS_PICKS' | 'WEEKLY_HIGHLIGHTS' | 'COMMUNITY_GENERATOR'>('EDITORIAL_FEED');
+  const [activeTab, setActiveTab] = useState<'EDITORIAL_FEED' | 'TRENDING' | 'NEWEST' | 'COLLECTIONS' | 'EDITORS_PICKS' | 'WEEKLY_HIGHLIGHTS' | 'COMMUNITY_GENERATOR' | 'INTELLIGENT_FASHION_AI'>('EDITORIAL_FEED');
+
+  // AI Style Generation Sub-Component States
+  const [isGeneratorOpen, setIsGeneratorOpen] = useState(false);
+  const [promptInput, setPromptInput] = useState('');
+  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generationStep, setGenerationStep] = useState('');
+  const [generatedResult, setGeneratedResult] = useState<{
+    imageUrl: string;
+    vibe: string;
+    prompt: string;
+    description: string;
+  } | null>(null);
+  const [hasSaved, setHasSaved] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [genLiked, setGenLiked] = useState(false);
+  const [genBookmarked, setGenBookmarked] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const quickChips = [
+    { label: 'Summer', prompt: 'Beige linen resort shirt and pleated linen shorts' },
+    { label: 'Streetwear', prompt: 'Heavy drop-shoulder hoodie and structured cargo pants' },
+    { label: 'Quiet Luxury', prompt: 'Cashmere cream sweater and tailored wool trousers' },
+    { label: 'Office', prompt: 'Structured double-breasted navy blazer with crisp white shirt' }
+  ];
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      processFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      processFile(e.target.files[0]);
+    }
+  };
+
+  const processFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setUploadedImage(reader.result as string);
+      setErrorMessage(null);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const triggerFileInput = () => {
+    fileInputRef.current?.click();
+  };
+
+  const clearUploadedImage = () => {
+    setUploadedImage(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleGenerateStyle = async (overridePrompt?: string) => {
+    const queryText = (overridePrompt || promptInput).trim();
+    const finalQuery = queryText || 'high-end minimalist outfit';
+    
+    setIsGenerating(true);
+    setErrorMessage(null);
+    setHasSaved(false);
+    setGenLiked(false);
+    setGenBookmarked(false);
+
+    const steps = [
+      'Consulting Gemini Fashion AI...',
+      'Synthesizing professional style lookbook...',
+      'Refining textile folds and stitching textures...',
+      'Applying neutral studio backdrop lighting...'
+    ];
+
+    let currentStep = 0;
+    setGenerationStep(steps[0]);
+    const stepInterval = setInterval(() => {
+      if (currentStep < steps.length - 1) {
+        currentStep++;
+        setGenerationStep(steps[currentStep]);
+      }
+    }, 1200);
+
+    try {
+      const strictStylePrompt = `${finalQuery}, professional high-fashion studio lookbook photography, solid light grey or dark slate background, clean neutral studio lighting, focus on fabric drape, clothing stitching and material folds, headless mannequin model portrait, elegant fashion focus, clean minimalist backdrop, studio background`;
+
+      let token = '';
+      if (auth.currentUser) {
+        token = await auth.currentUser.getIdToken();
+      } else {
+        token = 'guest-token';
+      }
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch('/api/image-generation/generate', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          theme: 'Community Style',
+          vibe: strictStylePrompt,
+          garments: [],
+          gender: 'All-Gender',
+          formality: 'High-Fidelity',
+          season: 'All-Season',
+          setting: 'Studio Backdrop',
+          provider: 'Gemini-3.1-Flash-Image',
+          hasUploadedUserImage: Boolean(uploadedImage)
+        })
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || `Server returned status ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      clearInterval(stepInterval);
+
+      if (result.success && result.imageUrl) {
+        setGeneratedResult({
+          imageUrl: result.imageUrl,
+          vibe: overridePrompt ? overridePrompt : (queryText ? queryText : 'Minimalist Silhouette'),
+          prompt: finalQuery,
+          description: `A meticulously balanced garment curation focusing on structured drape and texture contrast. Features professional lookbook lighting set against a solid neutral studio backdrop.`
+        });
+        
+        window.dispatchEvent(new CustomEvent('lookvision_show_toast', { 
+          detail: '✨ Co-creation complete. Style successfully curated!' 
+        }));
+      } else {
+        throw new Error(result.error || 'Style synthesis timed out.');
+      }
+    } catch (err: any) {
+      clearInterval(stepInterval);
+      setErrorMessage(err.message || 'Unable to connect to style engine. Please try again.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleSaveToWardrobe = async () => {
+    if (!generatedResult || hasSaved || !onAddGarment) return;
+    try {
+      const queryLower = generatedResult.prompt.toLowerCase();
+      let category = 'Casual';
+      if (queryLower.includes('blazer') || queryLower.includes('suit') || queryLower.includes('formal') || queryLower.includes('office')) {
+        category = 'Formal';
+      } else if (queryLower.includes('hoodie') || queryLower.includes('cargo') || queryLower.includes('street')) {
+        category = 'Casual';
+      } else if (queryLower.includes('jacket') || queryLower.includes('coat') || queryLower.includes('overcoat')) {
+        category = 'Outerwear';
+      }
+
+      await onAddGarment(
+        `${generatedResult.vibe.charAt(0).toUpperCase() + generatedResult.vibe.slice(1)} Piece`,
+        generatedResult.description,
+        category as any,
+        {
+          imageUrl: generatedResult.imageUrl,
+          primaryColor: 'Studio Gray',
+          secondaryColor: 'Charcoal'
+        }
+      );
+
+      setHasSaved(true);
+      window.dispatchEvent(new CustomEvent('lookvision_show_toast', { 
+        detail: '💾 Look added directly to your Closet archive!' 
+      }));
+    } catch (err) {
+      console.error('Failed to commit garment to closet:', err);
+    }
+  };
+
+  useEffect(() => {
+    const handleCheckTarget = () => {
+      const target = localStorage.getItem('community_target_tab');
+      if (target) {
+        setActiveTab(target as any);
+        localStorage.removeItem('community_target_tab');
+      }
+    };
+    handleCheckTarget();
+    window.addEventListener('community_check_target', handleCheckTarget);
+    return () => {
+      window.removeEventListener('community_check_target', handleCheckTarget);
+    };
+  }, []);
   
   // Real Firestore and Fallback Preset Posts State
   const [cloudPosts, setCloudPosts] = useState<CommunityPost[]>([]);
@@ -980,8 +1188,16 @@ SCENE COORDS:
         {/* Action button to open private Studio Ledger */}
         <div className="flex flex-wrap gap-3">
           <button
+            onClick={() => setIsGeneratorOpen(true)}
+            className="px-5 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-mono text-[10.5px] uppercase tracking-wider rounded-xl flex items-center gap-2.5 shadow-lg shadow-emerald-600/15 transition-all duration-300 transform active:scale-95 font-bold cursor-pointer border border-emerald-400/20"
+          >
+            <Sparkles className="w-4 h-4 text-white/90 animate-pulse" />
+            <span>Generate Style</span>
+          </button>
+
+          <button
             onClick={() => setIsLedgerOpen(true)}
-            className="px-5 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-mono text-[10.5px] uppercase tracking-wider rounded-xl flex items-center gap-2.5 shadow-lg shadow-indigo-600/15 transition-all duration-300 transform active:scale-95 font-bold cursor-pointer border border-indigo-400/20"
+            className="px-5 py-3 bg-white/5 hover:bg-white/10 text-white border border-white/10 font-mono text-[10.5px] uppercase tracking-wider rounded-xl flex items-center gap-2.5 transition-all duration-300 transform active:scale-95 font-bold cursor-pointer"
           >
             <Layers className="w-4 h-4 text-white/90" />
             <span>My Studio Ledger</span>
@@ -990,8 +1206,9 @@ SCENE COORDS:
       </header>
 
       {/* 2. DISCOVERY NAVIGATION RIBBON & SEARCH */}
-      <section className="max-w-7xl mx-auto mb-8 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 border-b border-white/[0.03] pb-6">
-        <div className="flex gap-2 overflow-x-auto no-scrollbar justify-start pb-2 md:pb-0 scroll-smooth">
+      <section className="max-w-7xl mx-auto mb-8 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 border-b border-white/[0.03] pb-6 w-full">
+        {/* All Tab Buttons Wrap Cleanly so ALL Buttons Are Fully Visible */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 flex-1 w-full">
           {[
             { id: 'EDITORIAL_FEED', label: 'Editorial Feed', icon: Compass },
             { id: 'TRENDING', label: 'Trending Fashion', icon: Flame },
@@ -1007,40 +1224,40 @@ SCENE COORDS:
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`px-4.5 py-2.5 text-[10.5px] font-mono uppercase tracking-wider rounded-xl flex items-center gap-2 transition-all duration-300 shrink-0 cursor-pointer ${
+                className={`px-4 py-2.5 text-[10.5px] font-mono uppercase tracking-wider rounded-xl flex items-center gap-2 transition-all duration-300 cursor-pointer ${
                   isActive 
-                    ? 'bg-violet-500/10 text-violet-300 border border-violet-500/20 font-bold shadow-[0_0_15px_rgba(168,85,247,0.08)]' 
-                    : 'text-zinc-400 hover:text-white bg-white/[0.01] border border-white/5 hover:border-white/10'
+                    ? 'bg-violet-500/15 text-violet-200 border border-violet-500/30 font-bold shadow-[0_0_20px_rgba(168,85,247,0.15)] ring-1 ring-violet-500/20' 
+                    : 'text-zinc-300 hover:text-white bg-white/[0.03] border border-white/10 hover:border-white/20 hover:bg-white/[0.06]'
                 }`}
               >
-                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-violet-400 animate-pulse' : 'text-zinc-500'}`} />
+                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-violet-400 animate-pulse' : 'text-zinc-400'}`} />
                 <span>{tab.label}</span>
               </button>
             );
           })}
         </div>
 
-        {/* Elegant Minimalist Search Input & Rotate Feed */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto shrink-0">
+        {/* Search Input & Rotate Feed Controls */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto shrink-0">
           <button
             onClick={() => {
               setRotationSeed(Date.now().toString());
               window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: 'Seeded Feed Rotation Engine triggered!' }));
             }}
-            className="px-3 py-2.5 bg-[#07070c] border border-white/5 hover:border-violet-500/20 rounded-xl text-zinc-400 hover:text-violet-300 transition-all flex items-center justify-center gap-1.5 text-[10px] font-mono uppercase tracking-wider cursor-pointer"
+            className="px-3.5 py-2.5 bg-[#07070c] border border-white/10 hover:border-violet-500/30 rounded-xl text-zinc-300 hover:text-violet-200 transition-all flex items-center justify-center gap-1.5 text-[10px] font-mono uppercase tracking-wider cursor-pointer font-bold"
             title="Rotate Feed Order Deterministically"
           >
             <RefreshCw className="w-3.5 h-3.5 text-violet-400" />
             <span>Rotate Feed</span>
           </button>
 
-          <div className="relative w-full md:w-72 shrink-0">
+          <div className="relative w-full lg:w-72 shrink-0">
             <input
               type="text"
               placeholder="Search campaign, tag, designer..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-[#07070c] border border-white/5 hover:border-white/10 focus:border-violet-500/30 px-4 py-2.5 pl-10 text-xs text-white placeholder-zinc-500 focus:outline-none rounded-xl transition-all duration-300 font-mono"
+              className="w-full bg-[#07070c] border border-white/10 hover:border-white/20 focus:border-violet-500/40 px-4 py-2.5 pl-10 text-xs text-white placeholder-zinc-500 focus:outline-none rounded-xl transition-all duration-300 font-mono"
             />
             <div className="absolute left-3.5 top-3 text-zinc-500">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1053,11 +1270,11 @@ SCENE COORDS:
 
       {/* 2B. INTELLIGENT COLLECTIONS SELECTOR DIR */}
       {activeTab === 'COLLECTIONS' && (
-        <section className="max-w-7xl mx-auto mb-8 text-left animate-fade-in">
-          <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest block mb-3 font-semibold">
-            Intelligent Collection Directory ({selectedCollection})
+        <section className="max-w-7xl mx-auto mb-8 text-left animate-fade-in w-full">
+          <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest block mb-3 font-semibold">
+            Intelligent Collection Directory ({selectedCollection}) - All Categories
           </span>
-          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-3">
+          <div className="flex flex-wrap gap-2 w-full">
             {[
               'Luxury', 'Streetwear', 'Editorial', 'Minimal', 'Avant Garde', 
               'Wedding', 'Formal', 'Winter', 'Summer', 'Autumn', 'Spring', 
@@ -1071,13 +1288,13 @@ SCENE COORDS:
                 <button
                   key={col}
                   onClick={() => setSelectedCollection(col as any)}
-                  className={`px-3.5 py-2 text-[10px] font-mono rounded-xl border shrink-0 transition-all cursor-pointer ${
+                  className={`px-3.5 py-2 text-[10px] font-mono rounded-xl border transition-all cursor-pointer ${
                     isSelected 
-                      ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20 font-bold' 
-                      : 'text-zinc-400 hover:text-white bg-[#07070c] border-white/5 hover:border-white/10'
+                      ? 'bg-emerald-500/15 text-emerald-200 border-emerald-500/30 font-bold shadow-[0_0_15px_rgba(16,185,129,0.15)] ring-1 ring-emerald-500/20' 
+                      : 'text-zinc-300 hover:text-white bg-[#07070c] border-white/10 hover:border-white/20 hover:bg-white/[0.04]'
                   }`}
                 >
-                  {col} <span className="text-[8px] opacity-60 ml-1">({count})</span>
+                  {col} <span className="text-[8px] opacity-70 ml-1">({count})</span>
                 </button>
               );
             })}
@@ -1087,12 +1304,12 @@ SCENE COORDS:
 
       {/* 2C. TRENDING RANKING SELECTORS & LIVE TREND DETECTION */}
       {activeTab === 'TRENDING' && (
-        <section className="max-w-7xl mx-auto mb-8 space-y-6 text-left animate-fade-in">
+        <section className="max-w-7xl mx-auto mb-8 space-y-6 text-left animate-fade-in w-full">
           <div>
-            <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest block mb-3 font-semibold">
-              Select Ranking Engine
+            <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest block mb-3 font-semibold">
+              Select Ranking Engine - All Engines
             </span>
-            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">
+            <div className="flex flex-wrap gap-2 w-full">
               {[
                 'Trending Today', 'Trending This Week', 'Trending This Month', 
                 'Most Loved', 'Most Viewed', 'Most Saved', 'Most Shared', 
@@ -1103,10 +1320,10 @@ SCENE COORDS:
                   <button
                     key={engine}
                     onClick={() => setActiveRanking(engine as any)}
-                    className={`px-3.5 py-2 text-[10px] font-mono rounded-xl border shrink-0 transition-all cursor-pointer ${
+                    className={`px-3.5 py-2 text-[10px] font-mono rounded-xl border transition-all cursor-pointer ${
                       isSelected 
-                        ? 'bg-violet-500/10 text-violet-300 border-violet-500/20 font-bold' 
-                        : 'text-zinc-400 hover:text-white bg-[#07070c] border-white/5 hover:border-white/10'
+                        ? 'bg-violet-500/15 text-violet-200 border-violet-500/30 font-bold shadow-[0_0_15px_rgba(168,85,247,0.15)] ring-1 ring-violet-500/20' 
+                        : 'text-zinc-300 hover:text-white bg-[#07070c] border-white/10 hover:border-white/20 hover:bg-white/[0.04]'
                     }`}
                   >
                     {engine}
@@ -1351,8 +1568,8 @@ SCENE COORDS:
                       </div>
 
                       {/* Engagement Counters Grid (Standardized, visual, clean layout) */}
-                      <div className="flex items-center justify-between border-t border-white/5 pt-3.5 select-none z-10 relative">
-                        <div className="flex items-center gap-4">
+                      <div className="flex items-center justify-between border-t border-white/5 pt-3.5 select-none z-10 relative flex-wrap sm:flex-nowrap gap-2">
+                        <div className="flex items-center gap-2.5 sm:gap-3.5">
                           {/* Like Button */}
                           <button
                             onClick={(e) => {
@@ -2022,6 +2239,237 @@ SCENE COORDS:
                 >
                   Cancel
                 </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* 9. PREMIUM SLIDING STYLE GENERATOR DRAWER */}
+      <AnimatePresence>
+        {isGeneratorOpen && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex justify-end">
+            {/* Click-outside back-drop */}
+            <div className="absolute inset-0 cursor-pointer" onClick={() => setIsGeneratorOpen(false)} />
+
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="bg-[#05050c] border-l border-white/5 w-full max-w-xl h-full relative z-10 flex flex-col justify-between overflow-y-auto no-scrollbar shadow-2xl p-6 md:p-8"
+            >
+              {/* Drawer Header */}
+              <div className="flex justify-between items-center border-b border-white/5 pb-4 mb-6">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-emerald-400">
+                    <Sparkles className="w-4 h-4 fill-emerald-400/20" />
+                    <span className="text-[9px] font-mono tracking-widest uppercase font-bold">Active Co-Creation Studio</span>
+                  </div>
+                  <h3 className="font-serif text-lg text-white">Fashion AI Generator</h3>
+                </div>
+                <button
+                  onClick={() => setIsGeneratorOpen(false)}
+                  className="p-1.5 bg-white/5 border border-white/5 text-zinc-400 hover:text-white rounded-xl transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Drawer Content */}
+              <div className="flex-1 space-y-6">
+                
+                {/* Drag and Drop Reference Box */}
+                <div 
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  onClick={triggerFileInput}
+                  className={`border-2 border-dashed rounded-2xl p-6 text-center transition-all duration-300 cursor-pointer flex flex-col items-center justify-center space-y-3 relative overflow-hidden group select-none min-h-36 ${
+                    isDragging 
+                      ? 'border-violet-500 bg-violet-500/5' 
+                      : uploadedImage 
+                        ? 'border-white/10 bg-black/40' 
+                        : 'border-white/5 hover:border-white/10 bg-white/[0.01]'
+                  }`}
+                >
+                  <input 
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    accept="image/*"
+                    className="hidden"
+                  />
+
+                  {uploadedImage ? (
+                    <div className="absolute inset-0 w-full h-full">
+                      <img 
+                        src={uploadedImage} 
+                        alt="Reference Silhouette" 
+                        className="w-full h-full object-cover opacity-30"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#05050c] via-[#05050c]/45 to-transparent flex flex-col justify-end p-4">
+                        <span className="text-[10px] font-mono text-zinc-300 bg-black/80 px-2 py-1 rounded-lg border border-white/5 inline-block mx-auto">
+                          Reference Image Loaded
+                        </span>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            clearUploadedImage();
+                          }}
+                          className="text-[10px] font-mono text-red-400 hover:text-red-300 mt-2 block hover:underline cursor-pointer"
+                        >
+                          Remove reference
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="p-3 bg-white/5 rounded-xl border border-white/5 group-hover:scale-105 duration-300 transition-transform">
+                        <Upload className="w-5 h-5 text-zinc-400" />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-xs font-semibold text-zinc-200">
+                          Upload visual fit blueprint
+                        </p>
+                        <p className="text-[10px] font-mono text-zinc-500">
+                          Drag and drop reference image or click to browse
+                        </p>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Prompt Box */}
+                <div className="space-y-2">
+                  <label className="text-[10px] font-mono tracking-wider text-zinc-400 uppercase">Describe your outfit...</label>
+                  <textarea
+                    value={promptInput}
+                    onChange={(e) => setPromptInput(e.target.value)}
+                    placeholder="E.g., charcoal double-breasted coat paired with wide-leg silk trousers..."
+                    rows={3}
+                    className="w-full bg-[#030306] border border-white/5 rounded-xl px-4 py-3 text-xs text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-violet-500/30 focus:ring-1 focus:ring-violet-500/20 transition-all duration-300 resize-none"
+                  />
+                </div>
+
+                {/* Generate Action Button */}
+                <button
+                  onClick={() => handleGenerateStyle()}
+                  disabled={isGenerating}
+                  className="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-600 to-cyan-600 text-white font-medium tracking-wide hover:brightness-110 disabled:brightness-75 active:scale-[0.99] transition-all duration-300 shadow-lg shadow-emerald-500/10 flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span className="font-mono text-xs uppercase tracking-widest">{generationStep}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4" />
+                      <span className="font-sans uppercase text-xs tracking-wider font-semibold">Generate Style</span>
+                    </>
+                  )}
+                </button>
+
+                {/* Presets Chips */}
+                <div className="space-y-2.5 pt-1">
+                  <p className="text-[10px] font-mono tracking-wide text-zinc-500 uppercase">Preset Styles</p>
+                  <div className="flex flex-wrap gap-2">
+                    {quickChips.map((chip, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => {
+                          setPromptInput(chip.prompt);
+                          handleGenerateStyle(chip.prompt);
+                        }}
+                        disabled={isGenerating}
+                        className="px-3.5 py-1.5 rounded-full text-[10px] font-mono border border-white/5 bg-white/[0.01] text-zinc-400 hover:text-white hover:border-violet-500/20 hover:bg-violet-500/10 transition-all duration-300 cursor-pointer disabled:opacity-50"
+                      >
+                        [{chip.label}]
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Error Box */}
+                {errorMessage && (
+                  <div className="p-4 bg-red-950/20 border border-red-500/15 rounded-xl text-xs font-mono text-red-400 text-center animate-fade-in">
+                    {errorMessage}
+                  </div>
+                )}
+
+                {/* Generated Result Lookbook */}
+                {generatedResult && (
+                  <div className="space-y-5 pt-4 border-t border-white/5 animate-fade-in text-left">
+                    <span className="text-[9px] font-mono tracking-wider text-zinc-500 uppercase block text-center">Curated Silhouette</span>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4 bg-black/40 border border-white/5 rounded-2xl p-4 overflow-hidden">
+                      {/* Left: 3:4 aspect image frame */}
+                      <div className="md:col-span-2 aspect-[3/4] w-full rounded-xl overflow-hidden border border-white/5 relative bg-zinc-950">
+                        <img 
+                          src={generatedResult.imageUrl} 
+                          alt="Generated Look" 
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute top-2 right-2 flex flex-col gap-1.5">
+                          <button 
+                            onClick={() => setGenLiked(!genLiked)}
+                            className={`p-1.5 rounded-full border transition-all ${
+                              genLiked ? 'bg-red-500 border-red-500 text-white' : 'bg-black/60 border-white/10 text-white hover:bg-black'
+                            }`}
+                          >
+                            <Heart className="w-3 h-3" />
+                          </button>
+                          <button 
+                            onClick={() => setGenBookmarked(!genBookmarked)}
+                            className={`p-1.5 rounded-full border transition-all ${
+                              genBookmarked ? 'bg-violet-500 border-violet-500 text-white' : 'bg-black/60 border-white/10 text-white hover:bg-black'
+                            }`}
+                          >
+                            <Bookmark className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Right: metadata description */}
+                      <div className="md:col-span-3 flex flex-col justify-between space-y-3">
+                        <div className="space-y-2">
+                          <div className="flex gap-1.5">
+                            <span className="px-2 py-0.5 rounded-full text-[9px] font-mono border border-violet-500/20 bg-violet-500/5 text-violet-300 capitalize">
+                              {generatedResult.vibe}
+                            </span>
+                          </div>
+                          <h4 className="text-sm font-semibold text-white tracking-tight">Studio Silhouette</h4>
+                          <p className="text-zinc-400 text-[11px] leading-relaxed line-clamp-4">{generatedResult.description}</p>
+                        </div>
+
+                        {/* Emerald Add to Closet Button */}
+                        <button
+                          onClick={handleSaveToWardrobe}
+                          disabled={hasSaved}
+                          className={`w-full py-3 rounded-xl font-medium tracking-wide flex items-center justify-center gap-2 transition-all duration-300 cursor-pointer text-xs ${
+                            hasSaved 
+                              ? 'bg-zinc-800 border border-zinc-700 text-zinc-500' 
+                              : 'bg-[#16a34a] hover:bg-[#22c55e] text-white shadow-[0_4px_15px_rgba(22,163,74,0.2)] hover:shadow-[0_4px_25px_rgba(22,163,74,0.4)]'
+                          }`}
+                        >
+                          {hasSaved ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-zinc-500" />
+                              <span className="font-mono text-[10px] uppercase tracking-wider">Archived in Closet</span>
+                            </>
+                          ) : (
+                            <>
+                              <Plus className="w-3.5 h-3.5" />
+                              <span className="font-sans text-[11px] tracking-wide font-semibold">Add to Closet</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
               </div>
             </motion.div>
           </div>

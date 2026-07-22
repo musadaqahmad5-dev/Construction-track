@@ -530,7 +530,7 @@ export class PersonalFashionMemoryEngine {
             occasion: options.agenda,
             generatedAt: new Date().toISOString().split('T')[0],
             vibeTags: [options.vibe.toLowerCase()],
-            schema_version: '1.2.0',
+            schema_version: '2.4.0-telemetry',
             scoring: computedScores,
             explanations,
             stylistNarrative: `This local coordinate has been mapped entirely from your persistent style memory. The ${top.title} anchors the outfit with ${computedScores.styleScore}% style affinity.`

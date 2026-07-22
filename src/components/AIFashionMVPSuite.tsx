@@ -278,7 +278,8 @@ export const AIFashionMVPSuite: React.FC<AIFashionMVPSuiteProps> = ({
           formality: studioFormality,
           season: 'All-Season',
           setting: studioSetting,
-          provider: studioProvider
+          provider: studioProvider,
+          hasUploadedUserImage: Boolean(inspireUserImage)
         })
       });
 
@@ -678,7 +679,8 @@ export const AIFashionMVPSuite: React.FC<AIFashionMVPSuiteProps> = ({
           formality: 'Casual',
           season: (fiosData.user_profile as any)?.season || 'All-Season',
           setting: settingPrompt,
-          provider: studioProvider
+          provider: studioProvider,
+          hasUploadedUserImage: Boolean(inspireUserImage)
         })
       });
 

@@ -74,37 +74,16 @@ export class FashionArtDirectorEngine {
 
 /**
  * 4. SCENE DIRECTOR ENGINE
- * Dynamically builds believable and gorgeous high-end environments.
+ * Dynamically builds clean, high-end neutral studio settings to support lookbook presentation.
+ * Adheres to strict constraints: background must be solid White, Light Grey, or solid dark slate.
+ * NO landscapes, NO buildings, NO nature, NO outdoor scenes, NO rain, NO desert.
  */
 export class SceneDirectorEngine {
   static getEnvironment(vibe: string, garments: string[]): { name: string; description: string } {
-    // Choose environment intelligently according to clothing & vibe
-    if (vibe === 'Wedding / Formal' || garments.includes('suit')) {
-      const environments = [
-        { name: 'Museum Modern Wing', description: 'set inside a grand modern museum wing with soaring concrete walls, dramatic light shafts, and minimalist marble architecture' },
-        { name: 'Paris Fashion Week Entrance', description: 'set against an elegant historic Parisian building facade during golden hour with a clean limestone street' },
-        { name: 'Private Lounge', description: 'set inside an exclusive minimalist private lounge featuring rich walnut wood paneling and warm ambient spotlights' }
-      ];
-      return environments[Math.floor(Date.now() % environments.length)];
-    }
-
-    if (vibe === 'Streetwear' || vibe === 'Cyber Avant-Garde') {
-      const environments = [
-        { name: 'Brutalist Concrete Underpass', description: 'set inside a brutalist raw concrete urban atrium with sleek glowing white accent lights and wet pavement textures' },
-        { name: 'Minimal Industrial Studio', description: 'set inside a dark minimalist industrial studio with high metal scaffolding, clean backdrop, and glowing blue led highlights' },
-        { name: 'Luxury Street in Tokyo', description: 'set on a clean, modern high-end architectural street with minimalist glass shopfronts and subtle soft night mist' }
-      ];
-      return environments[Math.floor(Date.now() % environments.length)];
-    }
-
-    // Default luxury environments for Quiet Luxury
-    const environments = [
-      { name: 'Luxury Hotel Atrium', description: 'set inside a sun-drenched minimalist limestone hotel atrium with warm natural light, concrete pillars, and elegant soft shadows' },
-      { name: 'Luxury Apartment Atrium', description: 'set inside a high-ceiling luxury loft featuring large floor-to-ceiling glass windows overlooking a serene fog-kissed minimalist garden' },
-      { name: 'Natural Luxury Landscape', description: 'set in an elegant travertine marble courtyard bordered by a calm, reflective pool and soft dry desert grass' },
-      { name: 'Minimal Studio', description: 'set inside a premium high-fashion studio with an off-white seamless cyclorama and soft professional studio diffusion panels' }
-    ];
-    return environments[Math.floor(Date.now() % environments.length)];
+    return {
+      name: 'Studio Only Constraint Setting',
+      description: 'A professional, sterile, solid-color studio background (White, Grey, or Dark Slate). NO roads, NO streets, NO outdoor elements, NO landscapes.'
+    };
   }
 }
 
@@ -347,6 +326,55 @@ export interface QualityReport {
 }
 
 export class GenerationIntelligenceEngine {
+  private static sessionHistory: string[] = [];
+  private static settingsCache: Map<string, any> = new Map();
+
+  /**
+   * Clears any previous session context or cached 'random mode' settings
+   */
+  static clearCache(): void {
+    this.sessionHistory = [];
+    this.settingsCache.clear();
+    console.info('[GenerationIntelligenceEngine] Session context and cached random mode settings cleared.');
+  }
+
+  /**
+   * Scans a concept/prompt string and returns if it's a fashion concept or triggers non-fashion categories
+   */
+  static validateConcept(concept: string): { isFashion: boolean; category: string | null } {
+    const lower = concept.toLowerCase();
+    
+    const categories = [
+      {
+        name: 'vehicle',
+        keywords: ['car', 'truck', 'vehicle', 'motorcycle', 'airplane', 'train', 'bus', 'scooter', 'automobile', 'ferrari', 'tesla', 'automotive']
+      },
+      {
+        name: 'animal',
+        keywords: ['dog', 'cat', 'bird', 'lion', 'horse', 'cow', 'sheep', 'pig', 'tiger', 'bear', 'animal', 'pet', 'fauna']
+      },
+      {
+        name: 'nature',
+        keywords: ['tree', 'river', 'mountain', 'landscape', 'forest', 'nature', 'ocean', 'beach', 'sunset', 'foliage']
+      },
+      {
+        name: 'structure',
+        keywords: ['building', 'house', 'skyscraper', 'office block', 'landmark', 'cityscape']
+      }
+    ];
+
+    for (const cat of categories) {
+      for (const keyword of cat.keywords) {
+        const regex = new RegExp(`\\b${keyword}s?\\b`, 'i');
+        if (regex.test(lower)) {
+          return { isFashion: false, category: cat.name };
+        }
+      }
+    }
+
+    return { isFashion: true, category: null };
+  }
+
   /**
    * Processes an already optimized fashion prompt and returns the ultimate luxury production directives.
    */
@@ -360,9 +388,42 @@ export class GenerationIntelligenceEngine {
     qualityScores: QualityReport;
     criticFeedback: string;
   } {
+    // 3. Clear Cache: Ensure no previous context or 'random mode' settings are persisting
+    if (config) {
+      delete (config as any).randomMode;
+      delete (config as any).cachedContext;
+    }
+    this.clearCache();
+
+    // 4. Prompt Modulator: Scan generated concept & rewrite if it triggers non-fashion category
+    let finalOriginalPrompt = originalPrompt;
+    let finalPromptData = { ...promptData };
+
+    const validation = this.validateConcept(originalPrompt);
+
+    if (!validation.isFashion) {
+      console.warn(`[GenerationIntelligenceEngine] Non-fashion category "${validation.category}" detected. Activating Prompt Modulator...`);
+      
+      const lower = originalPrompt.toLowerCase();
+      let inspiredTranslation = 'aesthetic high-fashion garment';
+      if (validation.category === 'vehicle' || lower.includes('car') || lower.includes('vehicle') || lower.includes('automobile') || lower.includes('truck') || lower.includes('motorcycle') || lower.includes('ferrari') || lower.includes('tesla')) {
+        inspiredTranslation = 'avant-garde automotive-inspired high-fashion jacket';
+      } else if (validation.category === 'animal' || lower.includes('dog') || lower.includes('cat') || lower.includes('animal') || lower.includes('pet') || lower.includes('lion') || lower.includes('bear') || lower.includes('tiger')) {
+        inspiredTranslation = 'fauna-inspired textured high-fashion coat';
+      } else if (validation.category === 'nature' || lower.includes('tree') || lower.includes('forest') || lower.includes('nature') || lower.includes('mountain') || lower.includes('river')) {
+        inspiredTranslation = 'organic foliage-inspired fluid couture drapery';
+      } else {
+        inspiredTranslation = `${originalPrompt}-inspired bespoke luxury garment`;
+      }
+      
+      finalOriginalPrompt = `Fashion editorial outfit inspired by ${originalPrompt} aesthetics, rendered as an exquisite ${inspiredTranslation}`;
+      
+      // Rewrite finalPromptData.prompt with a high-fidelity fashion description
+      finalPromptData.prompt = `Professional high-fashion campaign photo. Subject Profile: statuesque model cropped from the neck down (headless style) focusing solely on the clothing. Designed Garment: Fashion editorial outfit inspired by ${originalPrompt} aesthetics, meticulously crafted as a custom ${inspiredTranslation}, featuring heavy physical fabric folds, detailed stitching, precise raw seams. Atmosphere: A clean, neutral solid light grey studio setting background, completely flat and neutral, casting extremely soft studio shadows. Unique Session: LV-${Math.floor(1000 + Math.random() * 9000)}`;
+    }
     
     // Analyze original prompt to understand context and gender
-    const analysis = PromptUnderstandingEngine.analyze(originalPrompt);
+    const analysis = PromptUnderstandingEngine.analyze(finalOriginalPrompt);
     const vibe = analysis.inferredVibe;
     const garments = analysis.detectedGarments;
 
@@ -397,7 +458,7 @@ export class GenerationIntelligenceEngine {
     const lighting = LightingDirector.getLightingSpecs(vibe);
 
     // 11 & 12. Visual Impact & AI Self Critic Engine (incorporating corrective actions)
-    const critic = VisualImpactAndCriticEngine.evaluateAndCritic(promptData.prompt, originalPrompt, vibe);
+    const critic = VisualImpactAndCriticEngine.evaluateAndCritic(finalPromptData.prompt, finalOriginalPrompt, vibe);
 
     // 13. Consistency Engine
     const consistency = ConsistencyEngine.getCoreDirectives();
@@ -406,15 +467,91 @@ export class GenerationIntelligenceEngine {
     // To prevent prompt bloat and visual contradictions, we rely on the fully harmonized,
     // contradiction-free specifications already generated by the Prompt Intelligence Engine.
     // We only use the calculated critic corrections if active.
-    const finalPrompt = `${promptData.prompt}${critic.correctiveDirectives ? ' ' + critic.correctiveDirectives.trim() : ''}`;
+    const rawPrompt = `${promptData.prompt}${critic.correctiveDirectives ? ' ' + critic.correctiveDirectives.trim() : ''}`;
+
+    // CRITICAL GOVERNANCE RULE - STRICT MODE BACKGROUND OVERRIDE (Bypassed if user explicitly requested a background)
+    let sanitizedPrompt = rawPrompt;
+
+    if (!analysis.explicitBackground) {
+      // Remove any forbidden elements: roads, streets, sidewalks, exterior buildings, nature, urban landscapes, sky
+      const forbiddenPatterns = /road|street|sidewalk|building|exterior|outdoor|landscape|sky|nature|highway|alley|pavement|asphalt/gi;
+      sanitizedPrompt = sanitizedPrompt.replace(forbiddenPatterns, 'studio');
+
+      // Force studio floor environment
+      const allowedStudioSettings = [
+        'Solid Matte Studio Floor (White, Grey, or Charcoal)',
+        'Soft-lit Minimalist Studio Cove',
+        'Sterile Editorial Studio Backdrop'
+      ];
+      const index = (originalPrompt ? originalPrompt.length : 0) % allowedStudioSettings.length;
+      const selectedStudio = allowedStudioSettings[index];
+
+      sanitizedPrompt += ` [ENVIRONMENT: Set inside a professional, sterile, solid-color studio background. This background MUST be a ${selectedStudio}. Absolutely NO roads, NO streets, NO sidewalks, NO exterior buildings, NO nature, NO urban landscapes, NO sky. All street or industrial vibes are interpreted strictly as Raw Studio Minimalism with concrete studio floors and metallic textures.]`;
+    }
+
+    // Load Active Academic / Instructor Workspace Logic from Local Storage
+    let academicOverlay = "";
+    if (typeof localStorage !== 'undefined') {
+      const demoId = localStorage.getItem('look_vision_selected_demographic') || 'youth';
+      const instId = localStorage.getItem('look_vision_selected_instructor') || 'pattern_maker';
+      const topicId = localStorage.getItem('look_vision_curriculum_topic') || 'cyber_mesh';
+      const intensity = Number(localStorage.getItem('look_vision_instruction_intensity') || '75');
+      const practical = Number(localStorage.getItem('look_vision_practical_hours') || '65');
+      
+      const resultsStr = localStorage.getItem('look_vision_semester_results');
+      let results: any = null;
+      if (resultsStr) {
+        try { results = JSON.parse(resultsStr); } catch (e) {}
+      }
+
+      // 1. Demographic map label
+      const demoLabel = demoId === 'youth' ? 'Youth Division (12-18)' :
+                        demoId === 'young-adults' ? 'Young Adults Division (18-25)' :
+                        demoId === 'professionals' ? 'Active Professionals Division (25-45)' :
+                        'Noble Elders Division (45+)';
+
+      // 2. Instructor map label
+      const instructorLabel = instId === 'pattern_maker' ? 'Artisan Pattern Maker (credentials: artisan fit physics rendering)' :
+                              instId === 'trend_scout' ? 'Trend Ingestion Scout (credentials: real-time trend sensing)' :
+                              instId === 'decision_oracle' ? 'Sartorial Decision Oracle (credentials: personalized coordinate analytics)' :
+                              'Prompt Styling Alchemist (credentials: high-fidelity visual translation)';
+
+      // 3. Topic details
+      const topicLabel = topicId === 'cyber_mesh' ? 'Cyberpunk Mesh Reconstruction with vibrant high-density tech fabrics and modular layers' :
+                         topicId === 'eco_thrift' ? 'Eco-friendly Thrift Deconstruction with organic upcycled materials and custom distressing' :
+                         topicId === 'corp_layer' ? 'High-Performance Corporate Layering with precise sleek lines and tech-shell tailored structures' :
+                         'Classic Editorial Legacy Tailoring with rich organic woolens, perfect shoulder pads, and immaculate hems';
+
+      // 4. Slider nuances
+      const intensityDirectives = intensity > 75 
+        ? "highly concept-driven avant-garde layout, theoretical style taxonomy, artistic and structural focus"
+        : "grounded, clear streetwear proportions";
+
+      const practicalDirectives = practical > 75
+        ? "meticulously clean fabric draping, hyper-accurate stitching lines, flawless garment drapes and real-world fit"
+        : "relaxed and modern tailoring standard";
+
+      academicOverlay = ` [SARTORIAL ACADEMY DIRECTIVE: This luxury outfit is supervised under the Lead Instructor: "${instructorLabel}", aligned specifically for the "${demoLabel}" demographic. It implements the active syllabus curriculum: "${topicLabel}". The design is balanced at ${intensity}% Academic Instruction Intensity (${intensityDirectives}) and ${practical}% Practical Studio Hours (${practicalDirectives}).`;
+
+      if (results) {
+        academicOverlay += ` This design meets the current academic standing of Grade "${results.grade}" with an overall evaluation score of ${results.overallScore}%.]`;
+      } else {
+        academicOverlay += `]`;
+      }
+    }
+
+    if (academicOverlay) {
+      sanitizedPrompt += " " + academicOverlay;
+    }
 
     // STEP 6: Negative prompt enforcement
     // We combine the standard negative prompt with strict enterprise-grade rejections to eliminate low quality
     const strictRejections = `blurry, duplicate faces, extra fingers, bad anatomy, cartoon appearance, unrealistic proportions, low quality, watermark, text, logo, cropped body, duplicated limbs`;
-    const enrichedNegative = `${promptData.negativePrompt}, ${strictRejections}`.split(',').map(s => s.trim()).filter((v, i, a) => a.indexOf(v) === i).join(', ');
+    const mandatoryNegative = "Exclude all animals, vehicles, cars, nature, buildings, landscapes, and non-fashion objects. If it is not clothing, reject the generation. If the output shows a road, street, or sidewalk, immediately discard and regenerate with a pure studio floor.";
+    const enrichedNegative = `${promptData.negativePrompt}, ${strictRejections}, ${mandatoryNegative}`.split(',').map(s => s.trim()).filter((v, i, a) => a.indexOf(v) === i).join(', ');
 
     return {
-      prompt: finalPrompt,
+      prompt: sanitizedPrompt,
       negativePrompt: enrichedNegative,
       qualityScores: critic.scores,
       criticFeedback: critic.feedback

@@ -16,7 +16,7 @@ export class CatalogMatcher {
       category: 'Outerwear',
       priceUsd: 145.00,
       primaryColor: '#F5F5DC',
-      imageUrl: 'https://picsum.photos/seed/trench/300/400',
+      imageUrl: 'https://images.unsplash.com/photo-1544022613-e87ca75a784a?q=80&w=400&auto=format&fit=crop',
       curationLabel: 'Classics Selection'
     },
     {
@@ -25,7 +25,7 @@ export class CatalogMatcher {
       category: 'Outerwear',
       priceUsd: 95.00,
       primaryColor: '#8F9779',
-      imageUrl: 'https://picsum.photos/seed/windbreaker/300/400',
+      imageUrl: 'https://images.unsplash.com/photo-1576871337622-98d48d4aa53e?q=80&w=400&auto=format&fit=crop',
       curationLabel: 'Tech Performance'
     },
     {
@@ -34,7 +34,7 @@ export class CatalogMatcher {
       category: 'Formal',
       priceUsd: 160.00,
       primaryColor: '#0F172A',
-      imageUrl: 'https://picsum.photos/seed/blazer/300/400',
+      imageUrl: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?q=80&w=400&auto=format&fit=crop',
       curationLabel: 'Premium Tailored'
     },
     {
@@ -43,7 +43,7 @@ export class CatalogMatcher {
       category: 'Pants',
       priceUsd: 79.00,
       primaryColor: '#8F9779',
-      imageUrl: 'https://picsum.photos/seed/trouser/300/400',
+      imageUrl: 'https://images.unsplash.com/photo-1582552938357-32b906df40cb?q=80&w=400&auto=format&fit=crop',
       curationLabel: 'Minimalist Relaxed'
     },
     {
@@ -52,7 +52,7 @@ export class CatalogMatcher {
       category: 'Accessories',
       priceUsd: 125.00,
       primaryColor: '#5C4033',
-      imageUrl: 'https://picsum.photos/seed/boots/300/400',
+      imageUrl: 'https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?q=80&w=400&auto=format&fit=crop',
       curationLabel: 'Wardrobe Foundation'
     },
     {
@@ -61,7 +61,7 @@ export class CatalogMatcher {
       category: 'Pants',
       priceUsd: 89.00,
       primaryColor: '#1E3A8A',
-      imageUrl: 'https://picsum.photos/seed/denim/300/400',
+      imageUrl: 'https://images.unsplash.com/photo-1541099649105-f69ad21f3246?q=80&w=400&auto=format&fit=crop',
       curationLabel: 'Workwear Staples'
     },
     {
@@ -70,7 +70,7 @@ export class CatalogMatcher {
       category: 'Accessories',
       priceUsd: 49.00,
       primaryColor: '#F5F5DC',
-      imageUrl: 'https://picsum.photos/seed/scarf/300/400',
+      imageUrl: 'https://images.unsplash.com/photo-1520903920243-00d872a2d1c9?q=80&w=400&auto=format&fit=crop',
       curationLabel: 'Soft Accents'
     }
   ];

@@ -166,7 +166,7 @@ export const FounderDashboard: React.FC = () => {
           source: 'Founder Sandbox Console',
           timestamp_ms: Date.now()
         },
-        schema_version: '1.0.0'
+        schema_version: '2.4.0-telemetry'
       };
 
       await addDoc(collection(db, 'analytics'), payload);
@@ -204,7 +204,7 @@ export const FounderDashboard: React.FC = () => {
           timestamp: new Date(Date.now() - Math.random() * 86400000 * 3).toISOString(), // random past 3 days
           userId: 'seeded-sartorialist-user',
           params: item.params,
-          schema_version: '1.0.0'
+          schema_version: '2.4.0-telemetry'
         });
       }
       

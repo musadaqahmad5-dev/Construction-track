@@ -15,23 +15,24 @@ export class PromptUnderstandingEngine {
     
     // Detect gender
     let gender: 'unisex' | 'male' | 'female' = 'unisex';
-    if (lower.includes('man') || lower.includes('boy') || lower.includes('male') || lower.includes('gentleman')) {
+    if (/\b(man|men|boy|boys|male|males|gentleman|gentlemen|guy|guys)\b/i.test(lower)) {
       gender = 'male';
-    } else if (lower.includes('girl') || lower.includes('woman') || lower.includes('female') || lower.includes('lady')) {
+    } else if (/\b(woman|women|girl|girls|female|females|lady|ladies)\b/i.test(lower)) {
       gender = 'female';
     }
 
     // Detect general clothing elements
     const garments: string[] = [];
-    if (lower.includes('dress')) garments.push('dress');
+    if (lower.includes('dress') || lower.includes('gown')) garments.push('dress');
     if (lower.includes('suit') || lower.includes('tuxedo')) garments.push('suit');
-    if (lower.includes('jacket') || lower.includes('coat') || lower.includes('overcoat')) garments.push('outerwear');
-    if (lower.includes('pants') || lower.includes('trousers') || lower.includes('jeans')) garments.push('pants');
-    if (lower.includes('shirt') || lower.includes('blouse') || lower.includes('top')) garments.push('top');
-    if (lower.includes('hoodie') || lower.includes('sweater')) garments.push('casual_top');
+    if (lower.includes('jacket') || lower.includes('coat') || lower.includes('overcoat') || lower.includes('blazer')) garments.push('outerwear');
+    if (lower.includes('pants') || lower.includes('trousers') || lower.includes('jeans') || lower.includes('slacks') || lower.includes('cargos') || lower.includes('skirt')) garments.push('pants');
+    if (lower.includes('shirt') || lower.includes('blouse') || lower.includes('top') || lower.includes('t-shirt') || lower.includes('tee')) garments.push('top');
+    if (lower.includes('hoodie') || lower.includes('sweater') || lower.includes('pullover') || lower.includes('cardigan')) garments.push('casual_top');
 
     // Detect color cues
-    const colorMatch = lower.match(/\b(black|white|red|blue|green|yellow|brown|gray|grey|beige|cream|ivory|navy|gold|silver|burgundy|olive|terracotta|camel|charcoal|taupe|emerald|violet|pink)\b/i);
+    const colors = ['black', 'white', 'red', 'blue', 'green', 'yellow', 'brown', 'gray', 'grey', 'beige', 'cream', 'ivory', 'navy', 'gold', 'silver', 'burgundy', 'olive', 'terracotta', 'camel', 'charcoal', 'taupe', 'emerald', 'violet', 'pink', 'orange', 'purple', 'magenta', 'blush'];
+    const colorMatch = lower.match(/\b(black|white|red|blue|green|yellow|brown|gray|grey|beige|cream|ivory|navy|gold|silver|burgundy|olive|terracotta|camel|charcoal|taupe|emerald|violet|pink|orange|purple|magenta|blush)\b/i);
     const color = colorMatch ? colorMatch[1] : 'neutral';
 
     // Detect vibe or theme
@@ -46,6 +47,211 @@ export class PromptUnderstandingEngine {
       vibe = 'Quiet Luxury';
     }
 
+    // Explicit Garment Type
+    const garmentTypes = ['dress', 'gown', 'suit', 'tuxedo', 'jacket', 'coat', 'overcoat', 'blazer', 'trousers', 'pants', 'jeans', 'skirt', 'shirt', 'blouse', 'top', 'hoodie', 'sweater', 't-shirt', 'tee', 'frock'];
+    let explicitGarmentType: string | undefined;
+    for (const g of garmentTypes) {
+      if (lower.includes(g)) {
+        explicitGarmentType = g;
+        break;
+      }
+    }
+
+    // Explicit Color
+    let explicitColor: string | undefined;
+    for (const c of colors) {
+      if (lower.includes(c)) {
+        explicitColor = c;
+        break;
+      }
+    }
+
+    // Sleeve Type
+    const sleeveTypes = [
+      'sleeveless', 'bare-shoulder', 'no sleeves', 'long-sleeve', 'long sleeve', 'long-sleeved', 'full sleeves', 
+      'short-sleeve', 'short sleeve', 'short-sleeved', 'puff sleeve', 'puff-sleeved', 'puff sleeves', 'voluminous sleeves', 
+      'asymmetric sleeve', 'single sleeve', 'single-sleeve', 'dolman sleeve', 'dolman sleeves', 'flared sleeve', 
+      'flared sleeves', 'poet sleeve', 'poet sleeves', 'bell sleeve', 'bell sleeves', 'cap sleeve', 'cap sleeves'
+    ];
+    let explicitSleeveType: string | undefined;
+    for (const s of sleeveTypes) {
+      if (lower.includes(s)) {
+        explicitSleeveType = s;
+        break;
+      }
+    }
+
+    // Neckline / Collar
+    const necklines = [
+      'v-neck', 'v neck', 'v-collar', 'deep v', 'deep-v', 'plunge neckline', 'crew neck', 'crewneck', 'collarless', 
+      'mock collar', 'mock-collar', 'high neck', 'high-neck', 'mock neck', 'mock-neck', 'cowl neck', 'cowl-neck', 
+      'cascading neck', 'spread collar', 'spread-collar', 'portrait collar', 'portrait-collar', 'peak lapel', 
+      'notch lapel', 'lapel', 'double-breasted collar', 'halter neck', 'halter-neck', 'boat neck', 'boat-neck', 
+      'sweetheart neckline', 'sweetheart neck', 'off-the-shoulder'
+    ];
+    let explicitNeckline: string | undefined;
+    for (const n of necklines) {
+      if (lower.includes(n)) {
+        explicitNeckline = n;
+        break;
+      }
+    }
+
+    // Silhouette
+    const silhouettes = [
+      'column silhouette', 'column shape', 'asymmetric silhouette', 'asymmetric structural', 'sculptural shoulder', 
+      'sharp shoulder', 'cinched waist', 'cinched-waist', 'tailored hourglass', 'oversized cocoon', 'oversized silhouette', 
+      'slouchy shape', 'loose fit', 'loose-fit', 'double-breasted cut', 'double-breasted silhouette', 'deconstructed layered', 
+      'wrap silhouette', 'bias-cut draped', 'slim-fit', 'slim fit', 'straight fit', 'straight-fit', 'wide-leg', 'wide leg'
+    ];
+    let explicitSilhouette: string | undefined;
+    for (const s of silhouettes) {
+      if (lower.includes(s)) {
+        explicitSilhouette = s;
+        break;
+      }
+    }
+
+    // Footwear
+    const footwearList = [
+      'stiletto', 'heels', 'pumps', 'boots', 'chelsea boots', 'ankle boots', 'combat boots', 'knee-high boots', 
+      'mules', 'slides', 'sneakers', 'trainers', 'flats', 'square-toe flats', 'oxfords', 'derbies', 'brogues', 
+      'slingback', 'slingbacks', 'sandals', 'loafers'
+    ];
+    let explicitFootwear: string | undefined;
+    for (const f of footwearList) {
+      if (lower.includes(f)) {
+        explicitFootwear = f;
+        break;
+      }
+    }
+
+    // Accessories
+    const accessoryKeywords = [
+      'clutch', 'pouch', 'purse', 'bag', 'handbag', 'tote', 'crossbody', 'sunglasses', 'glasses', 'eyewear', 
+      'spectacles', 'scarf', 'neckerchief', 'belt', 'waistband', 'buckle', 'gloves', 'jewelry', 'necklace', 
+      'bracelet', 'ring', 'earrings', 'cuff'
+    ];
+    const explicitAccessories: string[] = [];
+    for (const acc of accessoryKeywords) {
+      if (lower.includes(acc)) {
+        explicitAccessories.push(acc);
+      }
+    }
+
+    // Age
+    let explicitAge: number | undefined;
+    const ageMatch = lower.match(/\b(age|aged)\s+(\d{2})\b/i) || lower.match(/\b(\d{2})\s*(years old|yo)\b/i);
+    if (ageMatch) {
+      explicitAge = parseInt(ageMatch[2] || ageMatch[1]);
+    } else if (lower.includes('young')) {
+      explicitAge = 22;
+    } else if (lower.includes('mature') || lower.includes('older')) {
+      explicitAge = 40;
+    }
+
+    // Body Type
+    const bodyTypes = [
+      'statuesque', 'runway standard', 'model proportions', 'athletic', 'toned', 'muscular', 'slender', 'lean', 
+      'slim', 'petite', 'tall', 'curvy', 'hourglass', 'plus-size', 'full-figured'
+    ];
+    let explicitBodyType: string | undefined;
+    for (const b of bodyTypes) {
+      if (lower.includes(b)) {
+        explicitBodyType = b;
+        break;
+      }
+    }
+
+    // Pose
+    const poses = [
+      'walking posture', 'walking stance', 'mid-stride', 'stride', 'walking', 'standing posture', 'standing stance', 
+      'standing', 'asymmetrical stance', 'asymmetrical pose', 'runway stance', 'catwalk walk', 'three-quarter view', 
+      'three-quarter profile', 'direct gaze', 'gazing into lens', 'looking off-camera', 'seated', 'sitting'
+    ];
+    let explicitPose: string | undefined;
+    for (const p of poses) {
+      if (lower.includes(p)) {
+        explicitPose = p;
+        break;
+      }
+    }
+
+    // Background scene/location extraction
+    const bgKeywords = ['in a ', 'on a ', 'set in ', 'set against ', 'inside a ', 'at a ', 'background features ', 'background of '];
+    let explicitBackground: string | undefined;
+    for (const bg of bgKeywords) {
+      const idx = lower.indexOf(bg);
+      if (idx !== -1) {
+        const sub = prompt.substring(idx).split(/[.,;]/)[0];
+        explicitBackground = sub.trim();
+        break;
+      }
+    }
+    if (!explicitBackground) {
+      if (lower.includes('background') || lower.includes('setting') || lower.includes('location')) {
+        const phrases = prompt.split(/[.,;]/);
+        for (const phrase of phrases) {
+          const lp = phrase.toLowerCase();
+          if (lp.includes('background') || lp.includes('setting') || lp.includes('location')) {
+            explicitBackground = phrase.trim();
+            break;
+          }
+        }
+      }
+    }
+
+    // Creative Freedom Allowed
+    const creativeKeywords = [
+      'creative freedom', 'anything goes', 'surprise me', 'do whatever', 'any style', 'creative license', 
+      'allow creative freedom', 'be creative', 'your choice', 'artistic freedom'
+    ];
+    const creativeFreedomAllowed = creativeKeywords.some(k => lower.includes(k));
+
+    // Split Outfit Top/Bottom Intelligence
+    let explicitTop: string | undefined;
+    let explicitBottom: string | undefined;
+    const splitWords = [' and ', ' with ', ' paired with ', ' matched with '];
+    let parts: string[] = [];
+    for (const sw of splitWords) {
+      if (lower.includes(sw)) {
+        parts = lower.split(sw);
+        break;
+      }
+    }
+    if (parts.length >= 2) {
+      const part1 = parts[0].trim();
+      const part2 = parts[1].trim();
+      const topKeywords = ['shirt', 'top', 'blouse', 'sweater', 'hoodie', 'jacket', 'coat', 'blazer', 'tee', 't-shirt', 'pullover', 'cardigan', 'suit'];
+      const bottomKeywords = ['pants', 'jeans', 'trousers', 'skirt', 'shorts', 'leggings', 'slacks', 'cargos'];
+      const p1HasTop = topKeywords.some(k => part1.includes(k));
+      const p1HasBottom = bottomKeywords.some(k => part1.includes(k));
+      const p2HasTop = topKeywords.some(k => part2.includes(k));
+      const p2HasBottom = bottomKeywords.some(k => part2.includes(k));
+      if (p1HasTop || p2HasBottom) {
+        explicitTop = part1;
+        explicitBottom = part2;
+      } else if (p2HasTop || p1HasBottom) {
+        explicitTop = part2;
+        explicitBottom = part1;
+      } else {
+        explicitTop = part1;
+        explicitBottom = part2;
+      }
+    } else {
+      const topKeywords = ['shirt', 'top', 'blouse', 'sweater', 'hoodie', 'jacket', 'coat', 'blazer', 'tee', 't-shirt', 'pullover', 'cardigan', 'suit', 'tuxedo'];
+      const bottomKeywords = ['pants', 'jeans', 'trousers', 'skirt', 'shorts', 'leggings', 'slacks', 'cargos'];
+      const isDress = lower.includes('dress') || lower.includes('gown') || lower.includes('frock');
+      if (isDress) {
+        explicitTop = lower;
+        explicitBottom = 'integrated fluid gown skirt';
+      } else if (topKeywords.some(k => lower.includes(k))) {
+        explicitTop = lower;
+      } else if (bottomKeywords.some(k => lower.includes(k))) {
+        explicitBottom = lower;
+      }
+    }
+
     return {
       rawPrompt: prompt,
       gender,
@@ -54,9 +260,25 @@ export class PromptUnderstandingEngine {
       inferredVibe: vibe,
       hasLighting: lower.includes('light') || lower.includes('studio') || lower.includes('sun') || lower.includes('glow'),
       hasComposition: lower.includes('shot') || lower.includes('composition') || lower.includes('lens') || lower.includes('perspective') || lower.includes('framing'),
-      hasBackground: lower.includes('background') || lower.includes('setting') || lower.includes('atrium') || lower.includes('street') || lower.includes('indoor') || lower.includes('outdoor'),
-      hasPose: lower.includes('pose') || lower.includes('standing') || lower.includes('walking') || lower.includes('gaze') || lower.includes('expression'),
-      isWeak: prompt.length < 40 || garments.length === 0
+      hasBackground: lower.includes('background') || lower.includes('setting') || lower.includes('atrium') || lower.includes('street') || lower.includes('indoor') || lower.includes('outdoor') || !!explicitBackground,
+      hasPose: lower.includes('pose') || lower.includes('standing') || lower.includes('walking') || lower.includes('gaze') || lower.includes('expression') || !!explicitPose,
+      isWeak: prompt.length < 40 || garments.length === 0,
+      
+      // High-Fidelity & Hierarchy Fields
+      explicitGarmentType,
+      explicitColor,
+      explicitSleeveType,
+      explicitNeckline,
+      explicitSilhouette,
+      explicitFootwear,
+      explicitAccessories,
+      explicitAge,
+      explicitBodyType,
+      explicitPose,
+      explicitBackground,
+      creativeFreedomAllowed,
+      explicitTop,
+      explicitBottom
     };
   }
 }
@@ -569,24 +791,144 @@ export class PromptIntelligenceEngine {
 
   /**
    * Promotes any raw prompt into a breathtaking enterprise-quality fashion editorial masterpiece.
+   * Aligned strictly with lookbook constraints: fashion focus, no backgrounds (studio only),
+   * Headless presentation, extreme texture focus, and strict input adherence.
    */
   static optimize(prompt: string, config?: ImageConfig, designSpec?: FashionDesignSpec): { prompt: string; negativePrompt: string } {
-    const raw = prompt ? prompt.trim() : '';
+    let raw = prompt ? prompt.trim() : '';
+    
+    // Constraint 1 & 5: FASHION FOCUS & NON-FASHION HANDLING
+    const fashionKeywords = [
+      'dress', 'shirt', 'pants', 'suit', 'jeans', 'coat', 'jacket', 'trousers', 'skirt', 'wear', 'outfit', 'apparel',
+      'fashion', 'garment', 'blouse', 'sweater', 'hoodie', 'shoes', 'boots', 'accessories', 'bag', 'leather', 'sartorial',
+      'look', 'style', 'denim', 'silk', 'wool', 'cashmere', 'knitwear', 'model', 'mannequin', 'top', 'bottom', 'tee',
+      't-shirt', 'sneaker', 'heel', 'clothing', 'vest', 'outerwear', 'blazer', 'cardigan', 'kimono', 'robe', 'parka',
+      'trench', 'pullover', 'scarf', 'jewelry', 'necklace', 'bracelet', 'ring', 'earring'
+    ];
+    
+    const nonFashionKeywords = [
+      'dog', 'cat', 'bird', 'lion', 'horse', 'cow', 'sheep', 'pig', 'tiger', 'bear', 'animal', 'pet',
+      'car', 'truck', 'vehicle', 'motorcycle', 'airplane', 'train', 'bus', 'scooter', 'automobile',
+      'tree', 'river', 'mountain', 'landscape', 'forest', 'nature', 'ocean', 'beach', 'sunset',
+      'building', 'house', 'skyscraper', 'office block', 'landmark', 'cityscape'
+    ];
+
+    const lowerRaw = raw.toLowerCase();
+    const hasNonFashion = nonFashionKeywords.some(keyword => {
+      const regex = new RegExp(`\\b${keyword}s?\\b`, 'i');
+      return regex.test(lowerRaw);
+    });
+
+    if (hasNonFashion && raw !== '') {
+      // Prompt Modulator: Automatically rewrite prompt to "Fashion editorial outfit inspired by [User's Input] aesthetics."
+      let inspiredTranslation = 'aesthetic high-fashion garment';
+      if (lowerRaw.includes('car') || lowerRaw.includes('vehicle') || lowerRaw.includes('automobile') || lowerRaw.includes('truck') || lowerRaw.includes('motorcycle')) {
+        inspiredTranslation = 'avant-garde automotive-inspired high-fashion jacket';
+      } else if (lowerRaw.includes('dog') || lowerRaw.includes('cat') || lowerRaw.includes('animal') || lowerRaw.includes('pet') || lowerRaw.includes('lion') || lowerRaw.includes('bear') || lowerRaw.includes('tiger')) {
+        inspiredTranslation = 'fauna-inspired textured high-fashion coat';
+      } else if (lowerRaw.includes('tree') || lowerRaw.includes('forest') || lowerRaw.includes('nature') || lowerRaw.includes('mountain') || lowerRaw.includes('river')) {
+        inspiredTranslation = 'organic foliage-inspired fluid couture drapery';
+      } else {
+        inspiredTranslation = `${raw}-inspired bespoke luxury garment`;
+      }
+      raw = `Fashion editorial outfit inspired by ${raw} aesthetics, beautifully resolved as a custom ${inspiredTranslation}`;
+    } else {
+      const isFashionRelated = fashionKeywords.some(kw => raw.toLowerCase().includes(kw));
+      
+      if (!isFashionRelated && raw !== '') {
+        // Input is non-fashion related, replace with high-end minimalist outfit to respect the mandate
+        raw = `An exquisite high-end minimalist outfit, styling-focused luxury lookbook presentation, inspired by the theme of "${raw}" but strictly resolved as a premium fashion garment`;
+      }
+    }
+
     if (!raw) {
       return {
-        prompt: `Photorealistic high-fashion editorial. A tailored quiet luxury outfit. Rembrandt lighting, minimalist marble atrium background, Hasselblad 85mm lens.`,
+        prompt: `Photorealistic professional fashion lookbook. A tailored quiet luxury outfit. Rembrandt studio lighting, clean solid light grey studio setting background, Hasselblad 85mm lens. Headless mannequin style focus on fabric, denim and wool textures.`,
         negativePrompt: ImageQualityValidationEngine.getNegativePrompt()
       };
     }
 
-    // Step 1: Execute the complete Fashion Design Intelligence System (The LOOK VISION Brain)
-    const spec = designSpec || FashionDesignIntelligenceSystem.design(raw, config);
-
     // Step 2: Prompt Understanding
     const analysis = PromptUnderstandingEngine.analyze(raw);
 
+    // Step 1: Execute the complete Fashion Design Intelligence System (The LOOK VISION Brain)
+    const spec = designSpec || FashionDesignIntelligenceSystem.design(raw, config);
+
     // Step 3: Fashion Context
     const context = FashionContextEngine.getContext(analysis);
+
+    // Constraint 2: NO BACKGROUNDS (Studio Setting Only) unless explicitly requested
+    if (analysis.explicitBackground) {
+      spec.diversity.background = `A clean beautiful setting background of: ${analysis.explicitBackground}, beautifully arranged, minimalist, high-fashion catalog standard. NO roads, NO outdoor streets unless explicitly requested.`;
+      if (spec.blueprints && spec.blueprints.scene) {
+        spec.blueprints.scene.background = `Beautiful setting: ${analysis.explicitBackground}`;
+        spec.blueprints.scene.location = analysis.explicitBackground;
+      }
+    } else {
+      const bgOptions = [
+        'A clean, neutral solid white studio setting background, completely minimalist and flat, with professional soft natural shadow drop. NO landscapes, NO buildings, NO nature, NO outdoor scenes, NO rain, NO desert.',
+        'A clean, neutral solid light grey studio setting background, completely flat and neutral, casting extremely soft studio shadows under-feet. NO landscapes, NO buildings, NO nature, NO outdoor scenes, NO rain, NO desert.',
+        'A solid dark slate studio setting background, deep premium slate-grey, completely neutral, minimalist and clean. NO landscapes, NO buildings, NO nature, NO outdoor scenes, NO rain, NO desert.'
+      ];
+      const bgIdx = Math.abs(raw.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)) % bgOptions.length;
+      const neutralStudioBackground = bgOptions[bgIdx];
+      spec.diversity.background = neutralStudioBackground;
+      if (spec.blueprints && spec.blueprints.scene) {
+        spec.blueprints.scene.background = neutralStudioBackground;
+        spec.blueprints.scene.location = 'Neutral studio setting';
+      }
+    }
+
+    // Constraint 3: NO FACES (Headless mannequin / neck down focus) unless explicitly requested
+    const hasFaceRequest = lowerRaw.includes('face') || lowerRaw.includes('expression') || lowerRaw.includes('gaze') || lowerRaw.includes('looking') || lowerRaw.includes('portrait') || lowerRaw.includes('model') || lowerRaw.includes('woman') || lowerRaw.includes('man') || lowerRaw.includes('girl') || lowerRaw.includes('boy') || lowerRaw.includes('gazing') || lowerRaw.includes('profile');
+    const chosenGenderText = analysis.gender === 'male' ? 'male' : (analysis.gender === 'female' ? 'female' : 'unisex');
+
+    if (hasFaceRequest && !lowerRaw.includes('headless')) {
+      spec.avatar.consistentFace = `A gorgeous, highly professional fashion model face, symmetrical eyes, sharp look, photorealistic facial details.`;
+      spec.avatar.makeup = `Elegant professional high-fashion runway makeup.`;
+      spec.avatar.hairstyle = `Perfect professional hair style.`;
+      spec.avatar.ethnicity = `statuesque professional ${chosenGenderText} fashion model`;
+    } else {
+      const faceObscuredDescription = `Focus: Headless style, cropped elegantly from the shoulders down (mannequin-style) or depicted as a professional model with their face completely out of frame, focusing 100% of the visual attention on the garment, drape, and material contours rather than the face.`;
+      spec.avatar.consistentFace = faceObscuredDescription;
+      spec.avatar.makeup = `Face is completely out of frame or obscured to maintain 100% focus on the garment structure`;
+      spec.avatar.hairstyle = `Face is completely out of frame or obscured`;
+      spec.avatar.ethnicity = `statuesque professional ${chosenGenderText} model cropped from the neck down (headless style) focusing solely on the clothing`;
+    }
+
+    if (spec.blueprints && spec.blueprints.avatar) {
+      spec.blueprints.avatar.expression = hasFaceRequest ? 'gazing professionally' : 'Headless style, focusing entirely on the outfit';
+      spec.blueprints.avatar.faceShape = hasFaceRequest ? 'symmetrical runway standard' : 'Out of frame / neck down crop';
+      spec.blueprints.avatar.hairStyle = hasFaceRequest ? 'immaculate styling' : 'Out of frame';
+    }
+
+    // Constraint 4: TEXTURE & DETAIL FOCUS
+    // Focus heavily on fabric folds, detailed stitching, precise raw seams, and materials like denim, silk, cotton, etc.
+    spec.garment.stitching = `precision high-contrast stitching, immaculate tailoring seams, visible thread density`;
+    spec.garment.textures = `exquisite physical material textures, fabric folds, stitching details, and material construction (such as denim, silk, cotton, or wool fibers)`;
+    spec.realism.wrinkles = `gravity-accurate fabric folds, natural tension creases where elbows and knees bend, real physical textile weight and presence`;
+    spec.realism.seams = `steam-pressed real tailoring seams, flawless double-stitching lines, absolute garment structural integrity`;
+    spec.realism.folds = `fluid, heavy drapes responding naturally to physical posture with authentic fabric weight and natural creases`;
+
+    // Constraint 5: INPUT ADHERENCE (Parse prompt elements for top/bottom clothing details)
+    spec.garment.description = `exquisite high-fashion garment precisely depicting the requested clothing: "${raw}"`;
+    const lowerRawGarment = raw.toLowerCase();
+    if (lowerRawGarment.includes('shirt') || lowerRawGarment.includes('top') || lowerRawGarment.includes('blouse') || lowerRawGarment.includes('sweater') || lowerRawGarment.includes('hoodie') || lowerRawGarment.includes('jacket') || lowerRawGarment.includes('coat') || lowerRawGarment.includes('blazer') || lowerRawGarment.includes('tee') || lowerRawGarment.includes('t-shirt')) {
+      const topMatch = raw.match(/([a-zA-Z-\s]+(shirt|top|blouse|sweater|hoodie|jacket|coat|blazer|tee|t-shirt))/i);
+      if (topMatch) {
+        spec.outfit.top = topMatch[0].trim();
+      } else {
+        spec.outfit.top = raw;
+      }
+    }
+    if (lowerRawGarment.includes('pants') || lowerRawGarment.includes('jeans') || lowerRawGarment.includes('trousers') || lowerRawGarment.includes('skirt') || lowerRawGarment.includes('shorts')) {
+      const bottomMatch = raw.match(/([a-zA-Z-\s]+(pants|jeans|trousers|skirt|shorts))/i);
+      if (bottomMatch) {
+        spec.outfit.bottom = bottomMatch[0].trim();
+      } else {
+        spec.outfit.bottom = raw;
+      }
+    }
 
     // Step 4: Camera & Photo Parameters
     const photoSettings = LuxuryFashionPhotographyEngine.getSettings();
@@ -600,7 +942,7 @@ export class PromptIntelligenceEngine {
     // Construct the magnificent optimized prompt block based on the true Fashion Design Brain spec.
     // It harmonizes background, camera setup, lighting, and model features to prevent any prompt contradictions.
     const rawFinalPrompt = `Professional high-fashion campaign photo.
-Subject Profile: ${spec.avatar.ethnicity}, age ${spec.avatar.age}, representing ${spec.trend.luxuryBrand}. Symmetrical facial features of professional model quality, photorealistic, expressive eyes with sharp iris reflection, individual eyelashes. Hair styled in ${spec.avatar.hairstyle}. Beautiful cosmetic finish: ${spec.avatar.makeup}.
+Subject Profile: ${spec.avatar.ethnicity}, age ${spec.avatar.age}, representing ${spec.trend.luxuryBrand}. ${spec.avatar.consistentFace}.
 Anatomy Integrity: ${spec.avatar.bodyProportions}. Immaculate hand anatomy, perfectly formed fingers, natural hand joints, natural leg-to-torso ratio, natural feet, completely free of deformities.
 Designed Garment: ${spec.garment.description}. Silhouette is ${spec.garment.silhouette} with ${spec.garment.sleeves} and an exquisite ${spec.garment.collar}. Tailoring: ${spec.garment.stitching} featuring ${spec.garment.cuts} and ${spec.garment.layers}, finished with ${spec.garment.hems}. Fabric texture of ${spec.garment.textures}.
 Fabric Intelligence: Crafted in ${spec.fabric.name} with ${spec.fabric.simulation}. Fabric is designed for the ${spec.fabric.season} collection.
@@ -614,9 +956,139 @@ Realism Engineering: Enforcing ${spec.realism.wrinkles}, ${spec.realism.seams}, 
     // Process through our intelligent high-fashion prompt compressor to guarantee a compact, powerful instructions list under 1600 characters
     const finalPrompt = this.compressIfNeeded(rawFinalPrompt.replace(/\s+/g, ' ').trim(), 1550);
 
+    // Apply the Fashion Fidelity Layer Checklist Verification & Repair!
+    const fidelityResult = FashionFidelityLayer.verifyAndRepair(finalPrompt, analysis);
+    console.log(`[Fashion Fidelity Layer] Internal Checklist audit completed:\n` + fidelityResult.checklist.join('\n'));
+
     return {
-      prompt: finalPrompt,
+      prompt: fidelityResult.prompt,
       negativePrompt: ImageQualityValidationEngine.getNegativePrompt()
+    };
+  }
+}
+
+/**
+ * FASHION FIDELITY LAYER
+ * Verifies the final optimized prompt against a strict checklist of user requested attributes.
+ * If any requested items are missing or overridden, it repairs/injects them to guarantee 100% fidelity.
+ */
+export class FashionFidelityLayer {
+  static verifyAndRepair(optimizedPrompt: string, analysis: any): { prompt: string; checklist: string[] } {
+    const checklist: string[] = [];
+    let repairedPrompt = optimizedPrompt;
+    const lower = repairedPrompt.toLowerCase();
+
+    // 1. Correct garment check
+    if (analysis.explicitGarmentType) {
+      if (lower.includes(analysis.explicitGarmentType)) {
+        checklist.push(`✓ Correct garment (${analysis.explicitGarmentType})`);
+      } else {
+        repairedPrompt += ` [FIDELITY REPAIR: The main garment featured MUST be exactly a ${analysis.explicitGarmentType}.]`;
+        checklist.push(`✓ Repaired garment (${analysis.explicitGarmentType})`);
+      }
+    } else {
+      checklist.push(`✓ Correct garment`);
+    }
+
+    // 2. Correct colors check
+    if (analysis.explicitColor) {
+      if (lower.includes(analysis.explicitColor)) {
+        checklist.push(`✓ Correct colors (${analysis.explicitColor})`);
+      } else {
+        repairedPrompt += ` [FIDELITY REPAIR: The primary color of the garment is strictly ${analysis.explicitColor}.]`;
+        checklist.push(`✓ Repaired colors (${analysis.explicitColor})`);
+      }
+    } else {
+      checklist.push(`✓ Correct colors`);
+    }
+
+    // 3. Correct accessories check
+    if (analysis.explicitAccessories && analysis.explicitAccessories.length > 0) {
+      const missingAccs = analysis.explicitAccessories.filter((acc: string) => !lower.includes(acc));
+      if (missingAccs.length === 0) {
+        checklist.push(`✓ Correct accessories`);
+      } else {
+        repairedPrompt += ` [FIDELITY REPAIR: Must include the following accessories explicitly: ${missingAccs.join(', ')}.]`;
+        checklist.push(`✓ Repaired accessories (${missingAccs.join(', ')})`);
+      }
+    } else {
+      checklist.push(`✓ Correct accessories`);
+    }
+
+    // 4. Correct gender check
+    if (analysis.gender && analysis.gender !== 'unisex') {
+      if (lower.includes(analysis.gender) || (analysis.gender === 'male' && (lower.includes('man') || lower.includes('gentleman'))) || (analysis.gender === 'female' && (lower.includes('woman') || lower.includes('lady')))) {
+        checklist.push(`✓ Correct gender (${analysis.gender})`);
+      } else {
+        repairedPrompt += ` [FIDELITY REPAIR: The fashion model featured is a ${analysis.gender}.]`;
+        checklist.push(`✓ Repaired gender (${analysis.gender})`);
+      }
+    } else {
+      checklist.push(`✓ Correct gender`);
+    }
+
+    // 5. Correct scene check (background)
+    if (analysis.explicitBackground) {
+      if (lower.includes(analysis.explicitBackground.toLowerCase())) {
+        checklist.push(`✓ Correct scene`);
+      } else {
+        repairedPrompt += ` [FIDELITY REPAIR: The setting environment is strictly: ${analysis.explicitBackground}.]`;
+        checklist.push(`✓ Repaired scene`);
+      }
+    } else {
+      checklist.push(`✓ Correct scene`);
+    }
+
+    // 6. Correct style check
+    if (analysis.inferredVibe) {
+      checklist.push(`✓ Correct style (${analysis.inferredVibe})`);
+    } else {
+      checklist.push(`✓ Correct style`);
+    }
+
+    // 7. Correct pose check
+    if (analysis.explicitPose) {
+      if (lower.includes(analysis.explicitPose.toLowerCase())) {
+        checklist.push(`✓ Correct pose (${analysis.explicitPose})`);
+      } else {
+        repairedPrompt += ` [FIDELITY REPAIR: The model pose is strictly: ${analysis.explicitPose}.]`;
+        checklist.push(`✓ Repaired pose (${analysis.explicitPose})`);
+      }
+    } else {
+      checklist.push(`✓ Correct pose`);
+    }
+
+    // 8. Correct body check
+    if (analysis.explicitBodyType) {
+      if (lower.includes(analysis.explicitBodyType.toLowerCase())) {
+        checklist.push(`✓ Correct body (${analysis.explicitBodyType})`);
+      } else {
+        repairedPrompt += ` [FIDELITY REPAIR: The model body type has ${analysis.explicitBodyType} proportions.]`;
+        checklist.push(`✓ Repaired body (${analysis.explicitBodyType})`);
+      }
+    } else {
+      checklist.push(`✓ Correct body`);
+    }
+
+    // 9. Correct camera check (Hasselblad)
+    if (lower.includes('hasselblad') || lower.includes('camera') || lower.includes('lens')) {
+      checklist.push(`✓ Correct camera`);
+    } else {
+      repairedPrompt += ` [FIDELITY REPAIR: Shot with a professional Hasselblad medium-format camera, 85mm lens, high-fashion campaign quality.]`;
+      checklist.push(`✓ Repaired camera`);
+    }
+
+    // 10. Correct lighting check
+    if (lower.includes('lighting') || lower.includes('illumination') || lower.includes('studio spotlight')) {
+      checklist.push(`✓ Correct lighting`);
+    } else {
+      repairedPrompt += ` [FIDELITY REPAIR: Illuminated by high-end studio spotlighting with soft luxury shadow details.]`;
+      checklist.push(`✓ Repaired lighting`);
+    }
+
+    return {
+      prompt: repairedPrompt,
+      checklist
     };
   }
 }

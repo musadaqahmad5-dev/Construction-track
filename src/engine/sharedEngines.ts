@@ -88,7 +88,10 @@ export class FashionEngine {
   ];
 
   static checkSartoGuardrail(text: string): { allowed: boolean; reason?: string } {
-    const testText = text.toLowerCase();
+    const testText = text.toLowerCase()
+      .replace(/\b(zero|no|not|without|exclude|avoid|never|non)\b[^,.!;\n]*/gi, '')
+      .replace(/\b(fashion house|couture house|house of|plant-based|apple skin|apple leather|tree fiber|dogtooth|houndstooth)\b/gi, '');
+
     const blockedWord = this.NON_FASHION_KEYWORDS.find(word => {
       const regex = new RegExp(`\\b${word}s?\\b`, 'i');
       return regex.test(testText);

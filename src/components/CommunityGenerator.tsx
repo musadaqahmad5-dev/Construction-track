@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Upload, Sparkles, RefreshCw, Layers, Check, ArrowRight, 
-  User, Shield, Info, Trash2, Tag, CheckCircle2, Save, Send, AlertTriangle
+  User, Shield, Info, Trash2, Tag, CheckCircle2, Save, Send, AlertTriangle, Sliders
 } from 'lucide-react';
 import { auth, db } from '../firebase';
 import { collection, addDoc, getDocs, query, where, orderBy } from 'firebase/firestore';
@@ -24,6 +24,51 @@ export const CommunityGenerator: React.FC<CommunityGeneratorProps> = ({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   
+  // High-Fidelity Professional Generation Parameters
+  const [qualityMode, setQualityMode] = useState<boolean>(true);
+  const [aspectRatio, setAspectRatio] = useState<'1:1' | '3:4' | '4:3' | '9:16' | '16:9'>('3:4');
+  const [styleTransferWeight, setStyleTransferWeight] = useState<number>(0.85);
+
+  // Integrated 'Create with AI' Strategy States
+  const [customPrompt, setCustomPrompt] = useState<string>('');
+  const [selectedCategory, setSelectedCategory] = useState<'Casual' | 'Formal' | 'Outerwear'>('Casual');
+
+  const [selectedDemographic, setSelectedDemographic] = useState<string>(() => {
+    return typeof localStorage !== 'undefined' ? localStorage.getItem('look_vision_selected_demographic') || 'youth' : 'youth';
+  });
+  const [selectedInstructor, setSelectedInstructor] = useState<string>(() => {
+    return typeof localStorage !== 'undefined' ? localStorage.getItem('look_vision_selected_instructor') || 'pattern_maker' : 'pattern_maker';
+  });
+
+  useEffect(() => {
+    const handleSync = () => {
+      if (typeof localStorage !== 'undefined') {
+        const demo = localStorage.getItem('look_vision_selected_demographic') || 'youth';
+        const inst = localStorage.getItem('look_vision_selected_instructor') || 'pattern_maker';
+        setSelectedDemographic(demo);
+        setSelectedInstructor(inst);
+      }
+    };
+    window.addEventListener('lookvision_sync_instructor', handleSync);
+    return () => {
+      window.removeEventListener('lookvision_sync_instructor', handleSync);
+    };
+  }, []);
+
+  const instructorDemographics = [
+    { id: 'youth', name: 'Youth Division', ageRange: '12-18', styleVibe: 'Vibrant Cyberpunk Streetwear & Athletic Fusion', focus: 'Fast-fashion agility & energetic street expression' },
+    { id: 'young-adults', name: 'Young Adults', ageRange: '19-25', styleVibe: 'Deconstructed Minimalist & Eco-Conscious Thrift', focus: 'Expressive sustainability & digital style passports' },
+    { id: 'professionals', name: 'Active Professionals', ageRange: '26-45', styleVibe: 'Quiet Luxury, Precision Tailoring & High-Performance Outerwear', focus: 'Sleek corporate minimalism & high-efficiency wardrobes' },
+    { id: 'elders', name: 'Noble Elders', ageRange: '46+', styleVibe: 'Classic Editorial, Premium Organic Linens & Fine Merino', focus: 'Ergonomic comfort & timeless legacy heritage' }
+  ];
+
+  const instructorWorkers = [
+    { id: 'pattern_maker', name: 'Artisan Pattern Maker', role: 'Pattern & Fit Solver', cageId: 'Cage Alpha (Structure)', needs: 'CLO3D CAD integration, Kinetic drape physics weights' },
+    { id: 'trend_scout', name: 'Trend Ingestion Scout', role: 'Telemetry & Sourcing Analytics', cageId: 'Cage Beta (Intelligence)', needs: 'Pinterest RSS data endpoints, Vogue crawl engine' },
+    { id: 'prompt_alchemist', name: 'Prompt Styling Alchemist', role: 'High Fidelity Image Generation', cageId: 'Cage Gamma (Visuals)', needs: 'Imagen 4.0 API access, Aesthetic Quality Estimator' },
+    { id: 'decision_oracle', name: 'Sartorial Decision Oracle', role: 'Personalized Matching Logic', cageId: 'Cage Delta (Judgment)', needs: 'Local SQLite database state, Preference Learner DB' }
+  ];
+
   // Processing state
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingProgress, setProcessingProgress] = useState(0);
@@ -171,7 +216,16 @@ export const CommunityGenerator: React.FC<CommunityGeneratorProps> = ({
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ base64Image: imagePreview })
+        body: JSON.stringify({ 
+          base64Image: imagePreview,
+          qualityMode,
+          aspectRatio,
+          styleTransferWeight,
+          selectedDemographic,
+          selectedInstructor,
+          customPrompt,
+          selectedCategory
+        })
       });
 
       if (!response.ok) {
@@ -616,10 +670,221 @@ export const CommunityGenerator: React.FC<CommunityGeneratorProps> = ({
                   )}
                 </div>
 
+                {/* Integrated 'Create with AI' Strategy & Prompt Panel */}
+                <div className="bg-[#07070c] border border-white/5 rounded-3xl p-6 space-y-5 text-left">
+                  <div className="flex items-center gap-2.5 pb-3 border-b border-white/5">
+                    <Sparkles className="w-4 h-4 text-violet-400" />
+                    <div>
+                      <h4 className="font-serif text-sm text-white font-medium">Create with AI • Prompt & Style Strategy</h4>
+                      <p className="text-[10.5px] text-zinc-500 font-light">Specify custom garment prompts, silhouetting vibes, and target clothing categories.</p>
+                    </div>
+                  </div>
+
+                  {/* Clothing Category Selection */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-mono uppercase text-zinc-400 tracking-wider block">Target Clothing Category</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {(['Casual', 'Formal', 'Outerwear'] as const).map(cat => (
+                        <button
+                          key={cat}
+                          type="button"
+                          onClick={() => setSelectedCategory(cat)}
+                          className={`py-2 px-3 rounded-xl font-mono text-[10px] uppercase border transition-all cursor-pointer text-center ${
+                            selectedCategory === cat
+                              ? 'bg-violet-600/10 border-violet-500 text-violet-300 font-bold'
+                              : 'bg-white/[0.01] border-white/5 text-zinc-500 hover:text-zinc-300'
+                          }`}
+                        >
+                          {cat}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Design Prompt Textarea */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-mono uppercase text-zinc-400 tracking-wider block">
+                      Design Prompt & Stitching Details (Optional)
+                    </label>
+                    <textarea
+                      value={customPrompt}
+                      onChange={(e) => setCustomPrompt(e.target.value)}
+                      placeholder="E.g., asymmetrical draped silk gown in cream tone with pleated overlays and kinetic drapes..."
+                      rows={3}
+                      className="w-full bg-[#11111a] border border-white/5 rounded-xl px-4 py-3 text-xs text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-violet-500/50 transition-all duration-300 resize-none"
+                    />
+                  </div>
+
+                  {/* Preloaded Vibe Presets */}
+                  <div className="space-y-2 pt-2 border-t border-white/5">
+                    <span className="text-[10px] font-mono tracking-wide text-zinc-500 uppercase block">Preloaded Vibe Strategies</span>
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        { label: 'Summer Resort', prompt: 'Beige linen resort shirt and pleated linen shorts, luxury style lookbook' },
+                        { label: 'Cyber Techwear', prompt: 'Future punk heavy drop-shoulder utility coat and asymmetric tech cargo pants' },
+                        { label: 'Quiet Luxury', prompt: 'Exquisite cashmere cream crewneck sweater and tailored sand-colored wool trousers' },
+                        { label: 'Atelier Blazer', prompt: 'Deconstructed wool double-breasted gray blazer paired with crisp linen white shirt' },
+                        { label: 'Avant-Garde', prompt: 'Asymmetrical draped silk gown in cream tone with pleated kinetic overlays' }
+                      ].map((chip, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => setCustomPrompt(chip.prompt)}
+                          className="px-3 py-1.5 rounded-full text-[10px] font-mono border border-white/5 bg-[#11111a] text-zinc-400 hover:text-white hover:border-violet-500/20 hover:bg-violet-500/10 transition-all duration-300 cursor-pointer"
+                        >
+                          [{chip.label}]
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Advanced Sartorial High-Fidelity Parameters */}
+                <div className="bg-[#07070c] border border-white/5 rounded-3xl p-6 space-y-6 text-left">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <Sliders className="w-4 h-4 text-violet-400" />
+                      <h4 className="font-serif text-sm text-white font-medium">Advanced High-Fidelity Parameters</h4>
+                    </div>
+                    {/* Quality Mode Toggle */}
+                    <label className="relative inline-flex items-center cursor-pointer select-none">
+                      <input 
+                        type="checkbox" 
+                        checked={qualityMode} 
+                        onChange={(e) => setQualityMode(e.target.checked)} 
+                        className="sr-only peer" 
+                      />
+                      <div className="w-9 h-5 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-zinc-400 after:border-zinc-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-violet-600 peer-checked:after:bg-white peer-checked:after:border-white"></div>
+                      <span className="ml-2 text-[10px] font-mono text-zinc-400 uppercase">Quality Mode</span>
+                    </label>
+                  </div>
+
+                  <p className="text-[11px] text-zinc-400 font-light leading-relaxed">
+                    Activate <strong>Quality Mode</strong> to enable advanced multi-pass prompt synthesis and high-resolution rendering parameters, forcing a high-fidelity generation.
+                  </p>
+
+                  {qualityMode && (
+                    <div className="space-y-5 pt-4 border-t border-white/5">
+                      {/* Aspect Ratio Options */}
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider block">Aspect Ratio Selection</label>
+                        <div className="grid grid-cols-5 gap-2">
+                          {(['1:1', '3:4', '4:3', '9:16', '16:9'] as const).map((ratio) => (
+                            <button
+                              key={ratio}
+                              type="button"
+                              onClick={() => setAspectRatio(ratio)}
+                              className={`py-2 text-[10px] font-mono rounded-lg border transition-all cursor-pointer text-center ${
+                                aspectRatio === ratio
+                                  ? 'bg-violet-500/10 border-violet-500/40 text-violet-300 font-bold'
+                                  : 'bg-white/[0.01] border-white/5 hover:border-white/10 text-zinc-400 hover:text-white'
+                              }`}
+                            >
+                              {ratio}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Style Transfer Weight Slider */}
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <label className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider">Style Transfer Weight</label>
+                          <span className="text-[10px] font-mono text-violet-400 font-bold">{styleTransferWeight.toFixed(2)}</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0.10"
+                          max="1.00"
+                          step="0.05"
+                          value={styleTransferWeight}
+                          onChange={(e) => setStyleTransferWeight(parseFloat(e.target.value))}
+                          className="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-violet-500"
+                        />
+                        <div className="flex justify-between text-[9px] font-mono text-zinc-500">
+                          <span>Low (Abstract/Loose)</span>
+                          <span>High (Strict Anatomical/Texture Alignment)</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
               </div>
 
               {/* Right column: mapping rules info card */}
               <div className="space-y-6 text-left">
+                {/* SARTORIAL GOVERNOR DEMOGRAPHICS & WORKERS */}
+                <div className="bg-[#07070c] border border-white/5 rounded-3xl p-6 space-y-5">
+                  <div className="flex items-center justify-between border-b border-white/[0.04] pb-2">
+                    <h3 className="font-serif text-sm text-white flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-violet-400" />
+                      <span>Sartorial Governor Filters</span>
+                    </h3>
+                    <span className="text-[8px] font-mono bg-violet-950/40 border border-violet-500/20 text-violet-400 px-1.5 py-0.5 rounded">
+                      ACTIVE
+                    </span>
+                  </div>
+
+                  <div className="space-y-4">
+                    {/* Demography Choice */}
+                    <div className="space-y-1.5">
+                      <label className="text-[9px] font-mono uppercase text-zinc-500 tracking-wider block">
+                        Target Demography
+                      </label>
+                      <select
+                        value={selectedDemographic}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setSelectedDemographic(val);
+                          if (typeof localStorage !== 'undefined') {
+                            localStorage.setItem('look_vision_selected_demographic', val);
+                          }
+                          window.dispatchEvent(new Event('lookvision_sync_instructor'));
+                        }}
+                        className="w-full bg-[#11111a] border border-white/5 rounded-xl px-2.5 py-2 text-xs text-zinc-300 focus:outline-none focus:border-violet-500/50 cursor-pointer"
+                      >
+                        {instructorDemographics.map(d => (
+                          <option key={d.id} value={d.id}>
+                            {d.name} (Ages {d.ageRange})
+                          </option>
+                        ))}
+                      </select>
+                      <div className="text-[10px] text-zinc-500 leading-normal italic px-1">
+                        Focus: {instructorDemographics.find(d => d.id === selectedDemographic)?.focus}
+                      </div>
+                    </div>
+
+                    {/* Certified Worker Agent Cage Choice */}
+                    <div className="space-y-1.5">
+                      <label className="text-[9px] font-mono uppercase text-zinc-500 tracking-wider block">
+                        Assigned Worker Agent
+                      </label>
+                      <select
+                        value={selectedInstructor}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setSelectedInstructor(val);
+                          if (typeof localStorage !== 'undefined') {
+                            localStorage.setItem('look_vision_selected_instructor', val);
+                          }
+                          window.dispatchEvent(new Event('lookvision_sync_instructor'));
+                        }}
+                        className="w-full bg-[#11111a] border border-white/5 rounded-xl px-2.5 py-2 text-xs text-zinc-300 focus:outline-none focus:border-violet-500/50 cursor-pointer"
+                      >
+                        {instructorWorkers.map(i => (
+                          <option key={i.id} value={i.id}>
+                            {i.name} ({i.cageId.split(' ')[1]})
+                          </option>
+                        ))}
+                      </select>
+                      <div className="text-[10px] text-zinc-500 leading-normal italic px-1">
+                        Needs: {instructorWorkers.find(i => i.id === selectedInstructor)?.needs}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="bg-[#07070c] border border-white/5 rounded-3xl p-6 space-y-5">
                   <h3 className="font-serif text-sm text-white flex items-center gap-2">
                     <Shield className="w-4 h-4 text-violet-400" />

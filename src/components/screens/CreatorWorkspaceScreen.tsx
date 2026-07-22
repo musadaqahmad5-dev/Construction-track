@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Store, Plus, Trash2, Edit3, BarChart2, DollarSign, Eye, Award, CheckCircle2, ShoppingBag, Settings, Sparkles, Sliders, ArrowUpRight, Percent, RefreshCw } from 'lucide-react';
 import { WardrobeItem } from '../../types';
+import { FounderDashboard } from '../FounderDashboard';
 
 interface CreatorWorkspaceScreenProps {
   user: any;
@@ -16,7 +17,7 @@ export const CreatorWorkspaceScreen: React.FC<CreatorWorkspaceScreenProps> = ({
   onAddGarment,
   onNavigateToTab
 }) => {
-  const [activeTab, setActiveTab] = useState<'analytics' | 'listings' | 'predictions' | 'profile'>('analytics');
+  const [activeTab, setActiveTab] = useState<'analytics' | 'listings' | 'predictions' | 'profile' | 'seller'>('analytics');
   
   // Local products catalog state
   const [listings, setListings] = useState([
@@ -104,7 +105,8 @@ export const CreatorWorkspaceScreen: React.FC<CreatorWorkspaceScreenProps> = ({
               { id: 'analytics', label: 'Analytics' },
               { id: 'listings', label: 'Store Listings' },
               { id: 'predictions', label: 'AI Demand' },
-              { id: 'profile', label: 'Shop Profile' }
+              { id: 'profile', label: 'Shop Profile' },
+              { id: 'seller', label: 'Seller Hub' }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -306,6 +308,12 @@ export const CreatorWorkspaceScreen: React.FC<CreatorWorkspaceScreenProps> = ({
                 <span className="text-[10px] font-mono text-emerald-400 uppercase tracking-wider block text-center">✓ Brand contract successfully synchronized.</span>
               )}
             </form>
+          </div>
+        )}
+
+        {activeTab === 'seller' && (
+          <div className="space-y-6 animate-fade-in text-left">
+            <FounderDashboard />
           </div>
         )}
       </div>

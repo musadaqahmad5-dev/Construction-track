@@ -249,7 +249,15 @@ export class FashionDesignIntelligenceSystem {
       'Loewe sculptural fashion week editorial',
       'Alexander McQueen savage beauty campaign'
     ];
-    const brand = this.pick(luxuryBrands);
+    let brand = this.pick(luxuryBrands);
+    const lowerRaw = rawPrompt.toLowerCase();
+    for (const b of luxuryBrands) {
+      const brandWord = b.split(' ')[0].toLowerCase();
+      if (lowerRaw.includes(brandWord)) {
+        brand = b;
+        break;
+      }
+    }
 
     // Concept specific properties mapper (THE FASHION CONCEPT GENERATOR / FASHION CREATIVITY ENGINE)
     let locations: string[] = [];
@@ -510,10 +518,9 @@ export class FashionDesignIntelligenceSystem {
 
     // CAMERA SETUPS
     const cameraAngles = [
-      'Hasselblad 85mm f/1.2 medium-full lens capture, low-angle hero framing',
-      'medium portrait shot captured from a direct eye-level, highlighting facial structure and garment collar',
-      'wide-angle editorial shot from slightly below, integrating the model dynamically into the surrounding architecture',
-      'asymmetrical composition with generous off-center negative space, capturing the model in a sharp three-quarter profile'
+      'Hasselblad 85mm f/1.2 medium-full lens capture, low-angle hero framing focusing on drape and texture',
+      'medium portrait shot captured from a direct eye-level, highlighting garment chest-line and collar',
+      'asymmetrical composition with generous off-center negative space, capturing the garment in a sharp three-quarter profile'
     ];
 
     const compositions = [
@@ -526,14 +533,14 @@ export class FashionDesignIntelligenceSystem {
     // 2. CONSTRUCT THE FASHION BLUEPRINTS FIRST
     // ==========================================
     const chosenGender = analysis.gender === 'male' ? 'male' : (analysis.gender === 'female' ? 'female' : this.pick(['male', 'female']));
-    const chosenAge = this.pick([19, 21, 23, 25, 27, 29, 31]);
+    const chosenAge = analysis.explicitAge || this.pick([19, 21, 23, 25, 27, 29, 31]);
     const chosenFaceShape = this.pick(['sculpted sharp heart-shaped face', 'defined architectural square jawline', 'classic elegant oval symmetry', 'high-cheekboned geometric structure']);
     const chosenHairStyle = this.pick(hairstyles);
     const chosenHairColor = this.pick(hairColors);
     const chosenSkinTone = this.pick(ethnicities);
-    const chosenBodyProportions = this.pick(bodyProportions);
+    const chosenBodyProportions = analysis.explicitBodyType ? `balanced body with ${analysis.explicitBodyType} proportions` : this.pick(bodyProportions);
     const chosenHeight = this.pick(heights);
-    const chosenPose = this.pick(poses);
+    const chosenPose = analysis.explicitPose ? `elegant posture showing ${analysis.explicitPose}` : this.pick(poses);
     const chosenExpression = this.pick(expressions);
 
     const avatarBlueprint = {
@@ -550,15 +557,17 @@ export class FashionDesignIntelligenceSystem {
       expression: chosenExpression
     };
 
-    const chosenSilhouette = this.pick(silhouettes);
-    const chosenCollar = this.pick(collars);
-    const chosenSleeves = this.pick(sleeves);
+    const chosenSilhouette = analysis.explicitSilhouette ? `exquisite ${analysis.explicitSilhouette}` : this.pick(silhouettes);
+    const chosenCollar = analysis.explicitNeckline ? `exquisite collar featuring ${analysis.explicitNeckline}` : this.pick(collars);
+    const chosenSleeves = analysis.explicitSleeveType ? `exquisite sleeves featuring ${analysis.explicitSleeveType}` : this.pick(sleeves);
     const chosenStitching = this.pick(stitchings);
     const chosenFabricObj = this.pick(fabricsList);
     const chosenFolds = this.pick(foldsList);
     const chosenTexture = this.pick(textures);
-    const chosenAccessoriesPiece = this.pick(accessoriesOptions);
-    const chosenShoes = this.pick(shoesOptions);
+    const chosenAccessoriesPiece = (analysis.explicitAccessories && analysis.explicitAccessories.length > 0)
+      ? `tastefully styled with ${analysis.explicitAccessories.join(' and ')}`
+      : this.pick(accessoriesOptions);
+    const chosenShoes = analysis.explicitFootwear ? `custom premium ${analysis.explicitFootwear}` : this.pick(shoesOptions);
     const chosenJewelry = this.pick(jewelryOptions);
 
     const garmentBlueprint = {
@@ -575,14 +584,26 @@ export class FashionDesignIntelligenceSystem {
       jewelry: chosenJewelry
     };
 
-    const chosenLocation = this.pick(locations);
-    const chosenLighting = this.pick(lightings);
+    // STRICT STUDIO OVERRIDES
+    const studioLocations = ['minimal professional fashion studio setting', 'high-end product lookbook stage', 'clean light-controlled neutral room setting'];
+    const studioLightings = ['professional Rembrandt studio lighting', 'even soft diffused key studio lighting', 'dramatic high-contrast studio spotlighting'];
+    const studioBackgroundDetails = [
+      'A clean, neutral solid light grey studio backdrop casting extremely soft shadows. NO landscapes, NO buildings, NO nature, NO outdoor scenes, NO rain, NO desert.',
+      'A clean, neutral solid white studio setting background, completely minimalist and flat. NO landscapes, NO buildings, NO nature, NO outdoor scenes, NO rain, NO desert.',
+      'A solid dark slate studio setting background, deep premium slate-grey, completely neutral, minimalist and clean. NO landscapes, NO buildings, NO nature, NO outdoor scenes, NO rain, NO desert.'
+    ];
+    const studioReflections = ['subtle soft light bounce on studio surface', 'minimal shadow drop on clean flat studio flooring'];
+
+    const chosenLocation = analysis.explicitBackground ? analysis.explicitBackground : this.pick(studioLocations);
+    const chosenLighting = this.pick(studioLightings);
     const chosenCamera = this.pick(cameraAngles);
     const chosenComposition = this.pick(compositions);
-    const chosenBackground = this.pick(backgroundDetails);
+    const chosenBackground = analysis.explicitBackground 
+      ? `A beautiful setting of ${analysis.explicitBackground}, beautifully arranged, minimalist, high-fashion catalog standard. NO roads, NO outdoor streets unless explicitly requested.` 
+      : this.pick(studioBackgroundDetails);
     const chosenDepth = 'shallow depth of field, model sharply isolated from background with professional creamy bokeh';
-    const chosenShadows = 'sharp geometric structural shadows casting gorgeous contrasts on travertine flooring';
-    const chosenReflections = this.pick(reflectionsList);
+    const chosenShadows = 'soft natural studio drop shadows casting elegant contours under-feet on a clean flat studio floor';
+    const chosenReflections = this.pick(studioReflections);
 
     const sceneBlueprint = {
       location: chosenLocation,
@@ -599,22 +620,30 @@ export class FashionDesignIntelligenceSystem {
     // 3. CONVERT THE BLUEPRINTS INTO FASHION DESIGN SPEC
     // ====================================================
     const avatar = {
-      identity: avatarBlueprint.identity,
-      consistentFace: `beautiful symmetric ${avatarBlueprint.faceShape} displaying natural soft light contours, expressive lifelike eyes, skin displaying authentic micro-pores, completely free of artificial waxiness`,
+      identity: `mannequin cropped from the shoulders down`,
+      consistentFace: `headless style, cropped elegantly from the shoulders down (mannequin-style) or depicted as a professional model with their face completely out of frame, focusing 100% of the visual attention on the garment, drape, and material contours rather than the face`,
       age: avatarBlueprint.age,
-      ethnicity: `elite model of ${avatarBlueprint.skinTone} heritage, ${avatarBlueprint.height}`,
-      hairstyle: `${avatarBlueprint.hairStyle} in ${avatarBlueprint.hairColor}`,
+      ethnicity: `statuesque model cropped from the neck down (headless style) focusing solely on the clothing`,
+      hairstyle: `Face and head are completely out of frame or obscured to maintain 100% focus on the garment structure`,
       bodyProportions: `impeccable ${avatarBlueprint.bodyProportions}`,
-      beautyLevel: '100/100 masterpiece runway standard, refined facial symmetry and intense editorial presence',
-      quality: 'Vogue front-cover portrait quality, photorealistic, premium Hasselblad photography',
-      makeup: this.pick(makeupsList),
+      beautyLevel: '100/100 masterpiece lookbook standard, extreme focus on drape and structural design lines',
+      quality: 'Professional fashion lookbook quality, photorealistic, premium Hasselblad photography',
+      makeup: `Face is completely out of frame or obscured`,
       brandMuse: `acting as a modern muse for the ${brand}`
     };
 
     // Handle user inputs like 'suit' or 'dress' logically as requested
-    const customDescription = `an custom designed, breathtaking luxury piece based on "${rawPrompt || 'haute couture look'}"`;
-    const topPiece = lower.includes('suit') || lower.includes('dress') ? 'integrated luxury piece' : `a premium tailored top in structured ${garmentBlueprint.material} with precise stitching`;
-    const bottomPiece = lower.includes('suit') ? 'matching high-waisted pressed trousers' : (lower.includes('dress') ? 'fluid integrated gown skirt' : 'tailored wide-leg fluid trousers');
+    const customDescription = `an exquisite luxury garment: "${rawPrompt || 'haute couture look'}"`;
+    
+    const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+    
+    const topPiece = analysis.explicitTop 
+      ? capitalize(analysis.explicitTop) 
+      : (lower.includes('suit') || lower.includes('dress') ? 'integrated luxury piece' : `a premium tailored top in structured ${garmentBlueprint.material} with precise stitching`);
+      
+    const bottomPiece = analysis.explicitBottom 
+      ? capitalize(analysis.explicitBottom) 
+      : (lower.includes('suit') ? 'matching high-waisted pressed trousers' : (lower.includes('dress') ? 'fluid integrated gown skirt' : 'tailored wide-leg fluid trousers'));
 
     const garment = {
       description: customDescription,
@@ -649,7 +678,13 @@ export class FashionDesignIntelligenceSystem {
       accessories: garmentBlueprint.accessories
     };
 
-    const colorHarmony = this.pick(colorPalettes);
+    let colorHarmony = this.pick(colorPalettes);
+    if (analysis.explicitColor) {
+      colorHarmony = {
+        palette: `Sophisticated dominant luxurious ${analysis.explicitColor} tone, complemented by soft charcoal and platinum accents`,
+        colors: [analysis.explicitColor, '#09090b', '#94a3b8']
+      };
+    }
 
     const styleDNAs = [
       'Style DNA Signature: The Architectural Intellectual (rational structures, minimalist geometry, cerebral poise)',

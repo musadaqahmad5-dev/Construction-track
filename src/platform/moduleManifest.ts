@@ -12,7 +12,7 @@ export const PLATFORM_MODULES: ModuleInfo[] = [
   {
     id: 'mod-styling',
     name: 'Styling Core Engine',
-    version: '1.2.0',
+    version: '2.4-telemetry',
     description: 'Calculates baseline weather and style coherence weights.',
     enabled: true,
     dependencies: [],
@@ -21,7 +21,7 @@ export const PLATFORM_MODULES: ModuleInfo[] = [
   {
     id: 'mod-agent',
     name: 'Personal Style Agent',
-    version: '1.0.0',
+    version: '2.4-telemetry',
     description: 'Proactive outfit curation, repetition detection, and morning schedule planning.',
     enabled: true,
     dependencies: ['mod-styling'],
@@ -30,7 +30,7 @@ export const PLATFORM_MODULES: ModuleInfo[] = [
   {
     id: 'mod-wardrobe-health',
     name: 'Wardrobe Longevity Tracker',
-    version: '1.0.0',
+    version: '2.4-telemetry',
     description: 'Predicts garment decay, wear frequency stress, and wash cues.',
     enabled: true,
     dependencies: ['mod-styling'],
@@ -39,7 +39,7 @@ export const PLATFORM_MODULES: ModuleInfo[] = [
   {
     id: 'mod-tryon-lookbook',
     name: 'Visual Fit Studio',
-    version: '1.1.0',
+    version: '2.4-telemetry',
     description: 'Simulates visual overlays, scene compositions, and gap completions.',
     enabled: true,
     dependencies: ['mod-styling'],

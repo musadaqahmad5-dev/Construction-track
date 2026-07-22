@@ -14,7 +14,7 @@ export class ReleaseMetricsService {
    */
   public static getActiveRelease(): ReleaseManifest {
     return {
-      tag: 'v1.7.0-rc1',
+      tag: 'v2.4.0-telemetry',
       commitHash: '9ff02a3a8b4f',
       builtAt: new Date('2026-06-12').toISOString(),
       compilationStable: true,

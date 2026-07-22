@@ -943,7 +943,7 @@ class HomeGenerateProductModule implements IProduct {
   id = ProductIdentity.HOME_GENERATE;
   name = 'Home Generator & Try-On';
   description = 'Real-time personalized avatar rendering and synthetic runway inspirations.';
-  version = '1.2.0';
+  version = '2.4-telemetry';
   config = ProductConfigurationManager.getConfig(this.id);
   status = ProductStatus.INACTIVE;
 
@@ -970,7 +970,7 @@ class AICreationsProductModule implements IProduct {
   id = ProductIdentity.AI_CREATIONS;
   name = 'AI Creations Studio';
   description = 'High-concept virtual modeling, synthetic fashion drapery, and artwork editor.';
-  version = '2.1.4';
+  version = '2.4-telemetry';
   config = ProductConfigurationManager.getConfig(this.id);
   status = ProductStatus.INACTIVE;
 
@@ -997,7 +997,7 @@ class CommunityProductModule implements IProduct {
   id = ProductIdentity.COMMUNITY;
   name = 'Community Fashion Stream';
   description = 'The decentralized fashion social layers for sharing user-approved style works.';
-  version = '1.0.8';
+  version = '2.4-telemetry';
   config = ProductConfigurationManager.getConfig(this.id);
   status = ProductStatus.INACTIVE;
 
@@ -1024,7 +1024,7 @@ class MarketplaceProductModule implements IProduct {
   id = ProductIdentity.MARKETPLACE;
   name = 'Fashion Marketplace';
   description = 'E-commerce directory linking virtual aesthetic blueprints with physical clothing alternatives.';
-  version = '1.5.0';
+  version = '2.4-telemetry';
   config = ProductConfigurationManager.getConfig(this.id);
   status = ProductStatus.INACTIVE;
 
@@ -1051,7 +1051,7 @@ class FaceAIProductModule implements IProduct {
   id = ProductIdentity.FACE_AI;
   name = 'Face AI & Real Body Scan';
   description = 'Professional anthropometric body shape diagnostics and 3D facial mesh modeling.';
-  version = '3.0.0';
+  version = '2.4-telemetry';
   config = ProductConfigurationManager.getConfig(this.id);
   status = ProductStatus.INACTIVE;
 

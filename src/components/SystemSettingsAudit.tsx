@@ -8,7 +8,6 @@ import {
 } from 'lucide-react';
 import { LOOK_VISION_THEMES } from './AIStyleHub';
 import { SystemHealthPanel } from './SystemHealthPanel';
-import { FounderDashboard } from './FounderDashboard';
 import { 
   UnifiedFashionOS, PersonalFashionMemoryEngine, FashionKnowledgeGraphEngine, 
   VisionIntelligenceEngine, FashionVisualFeatureExtractor, OutfitSimilarityEngine, 
@@ -75,7 +74,7 @@ export const SystemSettingsAudit: React.FC<SystemSettingsAuditProps> = ({
   state,
   triggerQuietPause
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'OVERVIEW' | 'SETTINGS' | 'DIAGNOSTICS' | 'EFFICIENCY' | 'SELLER' | 'BRAIN' | 'VISION' | 'DECISION' | 'AGENT' | 'WORKFLOWS' | 'PLANNING' | 'EXPLAINABILITY' | 'LEARNING' | 'PREDICTIVE' | 'AUTONOMOUS' | 'GOVERNANCE' | 'PERFORMANCE' | 'OBSERVABILITY' | 'COORDINATION' | 'VALIDATION' | 'PRODUCT'>('OVERVIEW');
+  const [activeSubTab, setActiveSubTab] = useState<'OVERVIEW' | 'SETTINGS' | 'DIAGNOSTICS' | 'EFFICIENCY' | 'BRAIN' | 'VISION' | 'DECISION' | 'AGENT' | 'WORKFLOWS' | 'PLANNING' | 'EXPLAINABILITY' | 'LEARNING' | 'PREDICTIVE' | 'AUTONOMOUS' | 'GOVERNANCE' | 'PERFORMANCE' | 'OBSERVABILITY' | 'COORDINATION' | 'VALIDATION' | 'PRODUCT'>('OVERVIEW');
   const [selectedGraphStyle, setSelectedGraphStyle] = useState<string>('Luxury');
   const [flushConfirm, setFlushConfirm] = useState(false);
   const [clearMemoryConfirm, setClearMemoryConfirm] = useState(false);
@@ -1002,8 +1001,7 @@ export const SystemSettingsAudit: React.FC<SystemSettingsAuditProps> = ({
             { id: 'OBSERVABILITY', label: 'Observability' },
             { id: 'COORDINATION', label: 'Coordination' },
             { id: 'VALIDATION', label: 'Validation' },
-            { id: 'PRODUCT', label: 'Product Intelligence' },
-            { id: 'SELLER', label: 'Seller Hub' }
+            { id: 'PRODUCT', label: 'Product Intelligence' }
           ].map((sub) => (
             <button
               key={sub.id}
@@ -1287,19 +1285,7 @@ export const SystemSettingsAudit: React.FC<SystemSettingsAuditProps> = ({
             handleRunProductAnalysis={handleRunProductAnalysis}
             handleResolveUXPattern={handleResolveUXPattern}
           />
-        ) : (
-          <motion.div
-            key="seller"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
-            className="space-y-6 text-left"
-          >
-            {/* SELLER CONSOLE GATEWAY */}
-            <FounderDashboard />
-          </motion.div>
-        )}      </AnimatePresence>
+        ) : null}      </AnimatePresence>
     </div>
   );
 };

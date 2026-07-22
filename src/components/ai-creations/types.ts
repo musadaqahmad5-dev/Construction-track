@@ -34,4 +34,4 @@ export interface AICreation {
   variations?: string[]; // URLs of alternative renders
 }
 
-export type AICreationTab = 'GALLERY' | 'DISCOVERY' | 'PORTFOLIO' | '3D_LAB';
+export type AICreationTab = 'GALLERY' | 'DISCOVERY' | 'PORTFOLIO' | '3D_LAB' | 'CREATE_WITH_AI';

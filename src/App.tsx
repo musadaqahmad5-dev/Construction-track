@@ -696,7 +696,7 @@ export default function App() {
           <React.Suspense fallback={
             <div className="flex flex-col items-center justify-center min-h-screen text-center space-y-4 bg-black">
               <div className="w-10 h-10 border-2 border-white/10 border-t-white rounded-full animate-spin" />
-              <p className="font-mono text-[10px] uppercase tracking-widest text-white/40">Initializing LOOK VISION OS...</p>
+              <p className="font-mono text-[10px] uppercase tracking-widest text-white/40">Initializing Fashion AI...</p>
             </div>
           }>
             <AIStyleHub 

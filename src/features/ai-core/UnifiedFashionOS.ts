@@ -2080,7 +2080,7 @@ export class UnifiedFashionOS {
       occasion,
       generatedAt: timestampStr.split('T')[0],
       vibeTags: [currentVibe.toLowerCase()],
-      schema_version: '1.2.0',
+      schema_version: '2.4.0-telemetry',
       created_at: timestampStr,
       updated_at: timestampStr,
       scoring: computedScores,
@@ -2478,7 +2478,7 @@ export class UnifiedFashionOS {
       occasion,
       generatedAt: timestampStr.split('T')[0],
       vibeTags,
-      schema_version: '1.0.0',
+      schema_version: '2.4.0-telemetry',
       created_at: timestampStr,
       updated_at: timestampStr
     };
@@ -2742,7 +2742,7 @@ export class UnifiedFashionOS {
       eventType,
       timestamp: new Date().toLocaleString(),
       params,
-      schema_version: '1.0.0',
+      schema_version: '2.4.0-telemetry',
       created_at: timestampStr,
       updated_at: timestampStr
     };
@@ -2926,7 +2926,7 @@ export class UnifiedFashionOS {
   public static exportUserData(): string {
     const data = {
       timestamp: Date.now(),
-      schema_version: '1.2.0',
+      schema_version: '2.4.0-telemetry',
       ops_runtime: this.state.opsRuntime,
       incidents_log: this.state.incidents,
       audit_history: this.state.auditTrail,

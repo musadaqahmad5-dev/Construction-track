@@ -105,8 +105,8 @@ export const FloatingAIChat: React.FC<FloatingAIChatProps> = ({ wardrobe }) => {
         : [];
 
       const requestBody = isOutfitRequest 
-        ? { wardrobe: cleanedWardrobe, userProfile: { user_preferences_vector: UnifiedFashionOS.getState().unifiedStyleMemory?.user_preferences_vector || [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5] } }
-        : { userInput: textToSend.trim(), tenantId: 'default' };
+        ? { wardrobe: cleanedWardrobe, userProfile: { user_preferences_vector: UnifiedFashionOS.getState().unifiedStyleMemory?.user_preferences_vector || [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5] }, history: messages }
+        : { userInput: textToSend.trim(), tenantId: 'default', history: messages };
 
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -122,7 +122,9 @@ export const FloatingAIChat: React.FC<FloatingAIChatProps> = ({ wardrobe }) => {
       let assistantText = '';
       let suggestedOutfit: any = null;
 
-      if (isOutfitRequest) {
+      if (data && data.mode === 'CONFIG_ERROR') {
+        assistantText = "⚠️ **AI Engine Alert: Demo Resilient Mode**\n\nThe Sartorial Companion AI is fully built and ready! However, your **GEMINI_API_KEY** is not yet configured in this container environment.\n\nTo unlock dynamic AI-powered lookbook generation, personalized style trajectories, and live wardrobe coordination, please go to the **Settings** menu at the top-right of your AI Studio workspace and set `GEMINI_API_KEY`.\n\n*Currently using cached luxury styling coordinates for preview.*";
+      } else if (isOutfitRequest) {
         if (data && data.success && Array.isArray(data.outfits) && data.outfits.length > 0) {
           suggestedOutfit = data.outfits[0];
           assistantText = data.stylistNotes || `Here is a curated look for you: **${suggestedOutfit.name}**.\n\nExplanation: ${suggestedOutfit.explanation}`;
@@ -132,7 +134,7 @@ export const FloatingAIChat: React.FC<FloatingAIChatProps> = ({ wardrobe }) => {
           UnifiedFashionOS.recalculateGoLiveGate();
           UnifiedFashionOS.notify();
         } else {
-          assistantText = "I examined your wardrobe but couldn't assemble a perfect look. Try adding a couple of layer basics (blazers, classic tees) to complete your physical coordinates.";
+          assistantText = "I examined your virtual wardrobe but found no items. To let me style your personal clothes, please upload some items in the **Home Hub > Wardrobe** section, or use the **AI Creations** tab to synthesize brand new bespoke garments!";
         }
       } else {
         assistantText = data.final_recommendation || data.style_summary || "I processed your styling request. Consider styling clean minimalist shirts with relaxed tailored chinos.";

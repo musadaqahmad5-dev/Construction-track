@@ -1,6 +1,6 @@
 {
-  "name": "construction-tracker",
-  "version": "0.1.0",
+  "name": "look-vision",
+  "version": "2.4.0-telemetry",
   "private": true,
   "type": "module",
   "dependencies": {

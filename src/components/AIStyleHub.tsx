@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   Trash2, Shield, Settings, AlertTriangle, RefreshCw, CheckCircle, Sparkles, Sparkle, BarChart2,
   Search, ShoppingBag, ShoppingCart, Shirt, Clock, Info, Store, SlidersHorizontal, LogOut, 
-  ChevronRight, Compass, Eye, Cpu, Database, Activity, CloudSun, User,
+  ChevronRight, Compass, Eye, Cpu, Database, Activity, CloudSun, User, Fingerprint,
   Bell, PenSquare, X, ChevronDown, Award, Check,
   Home, Users, Heart, Layers, MessageSquare, Mail, Crown, MoreVertical, Moon, Menu,
   Camera, Upload, Calendar
@@ -39,13 +39,16 @@ import { StyleMessageCenter } from './StyleMessageCenter';
 import { StyleCollections } from './StyleCollections';
 import { StyleHistoryArchive } from './StyleHistoryArchive';
 import { StyleFavorites } from './StyleFavorites';
+import { FocusSearchPalette } from './FocusSearchPalette';
 import { DiscoverScreen } from './screens/DiscoverScreen';
-import { CommunityScreen } from './screens/CommunityScreen';
-import { MarketplaceScreen } from './screens/MarketplaceScreen';
+import { CommunityScreen, PRESET_MOCK_LOOKS } from './screens/CommunityScreen';
+import { MarketplaceScreen, BOUTIQUE_PRODUCTS } from './screens/MarketplaceScreen';
 import { ProductDetailScreen } from './screens/ProductDetailScreen';
 import { CreatorWorkspaceScreen } from './screens/CreatorWorkspaceScreen';
 import { VirtualStudioTryOn } from './VirtualStudioTryOn';
 import { OutfitPlanner } from './OutfitPlanner';
+import { FashionInstructorWorkspace } from './screens/FashionInstructorWorkspace';
+import { AIAssistantStudio } from './AIAssistantStudio';
 
 export interface LookVisionTheme {
   id: string;
@@ -538,21 +541,24 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
       window.removeEventListener('lookvision_update_sandbox_settings', handleUpdateSandboxSettings);
     };
   }, []);
-  const [activeSubTab, setActiveSubTab] = useState<'PRODUCT_HOME' | 'PRODUCT_AI_CREATIONS' | 'PRODUCT_COMMUNITY' | 'PRODUCT_MARKETPLACE' | 'ECOSYSTEM_GENERATE' | 'ECOSYSTEM_CREATE' | 'HOME' | 'AI_STUDIO' | 'WARDROBE' | 'DASHBOARD' | 'PROFILE' | 'SYSTEM_ROOM' | 'OUTFIT_GEN' | 'VIRTUAL_TRY' | 'COLLECTIONS' | 'HISTORY' | 'MESSAGES' | 'FAVORITES' | 'MARKETPLACE_ROOM' | 'COMMUNITY_ROOM' | 'DISCOVER' | 'CREATOR_WORKSPACE' | 'PRODUCT_DETAIL' | 'PLANNER'>(() => {
+  const [activeSubTab, setActiveSubTab] = useState<'PRODUCT_HOME' | 'PRODUCT_AI_CREATIONS' | 'PRODUCT_COMMUNITY' | 'PRODUCT_MARKETPLACE' | 'ECOSYSTEM_GENERATE' | 'ECOSYSTEM_CREATE' | 'HOME' | 'AI_STUDIO' | 'WARDROBE' | 'DASHBOARD' | 'PROFILE' | 'SYSTEM_ROOM' | 'OUTFIT_GEN' | 'VIRTUAL_TRY' | 'COLLECTIONS' | 'HISTORY' | 'MESSAGES' | 'FAVORITES' | 'MARKETPLACE_ROOM' | 'COMMUNITY_ROOM' | 'DISCOVER' | 'CREATOR_WORKSPACE' | 'PRODUCT_DETAIL' | 'PLANNER' | 'FASHION_INSTRUCTOR' | 'AI_ASSISTANT'>(() => {
     let saved = localStorage.getItem('last_active_place_subtab');
     if (saved === 'HOME') saved = 'PRODUCT_HOME';
     else if (saved === 'COMMUNITY_ROOM') saved = 'PRODUCT_COMMUNITY';
     else if (saved === 'MARKETPLACE_ROOM') saved = 'PRODUCT_MARKETPLACE';
     else if (saved === 'AI_STUDIO') saved = 'PRODUCT_AI_CREATIONS';
     else if (saved === 'OUTFIT_GEN') saved = 'ECOSYSTEM_GENERATE';
+    else if (saved === 'FASHION_INSTRUCTOR') saved = 'PRODUCT_COMMUNITY';
 
-    if (saved && ['PRODUCT_HOME', 'PRODUCT_AI_CREATIONS', 'PRODUCT_COMMUNITY', 'PRODUCT_MARKETPLACE', 'ECOSYSTEM_GENERATE', 'ECOSYSTEM_CREATE', 'HOME', 'AI_STUDIO', 'WARDROBE', 'DASHBOARD', 'PROFILE', 'SYSTEM_ROOM', 'OUTFIT_GEN', 'VIRTUAL_TRY', 'COLLECTIONS', 'HISTORY', 'MESSAGES', 'FAVORITES', 'MARKETPLACE_ROOM', 'COMMUNITY_ROOM', 'DISCOVER', 'CREATOR_WORKSPACE', 'PRODUCT_DETAIL', 'PLANNER'].includes(saved)) {
+    if (saved && ['PRODUCT_HOME', 'PRODUCT_AI_CREATIONS', 'PRODUCT_COMMUNITY', 'PRODUCT_MARKETPLACE', 'ECOSYSTEM_GENERATE', 'ECOSYSTEM_CREATE', 'HOME', 'AI_STUDIO', 'WARDROBE', 'DASHBOARD', 'PROFILE', 'SYSTEM_ROOM', 'OUTFIT_GEN', 'VIRTUAL_TRY', 'COLLECTIONS', 'HISTORY', 'MESSAGES', 'FAVORITES', 'MARKETPLACE_ROOM', 'COMMUNITY_ROOM', 'DISCOVER', 'CREATOR_WORKSPACE', 'PRODUCT_DETAIL', 'PLANNER', 'FASHION_INSTRUCTOR', 'AI_ASSISTANT'].includes(saved)) {
       return saved as any;
     }
-    return 'PRODUCT_HOME';
+    return 'PRODUCT_COMMUNITY';
   });
-  const [activeCockpitSubTab, setActiveCockpitSubTab] = useState<'PRODUCT_HOME' | 'PRODUCT_AI_CREATIONS' | 'PRODUCT_COMMUNITY' | 'PRODUCT_MARKETPLACE' | 'ECOSYSTEM_GENERATE' | 'ECOSYSTEM_CREATE' | 'HOME' | 'AI_STUDIO' | 'WARDROBE' | 'DASHBOARD' | 'PROFILE' | 'SYSTEM_ROOM' | 'OUTFIT_GEN' | 'VIRTUAL_TRY' | 'COLLECTIONS' | 'HISTORY' | 'MESSAGES' | 'FAVORITES' | 'MARKETPLACE_ROOM' | 'COMMUNITY_ROOM' | 'DISCOVER' | 'CREATOR_WORKSPACE' | 'PRODUCT_DETAIL' | 'PLANNER'>('PRODUCT_HOME');
+  const [activeCockpitSubTab, setActiveCockpitSubTab] = useState<'PRODUCT_HOME' | 'PRODUCT_AI_CREATIONS' | 'PRODUCT_COMMUNITY' | 'PRODUCT_MARKETPLACE' | 'ECOSYSTEM_GENERATE' | 'ECOSYSTEM_CREATE' | 'HOME' | 'AI_STUDIO' | 'WARDROBE' | 'DASHBOARD' | 'PROFILE' | 'SYSTEM_ROOM' | 'OUTFIT_GEN' | 'VIRTUAL_TRY' | 'COLLECTIONS' | 'HISTORY' | 'MESSAGES' | 'FAVORITES' | 'MARKETPLACE_ROOM' | 'COMMUNITY_ROOM' | 'DISCOVER' | 'CREATOR_WORKSPACE' | 'PRODUCT_DETAIL' | 'PLANNER' | 'FASHION_INSTRUCTOR'>('PRODUCT_COMMUNITY');
   const [showFounderConsole, setShowFounderConsole] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showMobileProfileMenu, setShowMobileProfileMenu] = useState(false);
   
   // Ceremony of Addition Form Steps States (Restore draft silently)
   const [addStep, setAddStep] = useState<'CLOSED' | 'IMAGE' | 'NAME' | 'NOTE'>(() => {
@@ -593,6 +599,13 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
 
   // Stillness / Intentional Pause State
   const [isHoldingStill, setIsHoldingStill] = useState(false);
+
+  // Center column interactive AI Creator states
+  const [centerPrompt, setCenterPrompt] = useState('');
+  const [isGeneratingCenter, setIsGeneratingCenter] = useState(false);
+  const [centerProgress, setCenterProgress] = useState(0);
+  const [centerStatusText, setCenterStatusText] = useState('Idle');
+  const [selectedCenterVibe, setSelectedCenterVibe] = useState('Cyber Core');
 
   // Selected Garment detail page state
   const [selectedGarment, setSelectedGarment] = useState<WardrobeItem | null>(null);
@@ -784,8 +797,37 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
     };
   }, [cameraStream]);
 
+  // Global sub-tab navigation event listener
+  useEffect(() => {
+    const handleNavigateEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<string>;
+      if (customEvent.detail) {
+        let target = customEvent.detail;
+        if (target === 'FASHION_INSTRUCTOR') {
+          target = 'PRODUCT_COMMUNITY';
+          localStorage.setItem('community_target_tab', 'INTELLIGENT_FASHION_AI');
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('community_check_target'));
+          }, 0);
+        }
+        setActiveSubTab(target as any);
+        localStorage.setItem('last_active_place_subtab', target);
+      }
+    };
+    const handleOpenFocusSearch = () => {
+      setIsFocusSearchOpen(true);
+    };
+    window.addEventListener('lookvision_navigate_tab' as any, handleNavigateEvent);
+    window.addEventListener('lookvision_open_focus_search' as any, handleOpenFocusSearch);
+    return () => {
+      window.removeEventListener('lookvision_navigate_tab' as any, handleNavigateEvent);
+      window.removeEventListener('lookvision_open_focus_search' as any, handleOpenFocusSearch);
+    };
+  }, []);
+
   // 3. Search query state
   const [searchQuery, setSearchQuery] = useState('');
+  const [isFocusSearchOpen, setIsFocusSearchOpen] = useState(false);
   const [currentTheme, setCurrentTheme] = useState<string>(() => localStorage.getItem('look_vision_theme') || 'cosmic-dream');
 
   // Synchronize document body color dynamically to prevent any "Preview Splitting"
@@ -983,6 +1025,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
     else if (activeSubTab === 'CREATOR_WORKSPACE') targetPath = '/creator';
     else if (activeSubTab === 'PRODUCT_DETAIL') targetPath = '/product-detail';
     else if (activeSubTab === 'ECOSYSTEM_GENERATE' || activeSubTab === 'OUTFIT_GEN') targetPath = '/generate';
+    else if (activeSubTab === 'FASHION_INSTRUCTOR') targetPath = '/fashion-instructor';
 
     if (targetPath && window.location.pathname !== targetPath) {
       window.history.pushState(null, '', targetPath);
@@ -1861,6 +1904,12 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
       resolvedTab = 'PRODUCT_AI_CREATIONS';
     } else if (resolvedTab === 'OUTFIT_GEN') {
       resolvedTab = 'ECOSYSTEM_GENERATE';
+    } else if (resolvedTab === 'FASHION_INSTRUCTOR') {
+      resolvedTab = 'PRODUCT_COMMUNITY';
+      localStorage.setItem('community_target_tab', 'INTELLIGENT_FASHION_AI');
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('community_check_target'));
+      }, 0);
     }
     setActiveSubTab(resolvedTab);
     localStorage.setItem('last_active_place_subtab', resolvedTab);
@@ -1878,13 +1927,15 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
 
     const navigationItems = [
       { id: 'HOME', label: 'Home Hub', icon: Home, route: 'PRODUCT_HOME' },
-      { id: 'PROFILE', label: 'My Profile', icon: User, route: 'PROFILE' },
+      { id: 'COMMUNITY', label: 'Community', icon: Users, route: 'PRODUCT_COMMUNITY' },
+      { id: 'AI_CREATIONS', label: 'AI Creations', icon: Sparkles, route: 'PRODUCT_AI_CREATIONS' },
+      { id: 'MARKETPLACE', label: 'Marketplace', icon: ShoppingBag, route: 'PRODUCT_MARKETPLACE' },
       { id: 'PLANNER', label: 'Outfit Planner', icon: Calendar, route: 'PLANNER' },
       { id: 'AUTHENTICATION', label: user && !user.isAnonymous && !user.uid.startsWith('guest-') ? 'Sign Out' : 'Sign In', icon: LogOut, action: 'AUTHENTICATION' },
       { id: 'AI_MEMORY', label: 'AI Memory', icon: Cpu, route: 'DASHBOARD' },
       { id: 'NOTIFICATIONS', label: 'Notifications', icon: Bell, action: 'NOTIFICATIONS', badge: '8' },
       { id: 'SEARCH', label: 'Focus Search', icon: Search, action: 'SEARCH' },
-      { id: 'AI_ASSISTANT', label: 'AI Assistant', icon: Sparkles, action: 'AI_ASSISTANT' },
+      { id: 'AI_ASSISTANT', label: 'AI Assistant', icon: Sparkles, route: 'AI_ASSISTANT' },
       { id: 'SETTINGS', label: 'Settings', icon: Settings, route: 'SYSTEM_ROOM' }
     ];
 
@@ -1895,7 +1946,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
       >
         
         {/* A. LEFT NAVIGATION SIDEBAR (Continuous from top to bottom) */}
-        <aside className={`w-64 shrink-0 p-4 flex flex-col justify-between hidden lg:flex select-none h-full z-40 ${themeObj.sidebarBg}`}>
+        <aside className={`w-64 shrink-0 p-4 flex flex-col justify-between flex select-none h-full z-40 ${themeObj.sidebarBg} border-r border-white/5`}>
           <div className="space-y-5 overflow-y-auto no-scrollbar flex-1 pb-4 pr-1">
             
             {/* AIStyleHub / LookVision Logo */}
@@ -1903,7 +1954,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
               <Sparkle className="w-6 h-6 text-violet-400 fill-violet-400 filter drop-shadow-[0_0_8px_rgba(168,85,247,0.85)] animate-pulse-slow" />
               <div className="flex flex-col">
                 <span className="text-sm font-mono tracking-[0.25em] uppercase text-white font-bold leading-none">AIStyleHub</span>
-                <span className="text-[9px] font-mono tracking-widest text-violet-400/60 uppercase mt-0.5">LookVision</span>
+                <span className="text-[9px] font-mono tracking-widest text-violet-400/60 uppercase mt-0.5">v2.4-telemetry</span>
               </div>
             </div>
 
@@ -1916,6 +1967,12 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
                 let isSelected = false;
                 if (tab.id === 'HOME' && (activeSubTabForRendering === 'PRODUCT_HOME' || activeSubTabForRendering === 'HOME')) {
                   isSelected = true;
+                } else if (tab.id === 'COMMUNITY' && (activeSubTabForRendering === 'PRODUCT_COMMUNITY' || activeSubTabForRendering === 'COMMUNITY_ROOM')) {
+                  isSelected = true;
+                } else if (tab.id === 'AI_CREATIONS' && (activeSubTabForRendering === 'PRODUCT_AI_CREATIONS' || activeSubTabForRendering === 'AI_STUDIO' || activeSubTabForRendering === 'ECOSYSTEM_CREATE')) {
+                  isSelected = true;
+                } else if (tab.id === 'MARKETPLACE' && (activeSubTabForRendering === 'PRODUCT_MARKETPLACE' || activeSubTabForRendering === 'MARKETPLACE_ROOM')) {
+                  isSelected = true;
                 } else if (tab.id === 'PROFILE' && activeSubTabForRendering === 'PROFILE') {
                   isSelected = true;
                 } else if (tab.id === 'PLANNER' && activeSubTabForRendering === 'PLANNER') {
@@ -1925,6 +1982,8 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
                 } else if (tab.id === 'NOTIFICATIONS' && isNotificationsOpen) {
                   isSelected = true;
                 } else if (tab.id === 'SETTINGS' && activeSubTabForRendering === 'SYSTEM_ROOM') {
+                  isSelected = true;
+                } else if (tab.id === 'FASHION_INSTRUCTOR' && activeSubTabForRendering === 'FASHION_INSTRUCTOR') {
                   isSelected = true;
                 }
 
@@ -1939,12 +1998,8 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
                         if (tab.action === 'NOTIFICATIONS') {
                           setIsNotificationsOpen(!isNotificationsOpen);
                         } else if (tab.action === 'SEARCH') {
-                          const sInput = document.querySelector('input[placeholder="Search styles..."]') as HTMLInputElement;
-                          if (sInput) {
-                            sInput.focus();
-                            sInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                          }
-                          window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: 'Search input focused.' }));
+                          setIsFocusSearchOpen(true);
+                          window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: '🔍 Quantum Focus Search opened (Cmd+K)' }));
                         } else if (tab.action === 'AI_ASSISTANT') {
                           window.dispatchEvent(new CustomEvent('lookvision_open_ai_chat'));
                         } else if (tab.action === 'AUTHENTICATION') {
@@ -2010,35 +2065,89 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
             </div>
 
             {/* Profile Identity Card (Sarah Khan verified) */}
-            <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.01] hover:bg-white/[0.04] transition-all border border-white/5 group">
-              <div className="flex items-center gap-3">
-                <img 
-                  src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&auto=format&fit=crop" 
-                  alt="Sarah Khan"
-                  className="w-9 h-9 rounded-full object-cover border border-white/10"
-                />
-                <div className="text-left">
-                  <div className="flex items-center gap-1">
-                    <p className="text-[11px] font-semibold text-white leading-none">Sarah Khan</p>
-                    <div className="w-3 h-3 rounded-full bg-blue-500 flex items-center justify-center shrink-0">
-                      <Check className="w-2.5 h-2.5 text-white stroke-[3.5]" />
+            <div className="relative">
+              <AnimatePresence>
+                {showProfileMenu && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    className="absolute bottom-full left-0 right-0 mb-2 bg-[#090911] border border-white/10 rounded-xl p-2.5 shadow-[0_10px_30px_rgba(0,0,0,0.8)] z-50 space-y-1"
+                  >
+                    <div className="px-2 py-1 border-b border-white/5 pb-1.5 mb-1.5 flex justify-between items-center">
+                      <span className="text-[8px] font-mono text-zinc-400 uppercase tracking-widest block">Sartorial Core</span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    </div>
+                    
+                    <button
+                      onClick={() => {
+                        setActiveSubTab('PROFILE');
+                        localStorage.setItem('last_active_place_subtab', 'PROFILE');
+                        setShowProfileMenu(false);
+                        window.dispatchEvent(new CustomEvent('lookvision_show_toast', { 
+                          detail: '👤 Profile Management System Fully Loaded' 
+                        }));
+                      }}
+                      className="w-full flex items-center gap-2 px-2 py-2 text-left text-xs font-mono uppercase tracking-wider text-zinc-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
+                    >
+                      <User className="w-3.5 h-3.5 text-violet-400" />
+                      <span>Profile Management</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setActiveSubTab('PROFILE');
+                        localStorage.setItem('last_active_place_subtab', 'PROFILE');
+                        setShowProfileMenu(false);
+                        window.dispatchEvent(new CustomEvent('lookvision_show_toast', { 
+                          detail: '🛂 Style Passport DNA & Measurements Calibrated' 
+                        }));
+                      }}
+                      className="w-full flex items-center gap-2 px-2 py-2 text-left text-xs font-mono uppercase tracking-wider text-zinc-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
+                    >
+                      <Fingerprint className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Style Passport</span>
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.01] hover:bg-white/[0.04] transition-all border border-white/5 group">
+                <div 
+                  onClick={() => {
+                    setActiveSubTab('PROFILE');
+                    localStorage.setItem('last_active_place_subtab', 'PROFILE');
+                  }}
+                  className="flex items-center gap-3 cursor-pointer flex-1"
+                >
+                  <img 
+                    src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&auto=format&fit=crop" 
+                    alt="Sarah Khan"
+                    className="w-9 h-9 rounded-full object-cover border border-white/10"
+                  />
+                  <div className="text-left">
+                    <div className="flex items-center gap-1">
+                      <p className="text-[11px] font-semibold text-white leading-none">Sarah Khan</p>
+                      <div className="w-3 h-3 rounded-full bg-blue-500 flex items-center justify-center shrink-0">
+                        <Check className="w-2.5 h-2.5 text-white stroke-[3.5]" />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 mt-1">
+                      <span className="w-1 h-1 rounded-full bg-violet-400"></span>
+                      <span className="text-[8px] font-mono text-violet-400 uppercase tracking-widest leading-none">Premium</span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1 mt-1">
-                    <span className="w-1 h-1 rounded-full bg-violet-400"></span>
-                    <span className="text-[8px] font-mono text-violet-400 uppercase tracking-widest leading-none">Premium</span>
-                  </div>
                 </div>
+                
+                <button
+                  onClick={() => setShowProfileMenu(!showProfileMenu)}
+                  className={`p-1.5 transition-colors cursor-pointer rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 ${
+                    showProfileMenu ? 'text-violet-400 bg-white/5' : 'text-white/30 hover:text-white'
+                  }`}
+                >
+                  <MoreVertical className="w-4 h-4" />
+                </button>
               </div>
-              
-              <button
-                onClick={() => {
-                  window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: 'Account Management loaded.' }));
-                }}
-                className="p-1.5 text-white/30 hover:text-white transition-colors cursor-pointer rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
-              >
-                <MoreVertical className="w-4 h-4" />
-              </button>
             </div>
           </div>
         </aside>
@@ -2079,7 +2188,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
                     <Sparkle className="w-6 h-6 text-violet-400 fill-violet-400 filter drop-shadow-[0_0_8px_rgba(168,85,247,0.85)] animate-pulse-slow" />
                     <div className="flex flex-col">
                       <span className="text-sm font-mono tracking-[0.25em] uppercase text-white font-bold leading-none">AIStyleHub</span>
-                      <span className="text-[9px] font-mono tracking-widest text-violet-400/60 uppercase mt-0.5">LookVision</span>
+                      <span className="text-[9px] font-mono tracking-widest text-violet-400/60 uppercase mt-0.5">v2.4-telemetry</span>
                     </div>
                   </div>
 
@@ -2113,12 +2222,8 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
                               if (tab.action === 'NOTIFICATIONS') {
                                 setIsNotificationsOpen(!isNotificationsOpen);
                               } else if (tab.action === 'SEARCH') {
-                                const sInput = document.querySelector('input[placeholder="Search styles..."]') as HTMLInputElement;
-                                if (sInput) {
-                                  sInput.focus();
-                                  sInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                }
-                                window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: 'Search input focused.' }));
+                                setIsFocusSearchOpen(true);
+                                window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: '🔍 Quantum Focus Search opened (Cmd+K)' }));
                               } else if (tab.action === 'AI_ASSISTANT') {
                                 window.dispatchEvent(new CustomEvent('lookvision_open_ai_chat'));
                               } else if (tab.action === 'AUTHENTICATION') {
@@ -2184,36 +2289,92 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
                   </div>
 
                   {/* Profile Identity Card */}
-                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.01] hover:bg-white/[0.04] transition-all border border-white/5 group">
-                    <div className="flex items-center gap-3">
-                      <img 
-                        src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&auto=format&fit=crop" 
-                        alt="Sarah Khan"
-                        className="w-9 h-9 rounded-full object-cover border border-white/10"
-                      />
-                      <div className="text-left">
-                        <div className="flex items-center gap-1">
-                          <p className="text-[11px] font-semibold text-white leading-none">Sarah Khan</p>
-                          <div className="w-3 h-3 rounded-full bg-blue-500 flex items-center justify-center shrink-0">
-                            <Check className="w-2.5 h-2.5 text-white stroke-[3.5]" />
+                  <div className="relative w-full">
+                    <AnimatePresence>
+                      {showMobileProfileMenu && (
+                        <motion.div 
+                          initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                          className="absolute bottom-full left-0 right-0 mb-2 bg-[#090911] border border-white/10 rounded-xl p-2.5 shadow-[0_10px_30px_rgba(0,0,0,0.8)] z-50 space-y-1"
+                        >
+                          <div className="px-2 py-1 border-b border-white/5 pb-1.5 mb-1.5 flex justify-between items-center">
+                            <span className="text-[8px] font-mono text-zinc-400 uppercase tracking-widest block">Sartorial Core</span>
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                          </div>
+                          
+                          <button
+                            onClick={() => {
+                              setActiveSubTab('PROFILE');
+                              localStorage.setItem('last_active_place_subtab', 'PROFILE');
+                              setShowMobileProfileMenu(false);
+                              setIsMobileSidebarOpen(false);
+                              window.dispatchEvent(new CustomEvent('lookvision_show_toast', { 
+                                detail: '👤 Profile Management System Fully Loaded' 
+                              }));
+                            }}
+                            className="w-full flex items-center gap-2 px-2 py-2 text-left text-xs font-mono uppercase tracking-wider text-zinc-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
+                          >
+                            <User className="w-3.5 h-3.5 text-violet-400" />
+                            <span>Profile Management</span>
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              setActiveSubTab('PROFILE');
+                              localStorage.setItem('last_active_place_subtab', 'PROFILE');
+                              setShowMobileProfileMenu(false);
+                              setIsMobileSidebarOpen(false);
+                              window.dispatchEvent(new CustomEvent('lookvision_show_toast', { 
+                                detail: '🛂 Style Passport DNA & Measurements Calibrated' 
+                              }));
+                            }}
+                            className="w-full flex items-center gap-2 px-2 py-2 text-left text-xs font-mono uppercase tracking-wider text-zinc-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
+                          >
+                            <Fingerprint className="w-3.5 h-3.5 text-emerald-400" />
+                            <span>Style Passport</span>
+                          </button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.01] hover:bg-white/[0.04] transition-all border border-white/5 group w-full">
+                      <div 
+                        onClick={() => {
+                          setActiveSubTab('PROFILE');
+                          localStorage.setItem('last_active_place_subtab', 'PROFILE');
+                          setIsMobileSidebarOpen(false);
+                        }}
+                        className="flex items-center gap-3 cursor-pointer flex-1"
+                      >
+                        <img 
+                          src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&auto=format&fit=crop" 
+                          alt="Sarah Khan"
+                          className="w-9 h-9 rounded-full object-cover border border-white/10"
+                        />
+                        <div className="text-left">
+                          <div className="flex items-center gap-1">
+                            <p className="text-[11px] font-semibold text-white leading-none">Sarah Khan</p>
+                            <div className="w-3 h-3 rounded-full bg-blue-500 flex items-center justify-center shrink-0">
+                              <Check className="w-2.5 h-2.5 text-white stroke-[3.5]" />
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1 mt-1">
+                            <span className="w-1 h-1 rounded-full bg-violet-400"></span>
+                            <span className="text-[8px] font-mono text-violet-400 uppercase tracking-widest leading-none">Premium</span>
                           </div>
                         </div>
-                        <div className="flex items-center gap-1 mt-1">
-                          <span className="w-1 h-1 rounded-full bg-violet-400"></span>
-                          <span className="text-[8px] font-mono text-violet-400 uppercase tracking-widest leading-none">Premium</span>
-                        </div>
                       </div>
+                      
+                      <button
+                        onClick={() => setShowMobileProfileMenu(!showMobileProfileMenu)}
+                        className={`p-1.5 transition-colors cursor-pointer rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 ${
+                          showMobileProfileMenu ? 'text-violet-400 bg-white/5' : 'text-white/30 hover:text-white'
+                        }`}
+                      >
+                        <MoreVertical className="w-4 h-4" />
+                      </button>
                     </div>
-                    
-                    <button
-                      onClick={() => {
-                        setIsMobileSidebarOpen(false);
-                        window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: 'Account Management loaded.' }));
-                      }}
-                      className="p-1.5 text-white/30 hover:text-white transition-colors cursor-pointer rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
-                    >
-                      <MoreVertical className="w-4 h-4" />
-                    </button>
                   </div>
                 </div>
               </motion.div>
@@ -2221,199 +2382,209 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
           )}
         </AnimatePresence>
 
-        {/* RIGHT AREA: HEADER + MAIN WORKSPACE (Takes rest of the viewport) */}
-        <div className="flex-1 flex flex-col overflow-hidden h-full">
-          
-          {/* 1. TOP BAR NAVIGATION (Sits at the top of the right area) */}
-          <header className={`h-16 flex items-center shrink-0 z-40 relative ${
-            currentTheme === 'solar-day' 
-              ? 'bg-[#f5f4f0] border-b border-stone-200 text-stone-900' 
-              : 'bg-[#07070c] border-b border-white/5 text-white'
-          }`}>
-            {/* Mobile Menu & Logo: Shown only if sidebar is hidden */}
-            <div className="pl-6 lg:hidden flex items-center gap-3 shrink-0">
-              <button
-                onClick={() => setIsMobileSidebarOpen(true)}
-                className="p-2 -ml-2 rounded-lg text-white/70 hover:text-white hover:bg-white/5 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
-                title="Open Navigation"
-              >
-                <Menu className="w-5 h-5" />
-              </button>
-              <Sparkle className="w-5 h-5 text-violet-400 fill-violet-400 filter drop-shadow-[0_0_8px_rgba(168,85,247,0.85)] animate-pulse-slow" />
+        {/* B. CENTER FLOATING COLUMN (Community View, AI Creation View, and Adjusted Marketplace Gateway) */}
+        <div className="w-80 xl:w-[380px] shrink-0 border-r border-white/5 bg-[#050508]/45 hidden md:flex flex-col h-full overflow-hidden select-none relative z-10">
+          {/* Header of Center Column */}
+          <div className="h-16 px-6 border-b border-white/5 shrink-0 flex items-center justify-between bg-black/25">
+            <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-white/50">Discovery Hub</span>
+            <div className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse"></span>
+              <span className="text-[8px] font-mono text-violet-400 font-bold uppercase tracking-widest">v2.4-telemetry</span>
+            </div>
+          </div>
+
+          <div className="flex-grow overflow-y-auto p-4 space-y-6 no-scrollbar">
+            {/* 1. Community AI Creations Section */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[9.5px] font-mono uppercase tracking-[0.15em] text-white/40 block font-bold">Community View</span>
+                <button 
+                  onClick={() => handleNavigate('PRODUCT_COMMUNITY')}
+                  className="text-[9px] font-mono text-violet-400 hover:text-violet-300 cursor-pointer hover:underline uppercase tracking-wider font-bold"
+                >
+                  View All
+                </button>
+              </div>
+              <div className="space-y-3">
+                {PRESET_MOCK_LOOKS.slice(0, 2).map((post) => (
+                  <div 
+                    key={post.id} 
+                    className="p-3 rounded-2xl bg-white/[0.01] hover:bg-white/[0.03] border border-white/5 transition-all duration-300 hover:border-violet-500/20 hover:scale-[1.01] group relative cursor-pointer text-left"
+                    onClick={() => {
+                      if (post.taggedGarment) {
+                        window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: `Selected garment: ${post.taggedGarment.title}` }));
+                      }
+                    }}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <img src={post.author.avatar} className="w-5 h-5 rounded-full object-cover border border-white/10 shrink-0" alt="" />
+                      <div className="min-w-0 flex-1">
+                        <span className="block text-[9.5px] font-semibold text-white/95 truncate leading-none">{post.author.name}</span>
+                        <span className="block text-[7.5px] font-mono text-white/30 truncate mt-0.5">{post.author.handle}</span>
+                      </div>
+                    </div>
+                    <div className="w-full aspect-[4/3] rounded-xl overflow-hidden bg-zinc-900 border border-white/5 mb-2 relative">
+                      <img src={post.imageUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="" />
+                      <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded text-[7.5px] font-mono bg-black/60 text-violet-300 border border-violet-500/10">
+                        {post.vibeTags[0] || 'Aesthetic'}
+                      </div>
+                    </div>
+                    <p className="text-[9.5px] text-white/60 font-serif italic line-clamp-1 leading-relaxed mb-2">"{post.caption}"</p>
+                    <div className="flex items-center justify-between text-[8.5px] font-mono text-white/30 border-t border-white/5 pt-2">
+                      <div className="flex items-center gap-3">
+                        <span className="flex items-center gap-1 hover:text-rose-400 transition-colors"><Heart className="w-3 h-3 text-rose-500" /> {post.likes >= 1000 ? `${(post.likes/1000).toFixed(1)}K` : post.likes}</span>
+                        <span className="flex items-center gap-1 hover:text-violet-400 transition-colors"><Sparkles className="w-3 h-3 text-violet-400" /> {post.views >= 1000 ? `${(post.views/1000).toFixed(0)}K` : post.views}</span>
+                      </div>
+                      <span className="text-[8px] hover:text-white transition-colors">Details →</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
 
-            {/* Right header column (aligned with main workspace content and right sidebar) */}
-            <div className="flex-grow h-full flex items-center justify-between px-6">
-              {/* Left: Wider, Elegant Search Input */}
-              <div className="flex-1 max-w-xs relative hidden md:block select-none">
-                <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40" />
-                <input 
-                  type="text" 
-                  placeholder="Search styles..." 
-                  value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    window.dispatchEvent(new CustomEvent('lookvision_set_search_query', { detail: e.target.value }));
-                  }}
-                  className="w-full bg-white/[0.02] hover:bg-white/[0.04] border border-white/5 rounded-xl py-2 pl-10 pr-4 text-xs text-white placeholder-white/30 focus:outline-none focus:border-violet-500/30 transition-all font-light"
-                />
+            {/* 2. AI Creation View Section */}
+            <div className="space-y-3 pt-1 border-t border-white/5 text-left">
+              <div className="flex items-center justify-between">
+                <span className="text-[9.5px] font-mono uppercase tracking-[0.15em] text-violet-400 block font-bold">AI Creation View</span>
+                <button 
+                  onClick={() => handleNavigate('PRODUCT_AI_CREATIONS')}
+                  className="text-[9px] font-mono text-violet-400 hover:text-violet-300 cursor-pointer hover:underline uppercase tracking-wider font-bold"
+                >
+                  Open Studio
+                </button>
               </div>
 
-              {/* Centered Segmented Public Sections Tab Bar */}
-              <div className="flex items-center bg-[#050508]/60 backdrop-blur-md border border-white/5 p-1 rounded-xl mx-4 select-none">
-                {[
-                  { id: 'PRODUCT_COMMUNITY', label: 'Community', icon: Users },
-                  { id: 'PRODUCT_AI_CREATIONS', label: 'AI Creations', icon: Sparkles },
-                  { id: 'PRODUCT_MARKETPLACE', label: 'Marketplace', icon: ShoppingBag }
-                ].map(item => {
-                  const Icon = item.icon;
-                  const isActive = activeSubTabForRendering === item.id ||
-                                   (item.id === 'PRODUCT_COMMUNITY' && activeSubTabForRendering === 'COMMUNITY_ROOM') ||
-                                   (item.id === 'PRODUCT_AI_CREATIONS' && (activeSubTabForRendering === 'AI_STUDIO' || activeSubTabForRendering === 'ECOSYSTEM_CREATE')) ||
-                                   (item.id === 'PRODUCT_MARKETPLACE' && activeSubTabForRendering === 'MARKETPLACE_ROOM');
-                  return (
+              <div className="p-4 rounded-2xl bg-violet-950/10 border border-violet-500/10 space-y-3.5 relative overflow-hidden">
+                {isGeneratingCenter && (
+                  <div className="absolute inset-0 bg-[#07070e]/95 flex flex-col items-center justify-center p-4 z-20 text-center space-y-2">
+                    <Sparkles className="w-6 h-6 text-violet-400 animate-spin-slow filter drop-shadow-[0_0_8px_rgba(168,85,247,0.7)]" />
+                    <span className="text-[9.5px] font-mono uppercase text-violet-300 tracking-wider font-bold">{centerProgress}%</span>
+                    <span className="text-[8.5px] font-mono text-white/50 leading-relaxed max-w-[190px]">{centerStatusText}</span>
+                    <div className="w-full max-w-[160px] h-1 bg-white/5 rounded-full overflow-hidden mt-1">
+                      <div className="h-full bg-violet-500 transition-all duration-150" style={{ width: `${centerProgress}%` }} />
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-1">
+                  <h4 className="text-[10.5px] font-bold text-white tracking-wide uppercase font-mono">Instant Designer</h4>
+                  <p className="text-[8.5px] text-white/40 leading-relaxed">Co-create bespoke styles with lookvision's active intelligence.</p>
+                </div>
+
+                {/* Vibe Selection Tags */}
+                <div className="flex flex-wrap gap-1">
+                  {['Cyber Core', 'Minimal Luxe', 'Tokyo Retro'].map((vibe) => (
                     <button
-                      key={item.id}
-                      onClick={() => handleNavigate(item.id as any)}
-                      className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-mono tracking-wider transition-all duration-200 cursor-pointer ${
-                        isActive 
-                          ? 'bg-[#181135] text-[#b6a1ff] font-semibold border border-[#2b1c63]/40 shadow-sm' 
-                          : 'text-zinc-500 hover:text-white'
+                      key={vibe}
+                      onClick={() => {
+                        setSelectedCenterVibe(vibe);
+                        if (vibe === 'Cyber Core') setCenterPrompt('Matte black asymmetrical tech shell with high collar');
+                        else if (vibe === 'Minimal Luxe') setCenterPrompt('Premium beige heavy knit cashmere sweater with relaxed tailoring');
+                        else if (vibe === 'Tokyo Retro') setCenterPrompt('Vintage oversytled oversized varsity bomber with patch embroidery');
+                      }}
+                      className={`px-2 py-1 rounded-md text-[8.5px] font-mono transition-all border ${
+                        selectedCenterVibe === vibe 
+                          ? 'bg-violet-600/20 text-violet-300 border-violet-500/35' 
+                          : 'bg-white/[0.01] text-white/40 border-white/5 hover:text-white/70'
                       }`}
                     >
-                      <Icon className="w-3.5 h-3.5" />
-                      <span>{item.label}</span>
+                      #{vibe.replace(' ', '')}
                     </button>
-                  );
-                })}
-              </div>
-
-              {/* Right: Actions and Profile dropdown */}
-              <div className="flex items-center gap-4 relative">
-                
-                {/* Dark Mode toggle icon */}
-                <button 
-                  onClick={() => {
-                    const currentIndex = LOOK_VISION_THEMES.findIndex(t => t.id === currentTheme);
-                    const nextIndex = (currentIndex + 1) % LOOK_VISION_THEMES.length;
-                    const nextTheme = LOOK_VISION_THEMES[nextIndex];
-                    setCurrentTheme(nextTheme.id);
-                    localStorage.setItem('look_vision_theme', nextTheme.id);
-                    window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: `Theme switched to: ${nextTheme.name}` }));
-                  }}
-                  className="p-2 rounded-full hover:bg-white/5 text-white/70 hover:text-white transition-all cursor-pointer"
-                  title="Cycle Theme"
-                >
-                  <Moon className="w-4 h-4 text-violet-400" />
-                </button>
-
-                {/* Notifications Bell */}
-                <div className="relative">
-                  <button
-                    onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
-                    className="p-2 rounded-full hover:bg-white/5 text-white/70 hover:text-white transition-all cursor-pointer relative"
-                    title="Notifications"
-                  >
-                    <Bell className="w-4 h-4" />
-                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-violet-600 rounded-full flex items-center justify-center text-[8px] font-bold font-mono text-white">8</span>
-                  </button>
-
-                  {/* Notifications Drawer Slide-over */}
-                  {isNotificationsOpen && (
-                    <>
-                      <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs" onClick={() => setIsNotificationsOpen(false)} />
-                      <div className="fixed top-0 right-0 h-full w-80 bg-[#0c0c12] border-l border-white/5 shadow-2xl p-6 z-50 text-left space-y-6 select-none flex flex-col justify-between">
-                        <div className="space-y-6">
-                          <div className="flex justify-between items-center border-b border-white/5 pb-3">
-                            <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-white/30 block">Live Feed Updates</span>
-                            <button 
-                              onClick={() => setIsNotificationsOpen(false)}
-                              className="text-white/40 hover:text-white cursor-pointer"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                          </div>
-
-                          <div className="space-y-4">
-                            {[
-                              { title: '🔥 Vibe Check', desc: 'Your last post received 14 likes from style creators!', time: '2m ago' },
-                              { title: '⚡ Style Drop', desc: 'Classic Noir silk shirts added to boutiques!', time: '1h ago' },
-                              { title: '🧬 DNA Alignment', desc: 'Coherence reaches 98% with Nordic Minimalist aesthetics.', time: '3h ago' },
-                              { title: '🌦️ Weather Alert', desc: 'Lighter layers advised for warm morning strolls.', time: '5h ago' }
-                            ].map((not, i) => (
-                              <div key={i} className="p-3 bg-white/[0.02] border border-white/5 rounded-xl space-y-1">
-                                <div className="flex justify-between items-center">
-                                  <strong className="text-[10px] font-mono uppercase text-white tracking-wider">{not.title}</strong>
-                                  <span className="text-[8px] font-mono text-white/30">{not.time}</span>
-                                </div>
-                                <p className="text-[10px] font-serif italic text-white/50 leading-relaxed">
-                                  "{not.desc}"
-                                </p>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-
-                        <button
-                          onClick={() => setIsNotificationsOpen(false)}
-                          className="w-full bg-white text-black py-3 rounded-xl text-[10px] font-mono uppercase tracking-widest font-semibold text-center cursor-pointer hover:bg-neutral-200 transition-colors"
-                        >
-                          Clear All Notifications
-                        </button>
-                      </div>
-                    </>
-                  )}
+                  ))}
                 </div>
 
-                {/* Shopping Bag Icon button */}
-                <button 
-                  onClick={() => {
-                    // Navigate to MARKETPLACE_ROOM instead of HOME
-                    setActiveSubTab('MARKETPLACE_ROOM');
-                    localStorage.setItem('last_active_place_subtab', 'MARKETPLACE_ROOM');
-                    // Dispatch custom event to open orders drawer inside Marketplace screen
-                    setTimeout(() => {
-                      window.dispatchEvent(new CustomEvent('lookvision_open_marketplace_orders'));
-                    }, 100);
-                  }}
-                  className="p-2 rounded-full hover:bg-white/5 text-white/70 hover:text-white transition-all cursor-pointer relative"
-                  title="Shopping Orders"
-                >
-                  <ShoppingCart className="w-4 h-4" />
-                </button>
+                {/* Prompt input */}
+                <div className="space-y-1.5">
+                  <textarea
+                    placeholder="Describe custom outfit silhouette or theme..."
+                    value={centerPrompt}
+                    onChange={(e) => setCenterPrompt(e.target.value)}
+                    rows={2}
+                    className="w-full bg-black/30 border border-white/5 hover:border-white/10 rounded-xl p-2.5 text-[9.5px] text-white placeholder-white/20 focus:outline-none focus:border-violet-500/30 transition-all resize-none font-light leading-relaxed"
+                  />
+                </div>
 
-                {/* Create with AI Button */}
-                <button 
+                <button
                   onClick={() => {
-                    setActiveSubTab('AI_STUDIO');
+                    if (isGeneratingCenter) return;
+                    setIsGeneratingCenter(true);
+                    setCenterProgress(0);
+                    setCenterStatusText('Initiating neural stylist engine...');
+                    
+                    let currentProgress = 0;
+                    const interval = setInterval(() => {
+                      currentProgress += 10;
+                      setCenterProgress(currentProgress);
+                      
+                      if (currentProgress < 30) {
+                        setCenterStatusText('Re-evaluating look vision body proportions...');
+                      } else if (currentProgress < 60) {
+                        setCenterStatusText('Drafting raw mesh geometry...');
+                      } else if (currentProgress < 95) {
+                        setCenterStatusText('Baking photorealistic lighting passes...');
+                      } else {
+                        setCenterStatusText('Finalizing aesthetic coherence scores...');
+                      }
+                      
+                      if (currentProgress >= 100) {
+                        clearInterval(interval);
+                        setTimeout(() => {
+                          setIsGeneratingCenter(false);
+                          setCenterPrompt('');
+                          window.dispatchEvent(new CustomEvent('lookvision_show_toast', { 
+                            detail: `Successfully generated a new ${selectedCenterVibe} look in AI Creations!` 
+                          }));
+                          handleNavigate('PRODUCT_AI_CREATIONS');
+                        }, 300);
+                      }
+                    }, 120);
                   }}
-                  className="bg-violet-600 hover:bg-violet-500 text-white px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 cursor-pointer transition-all shadow-lg shadow-violet-600/20 animate-pulse-slow"
+                  disabled={!centerPrompt.trim()}
+                  className={`w-full py-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 disabled:from-white/[0.02] disabled:to-white/[0.02] text-white disabled:text-white/20 rounded-xl text-[9px] font-mono uppercase tracking-widest font-bold transition-all duration-300 shadow-md ${centerPrompt.trim() ? 'shadow-violet-600/10 cursor-pointer hover:translate-y-[-0.5px]' : 'cursor-not-allowed border border-white/5'}`}
                 >
-                  <Sparkle className="w-3.5 h-3.5 fill-white" />
-                  <span>Create with AI</span>
+                  Generate Look
                 </button>
+              </div>
+            </div>
 
-                {/* User profile dropdown caret */}
-                <div className="flex items-center gap-1.5 border-l border-white/10 pl-4">
-                  <button
-                    onClick={() => {
-                      setActiveSubTab('PROFILE');
-                    }}
-                    className="flex items-center gap-1 hover:opacity-80 transition-opacity cursor-pointer"
-                  >
-                    <img 
-                      src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&auto=format&fit=crop" 
-                      alt="Sarah Khan avatar"
-                      className="w-8 h-8 rounded-full object-cover border border-white/10"
-                    />
-                    <ChevronDown className="w-3.5 h-3.5 text-white/50" />
-                  </button>
+            {/* 3. Marketplace Direct Gateway Block */}
+            <div className="space-y-3 pt-1 border-t border-white/5 text-left">
+              <div className="flex items-center justify-between">
+                <span className="text-[9.5px] font-mono uppercase tracking-[0.15em] text-emerald-400 block font-bold">Marketplace View</span>
+              </div>
+
+              {/* Proportional Card with emerald-colored ShoppingBag Icon */}
+              <div 
+                onClick={() => handleNavigate('PRODUCT_MARKETPLACE')}
+                className="my-3 mx-0.5 p-4 rounded-2xl bg-emerald-950/10 border border-emerald-500/10 hover:border-emerald-500/30 transition-all duration-300 hover:scale-[1.01] group relative cursor-pointer text-left flex items-center gap-4 shadow-lg shadow-emerald-950/15"
+              >
+                {/* Floating Glow elements */}
+                <div className="absolute -right-6 -bottom-6 w-16 h-16 bg-emerald-500/5 rounded-full blur-xl pointer-events-none group-hover:bg-emerald-500/10 transition-colors" />
+
+                {/* Left: Emerald ShoppingBag Icon */}
+                <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0 border border-emerald-500/15 group-hover:scale-110 duration-300 transition-transform">
+                  <ShoppingBag className="w-5 h-5 text-emerald-400 filter drop-shadow-[0_0_6px_rgba(34,197,94,0.4)]" />
+                </div>
+
+                {/* Right: Copy & Button */}
+                <div className="min-w-0 flex-1 space-y-1">
+                  <h4 className="text-[10.5px] font-bold text-white uppercase tracking-wider font-mono group-hover:text-emerald-300 transition-colors">Exclusive Boutique</h4>
+                  <p className="text-[8.5px] text-white/40 leading-normal">Browse luxury designers, limited drops, and custom-baking outfits.</p>
+                  <div className="flex items-center gap-1 text-[8px] font-mono text-emerald-400 uppercase tracking-widest pt-1 font-bold">
+                    <span>Enter Portal</span>
+                    <span className="group-hover:translate-x-0.5 transition-transform">→</span>
+                  </div>
                 </div>
               </div>
             </div>
-          </header>
 
-          {/* 2. SPLIT INTERFACE STRUCTURE (Sits underneath header, scrolls independently) */}
+          </div>
+        </div>
+
+        {/* RIGHT AREA: MAIN WORKSPACE (Takes rest of the viewport) */}
+        <div className="flex-1 flex flex-col overflow-hidden h-full">
+          
+          {/* 2. SPLIT INTERFACE STRUCTURE (Scrolls independently) */}
           <div className="flex-grow flex overflow-hidden">
 
              {/* B. CENTRAL WORKSPACE CONTENT */}
@@ -2443,8 +2614,8 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
 
           {/* Active Workspaces Render Block */}
           {(activeSubTab === 'PRODUCT_HOME' || activeSubTab === 'HOME') ? (
-            <div className="space-y-6 animate-fade-in w-full">
-              <LookVisionMainDashboard 
+            <div className="space-y-6 animate-fade-in w-full h-full overflow-y-auto">
+              <HomeFeed 
                 wardrobe={activeWardrobeList}
                 onAddGarment={onAddGarment}
                 onDeleteGarment={onDeleteGarment}
@@ -2458,7 +2629,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
           ) : null}
 
           {/* Unhidden sub-tab container (renders when not in HOME sub-tab) */}
-          <div className={(activeSubTab === 'PRODUCT_HOME' || activeSubTab === 'HOME') ? "hidden pointer-events-none opacity-0 h-0 overflow-hidden select-none" : "block select-text max-w-4xl mx-auto"}>
+          <div className={(activeSubTab === 'PRODUCT_HOME' || activeSubTab === 'HOME') ? "hidden pointer-events-none opacity-0 h-0 overflow-hidden select-none" : "block select-text w-full max-w-7xl mx-auto px-2 sm:px-4"}>
           {/* Old Redundant Switcher - hidden since Left Sidebar handles navigation */}
           <div className="hidden pointer-events-none opacity-0 h-0 overflow-hidden select-none">
             {[
@@ -3695,234 +3866,11 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
 
               {/* ROOM 3: AI DESIGN STUDIO */}
               {(activeSubTab === 'PRODUCT_AI_CREATIONS' || activeSubTab === 'ECOSYSTEM_CREATE' || activeSubTab === 'AI_STUDIO') && (
-                <AIEngineStudio wardrobe={activeWardrobeList} onAddGarment={onAddGarment} />
-              )}
-
-              {/* ROOM 3: TOMORROW (PLANNER) */}
-              {(activeSubTab as string) === 'PLANNER_LEGACY' && (
-                <div className="space-y-12 max-w-sm mx-auto">
-                  
-                  {/* Human Scheduler Header */}
-                  <div className="text-center space-y-3">
-                    <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-white/30 block font-light">UNWRITTEN DESK</span>
-                    <h2 className="font-serif font-light tracking-[-0.03em] text-4xl text-white">Tomorrow's look</h2>
-                    <p className="text-sm text-white/40 leading-relaxed font-light font-serif italic">
-                      "Place exactly one outfit for the hours ahead."
-                    </p>
-                  </div>
-
-                  {!tomorrowOutfit ? (
-                    <div className="space-y-10 py-4 text-left">
-                      {/* Form to save exactly one outfit */}
-                      <div className="space-y-6">
-                        <div>
-                          <label className="text-[10px] font-mono text-white/30 uppercase tracking-[0.14em] block font-light mb-3">
-                            Select garment
-                          </label>
-                          {activeWardrobeList.length === 0 ? (
-                            <p className="text-xs text-white/30 italic font-serif">Nothing here yet.</p>
-                          ) : (
-                            <select
-                              id="tomorrow-garment-select"
-                              className="w-full bg-[#111] border border-white/10 p-3 text-sm text-white focus:outline-none focus:border-white/35 font-serif rounded-none"
-                              defaultValue=""
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                if (val) {
-                                  const found = activeWardrobeList.find(x => x.id === val);
-                                  if (found) {
-                                    setTempTomorrowItems([found]);
-                                  }
-                                }
-                              }}
-                            >
-                              <option value="" disabled>Choose a piece to place...</option>
-                              {activeWardrobeList.map(item => (
-                                <option key={item.id} value={item.id}>
-                                  {item.title}
-                                </option>
-                              ))}
-                            </select>
-                          )}
-                        </div>
-
-                        {/* Prepare now (Requirement 3) */}
-                        {state.activeSuggestion && (
-                          <div className="text-center p-4 bg-white/[0.02] border border-white/5 space-y-2 select-none">
-                            <span className="text-[9px] font-mono uppercase tracking-[0.2em] text-white/30 block">
-                              Carry over today's look
-                            </span>
-                            <button
-                              onClick={() => {
-                                if (state.activeSuggestion) {
-                                  const prevTomorrow = tomorrowOutfit;
-                                  saveTomorrowOutfit({
-                                    items: state.activeSuggestion.items,
-                                    note: "Left in place."
-                                  });
-                                  registerUndo(() => {
-                                    saveTomorrowOutfit(prevTomorrow);
-                                  });
-                                }
-                              }}
-                              className="bg-white hover:bg-[#EAEAEA] text-black text-[10px] font-mono font-semibold py-2.5 px-6 rounded-none uppercase tracking-[0.2em] cursor-pointer transition-all animate-fade-in"
-                            >
-                              Prepare now
-                            </button>
-                          </div>
-                        )}
-
-                        {tempTomorrowItems.length > 0 && (
-                          <div className="p-3 bg-white/5 border border-white/5 text-center text-xs italic font-serif text-white/70">
-                            Selected: {tempTomorrowItems.map(i => i.title).join(" & ")}
-                          </div>
-                        )}
-
-                        <div className="space-y-3">
-                          <label className="text-[10px] font-mono text-white/30 uppercase tracking-[0.14em] block font-light">
-                            A short note
-                          </label>
-                          <input
-                            type="text"
-                            placeholder="e.g. For early hours."
-                            value={tomorrowNote}
-                            onChange={(e) => setTomorrowNote(e.target.value)}
-                            className="w-full bg-transparent border-b border-white/10 py-3 text-sm text-white placeholder-white/20 focus:outline-none focus:border-white transition-all font-light"
-                          />
-                          
-                          <div className="flex flex-wrap gap-2 pt-1">
-                            {["For early hours.", "For walking.", "Keep simple."].map(presetNote => (
-                              <button
-                                key={presetNote}
-                                onClick={() => setTomorrowNote(presetNote)}
-                                className="text-[9px] font-mono text-white/40 hover:text-white/85 border border-white/5 px-2.5 py-1 cursor-pointer"
-                              >
-                                {presetNote}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        {tomorrowError && (
-                          <div className="text-[10px] font-mono text-red-400 uppercase tracking-wider pb-3 text-center animate-pulse">
-                            {tomorrowError}
-                          </div>
-                        )}
-
-                        <div className="pt-4 flex justify-center">
-                          <button
-                            onClick={() => {
-                              if (tempTomorrowItems.length === 0) {
-                                setTomorrowError("Please select a garment first.");
-                                setTimeout(() => setTomorrowError(null), 4000);
-                                return;
-                              }
-                              const prevTomorrow = tomorrowOutfit;
-                              saveTomorrowOutfit({
-                                items: tempTomorrowItems,
-                                note: tomorrowNote || "Keep simple."
-                              });
-                              registerUndo(() => {
-                                saveTomorrowOutfit(prevTomorrow);
-                              }, "Tomorrow's calendar saved.");
-                            }}
-                            className="bg-white hover:bg-[#EAEAEA] text-black text-[11px] font-mono font-semibold py-4 px-10 rounded-none uppercase tracking-[0.25em] cursor-pointer transition-all"
-                          >
-                            [ Save for tomorrow ]
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-10 py-4 text-center">
-                      <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-white/30 block select-none font-light">
-                        Placed on the desk
-                      </span>
-
-                      {/* Outfit Preview */}
-                      <div className="w-[280px] mx-auto relative shadow-sm aspect-[4/5] overflow-hidden bg-[#0d0d0d]">
-                        <ImageWithFade 
-                          src={tomorrowOutfit.items[0]?.imageUrl || getGarmentImage(tomorrowOutfit.items[0]?.title || '')} 
-                          alt="Tomorrow look" 
-                        />
-                      </div>
-
-                      <div className="space-y-2 select-none">
-                        <h4 className="font-serif font-light text-2xl text-white">
-                          {tomorrowOutfit.items.map(i => i.title).join(" & ")}
-                        </h4>
-                        <p className="text-xs font-serif italic text-white/50 max-w-xs mx-auto leading-relaxed">
-                          "{tomorrowOutfit.note}"
-                        </p>
-                      </div>
-
-                      <div className="pt-4 flex flex-col items-center gap-4">
-                        <button
-                          onClick={() => {
-                            const prevTomorrow = tomorrowOutfit;
-                            const prevActiveSuggestion = state.activeSuggestion;
-                            // Move tomorrow look to today's suggestion
-                            triggerQuietPause(() => {
-                              const suggested: UnifiedOutfit = {
-                                id: `out-${Date.now()}`,
-                                name: tomorrowOutfit.items.map(i => i.title).join(" & "),
-                                items: tomorrowOutfit.items,
-                                suitabilityScore: 100,
-                                occasion: tomorrowOutfit.note,
-                                generatedAt: new Date().toISOString().split('T')[0],
-                                vibeTags: ['minimalist']
-                              };
-                              UnifiedFashionOS.getState().activeSuggestion = suggested;
-                              // Clear tomorrow look and reset temp choices
-                              saveTomorrowOutfit(null);
-                              setTempTomorrowItems([]);
-                              setTomorrowNote('');
-                              // Go to HOME tab
-                              setActiveSubTab('HOME');
-
-                              registerUndo(() => {
-                                saveTomorrowOutfit(prevTomorrow);
-                                UnifiedFashionOS.getState().activeSuggestion = prevActiveSuggestion;
-                                setActiveSubTab('AI_STUDIO');
-                              });
-                            });
-                          }}
-                          className="bg-white hover:bg-[#EAEAEA] text-black text-[11px] font-mono font-semibold py-4 px-12 rounded-none uppercase tracking-[0.25em] cursor-pointer transition-all w-full sm:w-auto"
-                        >
-                          [ wear look today ]
-                        </button>
-                        
-                        <button
-                          onClick={() => {
-                            saveTomorrowFrozen(!tomorrowFrozen);
-                          }}
-                          className={`text-[10px] uppercase tracking-[0.25em] font-mono transition-all cursor-pointer ${
-                            tomorrowFrozen 
-                              ? 'text-white border-b border-dashed border-white/50 pb-0.5' 
-                              : 'text-white/40 hover:text-white/85'
-                          }`}
-                          id="tomorrow-freeze-toggle"
-                        >
-                          {tomorrowFrozen ? '[ Frozen ready ]' : '[ Leave ready ]'}
-                        </button>
-
-                        <button
-                          onClick={() => {
-                            triggerQuietPause(() => {
-                              saveTomorrowOutfit(null);
-                              setTempTomorrowItems([]);
-                              setTomorrowNote('');
-                            });
-                          }}
-                          className="text-[10px] text-white/30 hover:text-white/60 font-mono uppercase tracking-[0.2em] transition-all font-light cursor-pointer"
-                        >
-                          [ Let go of this look ]
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                </div>
+                <AIEngineStudio 
+                  wardrobe={activeWardrobeList} 
+                  onAddGarment={onAddGarment} 
+                  onNavigateToTab={(tab) => handleNavigate(tab as any)} 
+                />
               )}
 
               {/* ROOM 4: SARTORIAL CONTROL DASHBOARD & HISTORY */}
@@ -3930,143 +3878,14 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
                 <SartorialControlCenter wardrobe={activeWardrobeList} user={user} />
               )}
 
-              {/* ROOM 4: MOMENTS (Reflections journal without numbers) */}
-              {(activeSubTab as string) === 'LEARN_LEGACY' && (
-                <div className="space-y-16 max-w-xl mx-auto pb-12 animate-fade-in">
-                  
-                  <div className="space-y-16">
-                    <div className="space-y-3 text-center">
-                      <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-white/30 block font-light">WARDROBE JOURNAL</span>
-                      <h2 className="font-serif font-light tracking-[-0.03em] text-4xl text-white">Memory corner</h2>
-                      <p className="text-sm text-white/40 leading-relaxed font-light font-serif italic">
-                        "Quiet reflections on choices worn over time."
-                      </p>
-                    </div>
-
-                    {/* Poetic lines precisely as requested */}
-                    <div className="space-y-20 text-center select-none py-12 border-t border-b border-white/5">
-                      <div className="space-y-3">
-                        <span className="text-[10px] font-mono tracking-[0.25em] text-white/30 uppercase block font-light">Yesterday</span>
-                        <p className="font-serif italic text-2xl text-white/75 font-light max-w-xs mx-auto leading-relaxed">
-                          Comfort chosen quietly.
-                        </p>
-                      </div>
-                      
-                      <div className="space-y-3">
-                        <span className="text-[10px] font-mono tracking-[0.25em] text-white/30 uppercase block font-light">Earlier</span>
-                        <p className="font-serif italic text-2xl text-white/75 font-light max-w-xs mx-auto leading-relaxed">
-                          Repeated without effort.
-                        </p>
-                      </div>
-
-                      <div className="space-y-3">
-                        <span className="text-[10px] font-mono tracking-[0.25em] text-white/30 uppercase block font-light">Returned often</span>
-                        <p className="font-serif italic text-2xl text-white/75 font-light max-w-xs mx-auto leading-relaxed">
-                          Certain shapes remain.
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Understated journal signature lines with zero logs/timestamps */}
-                    <div className="space-y-8 text-center max-w-xs mx-auto">
-                      <span className="text-[10px] font-mono text-white/30 uppercase tracking-[0.25em] block font-light">
-                        ROOM SILHOUETTES
-                      </span>
-                      <div className="space-y-4">
-                        {(() => {
-                          const feedbackSignals = state.unifiedStyleMemory.feedback_signals;
-                          if (feedbackSignals.length === 0) {
-                            return (
-                              <p className="text-xs text-white/35 italic font-serif leading-relaxed">
-                                No silhouettes have left their imprint yet. Rhythms are waiting.
-                              </p>
-                            );
-                          }
-                          
-                          // MEMORY WITHOUT HISTORY: Simple poetic summaries based on wardrobe content
-                          const summaries = [];
-                          const hasDark = activeWardrobeList.some(item => {
-                            const t = item.title.toLowerCase();
-                            return t.includes("black") || t.includes("dark") || t.includes("charcoal") || t.includes("slate") || t.includes("midnight");
-                          });
-                          const hasLight = activeWardrobeList.some(item => {
-                            const t = item.title.toLowerCase();
-                            return t.includes("white") || t.includes("light") || t.includes("cream") || t.includes("linen") || t.includes("ivory") || t.includes("beige");
-                          });
-                          
-                          if (hasLight) {
-                            summaries.push("Lighter pieces stayed nearby.");
-                          }
-                          if (hasDark) {
-                            summaries.push("Darker silhouettes returned to the rack.");
-                          }
-                          summaries.push("A preference for softer layers.");
-                          if (feedbackSignals.length > 2) {
-                            summaries.push("Steady outlines have begun to settle.");
-                          } else {
-                            summaries.push("Silence is keeping time with you.");
-                          }
-
-                          return summaries.map((phrase, idx) => (
-                            <div key={idx} className="text-xs font-serif italic text-white/50 py-1">
-                              {phrase}
-                            </div>
-                          ));
-                        })()}
-                      </div>
-                    </div>
-                  </div>
-
-                </div>
-              )}
-
               {/* ROOM 5: COGNITIVE PASSPORT & STYLE DNA */}
               {activeSubTab === 'PROFILE' && (
-                <CognitivePassport user={user} onLogout={onLogout} />
-              )}
-
-              {/* ROOM 5: SIGNATURE */}
-              {(activeSubTab as string) === 'SIGNATURE_LEGACY' && (
-                <div className="space-y-16 max-w-md mx-auto py-8 text-center animate-fade-in select-none">
-                  <div className="space-y-3">
-                    <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-white/30 block font-light">
-                      SARTORIAL IDENTITY
-                    </span>
-                    <h2 className="font-serif font-light tracking-[-0.03em] text-4xl text-white">Personal imprint</h2>
-                    <p className="text-sm text-white/40 max-w-xs mx-auto leading-relaxed font-serif italic italic">
-                      "Your taste is a quiet signature of the archives you hold."
-                    </p>
-                  </div>
-
-                  <div className="space-y-6 pt-6 border-t border-white/5">
-                    <div className="space-y-1">
-                      <span className="text-[10px] font-mono text-white/30 uppercase tracking-[0.15em] block font-light">
-                        Current Holder
-                      </span>
-                      <strong className="font-serif font-light text-xl text-white">
-                        {user?.displayName || 'Sartorialist'}
-                      </strong>
-                    </div>
-
-                    <div className="space-y-1">
-                      <span className="text-[10px] font-mono text-white/30 uppercase tracking-[0.15em] block font-light">
-                        Presence Tier
-                      </span>
-                      <span className="text-xs font-mono text-white/60 tracking-wider">
-                        {user?.isAnonymous ? 'TEMPORARY PRESENCE' : 'PERMANENT ARCHIVE MEMBER'}
-                      </span>
-                    </div>
-
-                    <div className="pt-8">
-                      <button
-                        onClick={onLogout}
-                        className="text-[10px] font-mono uppercase tracking-[0.2em] border border-white/10 hover:border-white px-8 py-4 transition-all hover:bg-white/5 cursor-pointer text-white/70 hover:text-white"
-                      >
-                        [ Sign out of Signature ]
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                <CognitivePassport 
+                  user={user} 
+                  onLogout={onLogout} 
+                  currentTheme={currentTheme}
+                  setCurrentTheme={setCurrentTheme}
+                />
               )}
 
               {/* ROOM 6: SYSTEM AUDIT & SETTINGS */}
@@ -4088,164 +3907,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
                 <OutfitPlanner wardrobe={activeWardrobeList} themeObj={themeObj} />
               )}
 
-              {/* ROOM 6: PRESENCE */}
-              {(activeSubTab as string) === 'PRESENCE_LEGACY' && (
-                <div className={`${showFounderConsole ? 'max-w-4xl' : 'max-w-md'} mx-auto py-8 text-center animate-fade-in select-none`}>
-                  {showFounderConsole ? (
-                    <div className="space-y-6 text-left">
-                      <div className="flex justify-between items-center pb-2">
-                        <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-white/30 block font-light">ADMINISTRATIVE CONTROL BOUNDARY</span>
-                        <button 
-                          onClick={() => setShowFounderConsole(false)}
-                          className="text-[10px] font-mono text-white/40 hover:text-white uppercase tracking-[0.15em] cursor-pointer"
-                        >
-                          [ Back to Quiet Space ]
-                        </button>
-                      </div>
-                      <FounderDashboard />
-                    </div>
-                  ) : (
-                    <div className="space-y-16">
-                      <div className="space-y-3">
-                        <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-white/30 block font-light">
-                          ROOM ATMOSPHERE
-                        </span>
-                        <h2 className="font-serif font-light tracking-[-0.03em] text-4xl text-white">Quiet control space</h2>
-                        <p className="text-sm text-white/40 max-w-xs mx-auto leading-relaxed font-serif italic italic">
-                          "Maintain the quiet space of your monochrome room."
-                        </p>
-                      </div>
-
-                      {/* Founder Dashboard Gateway */}
-                      <div className="pt-2">
-                        <button
-                          onClick={() => setShowFounderConsole(true)}
-                          className="w-full bg-white/5 border border-white/10 hover:bg-white/15 text-white/80 py-4 font-mono text-[10px] uppercase tracking-[0.25em] transition-all cursor-pointer font-semibold"
-                        >
-                          [ Open Founder Dashboard ]
-                        </button>
-                      </div>
-
-                      <div className="space-y-8 pt-6 border-t border-[#1a1a1a]/5 border-white/5">
-                    
-                    <div className="space-y-3">
-                      <span className="text-[10px] font-mono text-white/30 uppercase tracking-[0.15em] block font-light">
-                        Actions
-                      </span>
-                      
-                      <div className="flex flex-col gap-4 max-w-xs mx-auto pt-2">
-                        <button
-                          onClick={() => {
-                            if (onLoadSamples) {
-                              onLoadSamples();
-                            }
-                          }}
-                          disabled={isResetting}
-                          className="bg-white hover:bg-neutral-200 text-black py-4 font-mono text-[10px] uppercase tracking-[0.2em] transition-all cursor-pointer font-semibold"
-                        >
-                          [ Gather sample pieces ]
-                        </button>
- 
-                        <button
-                          onClick={() => {
-                            if (onReset) {
-                              if (!bulkResetConfirm) {
-                                setBulkResetConfirm(true);
-                                setTimeout(() => setBulkResetConfirm(false), 4000);
-                              } else {
-                                onReset();
-                                setBulkResetConfirm(false);
-                              }
-                            }
-                          }}
-                          disabled={isResetting}
-                          className={`border py-4 font-mono text-[10px] uppercase tracking-[0.2em] transition-all cursor-pointer ${
-                            bulkResetConfirm 
-                              ? 'border-red-500 text-red-400 bg-red-950/20 font-semibold' 
-                              : 'border-white/15 hover:border-white/30 text-white/80 hover:text-white font-light'
-                          }`}
-                        >
-                          {bulkResetConfirm ? '[ Click again to CONFIRM BULK RESET ]' : '[ Let Go of All Pieces ]'}
-                        </button>
- 
-                        <button
-                          onClick={() => {
-                            if (onEnterSilence) {
-                              onEnterSilence();
-                            }
-                          }}
-                          className="bg-transparent text-white/40 hover:text-white py-2 font-mono text-[9.5px] uppercase tracking-[0.2em] transition-all cursor-pointer font-light pt-4"
-                        >
-                          [ Enter Silence ]
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="pt-6 text-[10px] font-mono text-white/20 uppercase tracking-[0.15em] font-light">
-                      Companion volume 11 // offline resilient signature space.
-                    </div>
-
-                    {/* SYSTEM GOVERNOR & ADAPTIVE LOOP REPORT */}
-                    {(() => {
-                      const report = state.systemGovernorReport || {
-                        status: 'Balanced',
-                        detectedIssues: ['Initial system launch - system parameters fully stable.'],
-                        weights: { scoring: 35, diversity: 25, quietControl: 20, gravity: 20 },
-                        learningUpdates: {
-                          updatedPreferences: 'Initial factory coordinates loaded.',
-                          ignoredPatterns: 'No repetitive negative signals registered.',
-                          reinforcedStyles: 'Sartorial DNA is awaiting custom wear and planning confirmations.'
-                        },
-                        nextCyclePrediction: 'Excellent stability predicted. Open for discovery style coordinates.'
-                      };
-
-                      return (
-                        <div className="pt-8">
-                          <SystemHealthPanel
-                            systemHealthScore={state.systemGovernorReport ? 100 - (state.systemGovernorReport.detectedIssues?.length || 0) * 15 : 95}
-                            learningSpeedPercent={85}
-                            biasReductionFactor={92}
-                            readyForProduction={true}
-                            avgGenerationTime={32}
-                            storageUsageBytes={5200}
-                            onRunRehearsal={() => {
-                              triggerQuietPause(() => {
-                                // Simulate rehearsal log update
-                                const internalState = UnifiedFashionOS.getState();
-                                if (internalState.systemGovernorReport) {
-                                  internalState.systemGovernorReport.detectedIssues = [
-                                    "System rehearsal successful. Offline synchronization queue is empty.",
-                                    "All 3 core security rules checked against Firestore blueprints successfully."
-                                  ];
-                                  UnifiedFashionOS.recalculateGoLiveGate();
-                                  UnifiedFashionOS.notify();
-                                }
-                              });
-                            }}
-                            onClearMemory={() => {
-                              triggerQuietPause(() => {
-                                const internalState = UnifiedFashionOS.getState();
-                                if (internalState.systemGovernorReport?.weights) {
-                                  internalState.systemGovernorReport.weights = { scoring: 35, diversity: 25, quietControl: 20, gravity: 20 };
-                                  internalState.systemGovernorReport.detectedIssues = [
-                                    "Memory buffer flushed. System weights reset to equal distribution parameters."
-                                  ];
-                                  UnifiedFashionOS.recalculateGoLiveGate();
-                                  UnifiedFashionOS.notify();
-                                }
-                              });
-                            }}
-                          />
-                        </div>
-                      );
-                    })()}
-                  </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* ROOM: ARCHITECTURE ROADMAP */}
+              {/* ROOM: ARCHITECTURE ROADMAP */}
             {(activeSubTab as any) === 'ROADMAP' && (
               <ArchitectureMap 
                 user={user} 
@@ -4354,20 +4016,71 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
               />
             )}
 
+            {/* ROOM: AI ASSISTANT FULL-PAGE STUDIO */}
+            {activeSubTab === 'AI_ASSISTANT' && (
+              <AIAssistantStudio 
+                wardrobe={activeWardrobeList} 
+                onNavigateToTab={(tab) => handleNavigate(tab as any)} 
+              />
+            )}
+
             </motion.div>
           </AnimatePresence>
         </div>
       </main>
 
       {/* C. RIGHT SIDEBAR PERSISTENT PANEL */}
-      {activeSubTab !== 'HOME' && (
       <aside className={`w-80 shrink-0 p-4 flex flex-col gap-5 overflow-y-auto no-scrollbar hidden xl:flex text-left ${
         currentTheme === 'solar-day' 
           ? 'bg-[#f5f4f0] border-l border-stone-200 text-stone-900' 
           : 'bg-[#07070c] border-l border-white/5 text-white'
       }`}>
         
-        {/* 1. Quick Actions */}
+        {/* 1. Style Contributors Leaderboard */}
+        <div className="bg-black/20 border border-white/5 rounded-2xl p-4 space-y-3">
+          <div className="flex justify-between items-center border-b border-white/5 pb-2">
+            <span className="text-[9px] font-mono uppercase tracking-[0.15em] text-white/40 block font-bold">Contributors</span>
+            <span className="text-[9px] font-mono text-violet-400 font-bold">This Week</span>
+          </div>
+          <div className="space-y-2.5 pt-1">
+            {[
+              { rank: 1, name: 'Sarah Khan', score: '12.5K', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&auto=format&fit=crop' },
+              { rank: 2, name: 'Urban King', score: '8.7K', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=150&auto=format&fit=crop' },
+              { rank: 3, name: 'Trend Hunter', score: '6.3K', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=150&auto=format&fit=crop' },
+              { rank: 4, name: 'Style Icon', score: '4.9K', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=150&auto=format&fit=crop' },
+              { rank: 5, name: 'John Creator', score: '2.1K', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&auto=format&fit=crop', isYou: true }
+            ].map((cont) => (
+              <div key={cont.rank} className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-[10px] font-mono font-bold text-white/30 w-3">{cont.rank}</span>
+                  <img src={cont.avatar} className="w-6 h-6 rounded-full object-cover border border-white/10" alt="" />
+                  <span className={`text-[11px] ${cont.isYou ? 'text-violet-300 font-bold' : 'text-white/85'}`}>{cont.name}</span>
+                </div>
+                <span className="text-[10px] text-white/50 font-mono">{cont.score}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* 2. Trending Tags */}
+        <div className="bg-black/20 border border-white/5 rounded-2xl p-4 space-y-2.5">
+          <span className="text-[9px] font-mono uppercase tracking-[0.15em] text-white/40 block font-bold">Trending Tags</span>
+          <div className="flex flex-wrap gap-1.5">
+            {['#StreetStyle', '#Minimal', '#Techwear', '#Y2K', '#Luxury', '#CyberCore'].map((tag) => (
+              <span 
+                key={tag} 
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: `Active style filter locked to: ${tag}` }));
+                }}
+                className="px-2 py-0.5 bg-white/5 hover:bg-violet-600/20 text-[9.5px] text-white/60 hover:text-white border border-white/5 rounded-md cursor-pointer transition-colors font-mono"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* 3. Quick Actions */}
         <div className="space-y-3">
           <span className="text-[9px] font-mono uppercase tracking-[0.15em] text-white/40 block">Quick Actions</span>
           <div className="grid grid-cols-2 gap-2.5">
@@ -4417,7 +4130,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
           </div>
         </div>
 
-        {/* 2. Dynamic Compiled Look Widget */}
+        {/* 4. Dynamic Compiled Look Widget */}
         <div className="p-4 rounded-xl bg-zinc-950/45 border border-white/5 space-y-3 text-left relative overflow-hidden">
           <div className="flex items-center justify-between select-none">
             <div className="flex items-center gap-2">
@@ -4490,50 +4203,6 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
           )}
         </div>
 
-        {/* 3. Style Contributors Leaderboard */}
-        <div className="bg-black/20 border border-white/5 rounded-2xl p-4 space-y-3">
-          <div className="flex justify-between items-center border-b border-white/5 pb-2">
-            <span className="text-[9px] font-mono uppercase tracking-[0.15em] text-white/40 block font-bold">Leaderboard</span>
-            <span className="text-[9px] font-mono text-violet-400 font-bold">This Week</span>
-          </div>
-          <div className="space-y-2.5 pt-1">
-            {[
-              { rank: 1, name: 'Sarah Khan', score: '12.5K', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&auto=format&fit=crop' },
-              { rank: 2, name: 'Urban King', score: '8.7K', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=150&auto=format&fit=crop' },
-              { rank: 3, name: 'Trend Hunter', score: '6.3K', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=150&auto=format&fit=crop' },
-              { rank: 4, name: 'Style Icon', score: '4.9K', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=150&auto=format&fit=crop' },
-              { rank: 5, name: 'John Creator', score: '2.1K', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&auto=format&fit=crop', isYou: true }
-            ].map((cont) => (
-              <div key={cont.rank} className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <span className="text-[10px] font-mono font-bold text-white/30 w-3">{cont.rank}</span>
-                  <img src={cont.avatar} className="w-6 h-6 rounded-full object-cover border border-white/10" alt="" />
-                  <span className={`text-[11px] ${cont.isYou ? 'text-violet-300 font-bold' : 'text-white/85'}`}>{cont.name}</span>
-                </div>
-                <span className="text-[10px] text-white/50 font-mono">{cont.score}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* 4. Trending Tags */}
-        <div className="bg-black/20 border border-white/5 rounded-2xl p-4 space-y-2.5">
-          <span className="text-[9px] font-mono uppercase tracking-[0.15em] text-white/40 block font-bold">Trending Tags</span>
-          <div className="flex flex-wrap gap-1.5">
-            {['#StreetStyle', '#Minimal', '#Techwear', '#Y2K', '#Luxury', '#CyberCore'].map((tag) => (
-              <span 
-                key={tag} 
-                onClick={() => {
-                  window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: `Active style filter locked to: ${tag}` }));
-                }}
-                className="px-2 py-0.5 bg-white/5 hover:bg-violet-600/20 text-[9.5px] text-white/60 hover:text-white border border-white/5 rounded-md cursor-pointer transition-colors font-mono"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-        </div>
-
         {/* 5. Editor's Picks Curated Cards */}
         <div className="bg-black/20 border border-white/5 rounded-2xl p-4 space-y-3">
           <div className="flex justify-between items-center pb-1">
@@ -4600,15 +4269,23 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
             </span>
             <span className="text-[10px] font-mono text-white/80">AI Status: Coherent</span>
           </div>
-          <span className="text-[9px] font-mono text-violet-400 font-bold uppercase">v4.0</span>
+          <span className="text-[9px] font-mono text-violet-400 font-bold uppercase">v2.4-telemetry</span>
         </div>
 
       </aside>
-      )}
 
     </div>
     </div>
     <FloatingAIChat wardrobe={activeWardrobeList} />
+    <FocusSearchPalette 
+      isOpen={isFocusSearchOpen} 
+      onClose={() => setIsFocusSearchOpen(false)} 
+      onNavigate={(route) => {
+        handleNavigate(route as any);
+      }}
+      currentTheme={currentTheme}
+      setCurrentTheme={setCurrentTheme}
+    />
 
     {/* --- DESIGN REFERENCE MOCK OVERLAY ENGINE --- */}
     {isMockOverlayActive && (
@@ -4722,6 +4399,60 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
           user={user} 
           onClose={() => setIsSellerDashboardOpen(false)} 
         />
+      )}
+    </AnimatePresence>
+
+    {/* Notifications Drawer Slide-over */}
+    <AnimatePresence>
+      {isNotificationsOpen && (
+        <>
+          <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs animate-fade-in" onClick={() => setIsNotificationsOpen(false)} />
+          <motion.div 
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="fixed top-0 right-0 h-full w-80 bg-[#0c0c12] border-l border-white/5 shadow-2xl p-6 z-50 text-left space-y-6 select-none flex flex-col justify-between"
+          >
+            <div className="space-y-6">
+              <div className="flex justify-between items-center border-b border-white/5 pb-3">
+                <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-white/30 block">Live Feed Updates</span>
+                <button 
+                  onClick={() => setIsNotificationsOpen(false)}
+                  className="text-white/40 hover:text-white cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {[
+                  { title: '🔥 Vibe Check', desc: 'Your last post received 14 likes from style creators!', time: '2m ago' },
+                  { title: '⚡ Style Drop', desc: 'Classic Noir silk shirts added to boutiques!', time: '1h ago' },
+                  { title: '🧬 DNA Alignment', desc: 'Coherence reaches 98% with Nordic Minimalist aesthetics.', time: '3h ago' },
+                  { title: '🌦️ Weather Alert', desc: 'Lighter layers advised for warm morning strolls.', time: '5h ago' }
+                ].map((not, i) => (
+                  <div key={i} className="p-3 bg-white/[0.02] border border-white/5 rounded-xl space-y-1">
+                    <div className="flex justify-between items-center">
+                      <strong className="text-[10px] font-mono uppercase text-white tracking-wider">{not.title}</strong>
+                      <span className="text-[8px] font-mono text-white/30">{not.time}</span>
+                    </div>
+                    <p className="text-[10px] font-serif italic text-white/50 leading-relaxed">
+                      "{not.desc}"
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <button
+              onClick={() => setIsNotificationsOpen(false)}
+              className="w-full bg-white text-black py-3 rounded-xl text-[10px] font-mono uppercase tracking-widest font-semibold text-center cursor-pointer hover:bg-neutral-200 transition-colors"
+            >
+              Clear All Notifications
+            </button>
+          </motion.div>
+        </>
       )}
     </AnimatePresence>
   </div>

@@ -58,7 +58,7 @@ export async function runPreemptiveFirestoreBootTest() {
     await getDoc(testDocRef);
   } catch (err: any) {
     isFirestoreOfflineFallbackActive = true;
-    console.error(`[Quota System] Preemptive Firestore boot-test failed (7 PERMISSION_DENIED: Permission denied on resource project muazimatbassum.). Activating robust in-memory quota fallback tracking immediately.`);
+    console.warn(`[Quota System] Preemptive Firestore boot-test status: Offline/Fallback mode active. (Detail: ${err?.message || err})`);
     try {
       localStorage.setItem('firestore_offline_fallback_active', 'true');
     } catch (_) {}

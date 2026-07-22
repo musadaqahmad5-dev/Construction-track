@@ -537,7 +537,7 @@ export class ProductManifestRegistry {
       {
         productId: ProductIdentity.HOME_GENERATE,
         name: 'Home Generator & Try-On',
-        version: '1.2.0',
+        version: '2.4-telemetry',
         buildNumber: 1420,
         author: 'AIStyleHub Architecture Group',
         capabilities: [
@@ -554,7 +554,7 @@ export class ProductManifestRegistry {
       {
         productId: ProductIdentity.AI_CREATIONS,
         name: 'AI Creations Studio',
-        version: '2.1.4',
+        version: '2.4-telemetry',
         buildNumber: 2140,
         author: 'AIStyleHub Generative Division',
         capabilities: [
@@ -570,7 +570,7 @@ export class ProductManifestRegistry {
       {
         productId: ProductIdentity.COMMUNITY,
         name: 'Community Fashion Stream',
-        version: '1.0.8',
+        version: '2.4-telemetry',
         buildNumber: 1080,
         author: 'AIStyleHub Social Labs',
         capabilities: [
@@ -586,7 +586,7 @@ export class ProductManifestRegistry {
       {
         productId: ProductIdentity.MARKETPLACE,
         name: 'Fashion Marketplace',
-        version: '1.5.0',
+        version: '2.4-telemetry',
         buildNumber: 1500,
         author: 'AIStyleHub Commerce Core',
         capabilities: [
@@ -603,7 +603,7 @@ export class ProductManifestRegistry {
       {
         productId: ProductIdentity.FACE_AI,
         name: 'Face AI & Real Body Scan',
-        version: '3.0.0',
+        version: '2.4-telemetry',
         buildNumber: 3000,
         author: 'AIStyleHub Biometrics Core',
         capabilities: [

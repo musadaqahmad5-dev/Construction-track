@@ -114,7 +114,7 @@ export class AnalyticsEngine {
           timestamp: evt.timestamp,
           userId: evt.userId,
           params: evt.params || {},
-          schema_version: '1.0.0'
+          schema_version: '2.4.0-telemetry'
         });
       });
 

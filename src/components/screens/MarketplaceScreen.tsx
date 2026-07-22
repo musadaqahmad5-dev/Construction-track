@@ -14,7 +14,7 @@ interface MarketplaceScreenProps {
   user?: any;
 }
 
-const BOUTIQUE_PRODUCTS = [
+export const BOUTIQUE_PRODUCTS = [
   {
     id: 'prod-1',
     brand: 'ZARA MAN COUTURE',
