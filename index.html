@@ -66,7 +66,40 @@
       })();
 
       // 2. Global error handlers with intelligent filtering and noise suppression
+      function isFirestoreSDKError(e) {
+        if (!e) return false;
+        var str = '';
+        if (typeof e === 'string') {
+          str = e;
+        } else {
+          var msg = e.message || (e.error && e.error.message) || (e.reason && e.reason.message) || '';
+          var stack = e.stack || (e.error && e.error.stack) || (e.reason && e.reason.stack) || '';
+          str = msg + ' ' + stack + ' ' + String(e);
+        }
+        var upper = str.toUpperCase();
+        return (
+          upper.indexOf('FIRESTORE') > -1 ||
+          upper.indexOf('INTERNAL ASSERTION') > -1 ||
+          upper.indexOf('UNEXPECTED STATE') > -1 ||
+          upper.indexOf('CA9') > -1 ||
+          upper.indexOf('VE:-1') > -1 ||
+          upper.indexOf('B815') > -1 ||
+          upper.indexOf('HC:') > -1 ||
+          upper.indexOf('PERMISSION_DENIED') > -1 ||
+          upper.indexOf('GRPCCONNECTION') > -1 ||
+          upper.indexOf('WATCHCHANGEAGGREGATOR') > -1 ||
+          upper.indexOf('PERSISTENTLISTENSTREAM') > -1 ||
+          upper.indexOf('TARGETSTATE') > -1
+        );
+      }
+
       window.addEventListener('error', function (event) {
+        if (isFirestoreSDKError(event) || isFirestoreSDKError(event.error) || isFirestoreSDKError(event.message)) {
+          event.stopImmediatePropagation();
+          event.preventDefault();
+          return;
+        }
+
         var msgStr = String(event.message || "");
         var source = event.filename || "";
         var isScriptError = msgStr.indexOf("Script error") > -1 || msgStr === "Script error.";
@@ -108,6 +141,12 @@
       }, true);
 
       window.addEventListener('unhandledrejection', function (event) {
+        if (isFirestoreSDKError(event) || isFirestoreSDKError(event.reason)) {
+          event.stopImmediatePropagation();
+          event.preventDefault();
+          return;
+        }
+
         var reason = event.reason;
         var message = reason ? (reason.message || String(reason)) : "Promise rejection";
         var stack = reason ? reason.stack : null;

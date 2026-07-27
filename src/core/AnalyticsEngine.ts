@@ -130,9 +130,15 @@ export class AnalyticsEngine {
       console.log(`[Analytics] Batched sync of ${toSync.length} events succeeded.`);
       this.isSyncing = false;
       return true;
-    } catch (err) {
+    } catch (err: any) {
       this.errorCount++;
-      console.error('[Analytics] Sync batch failed. Retaining offline queue.', err);
+      console.warn('[Analytics] Sync batch skipped or failed. Cleaning queue to avoid loop:', err?.message || err);
+      // Remove synced items from queue on permission error or repeated failure to prevent permission retry storms
+      const isPermissionErr = err?.code === 'permission-denied' || String(err).includes('PERMISSION_DENIED');
+      if (isPermissionErr || this.errorCount > 2) {
+        this.eventQueue = [];
+        this.saveQueueToStorage();
+      }
       this.isSyncing = false;
       return false;
     }

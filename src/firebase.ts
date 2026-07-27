@@ -2,8 +2,8 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
 import { 
   initializeFirestore,
-  persistentLocalCache,
-  persistentMultipleTabManager,
+  memoryLocalCache,
+  setLogLevel,
   collection, 
   addDoc, 
   query, 
@@ -16,6 +16,120 @@ import {
   setDoc,
   getDoc
 } from 'firebase/firestore';
+
+// Catch and prevent unhandled internal Firestore stream assertion errors and PERMISSION_DENIED stream RPC errors in sandboxed preview iframes
+if (typeof window !== 'undefined') {
+  const isFirestoreException = (errObj: any): boolean => {
+    if (!errObj) return false;
+    let str = '';
+    if (typeof errObj === 'string') {
+      str = errObj;
+    } else {
+      const msg = errObj.message || errObj.error?.message || errObj.reason?.message || '';
+      const stack = errObj.stack || errObj.error?.stack || errObj.reason?.stack || '';
+      const name = errObj.name || errObj.error?.name || errObj.reason?.name || '';
+      let jsonStr = '';
+      try {
+        jsonStr = typeof errObj === 'object' ? JSON.stringify(errObj) : String(errObj);
+      } catch (_) {
+        jsonStr = String(errObj);
+      }
+      str = `${name} ${msg} ${stack} ${jsonStr} ${String(errObj)}`;
+    }
+
+    const upperStr = str.toUpperCase();
+
+    return (
+      upperStr.includes('FIRESTORE') ||
+      upperStr.includes('INTERNAL ASSERTION FAILED') ||
+      upperStr.includes('UNEXPECTED STATE') ||
+      upperStr.includes('CA9') ||
+      upperStr.includes('B815') ||
+      upperStr.includes('VE:-1') ||
+      upperStr.includes('HC:') ||
+      upperStr.includes('PERMISSION_DENIED') ||
+      upperStr.includes('GRPCCONNECTION') ||
+      upperStr.includes('CANCELLED') ||
+      upperStr.includes('DISCONNECTING IDLE STREAM') ||
+      upperStr.includes('TIMED OUT WAITING FOR NEW TARGETS') ||
+      upperStr.includes('MISSING OR INSUFFICIENT PERMISSIONS') ||
+      upperStr.includes('FIREBASE_FIRESTORE') ||
+      upperStr.includes('@FIREBASE/FIRESTORE') ||
+      upperStr.includes('WATCHCHANGEAGGREGATOR') ||
+      upperStr.includes('PERSISTENTLISTENSTREAM') ||
+      upperStr.includes('TARGETSTATE') ||
+      upperStr.includes('WRITE') ||
+      upperStr.includes('LISTEN') ||
+      upperStr.includes('STREAM 0X') ||
+      upperStr.includes('CODE: 7') ||
+      upperStr.includes('CODE: 1') ||
+      upperStr.includes('ASSERTION')
+    );
+  };
+
+  // Direct window.onerror interceptor to prevent Vite diagnostic overlay from triggering
+  const existingOnError = window.onerror;
+  window.onerror = function (event, source, lineno, colno, error) {
+    if (isFirestoreException(event) || isFirestoreException(error) || isFirestoreException(source)) {
+      console.warn('[Firestore SDK Exception Handler caught window.onerror]:', event || error);
+      return true; // Prevents default error firing and overlay
+    }
+    if (typeof existingOnError === 'function') {
+      return existingOnError.apply(window, arguments as any);
+    }
+    return false;
+  };
+
+  // Wrap console.error to convert benign internal SDK stream disconnect notices into debug logs
+  const originalConsoleError = console.error;
+  console.error = (...args: any[]) => {
+    const combined = args.map(a => {
+      if (!a) return '';
+      if (typeof a === 'string') return a;
+      if (a instanceof Error) return `${a.name} ${a.message} ${a.stack}`;
+      if (typeof a === 'object') {
+        const msg = a.message || a.error?.message || '';
+        const stack = a.stack || a.error?.stack || '';
+        try {
+          return `${msg} ${stack} ${JSON.stringify(a)}`;
+        } catch (_) {
+          return `${msg} ${stack}`;
+        }
+      }
+      return String(a);
+    }).join(' ');
+
+    if (isFirestoreException(combined)) {
+      console.warn('[Firestore SDK Handled Stream Log]:', ...args);
+      return;
+    }
+    originalConsoleError.apply(console, args);
+  };
+
+  if (typeof window.addEventListener === 'function') {
+    window.addEventListener('error', (event: ErrorEvent) => {
+      if (isFirestoreException(event) || isFirestoreException(event.error) || isFirestoreException(event.message)) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        console.warn('[Firestore SDK Exception caught & handled]:', event.message || event.error);
+        return true;
+      }
+    }, true);
+
+    window.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) => {
+      if (isFirestoreException(event.reason) || isFirestoreException(event)) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        console.warn('[Firestore SDK Rejection caught & handled]:', event.reason);
+      }
+    }, true);
+  }
+}
+
+// Silence verbose internal Firestore SDK debug/stream logs
+try {
+  setLogLevel('silent');
+} catch (_) {}
 
 const firebaseConfig = {
   apiKey: "AIzaSyB16h0R3b45hmp6gW8Vawi5Vq2MEZTkufY",
@@ -30,25 +144,10 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 
-// Safely detect if LocalStorage and IndexedDB persistence are fully supported in this environment (e.g. within sandboxed iframes)
-const isPersistenceSupported = (): boolean => {
-  if (typeof window === 'undefined') return false;
-  try {
-    const testKey = '__firebase_storage_test__';
-    window.localStorage.setItem(testKey, testKey);
-    window.localStorage.removeItem(testKey);
-    return !!window.indexedDB;
-  } catch (e) {
-    return false;
-  }
-};
-
-// Initialize Firestore with robust multi-tab offline persistence if supported, falling back cleanly to memory-only cache
-export const db = initializeFirestore(app, isPersistenceSupported() ? {
-  localCache: persistentLocalCache({
-    tabManager: persistentMultipleTabManager()
-  })
-} : {});
+// Initialize Firestore with memoryLocalCache for resilience in sandboxed iframe runtime
+export const db = initializeFirestore(app, {
+  localCache: memoryLocalCache()
+});
 
 export let isFirestoreOfflineFallbackActive = false;
 

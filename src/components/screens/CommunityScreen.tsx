@@ -6,13 +6,14 @@ import {
   TrendingUp, Compass, Shield, RefreshCw, Star, Share2, 
   ChevronRight, ChevronLeft, CheckCircle2, Copy, FolderPlus, PlusCircle, 
   X, HelpCircle, Layers, Grid, SlidersHorizontal, ArrowUpRight,
-  Loader2, Upload
+  Loader2, Upload, ThumbsDown, Slash, Download, Trash2
 } from 'lucide-react';
 import { WardrobeItem } from '../../types';
 import { db, auth } from '../../firebase';
 import { CommunityGenerator } from '../CommunityGenerator';
 import { FashionInstructorWorkspace } from './FashionInstructorWorkspace';
 import { ImageGenerationRegistry } from '../../features/image-generation/imageGenerationProvider';
+import { AIStyleHubV17Architecture } from '../../features/global/AIStyleHubV17Architecture';
 import { 
   collection, 
   addDoc, 
@@ -458,8 +459,28 @@ export const CommunityScreen: React.FC<CommunityScreenProps> = ({
   onAddGarment,
   onNavigateToTab
 }) => {
-  // Discovery Tabs: Large editorial feed, Trending fashion, Newest creations, Luxury collections, Editor's Picks, Weekly highlights
-  const [activeTab, setActiveTab] = useState<'EDITORIAL_FEED' | 'TRENDING' | 'NEWEST' | 'COLLECTIONS' | 'EDITORS_PICKS' | 'WEEKLY_HIGHLIGHTS' | 'COMMUNITY_GENERATOR' | 'INTELLIGENT_FASHION_AI'>('EDITORIAL_FEED');
+  // Discovery Tabs: Unified Community Feed with AI Creations, User Posts, Challenges, Trending, Collections & Editors Picks
+  const [activeTab, setActiveTab] = useState<'EDITORIAL_FEED' | 'TRENDING' | 'AI_CREATIONS' | 'USER_POSTS' | 'CHALLENGES' | 'NEWEST' | 'COLLECTIONS' | 'EDITORS_PICKS' | 'WEEKLY_HIGHLIGHTS' | 'COMMUNITY_GENERATOR' | 'INTELLIGENT_FASHION_AI'>('EDITORIAL_FEED');
+
+  // Helper handler to Remix an AI creation or community look in AI Studio
+  const handleRemixPost = (e: React.MouseEvent, post: CommunityPost) => {
+    e.stopPropagation();
+    const promptText = post.caption || post.vibeTags.join(', ') || 'Couture design look';
+    setPromptInput(`Remix of ${post.author?.name || 'Community Look'}: ${promptText}`);
+    setIsGeneratorOpen(true);
+    window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
+      detail: `✨ Loaded "${post.caption?.slice(0, 25) || 'Look'}" into AI Generation Studio!`
+    }));
+  };
+
+  // Architecture V17 Community Memory & Personal Component States
+  const [communityMemoryArea, setCommunityMemoryArea] = useState<'PUBLIC_CATEGORY' | 'PERSONAL_COMPONENT'>('PUBLIC_CATEGORY');
+  const [humanCategory, setHumanCategory] = useState<'ALL' | 'Street Fashion' | 'Daily Wear' | 'Casual Fashion' | 'Office Fashion' | 'Luxury Fashion' | 'Wedding Fashion' | 'Lifestyle Photography'>('ALL');
+  const [personalSubTab, setPersonalSubTab] = useState<'GENERATED' | 'SAVED' | 'LIKED' | 'DOWNLOADS' | 'HISTORY'>('GENERATED');
+
+  // Import to HomeHub (Give Your Name) Modal state
+  const [importModalPost, setImportModalPost] = useState<CommunityPost | null>(null);
+  const [importCustomTitle, setImportCustomTitle] = useState('');
 
   // AI Style Generation Sub-Component States
   const [isGeneratorOpen, setIsGeneratorOpen] = useState(false);
@@ -706,6 +727,46 @@ export const CommunityScreen: React.FC<CommunityScreenProps> = ({
   // Local views tracker to avoid duplicate incrementing
   const [localViews, setLocalViews] = useState<Record<string, boolean>>({});
 
+  // Creator Profile & Following Ecosystem States
+  const [selectedCreator, setSelectedCreator] = useState<{
+    name: string;
+    handle: string;
+    avatar: string;
+    uid: string;
+    bio?: string;
+    styleIdentity?: string;
+    isVerified?: boolean;
+    followersCount?: number;
+    followingCount?: number;
+    bannerUrl?: string;
+  } | null>(null);
+
+  const [followedCreators, setFollowedCreators] = useState<Record<string, boolean>>(() => {
+    try {
+      const saved = localStorage.getItem('lookvision_followed_creators');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return {
+      '@elena_luxe': true,
+      '@julian_cyber': false
+    };
+  });
+
+  useEffect(() => {
+    localStorage.setItem('lookvision_followed_creators', JSON.stringify(followedCreators));
+  }, [followedCreators]);
+
+  const handleToggleFollow = (creatorHandle: string) => {
+    const isFollowing = !!followedCreators[creatorHandle];
+    setFollowedCreators(prev => ({
+      ...prev,
+      [creatorHandle]: !isFollowing
+    }));
+    window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
+      detail: !isFollowing ? `✓ Following ${creatorHandle}` : `Unfollowed ${creatorHandle}`
+    }));
+  };
+
   // Board Creation States
   const [showNewBoardInput, setShowNewBoardInput] = useState(false);
   const [newBoardName, setNewBoardName] = useState('');
@@ -851,9 +912,141 @@ export const CommunityScreen: React.FC<CommunityScreenProps> = ({
     return FashionTrendDetectionEngine.detectActiveTrends(allPosts);
   }, [allPosts]);
 
-  // Filter and sort looks depending on selected Discovery Tab and search query
+  // Aggregate and curate creator profiles across community
+  const featuredCreators = useMemo(() => {
+    const map = new Map<string, {
+      name: string;
+      handle: string;
+      avatar: string;
+      uid: string;
+      bio: string;
+      styleIdentity: string;
+      isVerified: boolean;
+      followersCount: number;
+      followingCount: number;
+      bannerUrl: string;
+      postsCount: number;
+      totalLikes: number;
+    }>();
+
+    const defaults: Record<string, any> = {
+      '@elena_luxe': {
+        bio: 'Quiet luxury & autumn minimalism in Milan. Fashion direction & editorial curation.',
+        styleIdentity: 'Minimalist Couture',
+        isVerified: true,
+        followersCount: 142000,
+        followingCount: 380,
+        bannerUrl: 'https://images.unsplash.com/photo-1509631179647-0177331693ae?q=80&w=1200&auto=format&fit=crop'
+      },
+      '@julian_cyber': {
+        bio: 'Cyberpunk techwear, high-density twill, and storm defense utility in Tokyo & Berlin.',
+        styleIdentity: 'Techwear & Utility',
+        isVerified: true,
+        followersCount: 98000,
+        followingCount: 215,
+        bannerUrl: 'https://images.unsplash.com/photo-1544441893-675973e31985?q=80&w=1200&auto=format&fit=crop'
+      },
+      '@clara_couture': {
+        bio: 'Experimental silhouette play and monolithic silk campaign lead.',
+        styleIdentity: 'High Fashion Couture',
+        isVerified: true,
+        followersCount: 210000,
+        followingCount: 512,
+        bannerUrl: 'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?q=80&w=1200&auto=format&fit=crop'
+      },
+      '@kaelen_nordic': {
+        bio: 'Nordic knitwear, alpaca wool shelters, and deconstructed winter silhouettes.',
+        styleIdentity: 'Nordic Heritage',
+        isVerified: false,
+        followersCount: 64000,
+        followingCount: 190,
+        bannerUrl: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=1200&auto=format&fit=crop'
+      }
+    };
+
+    allPosts.forEach(post => {
+      const handle = post.author.handle || `@${post.author.name.toLowerCase().replace(/\s+/g, '')}`;
+      if (!map.has(handle)) {
+        const def = defaults[handle] || {};
+        map.set(handle, {
+          name: post.author.name,
+          handle,
+          avatar: post.author.avatar,
+          uid: post.author.uid || handle,
+          bio: def.bio || 'Sartorial AI Creator & Fashion Designer on AIStyleHub.',
+          styleIdentity: def.styleIdentity || (post.vibeTags[0] ? post.vibeTags[0].toUpperCase() : 'Editorial Design'),
+          isVerified: def.isVerified ?? true,
+          followersCount: def.followersCount || Math.floor(Math.random() * 50000) + 12000,
+          followingCount: def.followingCount || Math.floor(Math.random() * 400) + 80,
+          bannerUrl: def.bannerUrl || post.imageUrl,
+          postsCount: 1,
+          totalLikes: post.likes || 0
+        });
+      } else {
+        const existing = map.get(handle)!;
+        existing.postsCount += 1;
+        existing.totalLikes += (post.likes || 0);
+      }
+    });
+
+    return Array.from(map.values());
+  }, [allPosts]);
+
+  // Filter and sort looks depending on Memory Mode, Human Category, selected Discovery Tab and search query
   const filteredFeed = useMemo(() => {
     let list: any[] = [...allPosts];
+
+    // 0. Memory Area Layer (Public Category vs Personal Component)
+    if (communityMemoryArea === 'PERSONAL_COMPONENT') {
+      if (personalSubTab === 'SAVED') {
+        list = list.filter(p => !!localSaves[p.id]);
+      } else if (personalSubTab === 'LIKED') {
+        list = list.filter(p => !!localLikes[p.id]);
+      } else if (personalSubTab === 'GENERATED') {
+        // User's private generated looks or posts authored by user
+        list = list.filter(p => p.userId === currentUserUid || p.author?.uid === currentUserUid || p.id.startsWith('user-gen') || p.id.startsWith('local-'));
+        if (list.length === 0 && userLooks.length > 0) {
+          // Convert userLooks to community post shapes for display
+          list = userLooks.map(l => ({
+            id: l.id || `user-gen-${Date.now()}`,
+            userId: currentUserUid,
+            author: { name: currentUserDisplayName, handle: currentUserHandle, avatar: currentUserAvatar, uid: currentUserUid },
+            caption: l.description || l.vibe || 'Private Generated Human Fashion Look',
+            imageUrl: l.imageUrl,
+            likes: 12,
+            shares: 2,
+            saves: 5,
+            views: 40,
+            trendingScore: 90,
+            vibeTags: l.vibe ? [l.vibe.toLowerCase()] : ['personal-fashion'],
+            comments: [],
+            aiScore: l.aiScore || 94,
+            aiBreakdown: { color: 'High Symmetries', texture: 'Fine Drape', seasonal: 'All-Season' },
+            createdAt: l.createdAt || new Date().toISOString()
+          }));
+        }
+      } else if (personalSubTab === 'DOWNLOADS') {
+        const downloads = (AIStyleHubV17Architecture.getUnifiedMemory() as any).downloadVault || [];
+        const dlUrls = new Set(downloads.map((d: any) => d.imageUrl));
+        list = list.filter(p => dlUrls.has(p.imageUrl));
+      }
+    }
+
+    // 0B. Human Fashion Category Filter
+    if (humanCategory !== 'ALL') {
+      const catLower = humanCategory.toLowerCase();
+      list = list.filter(p => {
+        const text = `${p.caption} ${p.vibeTags.join(' ')} ${p.taggedGarment?.category || ''}`.toLowerCase();
+        if (catLower.includes('street')) return text.includes('street') || text.includes('urban') || text.includes('cargo') || text.includes('hoodie');
+        if (catLower.includes('daily')) return text.includes('daily') || text.includes('casual') || text.includes('everyday') || text.includes('linen');
+        if (catLower.includes('casual')) return text.includes('casual') || text.includes('denim') || text.includes('knit') || text.includes('t-shirt');
+        if (catLower.includes('office')) return text.includes('office') || text.includes('work') || text.includes('blazer') || text.includes('tailored') || text.includes('suit');
+        if (catLower.includes('luxury')) return text.includes('luxury') || text.includes('silk') || text.includes('couture') || text.includes('milan') || text.includes('gold');
+        if (catLower.includes('wedding')) return text.includes('wedding') || text.includes('bridal') || text.includes('gown') || text.includes('formal') || text.includes('tuxedo');
+        if (catLower.includes('lifestyle')) return text.includes('lifestyle') || text.includes('portrait') || text.includes('photography') || text.includes('outdoor') || text.includes('camera');
+        return true;
+      });
+    }
 
     // 1. Personalize lists using Inspiration Engine
     list = InspirationEngine.personalizeFeed(list, userInteractions);
@@ -875,6 +1068,17 @@ export const CommunityScreen: React.FC<CommunityScreenProps> = ({
       case 'TRENDING':
         list = AutomaticRankingEngine.rank(list, activeRanking);
         break;
+      case 'AI_CREATIONS':
+        list = list.filter(p => !!p.garmentBlueprint || !!p.avatarBlueprint || p.id.startsWith('user-gen') || p.id.startsWith('p-preset') || p.caption.toLowerCase().includes('ai') || p.caption.toLowerCase().includes('couture'));
+        list = AutomaticRankingEngine.rank(list, 'Trending This Week');
+        break;
+      case 'USER_POSTS':
+        list = list.filter(p => p.author?.name && !p.id.startsWith('user-gen'));
+        break;
+      case 'CHALLENGES':
+        list = list.filter(p => p.vibeTags.some(t => ['cyberpunk', 'minimalist', 'techwear', 'luxury', 'milan', 'tokyo', 'silk', 'challenge'].includes(t.toLowerCase())));
+        list = AutomaticRankingEngine.rank(list, 'Trending Today');
+        break;
       case 'NEWEST':
         list = list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         break;
@@ -883,7 +1087,6 @@ export const CommunityScreen: React.FC<CommunityScreenProps> = ({
           const cols = IntelligentCollectionsEngine.getCollectionsForPost(p);
           return cols.includes(selectedCollection);
         });
-        // Sort by Trending This Month
         list = AutomaticRankingEngine.rank(list, 'Trending This Month');
         break;
       case 'EDITORS_PICKS':
@@ -894,21 +1097,20 @@ export const CommunityScreen: React.FC<CommunityScreenProps> = ({
         break;
       case 'EDITORIAL_FEED':
       default:
-        // Default editorial feed blends all posts, applying rotation
         list = AutomaticRankingEngine.rank(list, 'Trending This Week');
         break;
     }
 
-    // 4. Apply Feed Rotation Engine (except for direct newest timeline or editor picks)
+    // 4. Apply Feed Rotation Engine
     if (activeTab !== 'NEWEST' && activeTab !== 'EDITORS_PICKS' && activeTab !== 'WEEKLY_HIGHLIGHTS' && !searchQuery.trim()) {
       list = FeedRotationEngine.rotateFeed(list, rotationSeed);
     }
 
-    // 5. Apply Creator Diversity Engine to prevent clustering
+    // 5. Apply Creator Diversity Engine
     list = CreatorDiversityEngine.enforceCreatorDiversity(list);
 
     return list as any;
-  }, [allPosts, activeTab, searchQuery, userInteractions, selectedCollection, activeRanking, rotationSeed]);
+  }, [allPosts, activeTab, searchQuery, userInteractions, selectedCollection, activeRanking, rotationSeed, communityMemoryArea, humanCategory, personalSubTab, userLooks, localLikes, localSaves, currentUserUid, currentUserDisplayName, currentUserHandle, currentUserAvatar]);
 
   // Check if a user's generatedLook is currently published to communityPosts
   const publishedLookUrls = useMemo(() => {
@@ -988,8 +1190,26 @@ export const CommunityScreen: React.FC<CommunityScreenProps> = ({
 
     try {
       await addDoc(collection(db, 'communityPosts'), newPostData);
+
+      // Queue in AIStyleHub v17 Universal Publishing Gateway
+      AIStyleHubV17Architecture.queueAssetForPublishing({
+        id: `pub-ledger-${newPostData.lookId}-${Date.now()}`,
+        title: newPostData.caption.slice(0, 50) || 'Studio Look',
+        description: newPostData.caption,
+        imageUrl: newPostData.imageUrl,
+        originModule: 'COMMUNITY',
+        createdAt: new Date().toISOString(),
+        tags: newPostData.vibeTags,
+        category: 'Studio Concept',
+        styleVibe: newPostData.vibeTags[0] || 'Community',
+        qualityScore: newPostData.aiScore || 92
+      });
+
+      AIStyleHubV17Architecture.recordLearningSignal('COMMUNITY', 'PUBLISH', newPostData.vibeTags[0] || 'Community');
+      window.dispatchEvent(new CustomEvent('lookvision_sync_v17_memory'));
+
       setPubSuccess(true);
-      window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: '✓ Concept published with full blueprints!' }));
+      window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: '✓ Concept published & queued to HomeHub Universal Publishing Gateway!' }));
       setTimeout(() => {
         setPublishingLook(null);
         setPubSuccess(false);
@@ -1008,6 +1228,21 @@ export const CommunityScreen: React.FC<CommunityScreenProps> = ({
     setLocalLikes(updatedLikes);
 
     const increment = isLiked ? -1 : 1;
+    const styleVibe = post.vibeTags?.[0] || 'Community';
+
+    if (!isLiked) {
+      AIStyleHubV17Architecture.addLikeItem({
+        title: post.caption?.slice(0, 45) || 'Community Look',
+        imageUrl: post.imageUrl,
+        originModule: 'COMMUNITY',
+        styleVibe
+      });
+      AIStyleHubV17Architecture.recordLearningSignal('COMMUNITY', 'LIKE', styleVibe);
+    } else {
+      AIStyleHubV17Architecture.recordLearningSignal('COMMUNITY', 'DISLIKE', styleVibe);
+    }
+    window.dispatchEvent(new CustomEvent('lookvision_sync_v17_memory'));
+
     // Real Firestore Sync if cloud item
     if (syncStatus === 'cloud' && !post.id.startsWith('p-preset')) {
       try {
@@ -1023,10 +1258,131 @@ export const CommunityScreen: React.FC<CommunityScreenProps> = ({
     }
   };
 
+  const handleDislikePost = (post: CommunityPost) => {
+    const styleVibe = post.vibeTags?.[0] || 'Community';
+    AIStyleHubV17Architecture.recordLearningSignal('COMMUNITY', 'DISLIKE', styleVibe);
+    window.dispatchEvent(new CustomEvent('lookvision_sync_v17_memory'));
+    window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: '👎 Dislike signal logged for Community recommendations.' }));
+  };
+
+  const handleNotRelatedPost = (post: CommunityPost) => {
+    const styleVibe = post.vibeTags?.[0] || 'Community';
+    AIStyleHubV17Architecture.recordLearningSignal('COMMUNITY', 'NOT_RELATED', styleVibe);
+    window.dispatchEvent(new CustomEvent('lookvision_sync_v17_memory'));
+    window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: '🚫 Marked as Not Related to your fashion persona.' }));
+  };
+
+  const handleDownloadPost = async (post: CommunityPost) => {
+    const styleVibe = post.vibeTags?.[0] || 'Community';
+
+    try {
+      const response = await fetch(post.imageUrl);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `aistylehub-community-${post.id}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+    } catch {
+      window.open(post.imageUrl, '_blank');
+    }
+
+    AIStyleHubV17Architecture.addDownloadItem({
+      title: post.caption?.slice(0, 45) || 'Community Look',
+      imageUrl: post.imageUrl,
+      originModule: 'COMMUNITY',
+      fileFormat: 'PNG (Ultra HD)',
+      resolution: '2048x2048'
+    });
+
+    AIStyleHubV17Architecture.convertToAnonymousDraft({
+      imageUrl: post.imageUrl,
+      title: post.caption || 'Community Fashion Concept',
+      originModule: 'COMMUNITY',
+      category: post.taggedGarment?.category || 'Community Look',
+      styleVibe,
+      tags: post.vibeTags
+    });
+
+    AIStyleHubV17Architecture.recordLearningSignal('COMMUNITY', 'DOWNLOAD', styleVibe);
+    window.dispatchEvent(new CustomEvent('lookvision_sync_v17_memory'));
+
+    window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: '⬇ Downloaded & archived to Anonymous Draft Library!' }));
+  };
+
+  const handlePublishToHomeHubGateway = (post: CommunityPost) => {
+    const styleVibe = post.vibeTags?.[0] || 'Community';
+
+    AIStyleHubV17Architecture.queueAssetForPublishing({
+      id: `pub-comm-${post.id}-${Date.now()}`,
+      title: post.caption?.slice(0, 50) || 'Community Campaign Look',
+      description: post.caption,
+      imageUrl: post.imageUrl,
+      originModule: 'COMMUNITY',
+      createdAt: new Date().toISOString(),
+      tags: post.vibeTags || ['community'],
+      category: 'Community Campaign',
+      styleVibe,
+      qualityScore: post.aiScore || 92
+    });
+
+    AIStyleHubV17Architecture.recordLearningSignal('COMMUNITY', 'PUBLISH', styleVibe);
+    window.dispatchEvent(new CustomEvent('lookvision_sync_v17_memory'));
+
+    window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: '🚀 Queued to HomeHub Universal Publishing Gateway (Private Draft)' }));
+  };
+
+  const handleDiscardToAnonymousDrafts = (post: CommunityPost) => {
+    const styleVibe = post.vibeTags?.[0] || 'Community';
+
+    AIStyleHubV17Architecture.convertToAnonymousDraft({
+      imageUrl: post.imageUrl,
+      title: post.caption || 'Archived Concept',
+      originModule: 'COMMUNITY',
+      category: 'Community Look',
+      styleVibe,
+      tags: post.vibeTags
+    });
+
+    AIStyleHubV17Architecture.recordLearningSignal('COMMUNITY', 'DISCARD', styleVibe);
+    window.dispatchEvent(new CustomEvent('lookvision_sync_v17_memory'));
+
+    if (selectedPost?.id === post.id) {
+      setSelectedPost(null);
+    }
+
+    window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: '🗑 Discarded & anonymized into Anonymous Draft Library.' }));
+  };
+
   // View look action
   const handleViewPost = async (post: CommunityPost) => {
     if (localViews[post.id]) return;
     setLocalViews(prev => ({ ...prev, [post.id]: true }));
+
+    const mem = AIStyleHubV17Architecture.getUnifiedMemory();
+    const pMem = mem.productMemories.COMMUNITY || {
+      module: 'COMMUNITY',
+      totalInteractions: 0,
+      savedItemsCount: 0,
+      lastActiveTimestamp: new Date().toISOString(),
+      topCategories: [],
+      favoriteStyles: [],
+      recentActivity: []
+    };
+    pMem.totalInteractions += 1;
+    pMem.lastActiveTimestamp = new Date().toISOString();
+    pMem.recentActivity.unshift({
+      action: 'EXPLORED',
+      targetTitle: post.caption?.slice(0, 30) || 'Community Look',
+      timestamp: new Date().toISOString()
+    });
+    pMem.recentActivity = pMem.recentActivity.slice(0, 10);
+    mem.productMemories.COMMUNITY = pMem;
+    AIStyleHubV17Architecture.saveUnifiedMemory(mem);
+    window.dispatchEvent(new CustomEvent('lookvision_sync_v17_memory'));
 
     if (syncStatus === 'cloud' && !post.id.startsWith('p-preset')) {
       try {
@@ -1172,7 +1528,7 @@ SCENE COORDS:
     <div className="w-full min-h-screen bg-[#05050a] text-zinc-100 p-4 sm:p-6 lg:p-10 select-none font-sans relative overflow-x-hidden">
       
       {/* 1. ELEGANT LUXURY HEADER */}
-      <header className="max-w-7xl mx-auto mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-white/5 pb-8 text-left">
+      <header className="max-w-7xl mx-auto mb-8 flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-white/5 pb-8 text-left">
         <div className="space-y-2">
           <span className="text-[10px] font-mono tracking-[0.3em] text-violet-400 uppercase block font-semibold">
             LUXURY COGNITIVE ENVIRONMENT
@@ -1181,7 +1537,7 @@ SCENE COORDS:
             <Users className="w-9 h-9 text-violet-400 font-light" /> Style Community
           </h1>
           <p className="text-xs text-zinc-400 leading-relaxed max-w-2xl font-light">
-            An elite social gallery for luxury AI fashion discovery. Explore dynamic design blueprints, inspect facial proportions, and import coordinate coordinates directly onto your shelves.
+            An elite social gallery for human fashion discovery. Community images are organized into Public Categories & Private User Memory.
           </p>
         </div>
 
@@ -1205,18 +1561,111 @@ SCENE COORDS:
         </div>
       </header>
 
+      {/* 1B. COMMUNITY STORAGE MEMORY SWITCHER (PUBLIC CATEGORY VS PERSONAL COMPONENT) */}
+      <section className="max-w-7xl mx-auto mb-8 p-4 bg-[#07070c] border border-white/10 rounded-2xl flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 text-left shadow-2xl">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setCommunityMemoryArea('PUBLIC_CATEGORY')}
+            className={`px-5 py-3 rounded-xl font-mono text-xs uppercase tracking-wider font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
+              communityMemoryArea === 'PUBLIC_CATEGORY'
+                ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-600/25 border border-violet-400/30'
+                : 'bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white border border-white/5'
+            }`}
+          >
+            <Compass className="w-4 h-4 text-violet-300" />
+            <span>🌐 Community Public Memory (Public Category)</span>
+          </button>
+
+          <button
+            onClick={() => setCommunityMemoryArea('PERSONAL_COMPONENT')}
+            className={`px-5 py-3 rounded-xl font-mono text-xs uppercase tracking-wider font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
+              communityMemoryArea === 'PERSONAL_COMPONENT'
+                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-600/25 border border-emerald-400/30'
+                : 'bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white border border-white/5'
+            }`}
+          >
+            <Shield className="w-4 h-4 text-emerald-300" />
+            <span>🔒 Private User Memory (Personal Component)</span>
+          </button>
+        </div>
+
+        {/* Sub-navigation for Private Memory vs Public Memory info */}
+        {communityMemoryArea === 'PERSONAL_COMPONENT' ? (
+          <div className="flex flex-wrap items-center gap-2">
+            {[
+              { id: 'GENERATED', label: 'Generated Images' },
+              { id: 'SAVED', label: 'Saved Images' },
+              { id: 'LIKED', label: 'Liked Images' },
+              { id: 'DOWNLOADS', label: 'Downloaded' }
+            ].map(sub => (
+              <button
+                key={sub.id}
+                onClick={() => setPersonalSubTab(sub.id as any)}
+                className={`px-3 py-1.5 rounded-lg font-mono text-[10px] uppercase tracking-wider font-bold transition-all cursor-pointer ${
+                  personalSubTab === sub.id
+                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                    : 'bg-white/5 text-zinc-400 hover:text-white border border-white/5'
+                }`}
+              >
+                {sub.label}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest hidden lg:inline-block">
+            ✦ Anonymous Reusable Inspiration • Import to HomeHub anytime
+          </span>
+        )}
+      </section>
+
+      {/* 1C. HUMAN FASHION CATEGORY SELECTOR RIBBON */}
+      <section className="max-w-7xl mx-auto mb-8 text-left">
+        <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest block mb-2.5 font-semibold">
+          Human Fashion Category Filter
+        </span>
+        <div className="flex flex-wrap gap-2">
+          {[
+            'ALL',
+            'Street Fashion',
+            'Daily Wear',
+            'Casual Fashion',
+            'Office Fashion',
+            'Luxury Fashion',
+            'Wedding Fashion',
+            'Lifestyle Photography'
+          ].map(cat => {
+            const isSel = humanCategory === cat;
+            return (
+              <button
+                key={cat}
+                onClick={() => setHumanCategory(cat as any)}
+                className={`px-3.5 py-2 rounded-xl text-[10px] font-mono uppercase tracking-wider font-bold transition-all cursor-pointer border ${
+                  isSel
+                    ? 'bg-violet-500/20 text-violet-200 border-violet-500/40 shadow-lg shadow-violet-500/10'
+                    : 'bg-[#07070c] text-zinc-400 hover:text-white border-white/10 hover:border-white/20'
+                }`}
+              >
+                {cat === 'ALL' ? '✨ All Human Fashion' : cat}
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
       {/* 2. DISCOVERY NAVIGATION RIBBON & SEARCH */}
       <section className="max-w-7xl mx-auto mb-8 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 border-b border-white/[0.03] pb-6 w-full">
         {/* All Tab Buttons Wrap Cleanly so ALL Buttons Are Fully Visible */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 flex-1 w-full">
           {[
-            { id: 'EDITORIAL_FEED', label: 'Editorial Feed', icon: Compass },
-            { id: 'TRENDING', label: 'Trending Fashion', icon: Flame },
-            { id: 'NEWEST', label: 'Newest Creations', icon: Star },
+            { id: 'EDITORIAL_FEED', label: 'All Feed', icon: Compass },
+            { id: 'TRENDING', label: '🔥 Trending', icon: Flame },
+            { id: 'AI_CREATIONS', label: '✨ AI Studio Creations', icon: Sparkles },
+            { id: 'USER_POSTS', label: '💬 Community Styling', icon: Users },
+            { id: 'CHALLENGES', label: '🏆 Weekly Challenges', icon: Award },
+            { id: 'NEWEST', label: 'Newest Looks', icon: Star },
             { id: 'COLLECTIONS', label: 'Luxury Collections', icon: Layers },
-            { id: 'EDITORS_PICKS', label: "Editor's Picks", icon: Award },
-            { id: 'WEEKLY_HIGHLIGHTS', label: 'Weekly Highlights', icon: Star },
-            { id: 'COMMUNITY_GENERATOR', label: 'Body Style Mapping', icon: Sparkles }
+            { id: 'EDITORS_PICKS', label: "Editor's Choice", icon: CheckCircle2 },
+            { id: 'COMMUNITY_GENERATOR', label: 'Body Style Mapping', icon: Tag }
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -1415,6 +1864,53 @@ SCENE COORDS:
         </section>
       )}
 
+      {/* 2D. WEEKLY STYLING CHALLENGE BANNER */}
+      {activeTab === 'CHALLENGES' && (
+        <section className="max-w-7xl mx-auto mb-10 text-left p-6 sm:p-8 bg-gradient-to-r from-violet-950/80 via-[#0a0a14] to-indigo-950/80 border border-violet-500/30 rounded-3xl relative overflow-hidden shadow-2xl">
+          <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+            <Award className="w-64 h-64 text-violet-400" />
+          </div>
+
+          <div className="relative z-10 max-w-2xl space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="px-3 py-1 bg-violet-500/20 border border-violet-400/40 text-violet-300 font-mono text-[9px] uppercase tracking-widest rounded-lg font-bold flex items-center gap-1.5">
+                <Award className="w-3.5 h-3.5 text-amber-400 fill-amber-400/30" />
+                ACTIVE WEEKLY STYLE CHALLENGE
+              </span>
+              <span className="text-[10px] font-mono text-emerald-400 font-semibold">
+                Ends in 3 days • 1,000 Style Credits Reward
+              </span>
+            </div>
+
+            <h2 className="font-serif text-2xl sm:text-3xl font-light text-white leading-snug">
+              Cyberpunk High-Fashion Runway Challenge
+            </h2>
+
+            <p className="text-xs text-zinc-300 font-light leading-relaxed font-sans">
+              Create a futuristic, rain-slicked, high-density utility look using AI Studio or share your community styling coordinates. Top voted creations will be featured on the Editorial Cover & awarded creator badges!
+            </p>
+
+            <div className="flex flex-wrap items-center gap-3 pt-2">
+              <button
+                onClick={() => {
+                  setPromptInput('Futuristic cyberpunk high-fashion runway model in rain-slicked alley, glowing neon accents, high-density utility storm coat, 35mm lens');
+                  setIsGeneratorOpen(true);
+                  window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: '✨ Challenge prompt loaded! Create your entry now.' }));
+                }}
+                className="px-5 py-3 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-mono text-xs uppercase font-bold tracking-wider rounded-xl flex items-center gap-2 shadow-lg shadow-violet-600/25 transition-all transform active:scale-95 cursor-pointer border border-violet-400/30"
+              >
+                <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
+                <span>Participate & Generate Entry</span>
+              </button>
+
+              <span className="text-[10px] font-mono text-zinc-400">
+                142 Community Entries Submitted
+              </span>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* 3. HERO SEGMENT (WEEKLY EDITORIAL POSTER) */}
       {activeTab === 'EDITORIAL_FEED' && !searchQuery && allPosts.find(p => p.isWeeklyHighlight) && (
         <section className="max-w-7xl mx-auto mb-10 text-left">
@@ -1474,6 +1970,82 @@ SCENE COORDS:
               </div>
             );
           })()}
+        </section>
+      )}
+
+      {/* 3B. FEATURED CREATORS ECOSYSTEM RIBBON */}
+      {(activeTab === 'EDITORIAL_FEED' || activeTab === 'TRENDING') && !searchQuery && (
+        <section className="max-w-7xl mx-auto mb-10 text-left">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest block font-bold">
+                CREATOR ECOSYSTEM & STYLE VOICES
+              </span>
+              <h3 className="font-serif text-base text-white font-semibold">Featured Fashion Architects</h3>
+            </div>
+            <span className="text-[10px] font-mono text-zinc-400">
+              {featuredCreators.length} Active Creators
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {featuredCreators.slice(0, 4).map((creator) => {
+              const isFollowing = !!followedCreators[creator.handle];
+              return (
+                <div
+                  key={creator.handle}
+                  onClick={() => setSelectedCreator(creator)}
+                  className="p-4 bg-[#07070c] border border-white/5 hover:border-violet-500/25 rounded-2xl transition-all duration-300 group cursor-pointer hover:bg-white/[0.02] flex flex-col justify-between space-y-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={creator.avatar}
+                        alt={creator.name}
+                        className="w-11 h-11 rounded-xl object-cover border border-white/10 group-hover:scale-105 transition-transform"
+                      />
+                      <div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs font-bold text-white group-hover:text-violet-200 transition-colors">
+                            {creator.name}
+                          </span>
+                          {creator.isVerified && (
+                            <CheckCircle2 className="w-3.5 h-3.5 text-violet-400 fill-violet-400/20" />
+                          )}
+                        </div>
+                        <span className="text-[9.5px] font-mono text-zinc-500 block">{creator.handle}</span>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleToggleFollow(creator.handle);
+                      }}
+                      className={`px-3 py-1.5 rounded-lg text-[9.5px] font-mono uppercase tracking-wider font-bold transition-all ${
+                        isFollowing
+                          ? 'bg-white/5 border border-white/10 text-zinc-300 hover:text-white'
+                          : 'bg-violet-600 hover:bg-violet-500 text-white shadow-md shadow-violet-600/10'
+                      }`}
+                    >
+                      {isFollowing ? 'Following' : '+ Follow'}
+                    </button>
+                  </div>
+
+                  <p className="text-[11px] text-zinc-400 line-clamp-2 leading-relaxed font-light">
+                    {creator.bio}
+                  </p>
+
+                  <div className="flex items-center justify-between border-t border-white/5 pt-3 text-[9px] font-mono text-zinc-500">
+                    <span className="px-2 py-0.5 rounded bg-violet-500/10 border border-violet-500/15 text-violet-300 uppercase truncate max-w-[120px]">
+                      {creator.styleIdentity}
+                    </span>
+                    <span>{creator.followersCount.toLocaleString()} followers</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </section>
       )}
 
@@ -1544,14 +2116,47 @@ SCENE COORDS:
                     {/* Bottom visual overlay (Metadata revealed seamlessly) */}
                     <div className="absolute inset-x-0 bottom-0 p-5 z-10 text-left space-y-3">
                       
-                      {/* Creator badge */}
-                      <div className="flex items-center gap-2.5 bg-black/45 backdrop-blur-md p-1.5 pr-3 rounded-2xl w-fit border border-white/5">
-                        <img src={post.author.avatar} alt={post.author.name} className="w-5.5 h-5.5 rounded-full object-cover border border-white/10" />
-                        <div className="text-left">
-                          <span className="block text-[10px] font-bold text-white leading-tight">{post.author.name}</span>
-                          <span className="block text-[8px] font-mono text-zinc-500 leading-none">{post.author.handle}</span>
+                      {/* Creator badge / Anonymous Public Memory badge */}
+                      {communityMemoryArea === 'PUBLIC_CATEGORY' ? (
+                        <div className="flex items-center justify-between gap-2 w-full">
+                          <div className="flex items-center gap-2 bg-black/60 backdrop-blur-md p-1.5 px-2.5 rounded-2xl border border-white/10">
+                            <Compass className="w-3.5 h-3.5 text-violet-400" />
+                            <span className="text-[9.5px] font-mono font-bold text-violet-200 uppercase">Anonymous Inspiration</span>
+                          </div>
+
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setImportModalPost(post);
+                              setImportCustomTitle(post.caption?.slice(0, 40) || 'Custom Human Fashion');
+                            }}
+                            className="px-3 py-1.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-mono text-[9px] uppercase font-bold rounded-xl flex items-center gap-1.5 shadow-lg shadow-emerald-600/20 transition-all active:scale-95 cursor-pointer border border-emerald-400/30"
+                            title="Import image into HomeHub and assign your custom title & ownership"
+                          >
+                            <Upload className="w-3 h-3 text-white" />
+                            <span>Import to HomeHub</span>
+                          </button>
                         </div>
-                      </div>
+                      ) : (
+                        <div className="flex items-center justify-between gap-2 w-full">
+                          <div className="flex items-center gap-2.5 bg-black/45 backdrop-blur-md p-1.5 pr-3 rounded-2xl w-fit border border-white/5">
+                            <img src={post.author.avatar} alt={post.author.name} className="w-5.5 h-5.5 rounded-full object-cover border border-white/10" />
+                            <div className="text-left">
+                              <span className="block text-[10px] font-bold text-white leading-tight">{post.author.name}</span>
+                              <span className="block text-[8px] font-mono text-zinc-500 leading-none">{post.author.handle}</span>
+                            </div>
+                          </div>
+
+                          <button
+                            onClick={(e) => handleRemixPost(e, post)}
+                            className="px-2.5 py-1.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-mono text-[9px] uppercase font-bold rounded-xl flex items-center gap-1.5 shadow-md shadow-violet-600/20 transition-all active:scale-95 cursor-pointer border border-violet-400/30 shrink-0"
+                            title="Remix this look in AI Studio Generator"
+                          >
+                            <Sparkles className="w-3 h-3 text-amber-300 animate-pulse" />
+                            <span>Remix Look</span>
+                          </button>
+                        </div>
+                      )}
 
                       {/* Campaign summary */}
                       <p className="text-[11.5px] text-zinc-200 line-clamp-2 leading-relaxed font-light">
@@ -1610,8 +2215,30 @@ SCENE COORDS:
                           </button>
                         </div>
 
-                        {/* Save Trigger */}
-                        <div className="flex items-center gap-3">
+                        {/* Save, Download & Gateway Triggers */}
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDownloadPost(post);
+                            }}
+                            className="text-zinc-400 hover:text-emerald-400 transition-colors cursor-pointer p-1 rounded-lg hover:bg-white/5"
+                            title="Download Image & Archive to Anonymous Drafts"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                          </button>
+
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handlePublishToHomeHubGateway(post);
+                            }}
+                            className="text-zinc-400 hover:text-violet-400 transition-colors cursor-pointer p-1 rounded-lg hover:bg-white/5"
+                            title="Queue to HomeHub Universal Publishing Gateway"
+                          >
+                            <Send className="w-3.5 h-3.5" />
+                          </button>
+
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -1625,7 +2252,7 @@ SCENE COORDS:
                             <Bookmark className={`w-4 h-4 ${saved ? 'fill-violet-400 text-violet-400' : 'text-zinc-400'}`} />
                           </button>
 
-                          <div className="flex items-center gap-1 text-[9.5px] font-mono text-zinc-500">
+                          <div className="flex items-center gap-1 text-[9.5px] font-mono text-zinc-500 pl-1">
                             <Eye className="w-3.5 h-3.5 text-zinc-500" />
                             <span>{formatCount(post.views)}</span>
                           </div>
@@ -1928,26 +2555,101 @@ SCENE COORDS:
                     </div>
                   </div>
 
-                  {/* 5. USER ENGAGEMENT ACTION PANEL */}
-                  <div className="grid grid-cols-2 gap-3.5 pt-2">
-                    <button
-                      onClick={() => handleImportToCloset(selectedPost)}
-                      className="py-3.5 bg-violet-600 hover:bg-violet-500 text-white font-mono text-[10.5px] uppercase tracking-widest rounded-xl transition-all duration-300 font-bold flex items-center justify-center gap-2 transform active:scale-95 cursor-pointer shadow-lg shadow-violet-600/10"
-                    >
-                      <Tag className="w-4 h-4 text-white" />
-                      Acquire Blueprint Layout
-                    </button>
+                  {/* 5. USER ENGAGEMENT & FEEDBACK ENGINE PANEL */}
+                  <div className="space-y-3 pt-2">
+                    <span className="text-[9.5px] font-mono text-zinc-400 uppercase tracking-widest block font-bold">
+                      Community Feedback & HomeHub Signals
+                    </span>
+                    
+                    {/* Primary Feedback Signals */}
+                    <div className="grid grid-cols-4 gap-2">
+                      <button
+                        onClick={() => handleLikePost(selectedPost)}
+                        className={`py-2 px-3 rounded-xl border text-[10px] font-mono flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                          localLikes[selectedPost.id]
+                            ? 'bg-rose-500/20 border-rose-500/40 text-rose-300 font-bold'
+                            : 'bg-white/5 border-white/5 text-zinc-300 hover:bg-white/10'
+                        }`}
+                        title="❤️ Like Look"
+                      >
+                        <Heart className={`w-3.5 h-3.5 ${localLikes[selectedPost.id] ? 'fill-rose-500 text-rose-500' : 'text-zinc-400'}`} />
+                        <span>{localLikes[selectedPost.id] ? 'Liked' : 'Like'}</span>
+                      </button>
 
-                    <button
-                      onClick={() => {
-                        setSelectedPost(null);
-                        setShareDossierPost(selectedPost);
-                      }}
-                      className="py-3.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-white/5 hover:border-white/15 font-mono text-[10.5px] uppercase tracking-widest rounded-xl transition-all duration-300 flex items-center justify-center gap-2 transform active:scale-95 cursor-pointer"
-                    >
-                      <Share2 className="w-4 h-4 text-zinc-400" />
-                      Get Share Dossier
-                    </button>
+                      <button
+                        onClick={() => handleDislikePost(selectedPost)}
+                        className="py-2 px-3 bg-white/5 hover:bg-white/10 border border-white/5 text-zinc-300 hover:text-rose-300 rounded-xl text-[10px] font-mono flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                        title="👎 Dislike Look"
+                      >
+                        <ThumbsDown className="w-3.5 h-3.5 text-zinc-400" />
+                        <span>Dislike</span>
+                      </button>
+
+                      <button
+                        onClick={() => handleNotRelatedPost(selectedPost)}
+                        className="py-2 px-3 bg-white/5 hover:bg-white/10 border border-white/5 text-zinc-300 hover:text-amber-300 rounded-xl text-[10px] font-mono flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                        title="🚫 Not Related to my style"
+                      >
+                        <Slash className="w-3.5 h-3.5 text-zinc-400" />
+                        <span>Unrelated</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setActiveBoardSelectorPost(selectedPost);
+                          AIStyleHubV17Architecture.recordLearningSignal('COMMUNITY', 'SAVE', selectedPost.vibeTags?.[0] || 'Community');
+                          window.dispatchEvent(new CustomEvent('lookvision_sync_v17_memory'));
+                        }}
+                        className={`py-2 px-3 rounded-xl border text-[10px] font-mono flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                          localSaves[selectedPost.id]
+                            ? 'bg-violet-500/20 border-violet-500/40 text-violet-300 font-bold'
+                            : 'bg-white/5 border-white/5 text-zinc-300 hover:bg-white/10'
+                        }`}
+                        title="⭐ Save to Inspiration Boards"
+                      >
+                        <Bookmark className={`w-3.5 h-3.5 ${localSaves[selectedPost.id] ? 'fill-violet-400 text-violet-400' : 'text-zinc-400'}`} />
+                        <span>{localSaves[selectedPost.id] ? 'Saved' : 'Save'}</span>
+                      </button>
+                    </div>
+
+                    {/* Secondary Actions: Download, Gateway Queue, Discard, Blueprint */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      <button
+                        onClick={() => handleDownloadPost(selectedPost)}
+                        className="py-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/20 font-mono text-[9.5px] uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer font-bold"
+                        title="⬇ Download Image (Does not require Like, adds to Anonymous Drafts)"
+                      >
+                        <Download className="w-3.5 h-3.5 text-emerald-400" />
+                        Download
+                      </button>
+
+                      <button
+                        onClick={() => handlePublishToHomeHubGateway(selectedPost)}
+                        className="py-2.5 bg-violet-600/20 hover:bg-violet-600/30 text-violet-300 border border-violet-500/30 font-mono text-[9.5px] uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer font-bold"
+                        title="🚀 Send to HomeHub Universal Publishing Gateway"
+                      >
+                        <Send className="w-3.5 h-3.5 text-violet-400" />
+                        To Gateway
+                      </button>
+
+                      <button
+                        onClick={() => handleDiscardToAnonymousDrafts(selectedPost)}
+                        className="py-2.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/20 font-mono text-[9.5px] uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                        title="🗑 Discard & Anonymize into Anonymous Draft Library"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                        Discard
+                      </button>
+
+                      <button
+                        onClick={() => handleImportToCloset(selectedPost)}
+                        className="py-2.5 bg-white/10 hover:bg-white/20 text-white border border-white/10 font-mono text-[9.5px] uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer font-bold"
+                        title="Acquire Blueprint Layout"
+                      >
+                        <Tag className="w-3.5 h-3.5 text-white" />
+                        Blueprint
+                      </button>
+                    </div>
                   </div>
 
                   {/* FASHION COGNITIVE SIMILARITY ENGINE ("YOU MAY ALSO LIKE") */}
@@ -2470,6 +3172,148 @@ SCENE COORDS:
                   </div>
                 )}
 
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* 10. CREATOR PROFILE SHOWCASE MODAL */}
+      <AnimatePresence>
+        {selectedCreator && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 select-none">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-[#0b0b10] border border-white/10 w-full max-w-2xl rounded-3xl overflow-hidden shadow-2xl relative text-left max-h-[90vh] flex flex-col"
+            >
+              {/* Profile Cover Banner */}
+              <div className="h-32 w-full relative bg-zinc-900 overflow-hidden shrink-0">
+                <img
+                  src={selectedCreator.bannerUrl}
+                  alt="Banner"
+                  className="w-full h-full object-cover opacity-60"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0b0b10] via-[#0b0b10]/40 to-transparent" />
+                <button
+                  onClick={() => setSelectedCreator(null)}
+                  className="absolute top-4 right-4 p-2 bg-black/60 hover:bg-black border border-white/10 rounded-full text-zinc-400 hover:text-white transition-all cursor-pointer z-10"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Profile Info Section */}
+              <div className="px-6 pb-6 relative flex-1 overflow-y-auto no-scrollbar space-y-5 -mt-10">
+                <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+                  <div className="flex items-end gap-4">
+                    <img
+                      src={selectedCreator.avatar}
+                      alt={selectedCreator.name}
+                      className="w-20 h-20 rounded-2xl object-cover border-2 border-[#0b0b10] shadow-xl relative z-10 bg-zinc-900"
+                    />
+                    <div className="space-y-0.5 pb-1">
+                      <div className="flex items-center gap-1.5">
+                        <h3 className="font-serif text-xl text-white font-bold">{selectedCreator.name}</h3>
+                        {selectedCreator.isVerified && (
+                          <CheckCircle2 className="w-4 h-4 text-violet-400 fill-violet-400/20" />
+                        )}
+                      </div>
+                      <span className="text-xs font-mono text-zinc-400 block">{selectedCreator.handle}</span>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => handleToggleFollow(selectedCreator.handle)}
+                    className={`px-5 py-2.5 rounded-xl font-mono text-xs uppercase tracking-wider font-bold transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                      followedCreators[selectedCreator.handle]
+                        ? 'bg-white/10 border border-white/20 text-white hover:bg-white/20'
+                        : 'bg-violet-600 hover:bg-violet-500 text-white shadow-lg shadow-violet-600/20'
+                    }`}
+                  >
+                    {followedCreators[selectedCreator.handle] ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>Following</span>
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Follow Creator</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* Bio & Identity Tag */}
+                <div className="space-y-2">
+                  <div className="inline-block px-2.5 py-1 bg-violet-500/10 border border-violet-500/20 rounded-lg text-[9px] font-mono text-violet-300 font-bold uppercase tracking-wider">
+                    {selectedCreator.styleIdentity || 'AI Fashion Architect'}
+                  </div>
+                  <p className="text-xs text-zinc-300 leading-relaxed font-light">
+                    {selectedCreator.bio}
+                  </p>
+                </div>
+
+                {/* Stats Bar */}
+                <div className="grid grid-cols-4 gap-2 p-3 bg-black/40 border border-white/5 rounded-2xl text-center">
+                  <div>
+                    <span className="block text-xs font-mono font-bold text-white">
+                      {(selectedCreator.followersCount || 14000).toLocaleString()}
+                    </span>
+                    <span className="text-[8px] font-mono text-zinc-500 uppercase">Followers</span>
+                  </div>
+                  <div>
+                    <span className="block text-xs font-mono font-bold text-white">
+                      {selectedCreator.followingCount || 240}
+                    </span>
+                    <span className="text-[8px] font-mono text-zinc-500 uppercase">Following</span>
+                  </div>
+                  <div>
+                    <span className="block text-xs font-mono font-bold text-white">
+                      {allPosts.filter(p => (p.author.handle || '').toLowerCase() === selectedCreator.handle.toLowerCase() || p.author.name === selectedCreator.name).length}
+                    </span>
+                    <span className="text-[8px] font-mono text-zinc-500 uppercase">Creations</span>
+                  </div>
+                  <div>
+                    <span className="block text-xs font-mono font-bold text-white">
+                      {allPosts.filter(p => (p.author.handle || '').toLowerCase() === selectedCreator.handle.toLowerCase() || p.author.name === selectedCreator.name).reduce((sum, p) => sum + (p.likes || 0), 0)}
+                    </span>
+                    <span className="text-[8px] font-mono text-zinc-500 uppercase">Total Likes</span>
+                  </div>
+                </div>
+
+                {/* Creator Portfolio Grid */}
+                <div className="space-y-3 pt-2">
+                  <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest block font-bold">
+                    Creator Lookbook Gallery
+                  </span>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {allPosts
+                      .filter(p => (p.author.handle || '').toLowerCase() === selectedCreator.handle.toLowerCase() || p.author.name === selectedCreator.name)
+                      .map((p) => (
+                        <div
+                          key={p.id}
+                          onClick={() => {
+                            setSelectedPost(p);
+                          }}
+                          className="group relative aspect-[3/4] rounded-xl overflow-hidden border border-white/5 hover:border-violet-500/30 cursor-pointer bg-zinc-950 transition-all"
+                        >
+                          <img
+                            src={p.imageUrl}
+                            alt={p.caption}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-2.5 flex flex-col justify-end text-left">
+                            <span className="text-[9px] font-bold text-white truncate">{p.caption}</span>
+                            <span className="text-[8px] font-mono text-violet-300">Coherence {p.aiScore}%</span>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
               </div>
             </motion.div>
           </div>

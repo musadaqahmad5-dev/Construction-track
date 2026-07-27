@@ -440,14 +440,14 @@ export class ImageGenerationRegistry {
 
     // Tertiary Fallback CASCADE to Pollinations AI generator
     if (!result.success && provider.name !== 'Pollinations-AI-Generator') {
-      console.info(`[Image Generation Manager] Provider ${provider.name} failed. Cascading to Pollinations AI Generator...`);
+      console.log(`[Image Generation Manager] Provider ${provider.name} fallback cascading to Pollinations AI Generator...`);
       provider = this.getProvider('Pollinations-AI-Generator');
       result = await provider.generateImage(activePrompt, mergedConfig);
     }
 
     // Secondary Fallback CASCADE to Picsum offline fallback if still failed
     if (!result.success && provider.name !== 'Fashion-Picsum-Deterministic') {
-      console.info(`[Image Generation Manager] Provider ${provider.name} failed. Cascading to Picsum Fallback...`);
+      console.log(`[Image Generation Manager] Provider ${provider.name} fallback cascading to Picsum Fallback...`);
       provider = this.getProvider('Fashion-Picsum-Deterministic');
       result = await provider.generateImage(activePrompt, mergedConfig);
     }

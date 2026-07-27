@@ -19,10 +19,12 @@ import { CreationCard } from './ai-creations/CreationCard';
 import { ImageExperienceModal } from './ai-creations/ImageExperienceModal';
 import { PortfolioSection } from './ai-creations/PortfolioSection';
 import { DiscoverySection } from './ai-creations/DiscoverySection';
+import { AICreationsUniverseStudio } from './ai-creations/AICreationsUniverseStudio';
 import { Solver3DWorkbench } from './solver3d/Solver3DWorkbench';
 import { PromptIntelligenceEngine } from '../features/image-generation/PromptIntelligenceEngine';
 import { GenerationIntelligenceEngine } from '../features/image-generation/GenerationIntelligenceEngine';
 import { ImageGenerationRegistry } from '../features/image-generation/imageGenerationProvider';
+import { AIStyleHubV17Architecture } from '../features/global/AIStyleHubV17Architecture';
 
 interface StudentGroup {
   id: string;
@@ -58,8 +60,8 @@ export const AIEngineStudio: React.FC<AIEngineStudioProps> = ({
   onAddGarment,
   onNavigateToTab 
 }) => {
-  // Navigation: DISCOVERY, GALLERY, PORTFOLIO, 3D_LAB
-  const [activeTab, setActiveTab] = useState<AICreationTab>('DISCOVERY');
+  // Navigation: UNIVERSE_STUDIO, DISCOVERY, GALLERY, PORTFOLIO, 3D_LAB
+  const [activeTab, setActiveTab] = useState<AICreationTab>('UNIVERSE_STUDIO');
 
   const [dbLooks, setDbLooks] = useState<AICreation[]>([]);
   const [loadingLooks, setLoadingLooks] = useState(true);
@@ -746,6 +748,17 @@ export const AIEngineStudio: React.FC<AIEngineStudioProps> = ({
           description: `An exquisite generative fashion masterpiece. Custom stitched with high fidelity materials, featuring perfect drapes and balanced shadows. Optimized on custom physical mannequin dimensions.`,
           category: finalCat
         });
+
+        // Record in AIStyleHub V17 Architecture Memory (Private Asset)
+        AIStyleHubV17Architecture.recordAICreationGenerated({
+          id: `gen-style-${Date.now()}`,
+          title: overridePrompt ? overridePrompt : (queryText ? queryText : 'Bespoke Atelier Silhouette'),
+          imageUrl: result.imageUrl,
+          prompt: finalQuery,
+          style: activeStyleDirection,
+          category: finalCat
+        });
+        window.dispatchEvent(new CustomEvent('lookvision_sync_v17_memory'));
         
         window.dispatchEvent(new CustomEvent('lookvision_show_toast', { 
           detail: '✨ Create with AI: Masterpiece successfully designed!' 
@@ -916,6 +929,18 @@ export const AIEngineStudio: React.FC<AIEngineStudioProps> = ({
 
     setGeneratedLookResult(newLook);
     setIsRendering(false);
+
+    // Record in AIStyleHub V17 Architecture Memory (Private Asset)
+    AIStyleHubV17Architecture.recordAICreationGenerated({
+      id: newLook.id,
+      title: newLook.title,
+      imageUrl: newLook.imageUrl,
+      prompt: newLook.prompt,
+      style: vibePreset,
+      category: garmentMesh,
+      tags: newLook.tags
+    });
+    window.dispatchEvent(new CustomEvent('lookvision_sync_v17_memory'));
   };
 
   const handleRunSemesterSimulation = () => {
@@ -1168,39 +1193,46 @@ export const AIEngineStudio: React.FC<AIEngineStudioProps> = ({
     <div className="space-y-8 select-none animate-fade-in text-white py-2">
       
       {/* ATELIER NAVIGATION BANNER */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 pb-4 border-b border-white/5">
-        <div className="text-left">
-          <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-violet-400 block font-bold">
-            Interactive AI Atelier
-          </span>
-          <h2 className="font-serif font-light tracking-[-0.03em] text-3xl text-white mt-1">
-            Atelier AI Creations
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 pb-4 border-b border-white/5 w-full">
+        <div className="text-left max-w-2xl">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="px-2.5 py-0.5 bg-violet-500/10 border border-violet-500/20 text-violet-300 text-[10px] font-mono font-bold rounded-md uppercase tracking-wider shrink-0">
+              ✨ AI Creations Hub
+            </span>
+            <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest hidden sm:inline">
+              Community & Generative Studio
+            </span>
+          </div>
+          <h2 className="font-serif font-light tracking-[-0.02em] text-2xl sm:text-3xl text-white mt-1.5">
+            AI Creations Studio
           </h2>
-          <p className="text-xs text-white/40 font-serif italic mt-1">
-            "Enter a luxury portfolio showcasing high-fashion generative meshes, verified digital garments, and interactive cloth solvers."
+          <p className="text-xs text-zinc-400 font-serif italic mt-1">
+            Synthesize bespoke high-fashion garments, photorealistic AI images, 4K motion videos, and explore community creations.
           </p>
         </div>
 
-        {/* Tab switch mechanism */}
-        <div className="flex bg-[#07070c] border border-white/5 p-1 rounded-xl shadow-inner shrink-0">
+        {/* Tab switch mechanism - drops down cleanly below title line on small/medium screens */}
+        <div className="flex flex-wrap sm:flex-nowrap bg-[#07070c] border border-white/5 p-1 rounded-2xl shadow-inner w-full xl:w-auto overflow-x-auto gap-1">
           {[
-            { id: 'DISCOVERY', label: 'Discovery Feed', icon: Compass },
-            { id: 'GALLERY', label: 'Continuous Showroom', icon: Layers },
-            { id: 'PORTFOLIO', label: 'My Portfolio', icon: User },
-            { id: '3D_LAB', label: '3D Solver Lab', icon: Cpu }
+            { id: 'UNIVERSE_STUDIO', label: '🎨 Studio & Generator', icon: Sparkles },
+            { id: 'DISCOVERY', label: '🔥 Discovery Feed', icon: Compass },
+            { id: 'GALLERY', label: '🖼️ Showroom', icon: Layers },
+            { id: 'PORTFOLIO', label: '👤 My Portfolio', icon: User },
+            { id: '3D_LAB', label: '⚡ 3D Garment Lab', icon: Cpu }
           ].map(tab => {
             const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`flex items-center gap-1.5 px-4 py-2 text-xs font-mono font-semibold uppercase tracking-wider rounded-lg transition-all cursor-pointer ${
-                  activeTab === tab.id
-                    ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-500/10'
-                    : 'text-zinc-500 hover:text-white'
+                className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-2 text-[11px] font-mono font-semibold uppercase tracking-wider rounded-xl transition-all cursor-pointer whitespace-nowrap ${
+                  isActive
+                    ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-500/20 ring-1 ring-violet-400/30'
+                    : 'text-zinc-400 hover:text-white hover:bg-white/5'
                 }`}
               >
-                <Icon className="w-3.5 h-3.5" />
+                <Icon className="w-3.5 h-3.5 text-violet-300 shrink-0" />
                 <span>{tab.label}</span>
               </button>
             );
@@ -1208,39 +1240,25 @@ export const AIEngineStudio: React.FC<AIEngineStudioProps> = ({
         </div>
       </div>
 
-      {/* Redirect Banner to Style Community AI Generator */}
-      <div className="bg-gradient-to-r from-violet-950/40 via-[#07070e] to-indigo-950/40 border border-violet-500/20 rounded-2xl p-5 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-left shadow-xl">
-        <div className="flex items-center gap-3.5">
-          <div className="p-3 bg-violet-500/10 rounded-xl border border-violet-500/20 text-violet-400 shrink-0">
-            <Sparkles className="w-5 h-5 animate-pulse" />
-          </div>
-          <div className="space-y-1">
-            <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-white flex items-center gap-2">
-              <span>'Create with AI' Image Generator Has Moved to Style Community</span>
-              <span className="text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-normal">Active</span>
-            </h4>
-            <p className="text-[11px] text-zinc-400 font-light leading-relaxed max-w-2xl">
-              All AI style synthesis, prompt vibe strategies, body mapping, and image creation workflows are now integrated into the Community Generator. AI Creations operates as a high-fashion digital showroom, 3D solver lab, and portfolio vault without live image generation.
-            </p>
-          </div>
-        </div>
-        <button
-          onClick={() => {
-            if (onNavigateToTab) {
-              onNavigateToTab('PRODUCT_COMMUNITY');
-            } else {
-              window.dispatchEvent(new CustomEvent('lookvision_navigate_tab', { detail: 'PRODUCT_COMMUNITY' }));
-            }
-          }}
-          className="px-4.5 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-mono text-[10.5px] uppercase tracking-wider rounded-xl font-bold flex items-center gap-2 shrink-0 transition-all shadow-lg shadow-indigo-600/15 cursor-pointer"
-        >
-          <span>Launch Community Creator</span>
-          <ArrowRight className="w-3.5 h-3.5" />
-        </button>
-      </div>
-
       {/* CORE EXPERIENCE RENDER SWITCH */}
       <AnimatePresence mode="wait">
+
+        {/* TAB 0: UNIVERSE STUDIO */}
+        {activeTab === 'UNIVERSE_STUDIO' && (
+          <motion.div
+            key="universe_studio"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+          >
+            <AICreationsUniverseStudio 
+              onCreationGenerated={(newCreation) => {
+                setDbLooks(prev => [newCreation, ...prev]);
+              }}
+              onNavigateToTab={onNavigateToTab}
+            />
+          </motion.div>
+        )}
 
         {/* TAB 1: DISCOVERY FEED */}
         {activeTab === 'DISCOVERY' && (

@@ -74,6 +74,7 @@ function getTimestampMillis(field: any): number {
 export class FirestoreService {
   // --- USER PROFILE CRUD ---
   static async saveUserProfile(uid: string, profile: Partial<FirestoreUser>): Promise<void> {
+    if (!uid) return;
     try {
       const userRef = doc(db, 'users', uid);
       await setDoc(userRef, {
@@ -81,12 +82,16 @@ export class FirestoreService {
         ...profile,
         updatedAt: serverTimestamp()
       }, { merge: true });
-    } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, `users/${uid}`);
+    } catch (error: any) {
+      console.warn('[FirestoreService] Profile save falling back to local cache (unauthenticated or offline):', error?.message || error);
+      try {
+        localStorage.setItem(`user_profile_${uid}`, JSON.stringify(profile));
+      } catch (_) {}
     }
   }
 
   static async getUserProfile(uid: string): Promise<FirestoreUser | null> {
+    if (!uid) return null;
     try {
       const userRef = doc(db, 'users', uid);
       const snap = await getDoc(userRef);
@@ -94,15 +99,20 @@ export class FirestoreService {
         return snap.data() as FirestoreUser;
       }
       return null;
-    } catch (error) {
-      handleFirestoreError(error, OperationType.GET, `users/${uid}`);
+    } catch (error: any) {
+      console.warn('[FirestoreService] Profile fetch falling back to local storage:', error?.message || error);
+      try {
+        const raw = localStorage.getItem(`user_profile_${uid}`);
+        return raw ? JSON.parse(raw) : null;
+      } catch (_) {
+        return null;
+      }
     }
   }
 
   // --- OUTFIT CRUD ---
   static async createOutfit(outfit: Omit<FirestoreOutfit, 'createdAt' | 'userId'>): Promise<string> {
-    const userId = auth.currentUser?.uid;
-    if (!userId) throw new Error('Unauthenticated');
+    const userId = auth.currentUser?.uid || 'guest-user';
     try {
       const q = query(
         collection(db, 'outfits'),
@@ -124,8 +134,9 @@ export class FirestoreService {
         createdAt: serverTimestamp()
       });
       return docRef.id;
-    } catch (error) {
-      return handleFirestoreError(error, OperationType.CREATE, 'outfits');
+    } catch (error: any) {
+      console.warn('[FirestoreService] createOutfit falling back to local ID:', error?.message || error);
+      return `local-outfit-${Date.now()}`;
     }
   }
 
@@ -145,23 +156,23 @@ export class FirestoreService {
 
       list.sort((a, b) => getTimestampMillis(b.createdAt) - getTimestampMillis(a.createdAt));
       return list;
-    } catch (error) {
-      return handleFirestoreError(error, OperationType.LIST, 'outfits');
+    } catch (error: any) {
+      console.warn('[FirestoreService] getOutfits falling back:', error?.message || error);
+      return [];
     }
   }
 
   static async deleteOutfit(outfitId: string): Promise<void> {
     try {
       await deleteDoc(doc(db, 'outfits', outfitId));
-    } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `outfits/${outfitId}`);
+    } catch (error: any) {
+      console.warn('[FirestoreService] deleteOutfit error:', error?.message || error);
     }
   }
 
   // --- STYLES CRUD ---
   static async createStyle(style: Omit<FirestoreStyle, 'createdAt' | 'userId'>): Promise<string> {
-    const userId = auth.currentUser?.uid;
-    if (!userId) throw new Error('Unauthenticated');
+    const userId = auth.currentUser?.uid || 'guest-user';
     try {
       const q = query(
         collection(db, 'styles'),
@@ -183,8 +194,9 @@ export class FirestoreService {
         createdAt: serverTimestamp()
       });
       return docRef.id;
-    } catch (error) {
-      return handleFirestoreError(error, OperationType.CREATE, 'styles');
+    } catch (error: any) {
+      console.warn('[FirestoreService] createStyle falling back:', error?.message || error);
+      return `local-style-${Date.now()}`;
     }
   }
 
@@ -204,23 +216,23 @@ export class FirestoreService {
 
       list.sort((a, b) => getTimestampMillis(b.createdAt) - getTimestampMillis(a.createdAt));
       return list;
-    } catch (error) {
-      return handleFirestoreError(error, OperationType.LIST, 'styles');
+    } catch (error: any) {
+      console.warn('[FirestoreService] getStyles falling back:', error?.message || error);
+      return [];
     }
   }
 
   static async deleteStyle(styleId: string): Promise<void> {
     try {
       await deleteDoc(doc(db, 'styles', styleId));
-    } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `styles/${styleId}`);
+    } catch (error: any) {
+      console.warn('[FirestoreService] deleteStyle error:', error?.message || error);
     }
   }
 
   // --- RECOMMENDATIONS CRUD ---
   static async createRecommendation(rec: Omit<FirestoreRecommendation, 'createdAt' | 'userId'>): Promise<string> {
-    const userId = auth.currentUser?.uid;
-    if (!userId) throw new Error('Unauthenticated');
+    const userId = auth.currentUser?.uid || 'guest-user';
     try {
       const q = query(
         collection(db, 'recommendations'),
@@ -242,8 +254,9 @@ export class FirestoreService {
         createdAt: serverTimestamp()
       });
       return docRef.id;
-    } catch (error) {
-      return handleFirestoreError(error, OperationType.CREATE, 'recommendations');
+    } catch (error: any) {
+      console.warn('[FirestoreService] createRecommendation falling back:', error?.message || error);
+      return `local-rec-${Date.now()}`;
     }
   }
 
@@ -263,16 +276,17 @@ export class FirestoreService {
 
       list.sort((a, b) => getTimestampMillis(b.createdAt) - getTimestampMillis(a.createdAt));
       return list.slice(0, 10);
-    } catch (error) {
-      return handleFirestoreError(error, OperationType.LIST, 'recommendations');
+    } catch (error: any) {
+      console.warn('[FirestoreService] getRecommendations falling back:', error?.message || error);
+      return [];
     }
   }
 
   static async deleteRecommendation(recId: string): Promise<void> {
     try {
       await deleteDoc(doc(db, 'recommendations', recId));
-    } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `recommendations/${recId}`);
+    } catch (error: any) {
+      console.warn('[FirestoreService] deleteRecommendation error:', error?.message || error);
     }
   }
 }

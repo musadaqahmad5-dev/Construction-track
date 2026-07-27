@@ -5,10 +5,13 @@ import {
   Sliders, Trash2, Calendar, Edit2, Plus, Info, Ruler, BookOpen, Fingerprint,
   CreditCard, ExternalLink, QrCode, Sparkle, Tag, CheckSquare, Square, ChevronDown, ChevronUp, Mail,
   Clock, ShoppingBag, TrendingUp, Compass, Shield, Lock, Eye, EyeOff, Globe, Sparkles as SparklesIcon,
-  Heart, AlertCircle, Search
+  Heart, AlertCircle, Search, Cpu, Database, Flame, Zap, Layers, Activity, Brain
 } from 'lucide-react';
 import { ProfileService, type StylistHistoryEntry, type StyleProfile } from '../platform';
 import { LOOK_VISION_THEMES } from './AIStyleHub';
+import { PersonalFashionMemoryEngine } from '../engine/personalMemory';
+import { RecommendationEngine } from '../features/recommendations/recommendationEngine';
+import { AIStyleHubV17Architecture } from '../features/global/AIStyleHubV17Architecture';
 
 interface CognitivePassportProps {
   user?: any;
@@ -27,7 +30,7 @@ interface SartorialGoal {
 
 export const CognitivePassport: React.FC<CognitivePassportProps> = ({ user, onLogout, currentTheme, setCurrentTheme }) => {
   // Navigation Tabs for unified Profile Management & Style Passport
-  const [activeTab, setActiveTab] = useState<'IDENTITY' | 'PASSPORT' | 'MEASUREMENTS' | 'GOALS' | 'HISTORY'>('IDENTITY');
+  const [activeTab, setActiveTab] = useState<'IDENTITY' | 'PASSPORT' | 'MEASUREMENTS' | 'GOALS' | 'INTELLIGENCE' | 'HISTORY'>('IDENTITY');
 
   // --- TAB 1: IDENTITY & GENERAL PROFILE STATES ---
   const [profileName, setProfileName] = useState(() => localStorage.getItem('user_profile_name') || 'Sarah Khan');
@@ -93,13 +96,48 @@ export const CognitivePassport: React.FC<CognitivePassportProps> = ({ user, onLo
   });
   const [newFabricInput, setNewFabricInput] = useState('');
 
-  // --- TAB 5: HISTORICAL ADVISOR LOGS ---
+  // --- TAB 5: AI ENGINE & STYLE MEMORY STATES ---
+  const [memoryTick, setMemoryTick] = useState(0);
+  const [newDislikeColor, setNewDislikeColor] = useState('');
+  const [newDislikeGarment, setNewDislikeGarment] = useState('');
+  const activeMemory = PersonalFashionMemoryEngine.getMemory(user?.uid || 'user-1');
+  const omniRecs = RecommendationEngine.getOmniRecommendations(user?.uid || 'user-1');
+
+  // --- TAB 6: HISTORICAL ADVISOR LOGS ---
   const [stylistLogs, setStylistLogs] = useState<StylistHistoryEntry[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
 
   // Common UI Feedback States
   const [isSaving, setIsSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
+
+  // Sync Style DNA with v1.7 Architecture
+  const syncStyleDNAWithArchitecture = () => {
+    const dnaModel = AIStyleHubV17Architecture.getStyleDNAModel();
+    if (dnaModel && dnaModel.identity) {
+      if (dnaModel.identity.styleArchetype) {
+        setStyleArchetype(dnaModel.identity.styleArchetype);
+      }
+      if (dnaModel.identity.colorPersonality) {
+        setFavColorPalette(dnaModel.identity.colorPersonality);
+      }
+      setDnaScores({
+        minimalist: Math.round(dnaModel.identity.minimalismScore / 10),
+        streetwear: Math.round(dnaModel.identity.experimentalScore / 10),
+        luxury: Math.round(dnaModel.identity.luxuryPreference / 10),
+        experimental: Math.round(dnaModel.identity.creativityLevel / 10)
+      });
+    }
+  };
+
+  useEffect(() => {
+    syncStyleDNAWithArchitecture();
+    const handleSync = () => syncStyleDNAWithArchitecture();
+    window.addEventListener('lookvision_sync_v17_memory', handleSync);
+    return () => {
+      window.removeEventListener('lookvision_sync_v17_memory', handleSync);
+    };
+  }, []);
 
   // Load User Style Profile on mount / user change
   useEffect(() => {
@@ -160,6 +198,22 @@ export const CognitivePassport: React.FC<CognitivePassportProps> = ({ user, onLo
     localStorage.setItem('user_meas_waist', waistVal.toString());
     localStorage.setItem('user_meas_inseam', inseamVal.toString());
     localStorage.setItem('user_meas_shape', bodyShape);
+
+    // Save & sync with v1.7 Architecture Style DNA
+    try {
+      const currentDnaModel = AIStyleHubV17Architecture.getStyleDNAModel();
+      currentDnaModel.identity.styleArchetype = styleArchetype;
+      currentDnaModel.identity.colorPersonality = favColorPalette;
+      currentDnaModel.identity.minimalismScore = dnaScores.minimalist * 10;
+      currentDnaModel.identity.experimentalScore = dnaScores.streetwear * 10;
+      currentDnaModel.identity.luxuryPreference = dnaScores.luxury * 10;
+      currentDnaModel.identity.creativityLevel = dnaScores.experimental * 10;
+      currentDnaModel.identity.lastEvolvedTimestamp = new Date().toISOString();
+      AIStyleHubV17Architecture.saveStyleDNAModel(currentDnaModel);
+      window.dispatchEvent(new CustomEvent('lookvision_sync_v17_memory'));
+    } catch (e) {
+      console.warn("Failed to sync Style DNA to v1.7 Architecture:", e);
+    }
 
     // Call ProfileService database integration
     if (user) {
@@ -412,6 +466,7 @@ export const CognitivePassport: React.FC<CognitivePassportProps> = ({ user, onLo
           { id: 'PASSPORT', label: 'Style Passport DNA', icon: Fingerprint },
           { id: 'MEASUREMENTS', label: 'Measurements & Sizes', icon: Ruler },
           { id: 'GOALS', label: 'Sartorial Preferences', icon: Award },
+          { id: 'INTELLIGENCE', label: 'AI Engine & Memory', icon: Brain },
           { id: 'HISTORY', label: 'Stylist Logs & Audit', icon: Clock },
         ].map(tab => {
           const Icon = tab.icon;
@@ -1449,7 +1504,222 @@ export const CognitivePassport: React.FC<CognitivePassportProps> = ({ user, onLo
             </motion.div>
           )}
 
-          {/* TAB 5: HISTORICAL LOGS */}
+          {/* TAB 5: AI ENGINE & STYLE MEMORY */}
+          {activeTab === 'INTELLIGENCE' && (
+            <motion.div
+              key="intelligence"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="space-y-8 text-left"
+            >
+              <div>
+                <h3 className="text-sm font-mono text-violet-400 uppercase tracking-wider">AI Intelligence & Style Memory Hub</h3>
+                <p className="text-xs text-zinc-500 mt-1">Monitor real-time learning metrics, manage smart negative dislikes filters, and preview 5D omnidirectional recommendations.</p>
+              </div>
+
+              {/* 4 KPI Banner Cards */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="bg-[#11111a] border border-white/5 rounded-2xl p-4 space-y-1">
+                  <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-wider block">Accuracy Confidence</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl font-bold text-white font-mono">{Math.round(activeMemory.accuracyEstimate)}%</span>
+                    <span className="text-[9px] text-emerald-400 font-mono font-bold">+2.4%</span>
+                  </div>
+                  <p className="text-[9px] text-zinc-600">Based on user feedback signals</p>
+                </div>
+
+                <div className="bg-[#11111a] border border-white/5 rounded-2xl p-4 space-y-1">
+                  <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-wider block">Feedback Signal Logs</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl font-bold text-violet-300 font-mono">{activeMemory.learningEventsLogged}</span>
+                    <Activity className="w-3.5 h-3.5 text-violet-400 animate-pulse" />
+                  </div>
+                  <p className="text-[9px] text-zinc-600">Events processed in memory</p>
+                </div>
+
+                <div className="bg-[#11111a] border border-white/5 rounded-2xl p-4 space-y-1">
+                  <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-wider block">API Calls Saved</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl font-bold text-emerald-300 font-mono">{activeMemory.apiCallsSaved}</span>
+                    <Zap className="w-3.5 h-3.5 text-emerald-400" />
+                  </div>
+                  <p className="text-[9px] text-zinc-600">Local deterministic caching</p>
+                </div>
+
+                <div className="bg-[#11111a] border border-white/5 rounded-2xl p-4 space-y-1">
+                  <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-wider block">Active Season Shift</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-amber-200 capitalize truncate">{activeMemory.timeline.activeSeason}</span>
+                  </div>
+                  <p className="text-[9px] text-zinc-600">{activeMemory.timeline.targetLocation || 'Paris / London'}</p>
+                </div>
+              </div>
+
+              {/* SECTION: SMART NEGATIVE LEARNING (DISLIKES MANAGER) */}
+              <div className="bg-[#11111a] border border-white/5 rounded-2xl p-5 space-y-4">
+                <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                  <span className="text-[10px] font-mono text-zinc-300 uppercase tracking-widest block">
+                    Smart Negative Dislikes Filter
+                  </span>
+                  <span className="text-[9px] font-mono text-violet-400">
+                    {activeMemory.dislikes.colors.length + activeMemory.dislikes.garments.length} Active Rules
+                  </span>
+                </div>
+
+                <p className="text-[11px] text-zinc-400 leading-normal">
+                  Specify colors or garment silhouettes you never want the AI Stylist to recommend. The engine filters these before computation.
+                </p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Disliked Colors */}
+                  <div className="bg-black/30 border border-white/5 rounded-xl p-3.5 space-y-3">
+                    <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider block">Disliked Colors</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {activeMemory.dislikes.colors.length === 0 ? (
+                        <span className="text-[10px] text-zinc-600 italic">No color exclusions set.</span>
+                      ) : (
+                        activeMemory.dislikes.colors.map(color => (
+                          <span 
+                            key={color}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-950/30 border border-red-500/20 text-red-300 text-[10px] font-mono"
+                          >
+                            <span>{color}</span>
+                            <button 
+                              type="button"
+                              onClick={() => {
+                                PersonalFashionMemoryEngine.removeDislikeColor('user-1', color);
+                                setMemoryTick(t => t + 1);
+                              }}
+                              className="hover:text-white cursor-pointer"
+                            >
+                              &times;
+                            </button>
+                          </span>
+                        ))
+                      )}
+                    </div>
+
+                    <div className="flex gap-2 pt-1">
+                      <input 
+                        type="text" 
+                        placeholder="Ex: Neon Yellow, Orange..."
+                        value={newDislikeColor}
+                        onChange={(e) => setNewDislikeColor(e.target.value)}
+                        className="flex-1 bg-black/50 border border-white/5 rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 placeholder:text-zinc-600 focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (newDislikeColor.trim()) {
+                            PersonalFashionMemoryEngine.addDislikeColor('user-1', newDislikeColor.trim());
+                            setNewDislikeColor('');
+                            setMemoryTick(t => t + 1);
+                          }
+                        }}
+                        className="px-3 py-1.5 bg-violet-600 hover:bg-violet-500 text-white rounded-lg text-[10px] font-mono uppercase font-bold cursor-pointer"
+                      >
+                        Add
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Disliked Garments */}
+                  <div className="bg-black/30 border border-white/5 rounded-xl p-3.5 space-y-3">
+                    <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider block">Disliked Garment Types</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {activeMemory.dislikes.garments.length === 0 ? (
+                        <span className="text-[10px] text-zinc-600 italic">No garment exclusions set.</span>
+                      ) : (
+                        activeMemory.dislikes.garments.map(garment => (
+                          <span 
+                            key={garment}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-950/30 border border-red-500/20 text-red-300 text-[10px] font-mono"
+                          >
+                            <span>{garment}</span>
+                            <button 
+                              type="button"
+                              onClick={() => {
+                                PersonalFashionMemoryEngine.removeDislikeGarment('user-1', garment);
+                                setMemoryTick(t => t + 1);
+                              }}
+                              className="hover:text-white cursor-pointer"
+                            >
+                              &times;
+                            </button>
+                          </span>
+                        ))
+                      )}
+                    </div>
+
+                    <div className="flex gap-2 pt-1">
+                      <input 
+                        type="text" 
+                        placeholder="Ex: Tracksuits, Crop Tops..."
+                        value={newDislikeGarment}
+                        onChange={(e) => setNewDislikeGarment(e.target.value)}
+                        className="flex-1 bg-black/50 border border-white/5 rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 placeholder:text-zinc-600 focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (newDislikeGarment.trim()) {
+                            PersonalFashionMemoryEngine.addDislikeGarment('user-1', newDislikeGarment.trim());
+                            setNewDislikeGarment('');
+                            setMemoryTick(t => t + 1);
+                          }
+                        }}
+                        className="px-3 py-1.5 bg-violet-600 hover:bg-violet-500 text-white rounded-lg text-[10px] font-mono uppercase font-bold cursor-pointer"
+                      >
+                        Add
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* SECTION: 5D OMNIDIRECTIONAL RECOMMENDATIONS PREVIEW */}
+              <div className="bg-[#11111a] border border-white/5 rounded-2xl p-5 space-y-4">
+                <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                  <span className="text-[10px] font-mono text-zinc-300 uppercase tracking-widest block">
+                    5D Recommendation Engine Matrix Output
+                  </span>
+                  <span className="text-[9px] font-mono text-emerald-400">
+                    Vibe: {omniRecs.styleDNAVibe}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+                  {/* Content */}
+                  <div className="bg-black/40 border border-white/5 rounded-xl p-3 space-y-2">
+                    <span className="text-[9px] font-mono text-violet-400 uppercase tracking-wider block">1. Content Match</span>
+                    <h5 className="text-xs font-bold text-white truncate">{omniRecs.content[0]?.title}</h5>
+                    <p className="text-[10px] text-zinc-400 line-clamp-2">{omniRecs.content[0]?.subtitle}</p>
+                    <span className="text-[9px] font-mono text-emerald-400 font-bold block">{omniRecs.content[0]?.matchScore}% Affinity</span>
+                  </div>
+
+                  {/* Product */}
+                  <div className="bg-black/40 border border-white/5 rounded-xl p-3 space-y-2">
+                    <span className="text-[9px] font-mono text-violet-400 uppercase tracking-wider block">2. Product Match</span>
+                    <h5 className="text-xs font-bold text-white truncate">{omniRecs.products[0]?.title}</h5>
+                    <p className="text-[10px] text-zinc-400">{omniRecs.products[0]?.brand} • €{omniRecs.products[0]?.price}</p>
+                    <span className="text-[9px] font-mono text-emerald-400 font-bold block">{omniRecs.products[0]?.matchScore}% Affinity</span>
+                  </div>
+
+                  {/* Trend */}
+                  <div className="bg-black/40 border border-white/5 rounded-xl p-3 space-y-2">
+                    <span className="text-[9px] font-mono text-violet-400 uppercase tracking-wider block">3. Trend Forecast</span>
+                    <h5 className="text-xs font-bold text-white truncate">{omniRecs.trends[0]?.trendName}</h5>
+                    <p className="text-[10px] text-zinc-400">{omniRecs.trends[0]?.description}</p>
+                    <span className="text-[9px] font-mono text-emerald-400 font-bold block">{omniRecs.trends[0]?.growthRate}</span>
+                  </div>
+                </div>
+              </div>
+
+            </motion.div>
+          )}
+
+          {/* TAB 6: HISTORICAL LOGS */}
           {activeTab === 'HISTORY' && (
             <motion.div
               key="history"

@@ -358,11 +358,11 @@ export class ProductUsageStatisticsEngine {
 
 export class ProductFeatureFlagsEngine {
   private static flags = new Map<ProductIdentity, Record<string, boolean>>([
-    [ProductIdentity.HOME_GENERATE, { beta_try_on: true, advanced_posing: false }],
-    [ProductIdentity.AI_CREATIONS, { collection_builder: true, model_generation_v3: false }],
-    [ProductIdentity.COMMUNITY, { creator_analytics_panel: true, reputation_rewards: false }],
-    [ProductIdentity.MARKETPLACE, { physical_orders: false, dynamic_pricing: true }],
-    [ProductIdentity.FACE_AI, { body_segmentation: true, anthropometric_scans: false }]
+    [ProductIdentity.HOME_GENERATE, { beta_try_on: true, advanced_posing: true }],
+    [ProductIdentity.AI_CREATIONS, { collection_builder: true, model_generation_v3: true }],
+    [ProductIdentity.COMMUNITY, { creator_analytics_panel: true, reputation_rewards: true }],
+    [ProductIdentity.MARKETPLACE, { physical_orders: true, dynamic_pricing: true }],
+    [ProductIdentity.FACE_AI, { body_segmentation: true, anthropometric_scans: true }]
   ]);
 
   public static isEnabled(productId: ProductIdentity, flag: string): boolean {
@@ -537,8 +537,8 @@ export class ProductManifestRegistry {
       {
         productId: ProductIdentity.HOME_GENERATE,
         name: 'Home Generator & Try-On',
-        version: '2.4-telemetry',
-        buildNumber: 1420,
+        version: '3.0.0-core',
+        buildNumber: 3000,
         author: 'AIStyleHub Architecture Group',
         capabilities: [
           ProductCapabilities.BODY_MEASUREMENT,
@@ -546,7 +546,7 @@ export class ProductManifestRegistry {
           ProductCapabilities.VIRTUAL_TRY_ON
         ],
         dependencies: ['UnifiedFashionOS', 'PersonalFashionMemoryEngine', 'FashionKnowledgeGraphEngine'],
-        featureFlags: { beta_try_on: true, advanced_posing: false }
+        featureFlags: { beta_try_on: true, advanced_posing: true }
       }
     ],
     [
@@ -554,15 +554,15 @@ export class ProductManifestRegistry {
       {
         productId: ProductIdentity.AI_CREATIONS,
         name: 'AI Creations Studio',
-        version: '2.4-telemetry',
-        buildNumber: 2140,
+        version: '3.0.0-core',
+        buildNumber: 3000,
         author: 'AIStyleHub Generative Division',
         capabilities: [
           ProductCapabilities.MODEL_GENERATION,
           ProductCapabilities.PROMPT_TO_IMAGE
         ],
         dependencies: ['UnifiedFashionOS', 'FashionKnowledgeGraphEngine', 'EnterpriseWorkflowEngine', 'EnterpriseLearningEngine'],
-        featureFlags: { collection_builder: true, model_generation_v3: false }
+        featureFlags: { collection_builder: true, model_generation_v3: true }
       }
     ],
     [
@@ -570,15 +570,15 @@ export class ProductManifestRegistry {
       {
         productId: ProductIdentity.COMMUNITY,
         name: 'Community Fashion Stream',
-        version: '2.4-telemetry',
-        buildNumber: 1080,
+        version: '3.0.0-core',
+        buildNumber: 3000,
         author: 'AIStyleHub Social Labs',
         capabilities: [
           ProductCapabilities.SOCIAL_FEED,
           ProductCapabilities.CREATOR_ANALYTICS
         ],
         dependencies: ['UnifiedFashionOS', 'PersonalFashionMemoryEngine', 'VisionIntelligenceEngine'],
-        featureFlags: { creator_analytics_panel: true, reputation_rewards: false }
+        featureFlags: { creator_analytics_panel: true, reputation_rewards: true }
       }
     ],
     [
@@ -586,8 +586,8 @@ export class ProductManifestRegistry {
       {
         productId: ProductIdentity.MARKETPLACE,
         name: 'Fashion Marketplace',
-        version: '2.4-telemetry',
-        buildNumber: 1500,
+        version: '3.0.0-core',
+        buildNumber: 3000,
         author: 'AIStyleHub Commerce Core',
         capabilities: [
           ProductCapabilities.DIGITAL_COMMERCE,
@@ -595,7 +595,7 @@ export class ProductManifestRegistry {
           ProductCapabilities.REVENUE_SHARING
         ],
         dependencies: ['UnifiedFashionOS', 'DecisionIntelligenceEngine'],
-        featureFlags: { physical_orders: false, dynamic_pricing: true }
+        featureFlags: { physical_orders: true, dynamic_pricing: true }
       }
     ],
     [
@@ -603,7 +603,7 @@ export class ProductManifestRegistry {
       {
         productId: ProductIdentity.FACE_AI,
         name: 'Face AI & Real Body Scan',
-        version: '2.4-telemetry',
+        version: '3.0.0-core',
         buildNumber: 3000,
         author: 'AIStyleHub Biometrics Core',
         capabilities: [
@@ -612,7 +612,7 @@ export class ProductManifestRegistry {
           ProductCapabilities.CLOTHING_DRAPERY
         ],
         dependencies: ['UnifiedFashionOS', 'VisionIntelligenceEngine'],
-        featureFlags: { body_segmentation: true, anthropometric_scans: false }
+        featureFlags: { body_segmentation: true, anthropometric_scans: true }
       }
     ]
   ]);

@@ -20,6 +20,13 @@ export { UnifiedFashionOS, type UnifiedState, type SubscriptionTier, type Unifie
 // 3. High-Performance Algorithmic Engines
 export { AIEngine } from '../features/feed/AIEngine';
 export { VisualSuggestion } from '../features/vision/visualSuggestion';
+export { DeviceReactionEngine, type DeviceTelemetryPayload, type AdaptiveLayoutResponse } from './DeviceReactionEngine';
+export {
+  mapCoordinatesToVideoVectors,
+  formatVectorsForAIStudio,
+  type CameraVector,
+  type VideoTimelinePayload
+} from './VideoTrackingMatrixEngine';
 
 // 4. Hardening & Self-Healing Engines
 export { StorageHardening } from '../core/StorageHardening';
@@ -348,6 +355,44 @@ export {
   TelemetryIngestion,
   type TelemetryPayload
 } from './optimizationEngine';
+
+// 27. AI-SEOS Evolution Knowledge Graph, Autonomous Engine, Operating Layer & Expansion Engine
+export { KnowledgeGraphEngine, type GraphNode, type GraphEdge, type GraphQueryResult } from './knowledgeGraphEngine';
+export { 
+  AISEOSAutonomousEngine, 
+  type HealthTelemetry, 
+  type ImprovementRecommendation, 
+  type MultiAgentTaskExecution 
+} from './aiSeosAutonomousEngine';
+export {
+  AgentRegistrySystem,
+  AIGovernanceSystem,
+  CentralAIOrchestrator,
+  EnterpriseIntelligenceReporting,
+  type RegisteredAgent,
+  type GovernanceDecision,
+  type WorkflowIntent,
+  type OrchestrationResult,
+  type EnterpriseIntelligenceReports
+} from './aiSeosOperatingLayer';
+export {
+  AISEOSEcosystemExpansionEngine,
+  type EcosystemAgentPlugin,
+  type CrossModuleSignal,
+  type ExpandedAnalyticsReport
+} from './aiSeosEcosystemExpansion';
+
+// 28. Community Visual Intelligence System (C02 Evolution)
+export {
+  CommunityVisualIntelligence,
+  type CreativeMode,
+  type CameraFramingMode,
+  type VisualFocusPriority,
+  type PromptIntentAnalysis,
+  type EnhancementOption,
+  type PrePublishQualityEvaluation
+} from '../features/image-generation/CommunityVisualIntelligence';
+
 
 
 

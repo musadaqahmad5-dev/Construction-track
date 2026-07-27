@@ -218,8 +218,8 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({
       </div>
 
       {/* Interactive Tabs bar */}
-      <div className="flex justify-between items-center border-b border-white/5 pb-2">
-        <div className="flex gap-6">
+      <div className="flex justify-between items-center border-b border-white/5 pb-2 w-full">
+        <div className="flex flex-wrap sm:flex-nowrap gap-3 sm:gap-6 overflow-x-auto w-full">
           {[
             { id: 'CREATIONS', label: 'My Creations', icon: Grid },
             { id: 'COLLECTIONS', label: 'My Collections', icon: Folder },
@@ -234,13 +234,13 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({
                   setPortfolioTab(tab.id as any);
                   setSelectedCollection(null);
                 }}
-                className={`flex items-center gap-1.5 pb-2 text-xs font-mono font-bold uppercase tracking-wider transition-all relative cursor-pointer ${
+                className={`flex items-center gap-1.5 pb-2 text-xs font-mono font-bold uppercase tracking-wider transition-all relative cursor-pointer whitespace-nowrap ${
                   portfolioTab === tab.id
                     ? 'text-violet-400 font-bold border-b-2 border-violet-500'
                     : 'text-zinc-500 hover:text-zinc-300'
                 }`}
               >
-                <Icon className="w-3.5 h-3.5" />
+                <Icon className="w-3.5 h-3.5 shrink-0" />
                 <span>{tab.label}</span>
               </button>
             );

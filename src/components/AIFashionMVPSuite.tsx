@@ -31,12 +31,19 @@ import {
   Camera,
   Image as ImageIcon,
   Upload,
-  X
+  X,
+  Heart,
+  ThumbsDown,
+  AlertCircle,
+  Send,
+  Download,
+  Share2
 } from 'lucide-react';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { auth } from '../firebase';
 import { FirestoreService } from '../lib/firestoreService';
 import { UnifiedFashionOS } from '../engine';
+import { AIStyleHubV17Architecture } from '../features/global/AIStyleHubV17Architecture';
 
 interface OutfitItem {
   items: {
@@ -198,6 +205,55 @@ export const AIFashionMVPSuite: React.FC<AIFashionMVPSuiteProps> = ({
   const [savingStyle, setSavingStyle] = useState<boolean>(false);
   const [savingRec, setSavingRec] = useState<boolean>(false);
 
+  // Restore active session from v1.7 Architecture on mount
+  useEffect(() => {
+    try {
+      const savedSession = AIStyleHubV17Architecture.getOutfitActiveSession();
+      if (savedSession) {
+        if (savedSession.customPrompt) setUserInput(savedSession.customPrompt);
+        if (savedSession.vibePreset) setStudioTheme(savedSession.vibePreset);
+        if (savedSession.occasion && ['Casual', 'Formal', 'Semi-formal'].includes(savedSession.occasion)) {
+          setStudioFormality(savedSession.occasion as 'Casual' | 'Formal' | 'Semi-formal');
+        }
+        if (savedSession.selectedGarmentIds) {
+          if (savedSession.selectedGarmentIds[0]) setStudioUpper(savedSession.selectedGarmentIds[0]);
+          if (savedSession.selectedGarmentIds[1]) setStudioLower(savedSession.selectedGarmentIds[1]);
+          if (savedSession.selectedGarmentIds[2]) setStudioShoes(savedSession.selectedGarmentIds[2]);
+          if (savedSession.selectedGarmentIds[3]) setStudioHeadwear(savedSession.selectedGarmentIds[3]);
+        }
+        if (savedSession.selectedColors) {
+          if (savedSession.selectedColors[0]) setStudioUpperColor(savedSession.selectedColors[0]);
+          if (savedSession.selectedColors[1]) setStudioLowerColor(savedSession.selectedColors[1]);
+          if (savedSession.selectedColors[2]) setStudioShoesColor(savedSession.selectedColors[2]);
+          if (savedSession.selectedColors[3]) setStudioHeadwearColor(savedSession.selectedColors[3]);
+        }
+        if (savedSession.pendingOutfitAssets && savedSession.pendingOutfitAssets.length > 0 && savedSession.pendingOutfitAssets[0].imageUrl) {
+          setStudioGeneratedImage(savedSession.pendingOutfitAssets[0].imageUrl);
+        }
+      }
+    } catch (e) {
+      console.warn("Could not restore outfit active session:", e);
+    }
+  }, []);
+
+  // Save active session to v1.7 Architecture on input/option updates
+  useEffect(() => {
+    try {
+      AIStyleHubV17Architecture.saveOutfitActiveSession({
+        vibePreset: studioTheme,
+        occasion: studioFormality,
+        selectedGarmentIds: [studioUpper, studioLower, studioShoes, studioHeadwear],
+        selectedColors: [studioUpperColor, studioLowerColor, studioShoesColor, studioHeadwearColor],
+        customPrompt: userInput,
+        isGenerating: loading || studioGenerating,
+        generationStep: loading ? 'FIOS Outfit Curation' : studioGenerating ? 'Lookbook Rendering' : 'Ready',
+        pendingOutfitAssets: studioGeneratedImage ? [{ imageUrl: studioGeneratedImage }] : undefined
+      });
+    } catch (e) {
+      console.warn("Could not save outfit active session:", e);
+    }
+  }, [userInput, studioTheme, studioFormality, studioUpper, studioLower, studioShoes, studioHeadwear, studioUpperColor, studioLowerColor, studioShoesColor, studioHeadwearColor, loading, studioGenerating, studioGeneratedImage]);
+
   const handleGenerateStudioImage = async () => {
     if (typeof window !== 'undefined' && !window.navigator.onLine) {
       setStudioError("Device is currently offline");
@@ -293,6 +349,18 @@ export const AIFashionMVPSuite: React.FC<AIFashionMVPSuiteProps> = ({
         setStudioGeneratedImage(data.imageUrl);
         setDelightNotice("✓ Premium Studio Lookbook Photo Generated!");
         setGeneratedCount(prev => prev + 1);
+
+        AIStyleHubV17Architecture.recordOutfitGenerated({
+          id: `outfit-studio-${Date.now()}`,
+          title: `${studioUpper || 'Top'} & ${studioLower || 'Bottom'} Ensemble`,
+          imageUrl: data.imageUrl,
+          prompt: `Theme: ${studioTheme} | Garments: ${studioUpper} (${studioUpperColor}), ${studioLower} (${studioLowerColor}), ${studioShoes} (${studioShoesColor})`,
+          styleVibe: studioTheme || 'Studio Bespoke',
+          category: studioFormality || 'Studio Outfit',
+          qualityScore: 96,
+          tags: ['studio-outfit', (studioTheme || 'studio').toLowerCase()]
+        });
+        window.dispatchEvent(new CustomEvent('lookvision_sync_v17_memory'));
       } else {
         throw new Error(data.error || "No image was returned from the generator");
       }
@@ -693,6 +761,18 @@ export const AIFashionMVPSuite: React.FC<AIFashionMVPSuiteProps> = ({
       if (data.success && data.imageUrl) {
         setOutfitImages(prev => ({ ...prev, [index]: data.imageUrl }));
         setDelightNotice("✓ Lookbook Photo Generated!");
+
+        AIStyleHubV17Architecture.recordOutfitGenerated({
+          id: `outfit-gen-${Date.now()}-${index}`,
+          title: fiosData?.style_title || `Curated Look 0${index + 1}`,
+          imageUrl: data.imageUrl,
+          prompt: outfit.fashion_reason || outfit.why_this_works || '',
+          styleVibe: fiosData?.user_profile?.style || 'Curated Ensemble',
+          category: fiosData?.user_profile?.occasion || 'Casual',
+          qualityScore: outfit.confidence || 95,
+          tags: ['curated-outfit', (fiosData?.user_profile?.style || 'ensemble').toLowerCase()]
+        });
+        window.dispatchEvent(new CustomEvent('lookvision_sync_v17_memory'));
       } else {
         throw new Error(data.error || "No image was returned from the generator");
       }
@@ -2034,69 +2114,149 @@ export const AIFashionMVPSuite: React.FC<AIFashionMVPSuiteProps> = ({
                       </p>
                     </div>
 
-                     {/* V3 Outfit Recommendation Feedback Engine (Phase B) & Social Share and Copier */}
-                    <div className="pt-3 border-t border-white/5 space-y-2">
+                    {/* V1.7 HomeHub Integrated Outfit Action Toolbar */}
+                    <div className="pt-3 border-t border-white/5 space-y-2.5">
                       <div className="flex items-center justify-between">
-                        <span className="text-[8px] font-mono text-white/30 uppercase tracking-wider font-bold">Feedback</span>
-                        {outfitFeedback[index] === 'love_it' && (
-                          <span className="text-[8px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">Loved</span>
+                        <span className="text-[8px] font-mono text-indigo-300 uppercase tracking-wider font-bold">
+                          v1.7 HomeHub Feedback & Publishing
+                        </span>
+                        {outfitFeedback[index] && (
+                          <span className="text-[8px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                            Signal Recorded
+                          </span>
                         )}
                       </div>
-                      <div className="grid grid-cols-4 gap-1">
+
+                      {/* Top Action Grid: Like, Dislike, Not Related, Save */}
+                      <div className="grid grid-cols-4 gap-1.5">
                         <button
-                          onClick={() => handleFeedback(index, 'love_it')}
-                          disabled={outfitFeedback[index] !== undefined}
-                          className={`text-[9px] font-mono py-1 rounded transition-all border text-center select-none cursor-pointer ${
+                          onClick={() => {
+                            handleFeedback(index, 'love_it');
+                            AIStyleHubV17Architecture.recordLearningSignal('OUTFITS', 'LIKE', fiosData?.user_profile?.style || 'Curated Ensemble');
+                            window.dispatchEvent(new CustomEvent('lookvision_sync_v17_memory'));
+                            window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: '❤️ Liked & recorded signal in AI Learning Engine' }));
+                          }}
+                          className={`text-[9.5px] font-mono py-1.5 rounded-lg transition-all border text-center select-none cursor-pointer flex items-center justify-center gap-1 ${
                             outfitFeedback[index] === 'love_it'
-                              ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
-                              : 'bg-white/[0.01] hover:bg-white/[0.05] border-white/5 text-white/60 hover:text-white'
+                              ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400 font-bold'
+                              : 'bg-white/[0.02] hover:bg-white/[0.06] border-white/5 text-white/80 hover:text-white'
                           }`}
                         >
-                          Love It
+                          <Heart className="w-3 h-3 text-red-400 fill-red-400/20" />
+                          <span>Like</span>
                         </button>
+
                         <button
-                          onClick={() => handleFeedback(index, 'show_similar')}
-                          disabled={outfitFeedback[index] !== undefined}
-                          className={`text-[9px] font-mono py-1 rounded transition-all border text-center select-none cursor-pointer ${
-                            outfitFeedback[index] === 'show_similar'
-                              ? 'bg-indigo-500/15 border-indigo-500/30 text-indigo-400'
-                              : 'bg-white/[0.01] hover:bg-white/[0.05] border-white/5 text-white/60 hover:text-white'
-                          }`}
+                          onClick={() => {
+                            handleFeedback(index, 'different_style');
+                            AIStyleHubV17Architecture.recordLearningSignal('OUTFITS', 'DISLIKE', fiosData?.user_profile?.style || 'Curated Ensemble');
+                            window.dispatchEvent(new CustomEvent('lookvision_sync_v17_memory'));
+                            window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: '👎 Dislike signal logged for AI Learning Engine' }));
+                          }}
+                          className="text-[9.5px] font-mono py-1.5 rounded-lg transition-all border border-white/5 bg-white/[0.02] hover:bg-white/[0.06] text-white/80 hover:text-white text-center select-none cursor-pointer flex items-center justify-center gap-1"
                         >
-                          Similar
+                          <ThumbsDown className="w-3 h-3 text-zinc-400" />
+                          <span>Dislike</span>
                         </button>
+
                         <button
-                          onClick={() => handleFeedback(index, 'different_style')}
-                          disabled={outfitFeedback[index] !== undefined}
-                          className={`text-[9px] font-mono py-1 rounded transition-all border text-center select-none cursor-pointer ${
-                            outfitFeedback[index] === 'different_style'
-                              ? 'bg-purple-500/15 border-purple-500/30 text-purple-400'
-                              : 'bg-white/[0.01] hover:bg-white/[0.05] border-white/5 text-white/60 hover:text-white'
-                          }`}
+                          onClick={() => {
+                            handleFeedback(index, 'not_related');
+                            AIStyleHubV17Architecture.recordLearningSignal('OUTFITS', 'NOT_RELATED', fiosData?.user_profile?.style || 'Curated Ensemble');
+                            window.dispatchEvent(new CustomEvent('lookvision_sync_v17_memory'));
+                            window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: '🚫 Irrelevant signal logged for AI Learning Engine' }));
+                          }}
+                          className="text-[9.5px] font-mono py-1.5 rounded-lg transition-all border border-white/5 bg-white/[0.02] hover:bg-white/[0.06] text-white/80 hover:text-white text-center select-none cursor-pointer flex items-center justify-center gap-1"
                         >
-                          Different
+                          <AlertCircle className="w-3 h-3 text-amber-400" />
+                          <span>Not Related</span>
                         </button>
+
+                        <button
+                          onClick={() => {
+                            handleSaveOutfit(index);
+                            AIStyleHubV17Architecture.recordLearningSignal('OUTFITS', 'SAVE', fiosData?.user_profile?.style || 'Curated Ensemble');
+                            window.dispatchEvent(new CustomEvent('lookvision_sync_v17_memory'));
+                          }}
+                          className="text-[9.5px] font-mono py-1.5 rounded-lg transition-all border border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/25 text-indigo-300 hover:text-white text-center select-none cursor-pointer flex items-center justify-center gap-1 font-medium"
+                        >
+                          <Bookmark className="w-3 h-3 text-indigo-400" />
+                          <span>Save</span>
+                        </button>
+                      </div>
+
+                      {/* Secondary Action Grid: Download, Discard, Share */}
+                      <div className="grid grid-cols-3 gap-1.5 pt-1">
+                        <button
+                          onClick={() => {
+                            const imgUrl = outfitImages[index] || 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=800';
+                            const link = document.createElement('a');
+                            link.href = imgUrl;
+                            link.download = `${(fiosData?.style_title || 'Outfit').replace(/\s+/g, '_')}_Look.jpg`;
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+
+                            AIStyleHubV17Architecture.addDownloadItem({
+                              title: fiosData?.style_title || `Curated Look 0${index + 1}`,
+                              imageUrl: imgUrl,
+                              originModule: 'OUTFITS',
+                              fileFormat: 'JPG (HD 2K)',
+                              resolution: '2048x2048'
+                            });
+                            AIStyleHubV17Architecture.convertToAnonymousDraft({
+                              imageUrl: imgUrl,
+                              title: fiosData?.style_title || `Curated Look 0${index + 1}`,
+                              originModule: 'OUTFITS',
+                              category: fiosData?.user_profile?.occasion || 'Curated Outfit',
+                              styleVibe: fiosData?.user_profile?.style || 'Curated Ensemble',
+                              tags: ['outfit', (fiosData?.user_profile?.style || 'ensemble').toLowerCase()]
+                            });
+                            AIStyleHubV17Architecture.recordLearningSignal('OUTFITS', 'DOWNLOAD', fiosData?.user_profile?.style || 'Curated Ensemble');
+                            window.dispatchEvent(new CustomEvent('lookvision_sync_v17_memory'));
+                            window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: '⬇ Downloaded & archived into Anonymous Draft Engine' }));
+                          }}
+                          className="text-[9.5px] font-mono py-1.5 rounded-lg transition-all border border-white/10 bg-white/[0.02] hover:bg-white/[0.08] text-zinc-300 hover:text-white flex items-center justify-center gap-1 cursor-pointer select-none"
+                        >
+                          <Download className="w-3 h-3 text-blue-400" />
+                          <span>Download</span>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            const imgUrl = outfitImages[index] || 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=800';
+                            AIStyleHubV17Architecture.convertToAnonymousDraft({
+                              imageUrl: imgUrl,
+                              title: fiosData?.style_title || `Curated Look 0${index + 1}`,
+                              originModule: 'OUTFITS',
+                              category: fiosData?.user_profile?.occasion || 'Curated Outfit',
+                              styleVibe: fiosData?.user_profile?.style || 'Curated Ensemble',
+                              tags: ['outfit', (fiosData?.user_profile?.style || 'ensemble').toLowerCase()]
+                            });
+                            AIStyleHubV17Architecture.recordLearningSignal('OUTFITS', 'DISCARD', fiosData?.user_profile?.style || 'Curated Ensemble');
+                            window.dispatchEvent(new CustomEvent('lookvision_sync_v17_memory'));
+                            window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: '🗑 Discarded & converted to Anonymous Draft' }));
+                          }}
+                          className="text-[9.5px] font-mono py-1.5 rounded-lg transition-all border border-red-500/20 bg-red-500/5 hover:bg-red-500/15 text-red-300 hover:text-red-200 flex items-center justify-center gap-1 cursor-pointer select-none"
+                        >
+                          <Trash2 className="w-3 h-3 text-red-400" />
+                          <span>Discard</span>
+                        </button>
+
                         <button
                           onClick={() => {
                             const title = fiosData?.quick_summary || "FIOS Curated Style";
                             const top = outfit.items?.top || "";
                             const bottom = outfit.items?.bottom || "";
                             const shoes = outfit.items?.shoes || "";
-                            
-                            const shareText = `My Fashion AI Look:
-${title}
-
-${top}
-${bottom}
-${shoes}`;
-
+                            const shareText = `My Fashion AI Look:\n${title}\n\n${top}\n${bottom}\n${shoes}`;
                             navigator.clipboard.writeText(shareText);
                             setCopiedIndex(index);
                             setSharedCount(prev => prev + 1);
                             setDelightNotice("✓ Style copied");
                             setTimeout(() => setCopiedIndex(null), 2500);
                           }}
-                          className={`text-[9px] font-mono py-1 rounded transition-all border text-center select-none cursor-pointer flex items-center justify-center gap-1 ${
+                          className={`text-[9.5px] font-mono py-1.5 rounded-lg transition-all border flex items-center justify-center gap-1 cursor-pointer select-none ${
                             copiedIndex === index
                               ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400 font-bold'
                               : 'bg-white/[0.02] hover:bg-white/[0.07] border-white/10 text-white/80 hover:text-white'
@@ -2104,59 +2264,45 @@ ${shoes}`;
                         >
                           {copiedIndex === index ? (
                             <>
-                              <Check className="w-2.5 h-2.5" />
+                              <Check className="w-3 h-3" />
                               <span>Copied</span>
                             </>
                           ) : (
                             <>
-                              <Copy className="w-2.5 h-2.5" />
+                              <Copy className="w-3 h-3" />
                               <span>Share</span>
                             </>
                           )}
                         </button>
                       </div>
 
-                      {/* Firestore Saving Loop */}
-                      <div className="pt-2 border-t border-white/5 mt-2 space-y-2">
-                        <button
-                          onClick={() => handleSaveOutfit(index)}
-                          disabled={savingOutfit[index]}
-                          className="w-full text-[9.5px] font-mono py-1.5 rounded transition-all border border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/25 text-indigo-300 hover:text-white flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
-                        >
-                          {savingOutfit[index] ? (
-                            <>
-                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                              <span>Saving to Firestore...</span>
-                            </>
-                          ) : (
-                            <>
-                              <Cloud className="w-3.5 h-3.5" />
-                              <span>Save Outfit to Firestore</span>
-                            </>
-                          )}
-                        </button>
-
-                        {outfitImages[index] && (
-                          <button
-                            onClick={() => handlePostToCommunityFeed(index)}
-                            disabled={postingCommunityIndex[index]}
-                            className="w-full text-[9.5px] font-mono py-1.5 rounded transition-all border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/25 text-emerald-300 hover:text-white flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 font-bold"
-                          >
-                            {postingCommunityIndex[index] ? (
-                              <>
-                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                <span>Publishing to Community...</span>
-                              </>
-                            ) : (
-                              <>
-                                <Upload className="w-3.5 h-3.5" />
-                                <span>Post manually to Community Feed</span>
-                              </>
-                            )}
-                          </button>
-                        )}
-                      </div>
-
+                      {/* Primary Gateway Trigger: Send to HomeHub Publishing Queue */}
+                      <button
+                        onClick={() => {
+                          const imgUrl = outfitImages[index] || 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=800';
+                          AIStyleHubV17Architecture.queueAssetForPublishing({
+                            id: `outfit-asset-${Date.now()}-${index}`,
+                            title: fiosData?.style_title || `Curated Look 0${index + 1}`,
+                            description: outfit.fashion_reason || outfit.why_this_works || 'Curated high-fashion outfit ensemble.',
+                            imageUrl: imgUrl,
+                            originModule: 'OUTFITS',
+                            createdAt: new Date().toISOString(),
+                            tags: ['outfit', (fiosData?.user_profile?.style || 'ensemble').toLowerCase()],
+                            category: fiosData?.user_profile?.occasion || 'Curated Outfit',
+                            styleVibe: fiosData?.user_profile?.style || 'Curated Ensemble',
+                            qualityScore: outfit.confidence || 92
+                          });
+                          AIStyleHubV17Architecture.recordLearningSignal('OUTFITS', 'PUBLISH', fiosData?.user_profile?.style || 'Curated Ensemble');
+                          window.dispatchEvent(new CustomEvent('lookvision_sync_v17_memory'));
+                          window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
+                            detail: '🚀 Outfit Queued to HomeHub Universal Publishing Gateway!'
+                          }));
+                        }}
+                        className="w-full py-2.5 rounded-xl transition-all border border-indigo-500/30 bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-indigo-500/20 hover:from-indigo-500/30 hover:to-purple-500/30 text-white font-mono text-[10.5px] font-bold flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-indigo-500/10 active:scale-[0.99]"
+                      >
+                        <Send className="w-3.5 h-3.5 text-indigo-300" />
+                        <span>Send to HomeHub Publishing Gateway</span>
+                      </button>
                     </div>
                   </motion.div>
                 );
@@ -2424,8 +2570,8 @@ ${shoes}`;
                   </div>
                   <div className="text-left">
                     <span className="block text-[8px] font-mono text-zinc-500 uppercase">Fallback Node</span>
-                    <span className={`block text-[11px] font-bold font-mono uppercase ${simulatedFallbackActive ? 'text-amber-400 animate-pulse font-bold' : 'text-zinc-500'}`}>
-                      {simulatedFallbackActive ? 'ACTIVE (V2)' : 'STANDBY (V3)'}
+                    <span className={`block text-[11px] font-bold font-mono uppercase ${simulatedFallbackActive ? 'text-amber-400 animate-pulse font-bold' : 'text-indigo-400'}`}>
+                      {simulatedFallbackActive ? 'FALLBACK ACTIVE (V2)' : 'READY (V3.0 CORE)'}
                     </span>
                   </div>
                 </div>
@@ -2803,6 +2949,32 @@ ${shoes}`;
               {/* Action buttons under image */}
               {studioGeneratedImage && (
                 <div className="space-y-2.5 pt-2">
+                  <button
+                    onClick={() => {
+                      AIStyleHubV17Architecture.queueAssetForPublishing({
+                        id: `studio-asset-${Date.now()}`,
+                        title: `Studio Lookbook: ${studioUpper !== 'None' ? studioUpper : 'Ensemble'}`,
+                        description: `Studio Lookbook Photo rendered with theme ${studioTheme}`,
+                        imageUrl: studioGeneratedImage,
+                        originModule: 'OUTFITS',
+                        createdAt: new Date().toISOString(),
+                        tags: ['studio-outfit', studioTheme.toLowerCase()],
+                        category: studioFormality || 'Studio Outfit',
+                        styleVibe: studioTheme || 'Studio Bespoke',
+                        qualityScore: 96
+                      });
+                      AIStyleHubV17Architecture.recordLearningSignal('OUTFITS', 'PUBLISH', studioTheme || 'Studio Bespoke');
+                      window.dispatchEvent(new CustomEvent('lookvision_sync_v17_memory'));
+                      window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
+                        detail: '🚀 Studio Look Queued to HomeHub Universal Publishing Gateway!'
+                      }));
+                    }}
+                    className="w-full py-2.5 rounded-xl transition-all border border-indigo-500/30 bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-indigo-500/20 hover:from-indigo-500/30 hover:to-purple-500/30 text-white font-mono text-[10.5px] font-bold flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-indigo-500/10 active:scale-[0.99]"
+                  >
+                    <Send className="w-3.5 h-3.5 text-indigo-300" />
+                    <span>Send Studio Look to HomeHub Gateway</span>
+                  </button>
+
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       onClick={() => {

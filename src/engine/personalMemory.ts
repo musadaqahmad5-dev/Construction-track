@@ -23,6 +23,7 @@ export interface NegativeKnowledge {
 
 export interface PersonalTimeline {
   activeSeason: string; // "Summer" | "Winter" | "Ramadan" | "Eid" | "Vacation" | "Weekend" | "Daily casual" | "Office" | "Wedding"
+  targetLocation?: string;
   seasonalPreferences: Record<string, {
     colors: string[];
     garments: string[];
@@ -221,6 +222,16 @@ export class PersonalFashionMemoryEngine {
     }
   }
 
+  static resetMemory(userId: string): void {
+    this.store.delete(userId);
+    try {
+      localStorage.removeItem(`fashion_memory_${userId}`);
+    } catch (e) {
+      // Ignored in headless tests
+    }
+    console.log(`[PersonalFashionMemoryEngine] Memory reset for user: ${userId}`);
+  }
+
   /**
    * Helper function to check if an item matches the smart negative dislikes list
    */
@@ -259,6 +270,38 @@ export class PersonalFashionMemoryEngine {
     }
 
     return { disliked: false };
+  }
+
+  static addDislikeColor(userId: string, color: string): void {
+    const memory = this.getMemory(userId);
+    const lower = color.toLowerCase();
+    if (!memory.dislikes.colors.includes(lower)) {
+      memory.dislikes.colors.push(lower);
+      this.saveMemory(memory);
+    }
+  }
+
+  static removeDislikeColor(userId: string, color: string): void {
+    const memory = this.getMemory(userId);
+    const lower = color.toLowerCase();
+    memory.dislikes.colors = memory.dislikes.colors.filter(c => c !== lower);
+    this.saveMemory(memory);
+  }
+
+  static addDislikeGarment(userId: string, garment: string): void {
+    const memory = this.getMemory(userId);
+    const lower = garment.toLowerCase();
+    if (!memory.dislikes.garments.includes(lower)) {
+      memory.dislikes.garments.push(lower);
+      this.saveMemory(memory);
+    }
+  }
+
+  static removeDislikeGarment(userId: string, garment: string): void {
+    const memory = this.getMemory(userId);
+    const lower = garment.toLowerCase();
+    memory.dislikes.garments = memory.dislikes.garments.filter(g => g !== lower);
+    this.saveMemory(memory);
   }
 
   /**

@@ -1,3 +1,10 @@
+import { 
+  AICreationUniverseCategory, 
+  AICreationUniverseMode, 
+  MultiViewPresentation, 
+  MarketplaceAssetMeta 
+} from '../../features/image-generation/AICreationsUniverseEngine';
+
 export interface AICreationCreator {
   id: string;
   name: string;
@@ -32,6 +39,23 @@ export interface AICreation {
   tags: string[];
   colorPalette: string[];
   variations?: string[]; // URLs of alternative renders
+  
+  // A01 Evolution Universe Extensions
+  creationCategory?: AICreationUniverseCategory;
+  creationMode?: AICreationUniverseMode;
+  multiView?: MultiViewPresentation;
+  marketplaceMeta?: MarketplaceAssetMeta;
+  conceptMeaning?: string;
+  visualDirection?: string;
+  isSharedToCommunity?: boolean;
+  videoUrl?: string;
+  mediaType?: 'image' | 'video';
+  motionSettings?: {
+    cameraMotion: string;
+    fps: number;
+    duration: number;
+  };
 }
 
-export type AICreationTab = 'GALLERY' | 'DISCOVERY' | 'PORTFOLIO' | '3D_LAB' | 'CREATE_WITH_AI';
+export type AICreationTab = 'GALLERY' | 'DISCOVERY' | 'PORTFOLIO' | '3D_LAB' | 'CREATE_WITH_AI' | 'UNIVERSE_STUDIO';
+

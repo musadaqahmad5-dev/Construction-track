@@ -1,6 +1,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ShoppingBag, Search, SlidersHorizontal, ArrowUpRight, Heart, Store, Sparkles, Filter, ChevronRight, Tag, Info, ShoppingCart, AlertCircle, X, Mail } from 'lucide-react';
+import { 
+  ShoppingBag, Search, SlidersHorizontal, ArrowUpRight, Heart, Store, 
+  Sparkles, Filter, ChevronRight, Tag, Info, ShoppingCart, AlertCircle, X, 
+  Mail, CheckCircle2, User, Layers, ShieldCheck, Zap, Scale, Plus, ArrowRight, Check
+} from 'lucide-react';
 import { WardrobeItem } from '../../types';
 import { collection, query, onSnapshot, addDoc, serverTimestamp, where, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
@@ -14,7 +18,74 @@ interface MarketplaceScreenProps {
   user?: any;
 }
 
+export const CREATOR_CAPSULES = [
+  {
+    creatorHandle: '@elena_luxe',
+    creatorName: 'Elena Rostova',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop',
+    title: 'Milan Autumn Wool Capsule',
+    royaltyShare: '88% Creator Royalty',
+    tagline: 'Quiet luxury silhouettes crafted from Italian virgin wool.',
+    itemCount: 3,
+    featuredImage: 'https://images.unsplash.com/photo-1509631179647-0177331693ae?q=80&w=600&auto=format&fit=crop'
+  },
+  {
+    creatorHandle: '@julian_cyber',
+    creatorName: 'Julian Vance',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop',
+    title: 'Neo-Tokyo Storm Anorak Line',
+    royaltyShare: '85% Creator Royalty',
+    tagline: 'GORE-TEX weather armor and modular magnetic sling pouches.',
+    itemCount: 2,
+    featuredImage: 'https://images.unsplash.com/photo-1544441893-675973e31985?q=80&w=600&auto=format&fit=crop'
+  },
+  {
+    creatorHandle: '@clara_couture',
+    creatorName: 'Clara Moreau',
+    avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=200&auto=format&fit=crop',
+    title: 'Monolithic Silk Atelier Drop',
+    royaltyShare: '90% Creator Royalty',
+    tagline: 'Architectural silk gowns & deconstructed tailored outer coats.',
+    itemCount: 4,
+    featuredImage: 'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?q=80&w=600&auto=format&fit=crop'
+  }
+];
+
 export const BOUTIQUE_PRODUCTS = [
+  {
+    id: 'prod-creator-1',
+    brand: '@elena_luxe Atelier',
+    title: 'Milanese Virgin Wool Trench Coat',
+    price: 285.00,
+    originalPrice: 340.00,
+    discount: '16% OFF',
+    rating: '4.9',
+    reviews: 58,
+    category: 'Outerwear' as const,
+    availability: 'Limited' as const,
+    vibeTags: ['creator_drop', 'minimalist', 'luxury', 'wool'],
+    description: 'Exclusive creator drop by Elena Rostova. Double-faced virgin wool trench with magnetic horn buttoning and silk lining.',
+    imageUrl: 'https://images.unsplash.com/photo-1509631179647-0177331693ae?q=80&w=500&auto=format&fit=crop',
+    isCreatorDrop: true,
+    creatorHandle: '@elena_luxe',
+    royaltyShare: '88% Creator Share'
+  },
+  {
+    id: 'prod-creator-2',
+    brand: '@julian_cyber Tech',
+    title: 'Modular Magnetic Sling Anorak',
+    price: 195.00,
+    rating: '4.8',
+    reviews: 44,
+    category: 'Outerwear' as const,
+    availability: 'Limited' as const,
+    vibeTags: ['creator_drop', 'techwear', 'waterproof', 'utility'],
+    description: 'Designed by Julian Vance. High-density storm twill with Fidlock magnetic buckle closures and waterproof seam taping.',
+    imageUrl: 'https://images.unsplash.com/photo-1544441893-675973e31985?q=80&w=500&auto=format&fit=crop',
+    isCreatorDrop: true,
+    creatorHandle: '@julian_cyber',
+    royaltyShare: '85% Creator Share'
+  },
   {
     id: 'prod-1',
     brand: 'ZARA MAN COUTURE',
@@ -123,12 +194,28 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({
     };
   }, []);
 
-  const [activeSubTab, setActiveSubTab] = useState<'All' | 'New In' | 'Brands' | 'Sale'>('All');
+  const [activeSubTab, setActiveSubTab] = useState<'All' | 'Creator Drops' | 'New In' | 'Brands' | 'Sale'>('All');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [selectedStoreType, setSelectedStoreType] = useState<string>('All');
   const [priceRange, setPriceRange] = useState<number>(300);
   const [showFilters, setShowFilters] = useState(false);
-  const [likedMap, setLikedMap] = useState<Record<string, boolean>>({});
+  const [likedMap, setLikedMap] = useState<Record<string, boolean>>(() => {
+    try {
+      const saved = localStorage.getItem('lookvision_liked_products');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return { 'prod-creator-1': true };
+  });
+
+  useEffect(() => {
+    localStorage.setItem('lookvision_liked_products', JSON.stringify(likedMap));
+  }, [likedMap]);
+
+  // Wishlist Drawer & Garment Comparison States
+  const [isWishlistOpen, setIsWishlistOpen] = useState(false);
+  const [comparedProductIds, setComparedProductIds] = useState<string[]>([]);
+  const [selectedCreatorCapsule, setSelectedCreatorCapsule] = useState<typeof CREATOR_CAPSULES[0] | null>(null);
+
   const [dbProducts, setDbProducts] = useState<any[]>([]);
 
   // Real-time shopping cart/order drawer states
@@ -273,6 +360,7 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({
       
       // 2. Tab Filter Match
       let matchesTab = true;
+      if (activeSubTab === 'Creator Drops') matchesTab = !!item.isCreatorDrop || (item.vibeTags && item.vibeTags.includes('creator_drop'));
       if (activeSubTab === 'New In') matchesTab = item.availability === 'Limited';
       if (activeSubTab === 'Brands') matchesTab = item.price > 100;
       if (activeSubTab === 'Sale') matchesTab = !!item.discount;
@@ -322,6 +410,21 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({
                 <span className="block text-xs text-white font-bold">{userWardrobe.length} Pieces</span>
               </div>
             </div>
+
+            {/* Wishlist & Style Comparison Drawer Trigger */}
+            <button
+              onClick={() => setIsWishlistOpen(true)}
+              className="p-3 bg-rose-500/5 hover:bg-rose-500/10 border border-rose-500/20 hover:border-rose-500/40 rounded-xl flex items-center gap-3 transition-all cursor-pointer text-left"
+              title="Open Wishlist & Comparison Matrix"
+            >
+              <Heart className="w-4 h-4 text-rose-400 fill-rose-400/20" />
+              <div className="text-left font-mono">
+                <span className="block text-[8px] uppercase text-rose-300">Wishlist Matrix</span>
+                <span className="block text-xs text-rose-400 font-bold">
+                  {Object.values(likedMap).filter(Boolean).length} Saved
+                </span>
+              </div>
+            </button>
 
             {/* Interactive Shopping Cart Reservations button */}
             <button 
@@ -387,7 +490,7 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({
 
         {/* Subtab Pill Navigation */}
         <div className="flex gap-1.5 overflow-x-auto w-full md:w-auto no-scrollbar py-1">
-          {['All', 'New In', 'Brands', 'Sale'].map((tab) => (
+          {['All', 'Creator Drops', 'New In', 'Brands', 'Sale'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveSubTab(tab as any)}
@@ -504,6 +607,68 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({
         )}
       </AnimatePresence>
 
+      {/* Creator Drops & Capsule Showroom Showcase */}
+      {(activeSubTab === 'All' || activeSubTab === 'Creator Drops') && (
+        <div className="max-w-6xl mx-auto mb-8 text-left space-y-3">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-violet-400" />
+              <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-zinc-300">
+                Creator Drops & Capsule Storefronts
+              </h3>
+            </div>
+            <span className="text-[10px] font-mono text-zinc-500 uppercase">Direct Creator Economy &middot; Verified Atelier Drops</span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {CREATOR_CAPSULES.map((cap, idx) => (
+              <div
+                key={idx}
+                onClick={() => setSelectedCreatorCapsule(cap)}
+                className="group relative aspect-[16/10] rounded-2xl overflow-hidden border border-white/5 hover:border-violet-500/30 transition-all cursor-pointer bg-zinc-950 p-4 flex flex-col justify-between shadow-xl"
+              >
+                <img
+                  src={cap.featuredImage}
+                  alt={cap.title}
+                  className="absolute inset-0 w-full h-full object-cover opacity-35 group-hover:scale-105 transition-transform duration-700"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#07070c] via-[#07070c]/50 to-transparent" />
+
+                <div className="relative z-10 flex justify-between items-start">
+                  <div className="flex items-center gap-2">
+                    <img
+                      src={cap.avatar}
+                      alt={cap.creatorName}
+                      className="w-7 h-7 rounded-full object-cover border border-white/20"
+                    />
+                    <div>
+                      <span className="text-[10px] font-bold text-white block leading-tight">{cap.creatorName}</span>
+                      <span className="text-[8px] font-mono text-violet-300 block">{cap.creatorHandle}</span>
+                    </div>
+                  </div>
+                  <span className="text-[8px] font-mono bg-violet-500/20 text-violet-300 border border-violet-500/30 px-2 py-0.5 rounded-md font-bold">
+                    {cap.royaltyShare}
+                  </span>
+                </div>
+
+                <div className="relative z-10 space-y-1">
+                  <h4 className="font-serif text-sm font-semibold text-white group-hover:text-violet-200 transition-colors">
+                    {cap.title}
+                  </h4>
+                  <p className="text-[10px] text-zinc-400 font-light line-clamp-1">{cap.tagline}</p>
+                  <div className="pt-2 flex items-center justify-between text-[9px] font-mono text-violet-300">
+                    <span>[ {cap.itemCount} Exclusive Pieces ]</span>
+                    <span className="flex items-center gap-1 font-bold group-hover:translate-x-1 transition-transform">
+                      Explore Drop <ArrowRight className="w-3 h-3" />
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Grid Product Catalog Listings */}
       <div className="max-w-6xl mx-auto">
         {filteredProducts.length === 0 ? (
@@ -611,14 +776,32 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({
                       <span className="text-zinc-600">({product.reviews})</span>
                     </div>
 
-                    {/* Quick acquire CTA */}
-                    <button
-                      onClick={(e) => handleAcquire(product, e)}
-                      className="w-8 h-8 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black flex items-center justify-center cursor-pointer transition-all hover:scale-105 active:scale-90 shadow-md shadow-emerald-950/20"
-                      title="Add to Closet"
-                    >
-                      <ShoppingBag className="w-3.5 h-3.5 text-black font-bold" />
-                    </button>
+                    {/* Quick CTAs: Virtual Try-On and Add to Closet */}
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (onNavigateToTab) {
+                            onNavigateToTab('VIRTUAL_TRYON');
+                          } else {
+                            window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: 'Navigating to Virtual Fitting Room...' }));
+                          }
+                        }}
+                        className="px-2.5 py-1 rounded-xl bg-violet-500/10 hover:bg-violet-500/20 text-violet-300 border border-violet-500/20 text-[9px] font-mono uppercase tracking-wider flex items-center gap-1 transition-all cursor-pointer"
+                        title="Instant Virtual Fitting"
+                      >
+                        <Sparkles className="w-3 h-3 text-violet-400" />
+                        <span>Try On</span>
+                      </button>
+
+                      <button
+                        onClick={(e) => handleAcquire(product, e)}
+                        className="w-8 h-8 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black flex items-center justify-center cursor-pointer transition-all hover:scale-105 active:scale-90 shadow-md shadow-emerald-950/20"
+                        title="Acquire Garment to Closet"
+                      >
+                        <ShoppingBag className="w-3.5 h-3.5 text-black font-bold" />
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -894,6 +1077,283 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({
                 >
                   [ Close Log ]
                 </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Wishlist & Style Comparison Matrix Drawer */}
+      <AnimatePresence>
+        {isWishlistOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-[#05050a]/90 backdrop-blur-md z-50 flex justify-end"
+          >
+            <div className="absolute inset-0" onClick={() => setIsWishlistOpen(false)} />
+
+            <motion.div 
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="relative w-full max-w-lg bg-[#07070c] border-l border-white/5 h-full shadow-2xl flex flex-col justify-between p-6 overflow-hidden z-50 text-left"
+            >
+              {/* Header */}
+              <div className="flex justify-between items-center border-b border-white/5 pb-4">
+                <div>
+                  <h2 className="font-serif text-xl font-light text-white tracking-tight flex items-center gap-2">
+                    <Heart className="w-5 h-5 text-rose-400 fill-rose-400/20" />
+                    <span>Wishlist Matrix</span>
+                  </h2>
+                  <p className="text-[9px] font-mono uppercase tracking-widest text-rose-400 mt-0.5">
+                    Saved Favorites & Side-by-Side Comparison Engine
+                  </p>
+                </div>
+                <button 
+                  onClick={() => setIsWishlistOpen(false)}
+                  className="text-white/40 hover:text-white font-mono text-[10px] uppercase font-bold cursor-pointer bg-white/5 px-3 py-1.5 rounded-lg border border-white/10"
+                >
+                  [ Close ]
+                </button>
+              </div>
+
+              {/* Scrollable Content */}
+              <div className="flex-1 py-4 overflow-y-auto space-y-4 no-scrollbar">
+                
+                {/* Comparison Mode Header Trigger */}
+                {comparedProductIds.length > 0 && (
+                  <div className="bg-violet-500/10 border border-violet-500/20 rounded-xl p-3 flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                      <Scale className="w-4 h-4 text-violet-400" />
+                      <span className="text-xs font-mono text-violet-300">
+                        Comparing {comparedProductIds.length}/2 Garments
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setComparedProductIds([])}
+                      className="text-[9px] font-mono text-zinc-400 hover:text-white uppercase"
+                    >
+                      Clear Selection
+                    </button>
+                  </div>
+                )}
+
+                {/* Side-by-Side Comparison Panel if 2 items selected */}
+                {comparedProductIds.length === 2 && (() => {
+                  const compItems = combinedProducts.filter(p => comparedProductIds.includes(p.id));
+                  if (compItems.length < 2) return null;
+                  const [itemA, itemB] = compItems;
+                  return (
+                    <div className="bg-white/[0.02] border border-violet-500/30 rounded-2xl p-4 space-y-4">
+                      <div className="flex items-center gap-2 border-b border-white/5 pb-2">
+                        <Scale className="w-4 h-4 text-violet-400" />
+                        <h4 className="text-xs font-mono uppercase tracking-wider text-white font-bold">
+                          Side-by-Side Spec Comparison
+                        </h4>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3 text-xs">
+                        {[itemA, itemB].map((item, idx) => (
+                          <div key={item.id} className="space-y-2 p-2 bg-black/40 rounded-xl border border-white/5">
+                            <img
+                              src={item.imageUrl}
+                              alt={item.title}
+                              className="w-full aspect-[4/5] object-cover rounded-lg"
+                              referrerPolicy="no-referrer"
+                            />
+                            <div className="space-y-0.5">
+                              <span className="text-[8px] font-mono text-emerald-400 uppercase font-bold block">{item.brand}</span>
+                              <h5 className="font-semibold text-white truncate text-[11px]">{item.title}</h5>
+                              <p className="text-xs font-bold text-white">${item.price}</p>
+                            </div>
+                            <div className="pt-2 border-t border-white/5 space-y-1 text-[9px] font-mono text-zinc-400">
+                              <p><span className="text-zinc-500">Category:</span> {item.category}</p>
+                              <p><span className="text-zinc-500">Rating:</span> ★ {item.rating}</p>
+                              <p><span className="text-zinc-500">AI Compatibility:</span> <span className="text-emerald-400 font-bold">94% Match</span></p>
+                            </div>
+                            <button
+                              onClick={(e) => handleAcquire(item, e)}
+                              className="w-full py-2 bg-emerald-500 hover:bg-emerald-400 text-black text-[9px] font-mono uppercase font-bold rounded-lg transition-all"
+                            >
+                              Acquire {idx === 0 ? 'Item A' : 'Item B'}
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* List of Favorited Items */}
+                {Object.keys(likedMap).filter(id => likedMap[id]).length === 0 ? (
+                  <div className="py-20 text-center space-y-4">
+                    <div className="w-12 h-12 border border-white/5 rounded-full flex items-center justify-center mx-auto text-zinc-600">
+                      <Heart className="w-5 h-5 text-rose-500/40" />
+                    </div>
+                    <div className="space-y-1 max-w-[200px] mx-auto">
+                      <p className="text-xs font-mono text-zinc-400 uppercase tracking-widest font-bold">Wishlist Empty</p>
+                      <p className="text-[11px] font-serif text-zinc-500 italic">"Tap the heart icon on any boutique item to save it for comparative analysis."</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-wider block font-bold">
+                      Saved Boutique Listings ({Object.keys(likedMap).filter(id => likedMap[id]).length})
+                    </span>
+
+                    {combinedProducts
+                      .filter(p => likedMap[p.id])
+                      .map(p => (
+                        <div
+                          key={p.id}
+                          className={`bg-white/[0.01] border p-3.5 rounded-xl flex gap-3.5 items-center transition-all ${
+                            comparedProductIds.includes(p.id)
+                              ? 'border-violet-500/50 bg-violet-500/5'
+                              : 'border-white/5 hover:border-white/10'
+                          }`}
+                        >
+                          <img
+                            src={p.imageUrl}
+                            alt={p.title}
+                            className="w-14 h-18 object-cover rounded-lg border border-white/5 shrink-0"
+                            referrerPolicy="no-referrer"
+                          />
+
+                          <div className="space-y-1 flex-1 min-w-0">
+                            <span className="text-[8px] font-mono text-emerald-400 uppercase font-bold block">{p.brand}</span>
+                            <h4 className="font-semibold text-xs text-white truncate">{p.title}</h4>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-white font-bold">${p.price}</span>
+                              <span className="text-[8px] font-mono bg-violet-500/20 text-violet-300 px-1.5 py-0.5 rounded">
+                                AI Match 94%
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col gap-1.5 shrink-0">
+                            <button
+                              onClick={() => {
+                                if (comparedProductIds.includes(p.id)) {
+                                  setComparedProductIds(comparedProductIds.filter(id => id !== p.id));
+                                } else if (comparedProductIds.length < 2) {
+                                  setComparedProductIds([...comparedProductIds, p.id]);
+                                } else {
+                                  setComparedProductIds([comparedProductIds[1], p.id]);
+                                }
+                              }}
+                              className={`px-2 py-1 rounded text-[8px] font-mono uppercase tracking-wider border transition-all cursor-pointer ${
+                                comparedProductIds.includes(p.id)
+                                  ? 'bg-violet-500 text-white border-violet-400'
+                                  : 'bg-white/5 text-zinc-400 border-white/10 hover:text-white'
+                              }`}
+                            >
+                              {comparedProductIds.includes(p.id) ? 'Comparing' : '+ Compare'}
+                            </button>
+
+                            <button
+                              onClick={(e) => handleAcquire(p, e)}
+                              className="px-2 py-1 bg-emerald-500 hover:bg-emerald-400 text-black rounded text-[8px] font-mono uppercase font-bold transition-all cursor-pointer"
+                            >
+                              Acquire
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Drawer Footer */}
+              <div className="border-t border-white/5 pt-4 space-y-1 font-mono text-[8.5px] text-zinc-500 uppercase">
+                <p>&copy; LookVision Style Intelligence Engine</p>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Creator Capsule Modal Showcase */}
+      <AnimatePresence>
+        {selectedCreatorCapsule && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-[#0b0b12] border border-white/10 w-full max-w-2xl rounded-3xl overflow-hidden shadow-2xl relative text-left max-h-[85vh] flex flex-col"
+            >
+              {/* Header Banner */}
+              <div className="h-36 w-full relative bg-zinc-900 overflow-hidden shrink-0">
+                <img
+                  src={selectedCreatorCapsule.featuredImage}
+                  alt={selectedCreatorCapsule.title}
+                  className="w-full h-full object-cover opacity-60"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0b0b12] via-[#0b0b12]/40 to-transparent" />
+                <button
+                  onClick={() => setSelectedCreatorCapsule(null)}
+                  className="absolute top-4 right-4 p-2 bg-black/60 hover:bg-black border border-white/10 rounded-full text-zinc-400 hover:text-white transition-all cursor-pointer z-10"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Creator Metainfo */}
+              <div className="p-6 space-y-4 overflow-y-auto no-scrollbar -mt-10 relative z-10">
+                <div className="flex items-end gap-3">
+                  <img
+                    src={selectedCreatorCapsule.avatar}
+                    alt={selectedCreatorCapsule.creatorName}
+                    className="w-16 h-16 rounded-2xl object-cover border-2 border-[#0b0b12] shadow-xl bg-zinc-900"
+                  />
+                  <div>
+                    <span className="text-[9px] font-mono text-violet-400 uppercase font-bold tracking-widest block">
+                      {selectedCreatorCapsule.creatorHandle}
+                    </span>
+                    <h3 className="font-serif text-xl text-white font-bold">{selectedCreatorCapsule.creatorName}</h3>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center">
+                    <h4 className="font-serif text-lg text-white font-medium">{selectedCreatorCapsule.title}</h4>
+                    <span className="text-[9px] font-mono bg-violet-500/20 text-violet-300 border border-violet-500/30 px-2.5 py-1 rounded-lg font-bold">
+                      {selectedCreatorCapsule.royaltyShare}
+                    </span>
+                  </div>
+                  <p className="text-xs text-zinc-400 font-light">{selectedCreatorCapsule.tagline}</p>
+                </div>
+
+                {/* Garments in this Capsule */}
+                <div className="space-y-3 pt-2">
+                  <span className="text-[10px] font-mono uppercase text-zinc-500 tracking-wider font-bold block">
+                    Garments In This Capsule Drop
+                  </span>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {BOUTIQUE_PRODUCTS
+                      .filter(p => p.creatorHandle === selectedCreatorCapsule.creatorHandle || p.vibeTags.includes('creator_drop'))
+                      .slice(0, 2)
+                      .map(p => (
+                        <div key={p.id} className="bg-black/40 border border-white/5 rounded-xl p-3 flex gap-3 items-center">
+                          <img src={p.imageUrl} alt={p.title} className="w-12 h-16 object-cover rounded-lg" />
+                          <div className="space-y-1 flex-1 min-w-0">
+                            <h5 className="text-xs font-semibold text-white truncate">{p.title}</h5>
+                            <p className="text-xs font-bold text-emerald-400">${p.price}</p>
+                            <button
+                              onClick={(e) => handleAcquire(p, e)}
+                              className="px-2.5 py-1 bg-emerald-500 hover:bg-emerald-400 text-black text-[8px] font-mono uppercase font-bold rounded-md transition-all cursor-pointer"
+                            >
+                              Acquire Piece
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
               </div>
             </motion.div>
           </div>

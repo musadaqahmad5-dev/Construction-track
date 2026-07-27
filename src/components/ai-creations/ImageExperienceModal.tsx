@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { 
   X, Heart, Bookmark, Share2, Copy, Check, RefreshCw, 
   Trash2, Archive, ZoomIn, Sliders, Info, Eye, Layers, 
-  UserPlus, UserMinus, Plus, FileText, ChevronRight, Minimize
+  UserPlus, UserMinus, Plus, FileText, ChevronRight, Minimize,
+  Download, Send, ThumbsDown, AlertCircle, Zap
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { AICreation } from './types';
+import { AIStyleHubV17Architecture } from '../../features/global/AIStyleHubV17Architecture';
 
 interface ImageExperienceModalProps {
   creation: AICreation;
@@ -600,10 +602,11 @@ export const ImageExperienceModal: React.FC<ImageExperienceModalProps> = ({
           </div>
 
           {/* Action Toolbar Bottom Panel */}
-          <div className="pt-6 border-t border-white/5 space-y-2.5 mt-6">
+          <div className="pt-6 border-t border-white/5 space-y-3 mt-6">
             {/* Primary Atelier Workspace Actions */}
             <div className="grid grid-cols-2 gap-2">
               <button
+                type="button"
                 onClick={() => onRemix(creation)}
                 className="flex items-center justify-center gap-1.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-sans font-bold text-[11px] uppercase py-3 rounded-xl tracking-wider cursor-pointer active:scale-95 transition-all border border-white/10 shadow-lg shadow-violet-600/10"
               >
@@ -612,21 +615,45 @@ export const ImageExperienceModal: React.FC<ImageExperienceModalProps> = ({
               </button>
 
               <button
-                onClick={() => onDuplicate && onDuplicate(creation)}
-                className="flex items-center justify-center gap-1.5 bg-[#11111a] hover:bg-white/5 border border-white/5 text-zinc-300 hover:text-white font-sans font-semibold text-[11px] uppercase py-3 rounded-xl tracking-wider cursor-pointer active:scale-95 transition-all"
+                type="button"
+                onClick={() => {
+                  AIStyleHubV17Architecture.queueAssetForPublishing({
+                    id: creation.id,
+                    title: creation.title,
+                    description: creation.prompt,
+                    imageUrl: creation.imageUrl,
+                    originModule: 'AI_CREATIONS',
+                    createdAt: creation.createdAt || new Date().toISOString(),
+                    tags: creation.tags,
+                    category: creation.creationCategory || 'AI Fashion',
+                    styleVibe: creation.style || 'Avant-Garde',
+                    qualityScore: 96
+                  });
+                  AIStyleHubV17Architecture.recordLearningSignal('AI_CREATIONS', 'PUBLISH', creation.style || 'Avant-Garde');
+                  window.dispatchEvent(new CustomEvent('lookvision_sync_v17_memory'));
+                  window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
+                    detail: '🚀 Queued to HomeHub Universal Publishing Gateway!'
+                  }));
+                }}
+                className="flex items-center justify-center gap-1.5 bg-emerald-900/30 hover:bg-emerald-800/40 border border-emerald-500/30 text-emerald-300 font-sans font-bold text-[11px] uppercase py-3 rounded-xl tracking-wider cursor-pointer active:scale-95 transition-all"
               >
-                <Layers className="w-3.5 h-3.5 text-zinc-400" />
-                <span>Duplicate Concept</span>
+                <Send className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Send to HomeHub Gateway</span>
               </button>
             </div>
 
-            {/* Quick Helper Actions: Favorite, Archive, Delete */}
-            <div className="grid grid-cols-3 gap-1.5">
+            {/* HomeHub Integrated Feedback Bar */}
+            <div className="grid grid-cols-4 gap-1.5">
               <button
-                onClick={() => onLike(creation.id)}
-                className={`flex-1 py-2 rounded-lg border text-[10px] font-mono font-bold uppercase tracking-wider flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                type="button"
+                onClick={() => {
+                  onLike(creation.id);
+                  AIStyleHubV17Architecture.recordLearningSignal('AI_CREATIONS', 'LIKE', creation.style || 'Avant-Garde');
+                  window.dispatchEvent(new CustomEvent('lookvision_sync_v17_memory'));
+                }}
+                className={`py-2 rounded-lg border text-[10px] font-mono font-bold uppercase tracking-wider flex items-center justify-center gap-1 transition-all cursor-pointer ${
                   isLiked 
-                    ? 'bg-rose-500/10 border-rose-500/30 text-rose-400' 
+                    ? 'bg-rose-500/15 border-rose-500/30 text-rose-400' 
                     : 'bg-black/40 border-white/5 text-zinc-400 hover:text-white hover:bg-white/5'
                 }`}
               >
@@ -635,19 +662,98 @@ export const ImageExperienceModal: React.FC<ImageExperienceModalProps> = ({
               </button>
 
               <button
-                onClick={() => onArchive && onArchive(creation.id)}
-                className="flex-1 bg-black/40 border border-white/5 hover:border-amber-500/30 text-zinc-400 hover:text-amber-400 hover:bg-amber-500/10 py-2 rounded-lg text-[10px] font-mono font-bold uppercase tracking-wider flex items-center justify-center gap-1 transition-all cursor-pointer"
+                type="button"
+                onClick={() => {
+                  AIStyleHubV17Architecture.recordLearningSignal('AI_CREATIONS', 'DISLIKE', creation.style || 'Avant-Garde');
+                  window.dispatchEvent(new CustomEvent('lookvision_sync_v17_memory'));
+                  window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
+                    detail: '👎 Dislike signal logged for AI Learning Engine'
+                  }));
+                }}
+                className="bg-black/40 border border-white/5 hover:border-amber-500/30 text-zinc-400 hover:text-amber-400 hover:bg-amber-500/10 py-2 rounded-lg text-[10px] font-mono font-bold uppercase tracking-wider flex items-center justify-center gap-1 transition-all cursor-pointer"
               >
-                <Archive className="w-3 h-3" />
-                <span>Archive</span>
+                <ThumbsDown className="w-3 h-3" />
+                <span>Dislike</span>
               </button>
 
               <button
-                onClick={() => onDelete && onDelete(creation.id)}
-                className="flex-1 bg-black/40 border border-white/5 hover:border-red-500/30 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 py-2 rounded-lg text-[10px] font-mono font-bold uppercase tracking-wider flex items-center justify-center gap-1 transition-all cursor-pointer"
+                type="button"
+                onClick={() => {
+                  AIStyleHubV17Architecture.recordLearningSignal('AI_CREATIONS', 'NOT_RELATED', creation.style || 'Avant-Garde');
+                  window.dispatchEvent(new CustomEvent('lookvision_sync_v17_memory'));
+                  window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
+                    detail: '🚫 Irrelevant signal logged'
+                  }));
+                }}
+                className="bg-black/40 border border-white/5 hover:border-orange-500/30 text-zinc-400 hover:text-orange-400 hover:bg-orange-500/10 py-2 rounded-lg text-[10px] font-mono font-bold uppercase tracking-wider flex items-center justify-center gap-1 transition-all cursor-pointer"
               >
-                <Trash2 className="w-3 h-3" />
-                <span>Delete</span>
+                <AlertCircle className="w-3 h-3" />
+                <span>Irrelevant</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const link = document.createElement('a');
+                  link.href = creation.imageUrl;
+                  link.download = `${creation.title.replace(/\s+/g, '_')}_AIStyleHub.jpg`;
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+
+                  AIStyleHubV17Architecture.addDownloadItem({
+                    title: creation.title,
+                    imageUrl: creation.imageUrl,
+                    originModule: 'AI_CREATIONS',
+                    fileFormat: 'PNG (Ultra 4K)',
+                    resolution: creation.resolution || '2048x2048'
+                  });
+                  AIStyleHubV17Architecture.convertToAnonymousDraft({
+                    imageUrl: creation.imageUrl,
+                    title: creation.title,
+                    originModule: 'AI_CREATIONS',
+                    category: creation.creationCategory || 'AI Fashion',
+                    styleVibe: creation.style || 'Avant-Garde',
+                    tags: creation.tags
+                  });
+                  AIStyleHubV17Architecture.recordLearningSignal('AI_CREATIONS', 'DOWNLOAD', creation.style || 'Avant-Garde');
+                  window.dispatchEvent(new CustomEvent('lookvision_sync_v17_memory'));
+                  window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
+                    detail: '⬇ Downloaded & archived into Anonymous Drafts!'
+                  }));
+                }}
+                className="bg-emerald-950/20 border border-emerald-500/20 hover:bg-emerald-900/30 text-emerald-300 py-2 rounded-lg text-[10px] font-mono font-bold uppercase tracking-wider flex items-center justify-center gap-1 transition-all cursor-pointer"
+              >
+                <Download className="w-3 h-3" />
+                <span>Download</span>
+              </button>
+            </div>
+
+            {/* Discard / Anonymous Draft Action */}
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  AIStyleHubV17Architecture.convertToAnonymousDraft({
+                    imageUrl: creation.imageUrl,
+                    title: creation.title,
+                    originModule: 'AI_CREATIONS',
+                    category: creation.creationCategory || 'AI Fashion',
+                    styleVibe: creation.style || 'Avant-Garde',
+                    tags: creation.tags
+                  });
+                  AIStyleHubV17Architecture.recordLearningSignal('AI_CREATIONS', 'DISCARD', creation.style || 'Avant-Garde');
+                  if (onDelete) onDelete(creation.id);
+                  onClose();
+                  window.dispatchEvent(new CustomEvent('lookvision_sync_v17_memory'));
+                  window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
+                    detail: '🗑 Discarded & anonymized into Anonymous Draft Engine'
+                  }));
+                }}
+                className="w-full bg-rose-950/20 border border-rose-500/20 hover:bg-rose-900/30 text-rose-300 py-2.5 rounded-xl text-[10px] font-mono font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Discard & Convert to Anonymous Draft</span>
               </button>
             </div>
           </div>

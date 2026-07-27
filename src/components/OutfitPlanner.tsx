@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { UnifiedFashionOS, ScheduledEvent } from '../features/ai-core/UnifiedFashionOS';
 import { WardrobeItem } from '../types';
+import { AIStyleHubV17Architecture } from '../features/global/AIStyleHubV17Architecture';
 
 interface OutfitPlannerProps {
   wardrobe: WardrobeItem[];
@@ -100,6 +101,26 @@ export const OutfitPlanner: React.FC<OutfitPlannerProps> = ({ wardrobe, themeObj
     }, 1200);
   };
 
+  const handlePublishOutfitToPublicMemory = () => {
+    if (selectedItems.length === 0) {
+      showToast('Select or generate pieces first.');
+      return;
+    }
+    const outfitTitle = title.trim() || `${occasion || 'Sartorial'} Ensemble`;
+    const outfitImg = selectedItems[0]?.imageUrl || 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=800';
+
+    AIStyleHubV17Architecture.convertToAnonymousDraft({
+      imageUrl: outfitImg,
+      title: outfitTitle,
+      originModule: 'OUTFITS',
+      category: occasion || 'Outfit Combination',
+      styleVibe: occasion || 'Planned Look',
+      tags: selectedItems.map(i => i.category || 'item')
+    });
+
+    showToast('🌐 Outfit published to Public Memory for the community to discover & wear!');
+  };
+
   // Handle Submit Form (Create / Edit)
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,6 +149,9 @@ export const OutfitPlanner: React.FC<OutfitPlannerProps> = ({ wardrobe, themeObj
       UnifiedFashionOS.addCustomScheduledEvent(payload);
       showToast('Outfit plan registered.');
     }
+
+    AIStyleHubV17Architecture.recordLearningSignal('OUTFITS', 'SAVE', occasion || 'Planned Look');
+    window.dispatchEvent(new CustomEvent('lookvision_sync_v17_memory'));
 
     resetForm();
   };
@@ -385,18 +409,51 @@ export const OutfitPlanner: React.FC<OutfitPlannerProps> = ({ wardrobe, themeObj
                   </div>
 
                   {/* Summary of Selected Items */}
-                  <div className="p-3 bg-white/[0.01] border border-white/5 rounded-xl">
-                    <p className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest mb-1.5 text-left">Selected Ensemble</p>
+                  <div className="p-3 bg-white/[0.01] border border-white/5 rounded-xl space-y-3">
+                    <p className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest text-left">Selected Ensemble</p>
                     {selectedItems.length === 0 ? (
                       <p className="text-xs text-zinc-600 italic text-left">No pieces selected. Use AI Generator or tick items above.</p>
                     ) : (
-                      <div className="flex flex-wrap gap-1.5">
-                        {selectedItems.map(item => (
-                          <span key={item.id} className="text-[10px] font-mono bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded border border-zinc-700 max-w-[140px] truncate">
-                            {item.title}
+                      <>
+                        <div className="flex flex-wrap gap-1.5">
+                          {selectedItems.map(item => (
+                            <span key={item.id} className="text-[10px] font-mono bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded border border-zinc-700 max-w-[140px] truncate">
+                              {item.title}
+                            </span>
+                          ))}
+                        </div>
+
+                        {/* RECOMMENDATION OVERLAY FOR OUTFIT DESTINATION */}
+                        <div className="p-3 bg-gradient-to-r from-violet-950/60 via-indigo-950/60 to-purple-950/60 border border-violet-500/40 rounded-xl space-y-2 text-left">
+                          <span className="text-[10px] font-mono text-amber-300 font-bold uppercase tracking-wider flex items-center gap-1">
+                            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                            <span>Where should this outfit go?</span>
                           </span>
-                        ))}
-                      </div>
+
+                          <div className="grid grid-cols-2 gap-2 pt-1">
+                            <button
+                              type="submit"
+                              className="py-2 px-2 bg-violet-600 hover:bg-violet-500 text-white rounded-lg text-[10px] font-mono font-semibold flex items-center justify-center gap-1 transition-all cursor-pointer"
+                            >
+                              <Calendar className="w-3.5 h-3.5 text-amber-300" />
+                              <span>🔒 Personal Schedule</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={handlePublishOutfitToPublicMemory}
+                              className="py-2 px-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-[10px] font-mono font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer"
+                            >
+                              <Sparkles className="w-3.5 h-3.5 text-cyan-200" />
+                              <span>🌐 Public Memory</span>
+                            </button>
+                          </div>
+
+                          <p className="text-[9px] font-mono text-zinc-400 leading-tight">
+                            💡 If unsaved, this generated outfit automatically flows into <span className="text-cyan-300">Public Memories</span> so other users can wear it!
+                          </p>
+                        </div>
+                      </>
                     )}
                   </div>
                 </div>

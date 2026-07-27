@@ -46,16 +46,27 @@ export const CreationCard: React.FC<CreationCardProps> = ({
       onClick={() => onSelect(creation)}
       className="group bg-[#080810]/60 border border-white/5 rounded-2xl overflow-hidden relative aspect-[3/4.2] hover:border-violet-500/20 hover:scale-[1.01] transition-all duration-300 shadow-xl cursor-pointer flex flex-col justify-end"
     >
-      {/* Background Image */}
+      {/* Background Image / Video */}
       <div className="absolute inset-0 bg-zinc-950 z-0">
-        <img
-          src={creation.imageUrl}
-          alt={creation.title}
-          className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
-          loading="lazy"
-          referrerPolicy="no-referrer"
-          onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?q=80&w=500&auto=format&fit=crop"; }}
-        />
+        {creation.videoUrl || creation.mediaType === 'video' ? (
+          <video
+            src={creation.videoUrl || 'https://assets.mixkit.co/videos/preview/mixkit-fashion-model-walking-in-a-studio-41123-large.mp4'}
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
+          />
+        ) : (
+          <img
+            src={creation.imageUrl}
+            alt={creation.title}
+            className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
+            loading="lazy"
+            referrerPolicy="no-referrer"
+            onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?q=80&w=500&auto=format&fit=crop"; }}
+          />
+        )}
       </div>
 
       {/* Gradient Overlay */}

@@ -11,6 +11,7 @@ import { WifiOff } from 'lucide-react';
 import { motion } from 'motion/react';
 import { AIStyleHub } from './components/AIStyleHub';
 import { UnifiedFashionOS } from './features/ai-core/UnifiedFashionOS';
+import { AIStyleHubV17Architecture } from './features/global/AIStyleHubV17Architecture';
 
 // Temporal light rules mapper
 export function getTemporalTheme() {
@@ -118,6 +119,12 @@ export default function App() {
       setFooterIndex(prev => (prev + 1) % 4);
     }, 15000);
     return () => clearInterval(tm);
+  }, []);
+
+  // Automated Hourly AI Memory Sync Daemon (Runs every 1 hour to upload generated AI images)
+  useEffect(() => {
+    const cleanup = AIStyleHubV17Architecture.startHourlySyncDaemon();
+    return () => cleanup();
   }, []);
 
   // Offline State Tracking using custom unified hook
@@ -403,7 +410,27 @@ export default function App() {
       });
       UnifiedFashionOS.trackEvent('wardrobe_added', { title, category });
     } catch (error) {
-      console.error("Failed to store garment:", error);
+      console.warn("Firestore write failed, saving to local wardrobe fallback:", error);
+      const localItem: WardrobeItem = {
+        id: `gar-${Date.now()}`,
+        title,
+        description,
+        category,
+        userId: user.uid,
+        status: 'In Closet',
+        season: extraOptions?.season || 'All-Season',
+        primaryColor: extraOptions?.primaryColor || 'Neutral Gray',
+        secondaryColor: extraOptions?.secondaryColor || 'Minimalist White',
+        wearCount: 0,
+        lastUsed: '',
+        imageUrl: extraOptions?.imageUrl || '',
+        createdAt: { seconds: Math.floor(Date.now() / 1000), nanoseconds: 0 }
+      };
+      const updated = [localItem, ...wardrobe];
+      setWardrobe(updated);
+      localStorage.setItem('local_wardrobe_items', JSON.stringify(updated));
+      UnifiedFashionOS.syncWardrobeItems(updated);
+      UnifiedFashionOS.trackEvent('wardrobe_added', { title, category });
     }
   };
 

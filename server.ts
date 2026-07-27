@@ -18,7 +18,9 @@ import {
   CatalogSync,
   RealityAudit,
   UnifiedFashionOS,
-  AIRequestPipeline
+  AIRequestPipeline,
+  CommunityVisualIntelligence,
+  DeviceReactionEngine
 } from "./src/engine";
 import { handler as recommendMvpHandler } from "./netlify/functions/recommend-mvp";
 
@@ -536,6 +538,114 @@ async function startServer() {
     res.json({ status: "logged" });
   });
 
+  // Backend Device Reaction & Adaptive Layout Engine API
+  app.post("/api/adaptive-layout", (req, res) => {
+    try {
+      const telemetry = req.body || {};
+      const layoutAnalysis = DeviceReactionEngine.analyzeClientDevice({
+        width: Number(telemetry.width) || 1280,
+        height: Number(telemetry.height) || 800,
+        pixelRatio: Number(telemetry.pixelRatio) || 1,
+        orientation: telemetry.orientation,
+        userAgent: req.headers["user-agent"] || telemetry.userAgent,
+        viewportMode: telemetry.viewportMode || "AUTO",
+        touchCapable: Boolean(telemetry.touchCapable),
+        connectionType: telemetry.connectionType,
+        colorScheme: telemetry.colorScheme || "dark",
+        userId: telemetry.userId || "anonymous"
+      });
+
+      res.json({
+        success: true,
+        data: layoutAnalysis
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.post("/api/device-preference", (req, res) => {
+    try {
+      const { userId = "anonymous", viewportMode = "AUTO" } = req.body || {};
+      DeviceReactionEngine.setPreference(userId, viewportMode);
+      res.json({ success: true, mode: viewportMode });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // AI Video Director & Temporal Sequence Endpoint
+  app.post("/api/video-timeline/generate", async (req, res) => {
+    try {
+      const { prompt, duration = 10, aspectRatio = "9:16", styleTheme = "Cyberpunk High-Fashion Runway" } = req.body || {};
+      const apiKey = process.env.GEMINI_API_KEY;
+
+      if (apiKey) {
+        const ai = new GoogleGenAI({ apiKey });
+        const systemInstruction = `You are an expert AI Video Director and Temporal Sequence Producer. Analyze the user prompt and split it into a logical, frame-by-frame video timeline.
+Return ONLY raw JSON with properties: totalDurationSec, aspectRatio, styleTheme, and scenes (array of scene objects containing sceneId, startSecond, endSecond, visualPrompt, motionIntensity, cameraFraming, audioVibeDescription).`;
+
+        const response = await ai.models.generateContent({
+          model: "gemini-2.5-flash",
+          contents: [{ role: "user", parts: [{ text: `${systemInstruction}\nUser Prompt: ${prompt || "Futuristic high-fashion editorial runway show in rain-slicked Tokyo neon lights"}` }] }],
+          config: { responseMimeType: "application/json" }
+        });
+
+        const text = response.text;
+        if (text) {
+          return res.json(JSON.parse(text));
+        }
+      }
+
+      // Fallback deterministic sequence
+      return res.json({
+        totalDurationSec: duration,
+        aspectRatio: aspectRatio,
+        styleTheme: styleTheme,
+        scenes: [
+          {
+            sceneId: "scene_1",
+            startSecond: 0,
+            endSecond: 2.5,
+            visualPrompt: `Macro extreme close-up of ${prompt || "liquid metallic couture fabric flexing under pulsating violet neon light. Iridescent stitching glows softly as light cascades."}`,
+            motionIntensity: 3,
+            cameraFraming: "Extreme Macro Low-Angle Tilt, slow upward pan tracking texture highlights.",
+            audioVibeDescription: "Low sub-bass drone with granular metallic shimmer and soft atmospheric hum."
+          },
+          {
+            sceneId: "scene_2",
+            startSecond: 2.5,
+            endSecond: 5.5,
+            visualPrompt: `Full-length runway tracking shot of ${prompt || "a futuristic model gliding through a rain-slicked alleyway framed by holographic neon billboards."}`,
+            motionIntensity: 7,
+            cameraFraming: "Medium Tracking Shot on 35mm lens, moving backwards smoothly at eye level.",
+            audioVibeDescription: "Pulsating synthwave arpeggio with crisp rain impact sounds and deep bass kick."
+          },
+          {
+            sceneId: "scene_3",
+            startSecond: 5.5,
+            endSecond: 8.0,
+            visualPrompt: `Over-the-shoulder dynamic pivot turn showing intricate geometric design details and dramatic lighting shadows.`,
+            motionIntensity: 9,
+            cameraFraming: "Dynamic Orbital Arc Shot swiveling 120 degrees around subject.",
+            audioVibeDescription: "Rhythmic stutter-edit percussion riser with heavy reverse reverb filter sweep."
+          },
+          {
+            sceneId: "scene_4",
+            startSecond: 8.0,
+            endSecond: duration,
+            visualPrompt: `Wide establishing hero shot dissolving into particles under glowing atmospheric rim lighting.`,
+            motionIntensity: 4,
+            cameraFraming: "Slow Dolly-Out Boom Shot rising upward into an overhead atmospheric wide angle.",
+            audioVibeDescription: "Ethereal ambient vocal pads resolving into a resonant cinematic bass impact tail."
+          }
+        ]
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // Real Stripe Checkout Session API Route
   app.post("/api/billing/create-checkout-session", verifyAuthToken, async (req, res) => {
     try {
@@ -1016,6 +1126,18 @@ You MUST respond strictly with a valid JSON object. No Markdown code fences (do 
         ? imageResult.imageUrl 
         : "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=800&auto=format&fit=crop";
 
+      const { creationCategory, creativeMode, cameraFraming, regionalContext } = req.body;
+      const intelAnalysis = CommunityVisualIntelligence.analyzePromptIntent(
+        customPrompt || parsedResult.afterLookPrompt,
+        creationCategory,
+        creativeMode
+      );
+      if (cameraFraming) intelAnalysis.framingMode = cameraFraming;
+      if (regionalContext) intelAnalysis.regionalContext = regionalContext;
+
+      const enhancementOptions = CommunityVisualIntelligence.getEnhancementOptions(intelAnalysis);
+      const qualityEvaluation = CommunityVisualIntelligence.evaluateQuality(intelAnalysis, afterImageUrl);
+
       const finalPayload = {
         userId: user.uid,
         uploadedImageUrl: base64Image,
@@ -1031,6 +1153,15 @@ You MUST respond strictly with a valid JSON object. No Markdown code fences (do 
         qualityModeEnabled: qualityMode || false,
         aspectRatioUsed: aspectRatio || '3:4',
         styleTransferWeightUsed: styleTransferWeight || 0.85,
+        communityIntel: {
+          creationCategory: intelAnalysis.category,
+          creativeMode: intelAnalysis.creativeMode,
+          framingMode: intelAnalysis.framingMode,
+          visualFocus: intelAnalysis.visualFocus,
+          regionalContext: intelAnalysis.regionalContext || 'Universal High-Fashion',
+          enhancementOptions,
+          qualityEvaluation
+        },
         createdAt: new Date().toISOString()
       };
 
@@ -1052,6 +1183,51 @@ You MUST respond strictly with a valid JSON object. No Markdown code fences (do 
     } catch (err: any) {
       console.error("[API ERROR] Community body-style mapping failed:", err);
       res.status(500).json({ error: "Failed to process image for body-style mapping: " + err.message });
+    }
+  });
+
+  // C02 — Community Image Enhancement API Route
+  app.post("/api/community/enhance-image", verifyAuthToken, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const quotaCheck = await checkAndDeductQuota(user.uid, "images");
+      if (!quotaCheck.allowed) {
+        res.status(403).json({ error: quotaCheck.error });
+        return;
+      }
+
+      const { prompt, enhancementId, optionSuffix, config, creationCategory, creativeMode, cameraFraming, regionalContext } = req.body;
+      const enhancedPrompt = `${prompt || 'Luxury high-fashion editorial look'} ${optionSuffix || ''}`.trim();
+      const providerName = process.env.GEMINI_API_KEY ? 'Gemini-3.1-Flash-Image' : 'Fashion-Picsum-Deterministic';
+
+      console.log(`[Community Generator] Enhancing image with enhancementId=${enhancementId}...`);
+
+      const imageResult = await ImageGenerationRegistry.generate(
+        enhancedPrompt,
+        config || { aspectRatio: '3:4', quality: 'high' },
+        providerName
+      );
+
+      const imageUrl = imageResult.success && imageResult.imageUrl 
+        ? imageResult.imageUrl 
+        : "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=800&auto=format&fit=crop";
+
+      const intelAnalysis = CommunityVisualIntelligence.analyzePromptIntent(enhancedPrompt, creationCategory, creativeMode);
+      if (cameraFraming) intelAnalysis.framingMode = cameraFraming;
+      if (regionalContext) intelAnalysis.regionalContext = regionalContext;
+
+      const qualityEval = CommunityVisualIntelligence.evaluateQuality(intelAnalysis, imageUrl);
+
+      res.json({
+        success: true,
+        imageUrl,
+        enhancedPrompt,
+        enhancementId,
+        qualityEvaluation: qualityEval
+      });
+    } catch (err: any) {
+      console.error("[API ERROR] Community image enhancement failed:", err);
+      res.status(500).json({ error: "Failed to enhance image: " + err.message });
     }
   });
 

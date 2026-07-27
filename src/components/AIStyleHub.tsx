@@ -6,7 +6,7 @@ import {
   ChevronRight, Compass, Eye, Cpu, Database, Activity, CloudSun, User, Fingerprint,
   Bell, PenSquare, X, ChevronDown, Award, Check,
   Home, Users, Heart, Layers, MessageSquare, Mail, Crown, MoreVertical, Moon, Menu,
-  Camera, Upload, Calendar
+  Camera, Upload, Calendar, Smartphone, Monitor, Tablet, Zap, Wifi, BatteryCharging, Globe, Maximize2, Minimize2
 } from 'lucide-react';
 import { WardrobeItem, ProfileService, type StyleProfile, type StylistHistoryEntry } from '../platform';
 import { getGarmentImage } from '../features/feed/AIEngine';
@@ -22,6 +22,7 @@ import { updateDoc, doc } from 'firebase/firestore';
 import { OutfitCard } from './OutfitCard';
 import { WardrobeGrid } from './WardrobeGrid';
 import { HomeFeed } from './HomeFeed';
+import { HomeHub } from './HomeHub';
 import { SellerDashboard } from './SellerDashboard';
 import { LookVisionMainDashboard } from './LookVisionMainDashboard';
 
@@ -49,6 +50,7 @@ import { VirtualStudioTryOn } from './VirtualStudioTryOn';
 import { OutfitPlanner } from './OutfitPlanner';
 import { FashionInstructorWorkspace } from './screens/FashionInstructorWorkspace';
 import { AIAssistantStudio } from './AIAssistantStudio';
+import { AIMemoryHub } from './AIMemoryHub';
 
 export interface LookVisionTheme {
   id: string;
@@ -164,19 +166,20 @@ interface AIStyleHubProps {
 
 // 4. IMAGE BEHAVIOR: Pristine 240ms opacity fade-in with film grain + printed matte style (Shelf Integrity F)
 export const ImageWithFade: React.FC<{ src: string; alt: string }> = ({ src, alt }) => {
-  const [currentSrc, setCurrentSrc] = useState(src);
+  const safeSrc = src && src.trim() !== '' ? src : 'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?q=80&w=600&auto=format&fit=crop';
+  const [currentSrc, setCurrentSrc] = useState(safeSrc);
   const [prevSrc, setPrevSrc] = useState<string | null>(null);
   const [isNewLoaded, setIsNewLoaded] = useState(true);
   const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
-    if (src !== currentSrc) {
-      setPrevSrc(currentSrc);
-      setCurrentSrc(src);
+    if (safeSrc !== currentSrc) {
+      if (currentSrc) setPrevSrc(currentSrc);
+      setCurrentSrc(safeSrc);
       setIsNewLoaded(false);
       setHasError(false);
     }
-  }, [src, currentSrc]);
+  }, [safeSrc, currentSrc]);
 
   return (
     <div className="w-full bg-[#0a0a0a] overflow-hidden aspect-[4/5] relative select-none rounded-none border border-white/[0.02]">
@@ -198,9 +201,9 @@ export const ImageWithFade: React.FC<{ src: string; alt: string }> = ({ src, alt
       ) : (
         <>
           {/* Previous Image kept visible while next loads */}
-          {prevSrc && (
+          {Boolean(prevSrc) && (
             <img
-              src={prevSrc}
+              src={prevSrc || undefined}
               alt={alt}
               referrerPolicy="no-referrer"
               loading="lazy"
@@ -213,7 +216,7 @@ export const ImageWithFade: React.FC<{ src: string; alt: string }> = ({ src, alt
           {/* New Image fading in once loaded */}
           <img
             key={currentSrc}
-            src={currentSrc}
+            src={currentSrc || safeSrc}
             alt={alt}
             onLoad={() => {
               setIsNewLoaded(true);
@@ -596,6 +599,101 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
 
   // One line memory continuity state
   const [memoryLine, setMemoryLine] = useState('');
+
+  // GLOBAL AUTO-ADAPTIVE VIEWPORT MODE STATE (Applies across ENTIRE Application)
+  const [globalViewportMode, setGlobalViewportMode] = useState<'AUTO' | 'MOBILE' | 'DESKTOP'>(() => {
+    return (localStorage.getItem('lookvision_global_viewport_mode') as any) || 'AUTO';
+  });
+
+  // USER DEVICE REACTION TELEMETRY STATE
+  const [deviceTelemetry, setDeviceTelemetry] = useState<{
+    width: number;
+    height: number;
+    breakpoint: 'XS' | 'SM' | 'MD' | 'LG' | 'XL' | '2XL';
+    orientation: 'PORTRAIT' | 'LANDSCAPE';
+    pixelRatio: number;
+    currentTime: string;
+  }>({
+    width: typeof window !== 'undefined' ? window.innerWidth : 1280,
+    height: typeof window !== 'undefined' ? window.innerHeight : 800,
+    breakpoint: 'XL',
+    orientation: 'LANDSCAPE',
+    pixelRatio: typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1,
+    currentTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  });
+
+  // REAL-TIME VIEWPORT & DEVICE REACTION LISTENER
+  useEffect(() => {
+    const handleResize = () => {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      let bp: 'XS' | 'SM' | 'MD' | 'LG' | 'XL' | '2XL' = 'XL';
+      if (w < 480) bp = 'XS';
+      else if (w < 640) bp = 'SM';
+      else if (w < 768) bp = 'MD';
+      else if (w < 1024) bp = 'LG';
+      else if (w < 1440) bp = 'XL';
+      else bp = '2XL';
+
+      setDeviceTelemetry({
+        width: w,
+        height: h,
+        breakpoint: bp,
+        orientation: w > h ? 'LANDSCAPE' : 'PORTRAIT',
+        pixelRatio: window.devicePixelRatio || 1,
+        currentTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      });
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    const timeInterval = setInterval(() => {
+      setDeviceTelemetry(prev => ({
+        ...prev,
+        currentTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }));
+    }, 30000);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      clearInterval(timeInterval);
+    };
+  }, []);
+
+  const changeGlobalViewportMode = (mode: 'AUTO' | 'MOBILE' | 'DESKTOP') => {
+    setGlobalViewportMode(mode);
+    localStorage.setItem('lookvision_global_viewport_mode', mode);
+
+    // Backend Telemetry & Device Preference Sync
+    fetch('/api/adaptive-layout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        width: deviceTelemetry.width,
+        height: deviceTelemetry.height,
+        pixelRatio: deviceTelemetry.pixelRatio,
+        orientation: deviceTelemetry.orientation,
+        viewportMode: mode,
+        touchCapable: 'ontouchstart' in window || navigator.maxTouchPoints > 0
+      })
+    }).catch(() => {});
+
+    fetch('/api/device-preference', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: user?.uid || 'anonymous', viewportMode: mode })
+    }).catch(() => {});
+
+    const detailText = mode === 'MOBILE'
+      ? `📱 Adaptive Mobile Device Chassis Active (${deviceTelemetry.width}x${deviceTelemetry.height}px) • Backend Reaction Engine Sync`
+      : mode === 'DESKTOP'
+        ? `💻 Expanded Ultra-Wide Canvas Mode (${deviceTelemetry.width}x${deviceTelemetry.height}px) • Backend Reaction Engine Sync`
+        : `✨ Auto-Adaptive Dynamic Fluid Layout Active (${deviceTelemetry.breakpoint} Viewport) • Backend Reaction Engine Sync`;
+
+    window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
+      detail: detailText
+    }));
+  };
 
   // Stillness / Intentional Pause State
   const [isHoldingStill, setIsHoldingStill] = useState(false);
@@ -2588,8 +2686,85 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
           <div className="flex-grow flex overflow-hidden">
 
              {/* B. CENTRAL WORKSPACE CONTENT */}
-            <main className="flex-1 overflow-y-auto p-3.5 sm:p-5 lg:p-5 scrollbar-thin scrollbar-thumb-white/5 relative bg-gradient-to-b from-white/[0.01] to-transparent">
+            <main className="flex-1 overflow-y-auto p-3 sm:p-5 lg:p-6 scrollbar-thin scrollbar-thumb-white/5 relative bg-gradient-to-b from-white/[0.01] to-transparent">
           
+          {/* GLOBAL AUTO-ADAPTIVE LAYOUT & USER DEVICE REACTION CONTROLLER BAR */}
+          <div className="mb-6 bg-[#07070c] border border-white/10 rounded-2xl p-3.5 sm:p-4 shadow-2xl relative overflow-hidden max-w-[1850px] mx-auto">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+              {/* Left: Auto-Adaptive Status & Device Telemetry */}
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-violet-600/10 border border-violet-500/20 flex items-center justify-center shrink-0">
+                  <Sparkles className="w-5 h-5 text-violet-400 filter drop-shadow-[0_0_8px_rgba(168,85,247,0.6)]" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs sm:text-sm font-serif font-medium text-white tracking-wide">
+                      AIStyleHub Global Auto-Adaptive Layout
+                    </span>
+                    <span className="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 font-mono text-[9px] rounded-full flex items-center gap-1 font-bold">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      <span>Device Reaction Active</span>
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-[10px] font-mono text-zinc-400 mt-1 flex-wrap">
+                    <span>Dimensions: <strong className="text-zinc-200">{deviceTelemetry.width} x {deviceTelemetry.height} px</strong></span>
+                    <span>•</span>
+                    <span>Breakpoint: <strong className="text-cyan-300 font-bold">{deviceTelemetry.breakpoint}</strong></span>
+                    <span>•</span>
+                    <span>DPI: <strong className="text-purple-300">{deviceTelemetry.pixelRatio}x</strong></span>
+                    <span>•</span>
+                    <span>Orientation: <strong className="text-amber-300 uppercase">{deviceTelemetry.orientation}</strong></span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right: Layout Viewport Mode Selector */}
+              <div className="flex items-center gap-1.5 bg-black/60 p-1.5 rounded-xl border border-white/10 shrink-0 self-start lg:self-auto">
+                <button
+                  type="button"
+                  onClick={() => changeGlobalViewportMode('AUTO')}
+                  title="Auto-Fluid Responsive Layout"
+                  className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all flex items-center gap-1.5 cursor-pointer ${
+                    globalViewportMode === 'AUTO'
+                      ? 'bg-violet-600 text-white font-bold shadow-lg shadow-violet-950/50'
+                      : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  <Compass className="w-3.5 h-3.5 text-amber-300" />
+                  <span>Auto-Fluid</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => changeGlobalViewportMode('MOBILE')}
+                  title="Mobile Device Chassis Reaction Mode"
+                  className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all flex items-center gap-1.5 cursor-pointer ${
+                    globalViewportMode === 'MOBILE'
+                      ? 'bg-violet-600 text-white font-bold shadow-lg shadow-violet-950/50'
+                      : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  <Smartphone className="w-3.5 h-3.5 text-cyan-300" />
+                  <span>Mobile View</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => changeGlobalViewportMode('DESKTOP')}
+                  title="Full Ultra-Wide Desktop Mode"
+                  className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all flex items-center gap-1.5 cursor-pointer ${
+                    globalViewportMode === 'DESKTOP'
+                      ? 'bg-violet-600 text-white font-bold shadow-lg shadow-violet-950/50'
+                      : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  <Monitor className="w-3.5 h-3.5 text-purple-300" />
+                  <span>Full View</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
           {/* Undo Banner if active */}
           {undoAction && (
             <div className="mb-6 p-3 rounded-xl bg-white/5 border border-white/15 flex items-center justify-between text-xs font-mono uppercase tracking-wider animate-fade-in max-w-4xl mx-auto">
@@ -2615,15 +2790,13 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
           {/* Active Workspaces Render Block */}
           {(activeSubTab === 'PRODUCT_HOME' || activeSubTab === 'HOME') ? (
             <div className="space-y-6 animate-fade-in w-full h-full overflow-y-auto">
-              <HomeFeed 
+              <HomeHub 
                 wardrobe={activeWardrobeList}
+                user={user}
+                onNavigateTab={(tab) => handleNavigate(tab as any)}
                 onAddGarment={onAddGarment}
                 onDeleteGarment={onDeleteGarment}
-                user={user}
-                onLogout={onLogout}
-                onReset={onReset}
                 onLoadSamples={onLoadSamples}
-                setActiveSubTab={setActiveSubTab}
               />
             </div>
           ) : null}
@@ -3873,9 +4046,9 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
                 />
               )}
 
-              {/* ROOM 4: SARTORIAL CONTROL DASHBOARD & HISTORY */}
+              {/* ROOM 4: AI MEMORY & PUBLIC COMPONENT MEMORY VAULT */}
               {activeSubTab === 'DASHBOARD' && (
-                <SartorialControlCenter wardrobe={activeWardrobeList} user={user} />
+                <AIMemoryHub user={user} onNavigateTab={(tab) => handleNavigate(tab as any)} />
               )}
 
               {/* ROOM 5: COGNITIVE PASSPORT & STYLE DNA */}
