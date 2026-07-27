@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Heart, Eye, Bookmark, Sparkles, MessageSquare, Copy, Check } from 'lucide-react';
+import { Heart, Eye, Bookmark, Sparkles, MessageSquare, Copy, Check, Maximize2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { AICreation } from './types';
 
@@ -58,8 +58,7 @@ export const CreationCard: React.FC<CreationCardProps> = ({
             className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
           />
         ) : (
-          <img
-            src={creation.imageUrl}
+          <img src={creation.imageUrl || null}
             alt={creation.title}
             className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
             loading="lazy"
@@ -81,6 +80,29 @@ export const CreationCard: React.FC<CreationCardProps> = ({
         <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
           <button
             type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              window.dispatchEvent(new CustomEvent('lookvision_open_lightbox', {
+                detail: {
+                  id: creation.id,
+                  imageUrl: creation.imageUrl,
+                  title: creation.title,
+                  description: creation.prompt,
+                  category: creation.style,
+                  creatorName: creation.creator.name,
+                  creatorAvatar: creation.creator.avatar,
+                  isSaved: isSaved
+                }
+              }));
+            }}
+            className="p-1.5 bg-[#07070c]/85 backdrop-blur-md hover:bg-violet-600/25 text-zinc-300 hover:text-white rounded-lg border border-white/5 transition-all shadow-md cursor-pointer"
+            title="Open Full Image View"
+          >
+            <Maximize2 className="w-3.5 h-3.5" />
+          </button>
+
+          <button
+            type="button"
             onClick={handleCopyPrompt}
             className="p-1.5 bg-[#07070c]/85 backdrop-blur-md hover:bg-violet-600/25 text-zinc-300 hover:text-white rounded-lg border border-white/5 transition-all shadow-md cursor-pointer"
             title="Copy Prompt"
@@ -100,9 +122,18 @@ export const CreationCard: React.FC<CreationCardProps> = ({
           {onSave && (
             <button
               type="button"
-              onClick={(e) => onSave(creation.id, e)}
-              className={`p-1.5 bg-[#07070c]/85 backdrop-blur-md hover:bg-indigo-500/20 text-zinc-300 hover:text-indigo-400 rounded-lg border border-white/5 transition-all shadow-md cursor-pointer ${isSaved ? 'text-indigo-400' : ''}`}
-              title="Save to Collection"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (isSaved) {
+                  window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
+                    detail: '⚠️ Creation is already saved in your collection!'
+                  }));
+                  return;
+                }
+                onSave(creation.id, e);
+              }}
+              className={`p-1.5 bg-[#07070c]/85 backdrop-blur-md hover:bg-indigo-500/20 text-zinc-300 hover:text-indigo-400 rounded-lg border border-white/5 transition-all shadow-md cursor-pointer ${isSaved ? 'text-indigo-400 cursor-not-allowed' : ''}`}
+              title={isSaved ? "Already Saved in Collection" : "Save to Collection"}
             >
               <Bookmark className={`w-3.5 h-3.5 ${isSaved ? 'fill-indigo-500 text-indigo-500' : ''}`} />
             </button>
@@ -138,8 +169,7 @@ export const CreationCard: React.FC<CreationCardProps> = ({
             onClick={(e) => onVisitCreator(creation.creator.id, e)}
             className="flex items-center gap-2 group/creator cursor-pointer"
           >
-            <img
-              src={creation.creator.avatar}
+            <img src={creation.creator.avatar || null}
               alt={creation.creator.name}
               className="w-5 h-5 rounded-full object-cover border border-white/10 group-hover/creator:border-violet-500/40 transition-colors"
             />

@@ -1943,6 +1943,29 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
               </span>
             </div>
 
+            {/* World / Closet Privacy Visibility Control */}
+            <div 
+              onClick={(e) => {
+                e.stopPropagation();
+                const newPrivateState = selectedGarment.isPrivate === false ? true : false;
+                handleUpdateGarment(selectedGarment.id, { isPrivate: newPrivateState, isPublic: !newPrivateState });
+                window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
+                  detail: newPrivateState 
+                    ? '🔒 Item made PRIVATE in My Closet!' 
+                    : '🌐 Item published to PUBLIC World Gallery!'
+                }));
+              }}
+              className="pt-4 cursor-pointer select-none"
+            >
+              <span className={`text-[10px] font-mono tracking-[0.2em] uppercase px-3 py-1 rounded-md border transition-all inline-flex items-center gap-1.5 ${
+                selectedGarment.isPrivate === false 
+                  ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400' 
+                  : 'bg-white/[0.03] border-white/10 text-white/50 hover:text-white'
+              }`}>
+                {selectedGarment.isPrivate === false ? '[ 🌐 Public in World Gallery ]' : '[ 🔒 Private in My Closet ]'}
+              </span>
+            </div>
+
             {/* Gentle Correction: [ not this together ] (Requirement B) */}
             {state.activeSuggestion && state.activeSuggestion.items.some(i => i.id === selectedGarment.id) && (
               <div 
@@ -2043,21 +2066,21 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
         id={isNested ? undefined : "editorial-style-hub-root"}
       >
         
-        {/* A. LEFT NAVIGATION SIDEBAR (Continuous from top to bottom) */}
-        <aside className={`w-64 shrink-0 p-4 flex flex-col justify-between flex select-none h-full z-40 ${themeObj.sidebarBg} border-r border-white/5`}>
-          <div className="space-y-5 overflow-y-auto no-scrollbar flex-1 pb-4 pr-1">
+        {/* A. LEFT NAVIGATION SIDEBAR (Fluid, proportional, continuous across all device sizes) */}
+        <aside className={`w-14 sm:w-16 md:w-56 lg:w-64 shrink-0 p-2 sm:p-3 md:p-4 flex flex-col justify-between select-none h-full z-40 ${themeObj.sidebarBg} border-r border-white/5 transition-all duration-300`}>
+          <div className="space-y-5 overflow-y-auto no-scrollbar flex-1 pb-4 pr-0 md:pr-1">
             
             {/* AIStyleHub / LookVision Logo */}
-            <div className="flex items-center gap-3 pl-3 py-2 mb-4">
-              <Sparkle className="w-6 h-6 text-violet-400 fill-violet-400 filter drop-shadow-[0_0_8px_rgba(168,85,247,0.85)] animate-pulse-slow" />
-              <div className="flex flex-col">
+            <div className="flex items-center justify-center md:justify-start gap-3 md:pl-3 py-2 mb-4">
+              <Sparkle className="w-6 h-6 text-violet-400 fill-violet-400 shrink-0 filter drop-shadow-[0_0_8px_rgba(168,85,247,0.85)] animate-pulse-slow" />
+              <div className="hidden md:flex flex-col">
                 <span className="text-sm font-mono tracking-[0.25em] uppercase text-white font-bold leading-none">AIStyleHub</span>
                 <span className="text-[9px] font-mono tracking-widest text-violet-400/60 uppercase mt-0.5">v2.4-telemetry</span>
               </div>
             </div>
 
             {/* Navigation options */}
-            <div className="space-y-0.5" role="tablist" aria-label="Sidebar Navigation">
+            <div className="space-y-1 md:space-y-0.5" role="tablist" aria-label="Sidebar Navigation">
               {navigationItems.map((tab) => {
                 const Icon = tab.icon;
                 
@@ -2090,6 +2113,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
                     key={tab.id}
                     id={`app-${tab.id.toLowerCase().replace('_', '-')}`}
                     role="tab"
+                    title={tab.label}
                     aria-selected={isSelected}
                     onClick={() => {
                       triggerQuietPause(() => {
@@ -2109,21 +2133,21 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
                         }
                       });
                     }}
-                    className={`w-full px-3 py-2.5 rounded-xl flex items-center justify-between transition-all group cursor-pointer text-[11.5px] focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50 hover:translate-x-0.5 duration-200 ${
+                    className={`w-full px-2 md:px-3 py-2.5 rounded-xl flex items-center justify-center md:justify-between transition-all group cursor-pointer text-[11.5px] focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50 hover:translate-x-0.5 duration-200 ${
                       isSelected 
                         ? 'bg-[#181135] text-[#b6a1ff] shadow-md font-medium border border-[#2b1c63]' 
                         : 'text-white/55 hover:text-white hover:bg-white/[0.02]'
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <Icon className={`w-4 h-4 shrink-0 transition-transform group-hover:scale-110 duration-200 ${
+                      <Icon className={`w-5 h-5 md:w-4 md:h-4 shrink-0 transition-transform group-hover:scale-110 duration-200 ${
                         isSelected ? 'text-violet-400' : 'text-white/30 group-hover:text-white/80'
                       }`} />
-                      <span className="tracking-wide font-sans">{tab.label}</span>
+                      <span className="hidden md:inline tracking-wide font-sans">{tab.label}</span>
                     </div>
 
                     {tab.badge && (
-                      <span className={`flex items-center justify-center font-bold shrink-0 transition-transform group-hover:scale-105 duration-200 ${
+                      <span className={`hidden md:flex items-center justify-center font-bold shrink-0 transition-transform group-hover:scale-105 duration-200 ${
                         tab.badge === 'NEW' 
                           ? 'px-1.5 py-0.5 text-[8px] bg-violet-600 text-white rounded font-mono tracking-wider' 
                           : 'w-4 h-4 text-[9px] bg-violet-600 text-white rounded-full font-sans'
@@ -2141,7 +2165,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
           <div className="pt-4 border-t border-white/5 space-y-4">
             
             {/* Upgrade to Pro Card */}
-            <div className="p-4 rounded-2xl bg-[#0e0c1f] border border-violet-500/15 space-y-3 relative overflow-hidden text-left shadow-lg shadow-violet-950/20">
+            <div className="hidden md:block p-4 rounded-2xl bg-[#0e0c1f] border border-violet-500/15 space-y-3 relative overflow-hidden text-left shadow-lg shadow-violet-950/20">
               <div className="absolute -right-6 -top-6 w-16 h-16 bg-violet-500/10 rounded-full blur-xl pointer-events-none"></div>
               <div className="flex items-center gap-2">
                 <Crown className="w-4 h-4 text-violet-400" />
@@ -2162,7 +2186,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
               </button>
             </div>
 
-            {/* Profile Identity Card (Sarah Khan verified) */}
+            {/* Profile Identity Card */}
             <div className="relative">
               <AnimatePresence>
                 {showProfileMenu && (
@@ -2170,7 +2194,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
                     initial={{ opacity: 0, y: 10, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                    className="absolute bottom-full left-0 right-0 mb-2 bg-[#090911] border border-white/10 rounded-xl p-2.5 shadow-[0_10px_30px_rgba(0,0,0,0.8)] z-50 space-y-1"
+                    className="absolute bottom-full left-0 right-0 mb-2 bg-[#090911] border border-white/10 rounded-xl p-2.5 shadow-[0_10px_30px_rgba(0,0,0,0.8)] z-50 space-y-1 min-w-[180px]"
                   >
                     <div className="px-2 py-1 border-b border-white/5 pb-1.5 mb-1.5 flex justify-between items-center">
                       <span className="text-[8px] font-mono text-zinc-400 uppercase tracking-widest block">Sartorial Core</span>
@@ -2198,7 +2222,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
                         localStorage.setItem('last_active_place_subtab', 'PROFILE');
                         setShowProfileMenu(false);
                         window.dispatchEvent(new CustomEvent('lookvision_show_toast', { 
-                          detail: '🛂 Style Passport DNA & Measurements Calibrated' 
+                          detail: 'Passport DNA & Measurements Calibrated' 
                         }));
                       }}
                       className="w-full flex items-center gap-2 px-2 py-2 text-left text-xs font-mono uppercase tracking-wider text-zinc-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
@@ -2210,38 +2234,37 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
                 )}
               </AnimatePresence>
 
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.01] hover:bg-white/[0.04] transition-all border border-white/5 group">
-                <div 
-                  onClick={() => {
-                    setActiveSubTab('PROFILE');
-                    localStorage.setItem('last_active_place_subtab', 'PROFILE');
-                  }}
-                  className="flex items-center gap-3 cursor-pointer flex-1"
-                >
-                  <img 
-                    src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&auto=format&fit=crop" 
-                    alt="Sarah Khan"
-                    className="w-9 h-9 rounded-full object-cover border border-white/10"
-                  />
-                  <div className="text-left">
-                    <div className="flex items-center gap-1">
-                      <p className="text-[11px] font-semibold text-white leading-none">Sarah Khan</p>
-                      <div className="w-3 h-3 rounded-full bg-blue-500 flex items-center justify-center shrink-0">
-                        <Check className="w-2.5 h-2.5 text-white stroke-[3.5]" />
-                      </div>
+              <div 
+                onClick={() => {
+                  setActiveSubTab('PROFILE');
+                  localStorage.setItem('last_active_place_subtab', 'PROFILE');
+                }}
+                className="flex items-center justify-center md:justify-between p-1.5 md:p-2.5 rounded-xl bg-white/[0.01] hover:bg-white/[0.04] transition-all border border-white/5 group cursor-pointer"
+              >
+                <img 
+                  src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&auto=format&fit=crop" 
+                  alt="Sarah Khan"
+                  className="w-8 h-8 md:w-9 md:h-9 rounded-full object-cover border border-white/10 shrink-0"
+                />
+                <div className="hidden md:block text-left flex-1 ml-3">
+                  <div className="flex items-center gap-1">
+                    <p className="text-[11px] font-semibold text-white leading-none">Sarah Khan</p>
+                    <div className="w-3 h-3 rounded-full bg-blue-500 flex items-center justify-center shrink-0">
+                      <Check className="w-2.5 h-2.5 text-white stroke-[3.5]" />
                     </div>
-                    <div className="flex items-center gap-1 mt-1">
-                      <span className="w-1 h-1 rounded-full bg-violet-400"></span>
-                      <span className="text-[8px] font-mono text-violet-400 uppercase tracking-widest leading-none">Premium</span>
-                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 mt-1">
+                    <span className="w-1 h-1 rounded-full bg-violet-400"></span>
+                    <span className="text-[8px] font-mono text-violet-400 uppercase tracking-widest leading-none">Premium</span>
                   </div>
                 </div>
                 
                 <button
-                  onClick={() => setShowProfileMenu(!showProfileMenu)}
-                  className={`p-1.5 transition-colors cursor-pointer rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 ${
-                    showProfileMenu ? 'text-violet-400 bg-white/5' : 'text-white/30 hover:text-white'
-                  }`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowProfileMenu(!showProfileMenu);
+                  }}
+                  className="hidden md:block p-1.5 transition-colors cursor-pointer rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 text-white/30 hover:text-white"
                 >
                   <MoreVertical className="w-4 h-4" />
                 </button>
@@ -2515,14 +2538,14 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
                     }}
                   >
                     <div className="flex items-center gap-2 mb-2">
-                      <img src={post.author.avatar} className="w-5 h-5 rounded-full object-cover border border-white/10 shrink-0" alt="" />
+                      <img src={post.author.avatar || null} className="w-5 h-5 rounded-full object-cover border border-white/10 shrink-0" alt="" />
                       <div className="min-w-0 flex-1">
                         <span className="block text-[9.5px] font-semibold text-white/95 truncate leading-none">{post.author.name}</span>
                         <span className="block text-[7.5px] font-mono text-white/30 truncate mt-0.5">{post.author.handle}</span>
                       </div>
                     </div>
                     <div className="w-full aspect-[4/3] rounded-xl overflow-hidden bg-zinc-900 border border-white/5 mb-2 relative">
-                      <img src={post.imageUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="" />
+                      <img src={post.imageUrl || null} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="" />
                       <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded text-[7.5px] font-mono bg-black/60 text-violet-300 border border-violet-500/10">
                         {post.vibeTags[0] || 'Aesthetic'}
                       </div>
@@ -2680,7 +2703,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
         </div>
 
         {/* RIGHT AREA: MAIN WORKSPACE (Takes rest of the viewport) */}
-        <div className="flex-1 flex flex-col overflow-hidden h-full">
+        <div className="flex-1 flex flex-col overflow-hidden h-full min-w-0">
           
           {/* 2. SPLIT INTERFACE STRUCTURE (Scrolls independently) */}
           <div className="flex-grow flex overflow-hidden">
@@ -3467,8 +3490,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
                         {!isCameraActive && gImage && isScanningVisual && (
                           <div className="space-y-4 animate-fade-in">
                             <div className="relative aspect-square max-w-[240px] mx-auto bg-neutral-950 border border-white/15 overflow-hidden rounded-lg">
-                              <img 
-                                src={gImage} 
+                              <img src={gImage || null} 
                                 referrerPolicy="no-referrer"
                                 className="w-full h-full object-cover opacity-60" 
                                 alt="Placing garment" 
@@ -3506,8 +3528,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
                         {!isCameraActive && gImage && !isScanningVisual && (
                           <div className="space-y-4 animate-fade-in">
                             <div className="relative aspect-square max-w-[200px] mx-auto bg-neutral-950 border border-white/15 overflow-hidden rounded-lg">
-                              <img 
-                                src={gImage} 
+                              <img src={gImage || null} 
                                 referrerPolicy="no-referrer"
                                 className="w-full h-full object-cover" 
                                 alt="Placing garment" 
@@ -4226,7 +4247,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
               <div key={cont.rank} className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <span className="text-[10px] font-mono font-bold text-white/30 w-3">{cont.rank}</span>
-                  <img src={cont.avatar} className="w-6 h-6 rounded-full object-cover border border-white/10" alt="" />
+                  <img src={cont.avatar || null} className="w-6 h-6 rounded-full object-cover border border-white/10" alt="" />
                   <span className={`text-[11px] ${cont.isYou ? 'text-violet-300 font-bold' : 'text-white/85'}`}>{cont.name}</span>
                 </div>
                 <span className="text-[10px] text-white/50 font-mono">{cont.score}</span>
@@ -4400,7 +4421,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
                 }}
                 className="rounded-xl overflow-hidden bg-[#0d0d18] border border-white/5 cursor-pointer relative aspect-[3/4] group"
               >
-                <img src={pick.img} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt="" />
+                <img src={pick.img || null} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt="" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent flex flex-col justify-end p-2 text-left" />
                 <div className="absolute bottom-1.5 left-1.5 right-1.5 text-left">
                   <span className="block text-[8.5px] font-bold text-white leading-tight truncate">{pick.displayTitle}</span>
@@ -4468,8 +4489,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
       >
         {/* Render actual custom uploaded mock image if present */}
         {mockImageUrl ? (
-          <img 
-            src={mockImageUrl} 
+          <img src={mockImageUrl || null} 
             alt="Reference Mockup" 
             className={`absolute inset-0 w-full h-full pointer-events-none ${
               mockImageFit === 'contain' ? 'object-contain' : mockImageFit === 'fill' ? 'object-fill' : 'object-cover'

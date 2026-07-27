@@ -509,8 +509,7 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
       >
         <div className="w-full h-full relative flex items-center justify-center">
           {item.imageUrl ? (
-            <img
-              src={item.imageUrl}
+            <img src={item.imageUrl || null}
               alt={item.title}
               className="max-w-full max-h-full object-contain filter drop-shadow-[0_8px_16px_rgba(0,0,0,0.6)]"
               draggable={false}
@@ -917,8 +916,7 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
                     style={{ left: `${comparisonSplit}%` }}
                   >
                     <div className="absolute inset-0 w-full h-full min-w-[320px] bg-zinc-950">
-                      <img 
-                        src={renderedImageUrl} 
+                      <img src={renderedImageUrl || null} 
                         alt="Simulated Look Lookbook" 
                         className="w-full h-full object-cover"
                       />
@@ -1231,8 +1229,7 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
                   </div>
 
                   <div className="aspect-[3/4] bg-zinc-950 rounded-lg overflow-hidden relative">
-                    <img 
-                      src={renderedImageUrl} 
+                    <img src={renderedImageUrl || null} 
                       alt="Volumetric tryon output render" 
                       className="w-full h-full object-cover"
                     />
@@ -1285,8 +1282,7 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
                 >
                   {/* Photo representation */}
                   {item.imageUrl ? (
-                    <img 
-                      src={item.imageUrl} 
+                    <img src={item.imageUrl || null} 
                       alt={item.title} 
                       className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 duration-500"
                       onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?q=80&w=200&auto=format&fit=crop"; }}
@@ -1340,8 +1336,7 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
                 className="group bg-[#11111a] border border-white/5 rounded-2xl overflow-hidden relative aspect-[3/4] hover:border-violet-500/20 hover:scale-[1.01] transition-all duration-300 shadow-xl flex flex-col justify-between"
               >
                 <div className="absolute inset-0 z-0">
-                  <img
-                    src={sess.renderUrl}
+                  <img src={sess.renderUrl || null}
                     alt="Fitting session render"
                     className="w-full h-full object-cover opacity-80"
                     onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?q=80&w=200&auto=format&fit=crop"; }}

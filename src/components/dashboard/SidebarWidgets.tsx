@@ -69,8 +69,7 @@ export const SidebarWidgets: React.FC<SidebarWidgetsProps> = ({
             >
               <div className="flex items-center gap-3">
                 <span className="text-[10px] font-mono font-bold text-zinc-600 w-3">{contributor.rank}</span>
-                <img 
-                  src={contributor.avatar} 
+                <img src={contributor.avatar || null} 
                   className="w-8 h-8 rounded-full object-cover border border-white/10" 
                   alt="" 
                 />

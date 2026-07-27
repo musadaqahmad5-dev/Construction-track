@@ -214,8 +214,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
                 {/* 3:4 aspect ratio portrait frame */}
                 <div className="aspect-[3/4] overflow-hidden rounded-xl bg-zinc-950 relative border border-white/5 shadow-inner">
                   {item.imageUrl ? (
-                    <img 
-                      src={item.imageUrl} 
+                    <img src={item.imageUrl || null} 
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.02]" 
                       alt={item.title} 
                       referrerPolicy="no-referrer"

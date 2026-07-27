@@ -325,8 +325,7 @@ export const VisionTab: React.FC<VisionTabProps> = ({
                   {dup && dup.isDuplicate ? (
                     <div className="space-y-2 text-center">
                       <span className="text-[9px] font-mono text-amber-400 block uppercase">Reused Match Target Preview:</span>
-                      <img
-                        src={dup.matchedLookImageUrl}
+                      <img src={dup.matchedLookImageUrl || null}
                         alt="Duplicate target"
                         referrerPolicy="no-referrer"
                         className="w-24 h-32 object-cover rounded-lg border border-white/10 mx-auto shadow-md"

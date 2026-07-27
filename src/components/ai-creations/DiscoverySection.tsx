@@ -51,8 +51,7 @@ export const DiscoverySection: React.FC<DiscoverySectionProps> = ({
         >
           {/* Background image */}
           <div className="absolute inset-0 z-0">
-            <img 
-              src={spotlightCreation.imageUrl} 
+            <img src={spotlightCreation.imageUrl || null} 
               alt={spotlightCreation.title}
               className="w-full h-full object-cover opacity-50 group-hover:scale-105 duration-[2000ms]"
               referrerPolicy="no-referrer"
@@ -82,8 +81,7 @@ export const DiscoverySection: React.FC<DiscoverySectionProps> = ({
 
             {/* Creator Row */}
             <div className="flex items-center gap-2.5 pt-1">
-              <img 
-                src={spotlightCreation.creator.avatar} 
+              <img src={spotlightCreation.creator.avatar || null} 
                 className="w-6 h-6 rounded-full object-cover border border-white/10" 
               />
               <span className="text-[10px] font-mono text-zinc-300 font-semibold">
@@ -117,7 +115,7 @@ export const DiscoverySection: React.FC<DiscoverySectionProps> = ({
               className="bg-[#07070c]/60 border border-white/5 rounded-2xl p-4 flex gap-4 hover:border-violet-500/20 hover:scale-[1.01] transition-all duration-300 shadow-xl cursor-pointer"
             >
               <div className="w-24 h-24 rounded-xl overflow-hidden border border-white/10 shadow-lg shrink-0">
-                <img src={creation.imageUrl} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                <img src={creation.imageUrl || null} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
               </div>
               <div className="text-left flex flex-col justify-between truncate py-0.5">
                 <div className="space-y-1">
@@ -155,7 +153,7 @@ export const DiscoverySection: React.FC<DiscoverySectionProps> = ({
                 className="bg-[#080812]/50 border border-white/5 p-4 rounded-2xl flex items-center justify-between hover:border-violet-500/20 transition-colors shadow-lg cursor-pointer"
               >
                 <div className="flex items-center gap-3 truncate">
-                  <img src={creator.avatar} className="w-10 h-10 rounded-full object-cover border border-white/10 shrink-0" />
+                  <img src={creator.avatar || null} className="w-10 h-10 rounded-full object-cover border border-white/10 shrink-0" />
                   <div className="text-left truncate space-y-0.5">
                     <h4 className="text-xs font-bold text-white hover:text-violet-400 transition-colors">{creator.name}</h4>
                     <p className="text-[9px] text-zinc-400 font-mono truncate max-w-[140px]">{creator.bio}</p>

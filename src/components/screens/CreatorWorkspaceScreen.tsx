@@ -196,7 +196,7 @@ export const CreatorWorkspaceScreen: React.FC<CreatorWorkspaceScreenProps> = ({
                 <div key={item.id} className="p-4 rounded-2xl bg-white/[0.01] border border-white/5 flex flex-col justify-between hover:border-violet-500/15 duration-300 transition-all">
                   <div className="space-y-3">
                     <div className="aspect-[4/5] rounded-xl overflow-hidden bg-neutral-900">
-                      <img src={item.imageUrl} alt={item.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      <img src={item.imageUrl || null} alt={item.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                     </div>
                     <div>
                       <span className="text-[9px] font-mono uppercase text-zinc-500">{item.category}</span>

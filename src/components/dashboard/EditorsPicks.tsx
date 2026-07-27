@@ -604,8 +604,7 @@ export const EditorsPicks: React.FC<EditorsPicksProps> = ({ setActiveSubTab, onA
             >
               {/* Left side: Image */}
               <div className="w-[110px] h-full overflow-hidden relative shrink-0 border-r border-white/5 bg-zinc-950">
-                <img 
-                  src={pick.imageUrl} 
+                <img src={pick.imageUrl || null} 
                   alt={pick.title}
                   referrerPolicy="no-referrer"
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
@@ -771,7 +770,7 @@ export const EditorsPicks: React.FC<EditorsPicksProps> = ({ setActiveSubTab, onA
                           {uploadedImageBase64 ? (
                             <div className="flex items-center gap-3">
                               <div className="w-16 h-16 rounded-lg overflow-hidden border border-white/10 shrink-0">
-                                <img src={uploadedImageBase64} alt="preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                                <img src={uploadedImageBase64 || null} alt="preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                               </div>
                               <div className="text-left space-y-1">
                                 <span className="text-[10.5px] text-emerald-400 font-mono block font-bold">✓ REFERENCE CONFIGURED</span>
@@ -810,7 +809,7 @@ export const EditorsPicks: React.FC<EditorsPicksProps> = ({ setActiveSubTab, onA
                               onClick={() => handleSelectSampleFabric(sample)}
                               className={`p-1.5 rounded-xl border text-left bg-[#07070c] transition-all flex items-center gap-2 cursor-pointer hover:border-indigo-500/35 ${uploadedImageName === sample.name ? 'border-indigo-500 bg-indigo-950/10' : 'border-white/5'}`}
                             >
-                              <img src={sample.url} alt="" className="w-8 h-8 rounded-lg object-cover shrink-0" referrerPolicy="no-referrer" />
+                              <img src={sample.url || null} alt="" className="w-8 h-8 rounded-lg object-cover shrink-0" referrerPolicy="no-referrer" />
                               <div className="min-w-0">
                                 <span className="block text-[9px] font-bold font-sans text-zinc-300 truncate leading-tight">{sample.name}</span>
                                 <span className="block text-[7.5px] text-zinc-500 truncate">{sample.desc}</span>
@@ -1110,7 +1109,7 @@ export const EditorsPicks: React.FC<EditorsPicksProps> = ({ setActiveSubTab, onA
                             }}
                             className="p-2 rounded-xl bg-indigo-950/20 border border-indigo-500/20 hover:border-indigo-400 space-y-1 text-[9px] cursor-pointer transition-all"
                           >
-                            <img src={cr.img} className="w-full aspect-[4/5] object-cover rounded-lg mb-1" alt="" referrerPolicy="no-referrer" />
+                            <img src={cr.img || null} className="w-full aspect-[4/5] object-cover rounded-lg mb-1" alt="" referrerPolicy="no-referrer" />
                             <span className="block font-bold text-emerald-400 truncate">{cr.title}</span>
                             <span className="block text-zinc-500 text-[8px] truncate">{cr.country}</span>
                           </div>

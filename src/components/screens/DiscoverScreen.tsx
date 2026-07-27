@@ -242,7 +242,7 @@ export const DiscoverScreen: React.FC<DiscoverScreenProps> = ({
                         className="p-3 bg-white/[0.01] border border-white/5 rounded-2xl space-y-3 hover:border-violet-500/20 hover:scale-[1.01] transition-all duration-300 cursor-pointer text-left"
                       >
                         <div className="aspect-[4/5] overflow-hidden bg-neutral-900 rounded-xl">
-                          <img src={item.imageUrl} alt={item.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          <img src={item.imageUrl || null} alt={item.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                         </div>
                         <div className="space-y-1">
                           <h4 className="text-xs font-semibold text-white truncate">{item.title}</h4>
@@ -270,7 +270,7 @@ export const DiscoverScreen: React.FC<DiscoverScreenProps> = ({
                   ].map((upgrade, uIdx) => (
                     <div key={uIdx} className="flex gap-3 bg-white/[0.01] p-2.5 rounded-xl border border-white/5 hover:border-violet-500/10 transition-colors">
                       <div className="w-14 h-16 rounded-lg overflow-hidden bg-zinc-950 shrink-0">
-                        <img src={upgrade.img} alt={upgrade.title} className="w-full h-full object-cover" />
+                        <img src={upgrade.img || null} alt={upgrade.title} className="w-full h-full object-cover" />
                       </div>
                       <div className="min-w-0">
                         <h4 className="text-[11.5px] font-bold text-white truncate">{upgrade.title}</h4>
@@ -325,8 +325,7 @@ function filteredEditorialList(
         >
           {/* Portrait Cover Illustration */}
           <div className="relative aspect-[3/2] overflow-hidden bg-zinc-950">
-            <img
-              src={ed.imageUrl}
+            <img src={ed.imageUrl || null}
               alt={ed.title}
               className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-103 grayscale-[30%] group-hover:grayscale-0"
               referrerPolicy="no-referrer"

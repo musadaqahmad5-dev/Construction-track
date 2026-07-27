@@ -86,8 +86,15 @@ export const HomeHub: React.FC<HomeHubProps> = ({
   const [importGivenTitle, setImportGivenTitle] = useState<string>('');
   const [importGivenCaption, setImportGivenCaption] = useState<string>('');
 
-  // Save Other Users' Image / Video Modal State
-  const [isSaveOtherAssetOpen, setIsSaveOtherAssetOpen] = useState<boolean>(false);
+  // Global Closet Privacy Setting (Private vs Public in World)
+  const [isClosetGloballyPrivate, setIsClosetGloballyPrivate] = useState<boolean>(() => {
+    try {
+      const stored = localStorage.getItem('user_closet_globally_private');
+      return stored !== null ? JSON.parse(stored) : true;
+    } catch (e) {
+      return true;
+    }
+  });
   const [saveOtherTitle, setSaveOtherTitle] = useState<string>('');
   const [saveOtherUrl, setSaveOtherUrl] = useState<string>('');
   const [saveOtherCategory, setSaveOtherCategory] = useState<'tops' | 'bottoms' | 'outerwear' | 'dresses' | 'shoes' | 'accessories'>('outerwear');
@@ -617,12 +624,11 @@ export const HomeHub: React.FC<HomeHubProps> = ({
                       <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-amber-400 via-rose-500 to-violet-600 p-0.5 shadow-lg group-hover:scale-105 transition-all overflow-hidden relative">
                         {isVideo ? (
                           <div className="w-full h-full bg-zinc-900 rounded-[14px] flex items-center justify-center relative overflow-hidden">
-                            <video src={story.imageUrl} className="w-full h-full object-cover" muted />
+                            <video src={story.imageUrl || null} className="w-full h-full object-cover" muted />
                             <Video className="w-4 h-4 text-white absolute inset-0 m-auto drop-shadow-md" />
                           </div>
                         ) : (
-                          <img
-                            src={story.imageUrl}
+                          <img src={story.imageUrl || null}
                             alt="Story"
                             className="w-full h-full object-cover rounded-[14px]"
                           />
@@ -753,10 +759,9 @@ export const HomeHub: React.FC<HomeHubProps> = ({
                       {/* Post Image / Video */}
                       <div className="relative rounded-2xl overflow-hidden bg-zinc-950 max-h-[500px]">
                         {post.imageUrl.endsWith('.mp4') || post.imageUrl.includes('video') ? (
-                          <video src={post.imageUrl} controls className="w-full h-auto object-cover max-h-[500px]" />
+                          <video src={post.imageUrl || null} controls className="w-full h-auto object-cover max-h-[500px]" />
                         ) : (
-                          <img
-                            src={post.imageUrl}
+                          <img src={post.imageUrl || null}
                             alt={post.title}
                             className="w-full h-auto object-cover max-h-[500px]"
                           />
@@ -1124,7 +1129,6 @@ export const HomeHub: React.FC<HomeHubProps> = ({
             <div className="flex items-center gap-2 border-b border-white/5 pb-3 overflow-x-auto scrollbar-none flex-nowrap">
               {[
                 { id: 'CLOSET', label: `Digital Closet (${wardrobe.length})`, icon: Shirt },
-                { id: 'SAVE_OTHER_USERS', label: `Save Other Users' Images/Videos`, icon: Download },
                 { id: 'COLLECTIONS', label: `Collections (${collections.length})`, icon: Folder },
                 { id: 'SAVED', label: `Saved & Liked (${recentLikes.length})`, icon: Bookmark },
                 { id: 'IMPORT_MEMORY', label: `Public Drafts (${anonymousDrafts.length})`, icon: Wand2 }
@@ -1152,20 +1156,79 @@ export const HomeHub: React.FC<HomeHubProps> = ({
             {/* SUB TAB 1: DIGITAL CLOSET */}
             {myWorldSubTab === 'CLOSET' && (
               <div className="space-y-4">
-                <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center justify-between flex-wrap gap-3">
                   <div>
-                    <h3 className="font-serif text-base font-medium text-white">Digital Closet & World</h3>
-                    <p className="text-xs text-zinc-400 font-light">Your private collection of garments and saved items from other users.</p>
+                    <h3 className="font-serif text-base font-medium text-white flex items-center gap-2">
+                      <span>Digital Closet & World</span>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono border uppercase font-bold ${
+                        isClosetGloballyPrivate 
+                          ? 'bg-amber-500/10 text-amber-300 border-amber-500/30' 
+                          : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
+                      }`}>
+                        {isClosetGloballyPrivate ? '🔒 Private' : '🌐 Public'}
+                      </span>
+                    </h3>
+                    <p className="text-xs text-zinc-400 font-light">
+                      {isClosetGloballyPrivate 
+                        ? 'Your closet is strictly Private. Searchers & other users see a Private status.'
+                        : 'Your closet is Public. Community searchers can explore your saved items & style interests.'}
+                    </p>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={() => setIsSaveOtherAssetOpen(true)}
-                      className="px-3.5 py-2 bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 text-amber-200 text-xs font-mono rounded-xl cursor-pointer flex items-center gap-1.5"
+                      onClick={() => {
+                        const newPrivacy = !isClosetGloballyPrivate;
+                        setIsClosetGloballyPrivate(newPrivacy);
+                        try {
+                          localStorage.setItem('user_closet_globally_private', JSON.stringify(newPrivacy));
+                        } catch (e) {}
+                        window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
+                          detail: newPrivacy 
+                            ? "🔒 My Closet & World is now PRIVATE. Other users searching for your profile will see that your closet is Private."
+                            : "🌐 My Closet & World is now PUBLIC. Searchers & community members can view your saved fashion items!"
+                        }));
+                      }}
+                      className={`px-4 py-2 rounded-xl text-xs font-mono font-bold flex items-center gap-2 cursor-pointer transition-all border shadow-lg ${
+                        isClosetGloballyPrivate
+                          ? 'bg-zinc-900 border-amber-500/40 text-amber-300 hover:bg-zinc-800 hover:border-amber-400'
+                          : 'bg-emerald-950/80 border-emerald-500/50 text-emerald-200 hover:bg-emerald-900/90 hover:border-emerald-400'
+                      }`}
+                      title={isClosetGloballyPrivate ? "Click to set My Closet & World PUBLIC to Community" : "Click to set My Closet & World PRIVATE"}
                     >
-                      <Plus className="w-3.5 h-3.5 text-amber-400" />
-                      <span>+ Add Other Users' Image/Video</span>
+                      {isClosetGloballyPrivate ? (
+                        <>
+                          <Lock className="w-3.5 h-3.5 text-amber-400" />
+                          <span>🔒 Make Closet Public</span>
+                        </>
+                      ) : (
+                        <>
+                          <Globe className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+                          <span>🌐 Make Closet Private</span>
+                        </>
+                      )}
                     </button>
+                  </div>
+                </div>
+
+                {/* Informative Privacy Status Banner */}
+                <div className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 transition-all ${
+                  isClosetGloballyPrivate
+                    ? 'bg-amber-500/5 border-amber-500/20 text-amber-200/90'
+                    : 'bg-emerald-500/5 border-emerald-500/20 text-emerald-200/90'
+                }`}>
+                  <div className="flex items-center gap-2.5 text-xs">
+                    {isClosetGloballyPrivate ? (
+                      <Lock className="w-4 h-4 text-amber-400 shrink-0" />
+                    ) : (
+                      <Globe className="w-4 h-4 text-emerald-400 shrink-0" />
+                    )}
+                    <span className="font-light">
+                      {isClosetGloballyPrivate 
+                        ? "Privacy Status: PRIVATE. When other users search for your profile, they will see that your My Closet & World is kept Private."
+                        : "Privacy Status: PUBLIC. Community members searching for your profile can view your public saved items and fashion interests."
+                      }
+                    </span>
                   </div>
                 </div>
 
@@ -1183,9 +1246,9 @@ export const HomeHub: React.FC<HomeHubProps> = ({
                       <div key={item.id} className="p-3 bg-[#07070c] border border-white/5 rounded-2xl space-y-2 group hover:border-violet-500/30 transition-all">
                         <div className="aspect-square rounded-xl overflow-hidden bg-zinc-950 relative">
                           {item.imageUrl.endsWith('.mp4') || item.imageUrl.includes('video') ? (
-                            <video src={item.imageUrl} controls className="w-full h-full object-cover" />
+                            <video src={item.imageUrl || null} controls className="w-full h-full object-cover" />
                           ) : (
-                            <img src={item.imageUrl} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-all" />
+                            <img src={item.imageUrl || null} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-all" />
                           )}
                         </div>
                         <div>
@@ -1199,80 +1262,7 @@ export const HomeHub: React.FC<HomeHubProps> = ({
               </div>
             )}
 
-            {/* SUB TAB 2: SAVE OTHER USERS' IMAGES & VIDEOS */}
-            {myWorldSubTab === 'SAVE_OTHER_USERS' && (
-              <div className="space-y-4">
-                <div className="p-4 bg-gradient-to-r from-violet-950/60 to-indigo-950/60 border border-violet-500/30 rounded-2xl space-y-1">
-                  <h4 className="font-serif text-sm font-medium text-amber-300 flex items-center gap-2">
-                    <Download className="w-4 h-4 text-amber-400" />
-                    <span>Save Other Users' Shared Assets into My Closet & World</span>
-                  </h4>
-                  <p className="text-xs text-zinc-300 font-light leading-relaxed">
-                    You can preserve any image or video uploaded by other community members into your personal Digital Closet or Collections to style and wear later.
-                  </p>
-                </div>
 
-                <div className="flex justify-between items-center">
-                  <span className="text-xs font-mono text-zinc-400">Available Public Community Assets</span>
-                  <button
-                    type="button"
-                    onClick={() => setIsSaveOtherAssetOpen(true)}
-                    className="px-3.5 py-2 bg-violet-600 hover:bg-violet-500 text-white text-xs font-mono rounded-xl cursor-pointer flex items-center gap-1.5"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Import Asset by Link</span>
-                  </button>
-                </div>
-
-                {/* Sample Public Community Uploads by Other Users */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                  {[
-                    {
-                      id: 'user-asset-1',
-                      author: 'Elena Vance (@elena_couture)',
-                      title: 'Liquid Metal Drape Dress',
-                      url: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=800',
-                      type: 'image',
-                      cat: 'dresses'
-                    },
-                    {
-                      id: 'user-asset-2',
-                      author: 'Soren Vance (@soren_design)',
-                      title: 'Deconstructed Oversized Trench',
-                      url: 'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?q=80&w=800',
-                      type: 'image',
-                      cat: 'outerwear'
-                    },
-                    {
-                      id: 'user-asset-3',
-                      author: 'Aria Sterling (@aria_cyber)',
-                      title: 'Runway Silk Trousers & Blazer',
-                      url: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=800',
-                      type: 'image',
-                      cat: 'tops'
-                    }
-                  ].map(asset => (
-                    <div key={asset.id} className="p-4 bg-[#07070c] border border-white/10 rounded-2xl space-y-3 hover:border-violet-500/30 transition-all">
-                      <div className="aspect-square rounded-xl overflow-hidden bg-zinc-950">
-                        <img src={asset.url} alt={asset.title} className="w-full h-full object-cover" />
-                      </div>
-                      <div>
-                        <span className="text-[9.5px] font-mono text-zinc-500 block truncate">{asset.author}</span>
-                        <h4 className="font-serif text-xs font-medium text-white">{asset.title}</h4>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleSaveOtherUserAsset(asset.title, asset.url, asset.cat)}
-                        className="w-full py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-mono font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-lg"
-                      >
-                        <Save className="w-3.5 h-3.5 text-amber-300" />
-                        <span>Save to My Closet</span>
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
 
             {/* SUB TAB 3: PERSONAL COLLECTIONS */}
             {myWorldSubTab === 'COLLECTIONS' && (
@@ -1330,7 +1320,7 @@ export const HomeHub: React.FC<HomeHubProps> = ({
                     {recentLikes.map(like => (
                       <div key={like.id} className="p-3 bg-[#07070c] border border-white/5 rounded-2xl space-y-2 group">
                         <div className="aspect-square rounded-xl overflow-hidden bg-zinc-950">
-                          <img src={like.imageUrl} alt={like.title} className="w-full h-full object-cover group-hover:scale-105 transition-all" />
+                          <img src={like.imageUrl || null} alt={like.title} className="w-full h-full object-cover group-hover:scale-105 transition-all" />
                         </div>
                         <div>
                           <h4 className="font-serif text-xs font-medium text-white truncate">{like.title}</h4>
@@ -1364,7 +1354,7 @@ export const HomeHub: React.FC<HomeHubProps> = ({
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {anonymousDrafts.map(draft => (
                       <div key={draft.id} className="p-4 bg-[#07070c] border border-white/10 rounded-2xl flex gap-4 items-center">
-                        <img src={draft.imageUrl} alt="Draft" className="w-20 h-20 object-cover rounded-xl shrink-0" />
+                        <img src={draft.imageUrl || null} alt="Draft" className="w-20 h-20 object-cover rounded-xl shrink-0" />
                         <div className="space-y-2 flex-1">
                           <span className="px-2 py-0.5 bg-violet-500/10 border border-violet-500/20 text-violet-300 text-[9px] font-mono rounded">
                             {draft.originModule}
@@ -1706,7 +1696,7 @@ export const HomeHub: React.FC<HomeHubProps> = ({
                           storyImageUrl === item.imageUrl ? 'border-amber-400 ring-2 ring-amber-400/50' : 'border-white/10 opacity-70 hover:opacity-100'
                         }`}
                       >
-                        <img src={item.imageUrl} alt={item.title} className="w-full h-full object-cover" />
+                        <img src={item.imageUrl || null} alt={item.title} className="w-full h-full object-cover" />
                       </button>
                     ))}
                   </div>
@@ -1717,9 +1707,9 @@ export const HomeHub: React.FC<HomeHubProps> = ({
               {storyImageUrl && (
                 <div className="aspect-[9/16] max-h-48 rounded-2xl overflow-hidden bg-black border border-amber-400/50 relative">
                   {storyMediaType === 'video' || storyImageUrl.endsWith('.mp4') ? (
-                    <video src={storyImageUrl} controls autoPlay loop muted className="w-full h-full object-cover" />
+                    <video src={storyImageUrl || null} controls autoPlay loop muted className="w-full h-full object-cover" />
                   ) : (
-                    <img src={storyImageUrl} alt="Preview" className="w-full h-full object-cover" />
+                    <img src={storyImageUrl || null} alt="Preview" className="w-full h-full object-cover" />
                   )}
                   <span className="absolute top-2 right-2 px-2 py-0.5 bg-black/60 text-amber-300 font-mono text-[9px] rounded-full border border-amber-400/30">
                     Ready
@@ -1834,9 +1824,9 @@ export const HomeHub: React.FC<HomeHubProps> = ({
                 {postImageUrl && (
                   <div className="rounded-2xl overflow-hidden bg-black border border-violet-500/30 max-h-48 relative">
                     {postMediaType === 'video' || postImageUrl.endsWith('.mp4') || postImageUrl.includes('video') ? (
-                      <video src={postImageUrl} controls className="w-full h-48 object-cover" />
+                      <video src={postImageUrl || null} controls className="w-full h-48 object-cover" />
                     ) : (
-                      <img src={postImageUrl} alt="Post Preview" className="w-full h-48 object-cover" />
+                      <img src={postImageUrl || null} alt="Post Preview" className="w-full h-48 object-cover" />
                     )}
                   </div>
                 )}
@@ -1883,98 +1873,7 @@ export const HomeHub: React.FC<HomeHubProps> = ({
         )}
       </AnimatePresence>
 
-      {/* MODAL: SAVE OTHER USER'S IMAGE / VIDEO TO MY CLOSET */}
-      <AnimatePresence>
-        {isSaveOtherAssetOpen && (
-          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-[#0c0c14] border border-amber-500/30 rounded-3xl p-6 w-full max-w-md space-y-5 shadow-2xl text-left"
-            >
-              <div className="flex items-center justify-between border-b border-white/10 pb-3">
-                <h3 className="font-serif text-base font-medium text-amber-300 flex items-center gap-2">
-                  <Save className="w-4 h-4 text-amber-400" />
-                  <span>Save Other User's Image/Video</span>
-                </h3>
-                <button type="button" onClick={() => setIsSaveOtherAssetOpen(false)} className="text-zinc-500 hover:text-white cursor-pointer">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
 
-              <form
-                onSubmit={async (e) => {
-                  e.preventDefault();
-                  if (!saveOtherUrl.trim()) return;
-                  await handleSaveOtherUserAsset(saveOtherTitle.trim() || 'Shared Community Look', saveOtherUrl.trim(), saveOtherCategory);
-                  setIsSaveOtherAssetOpen(false);
-                  setSaveOtherTitle('');
-                  setSaveOtherUrl('');
-                }}
-                className="space-y-4"
-              >
-                <div className="space-y-1">
-                  <label className="block text-xs font-mono text-zinc-400">Garment / Look Title</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Shared Silk Couture Dress"
-                    value={saveOtherTitle}
-                    onChange={e => setSaveOtherTitle(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-amber-500"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="block text-xs font-mono text-zinc-400">Image or Video Link</label>
-                  <input
-                    type="url"
-                    required
-                    placeholder="https://..."
-                    value={saveOtherUrl}
-                    onChange={e => setSaveOtherUrl(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-amber-500"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="block text-xs font-mono text-zinc-400">Closet Category</label>
-                  <select
-                    value={saveOtherCategory}
-                    onChange={e => setSaveOtherCategory(e.target.value as any)}
-                    className="w-full px-4 py-2.5 bg-[#07070c] border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-amber-500"
-                  >
-                    <option value="tops">Tops & Shirts</option>
-                    <option value="outerwear">Outerwear & Jackets</option>
-                    <option value="dresses">Dresses & Suits</option>
-                    <option value="bottoms">Bottoms & Trousers</option>
-                    <option value="shoes">Shoes & Footwear</option>
-                    <option value="accessories">Accessories</option>
-                  </select>
-                </div>
-
-                <div className="flex items-center justify-end gap-3 pt-3">
-                  <button
-                    type="button"
-                    onClick={() => setIsSaveOtherAssetOpen(false)}
-                    className="px-4 py-2 text-xs font-mono text-zinc-400 hover:text-white cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono rounded-xl cursor-pointer shadow-lg font-bold flex items-center gap-1.5"
-                  >
-                    <Save className="w-3.5 h-3.5 text-amber-300" />
-                    <span>Save to My Closet</span>
-                  </button>
-                </div>
-              </form>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
 
       {/* MODAL: "UPLOAD FOR GIVE YOUR NAME" IMPORT DRAFT */}
       <AnimatePresence>
@@ -1997,7 +1896,7 @@ export const HomeHub: React.FC<HomeHubProps> = ({
               </div>
 
               <div className="flex gap-4 items-center p-3 bg-white/[0.02] border border-white/5 rounded-2xl">
-                <img src={selectedImportDraft.imageUrl} alt="Preview" className="w-20 h-20 object-cover rounded-xl" />
+                <img src={selectedImportDraft.imageUrl || null} alt="Preview" className="w-20 h-20 object-cover rounded-xl" />
                 <div>
                   <span className="px-2 py-0.5 bg-violet-500/10 text-violet-300 font-mono text-[9px] rounded">
                     {selectedImportDraft.originModule} Anonymous Memory
@@ -2135,10 +2034,9 @@ export const HomeHub: React.FC<HomeHubProps> = ({
 
               <div className="relative aspect-[9/16] w-full bg-zinc-950">
                 {selectedStory.imageUrl.endsWith('.mp4') || selectedStory.imageUrl.includes('video') ? (
-                  <video src={selectedStory.imageUrl} controls autoPlay loop className="w-full h-full object-cover" />
+                  <video src={selectedStory.imageUrl || null} controls autoPlay loop className="w-full h-full object-cover" />
                 ) : (
-                  <img
-                    src={selectedStory.imageUrl}
+                  <img src={selectedStory.imageUrl || null}
                     alt="Story"
                     className="w-full h-full object-cover"
                   />

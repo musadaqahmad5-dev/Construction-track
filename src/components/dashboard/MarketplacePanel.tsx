@@ -82,8 +82,7 @@ export const MarketplacePanel: React.FC<MarketplacePanelProps> = ({
               onClick={() => window.dispatchEvent(new CustomEvent('lookvision_view_product', { detail: item }))}
               className="relative aspect-[3/4] overflow-hidden bg-zinc-950 cursor-pointer"
             >
-              <img 
-                src={item.imageUrl} 
+              <img src={item.imageUrl || null} 
                 alt={item.title} 
                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                 onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1544441893-675973e31985?q=80&w=200&auto=format&fit=crop"; }}

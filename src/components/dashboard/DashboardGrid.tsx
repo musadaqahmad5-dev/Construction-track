@@ -190,8 +190,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
             >
               {/* Card Image */}
               <div className="absolute inset-0 bg-zinc-950 z-0">
-                <img 
-                  src={item.imageUrl} 
+                <img src={item.imageUrl || null} 
                   alt={item.title} 
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                   onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?q=80&w=200&auto=format&fit=crop"; }}
@@ -321,8 +320,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
             >
               {/* Card Image */}
               <div className="absolute inset-0 bg-zinc-950 z-0">
-                <img 
-                  src={item.imageUrl} 
+                <img src={item.imageUrl || null} 
                   alt="" 
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                   onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=200&auto=format&fit=crop"; }}
@@ -333,8 +331,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
               {/* Community User Header Overlay */}
               <div className="absolute top-0 left-0 right-0 p-2 bg-gradient-to-b from-black/80 via-black/40 to-transparent flex items-center justify-between z-10">
                 <div className="flex items-center gap-1.5 min-w-0">
-                  <img 
-                    src={item.userAvatar} 
+                  <img src={item.userAvatar || null} 
                     className="w-5 h-5 rounded-full object-cover border border-white/10 shrink-0" 
                     alt="" 
                     referrerPolicy="no-referrer"
@@ -443,8 +440,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
                 onClick={() => window.dispatchEvent(new CustomEvent('lookvision_view_product', { detail: item }))}
                 className="absolute inset-0 bg-zinc-950 z-0 cursor-pointer"
               >
-                <img 
-                  src={item.imageUrl} 
+                <img src={item.imageUrl || null} 
                   alt={item.title} 
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                   onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1544441893-675973e31985?q=80&w=200&auto=format&fit=crop"; }}

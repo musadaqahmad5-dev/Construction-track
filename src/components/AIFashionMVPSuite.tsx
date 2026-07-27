@@ -1318,7 +1318,7 @@ export const AIFashionMVPSuite: React.FC<AIFashionMVPSuiteProps> = ({
             ) : (
               <div className="flex items-center gap-3 bg-black/40 border border-white/5 p-2 rounded-lg">
                 <div className="relative w-12 h-12 rounded bg-zinc-950 overflow-hidden border border-white/10 shrink-0">
-                  <img src={inspireUserImage} alt="Uploaded body reference" className="w-full h-full object-cover" />
+                  <img src={inspireUserImage || null} alt="Uploaded body reference" className="w-full h-full object-cover" />
                   <div className="absolute inset-0 bg-emerald-500/10 animate-pulse" />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -2909,8 +2909,7 @@ export const AIFashionMVPSuite: React.FC<AIFashionMVPSuiteProps> = ({
                   </div>
                 ) : studioGeneratedImage ? (
                   <>
-                    <img
-                      src={studioGeneratedImage}
+                    <img src={studioGeneratedImage || null}
                       alt="Studio Generated Fashion Outfit"
                       className="absolute inset-0 w-full h-full object-cover select-none transition-transform duration-700 group-hover:scale-105"
                       referrerPolicy="no-referrer"

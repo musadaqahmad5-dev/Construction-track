@@ -262,8 +262,7 @@ export const StyleMessageCenter: React.FC<StyleMessageCenterProps> = ({ wardrobe
                   }`}
                 >
                   <div className="relative shrink-0">
-                    <img 
-                      src={curator.imgUrl} 
+                    <img src={curator.imgUrl || null} 
                       alt={curator.name} 
                       className="w-10 h-10 rounded-xl object-cover grayscale"
                     />
@@ -290,8 +289,7 @@ export const StyleMessageCenter: React.FC<StyleMessageCenterProps> = ({ wardrobe
           {/* Active Curator Top Info */}
           <div className="p-4 border-b border-white/5 flex items-center justify-between bg-white/[0.01]">
             <div className="flex items-center gap-3">
-              <img 
-                src={activeCurator.imgUrl} 
+              <img src={activeCurator.imgUrl || null} 
                 alt={activeCurator.name} 
                 className="w-9 h-9 rounded-lg object-cover shrink-0 grayscale"
               />

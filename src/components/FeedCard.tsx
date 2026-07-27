@@ -234,6 +234,12 @@ export const FeedCard: React.FC<FeedCardProps> = ({
   };
 
   const handleSaveToCloset = () => {
+    if (isSaved) {
+      window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
+        detail: '⚠️ Item is already saved in your wardrobe collection!'
+      }));
+      return;
+    }
     onSaveToCloset(
       item.title, 
       item.description, 
@@ -242,7 +248,6 @@ export const FeedCard: React.FC<FeedCardProps> = ({
       item.price
     );
     setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 2000);
   };
 
   const handleBuyNow = () => {
@@ -484,7 +489,7 @@ export const FeedCard: React.FC<FeedCardProps> = ({
                                     : 'border-white/5 opacity-65 hover:opacity-100 hover:border-white/10'
                                 }`}
                               >
-                                <img src={model.url} alt={model.name} className="absolute inset-0 w-full h-full object-cover transition-transform group-hover:scale-105" />
+                                <img src={model.url || null} alt={model.name} className="absolute inset-0 w-full h-full object-cover transition-transform group-hover:scale-105" />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-0" />
                                 <span className="z-10 text-[7.5px] font-mono text-white/90 truncate w-full uppercase block text-left">
                                   {model.name.split(' ')[0]}
@@ -524,7 +529,7 @@ export const FeedCard: React.FC<FeedCardProps> = ({
                         <div className="bg-white/[0.04] border border-white/10 p-2.5 rounded-lg flex items-center justify-between text-xs font-mono text-white">
                           <div className="flex items-center gap-2 truncate">
                             <div className="w-6 h-6 rounded-full overflow-hidden border border-white/10">
-                              <img src={selectedAvatarUrl} alt="selected avatar preview" className="w-full h-full object-cover" />
+                              <img src={selectedAvatarUrl || null} alt="selected avatar preview" className="w-full h-full object-cover" />
                             </div>
                             <span className="truncate max-w-[150px]">{selectedAvatarName || "Custom Avatar"}</span>
                           </div>
@@ -587,7 +592,7 @@ export const FeedCard: React.FC<FeedCardProps> = ({
                           <span className="text-[7.5px] font-mono uppercase tracking-wider text-white/30 block">Mannequin Frame</span>
                           <div className="aspect-[3/4] rounded-lg overflow-hidden border border-white/5 bg-[#0a0a0a]">
                             {selectedAvatarUrl ? (
-                              <img src={selectedAvatarUrl} alt="selected body" className="w-full h-full object-cover" />
+                              <img src={selectedAvatarUrl || null} alt="selected body" className="w-full h-full object-cover" />
                             ) : (
                               <div className="w-full h-full flex flex-col items-center justify-center text-[10px] font-mono text-white/20 p-2">
                                 No Model Selected
@@ -684,8 +689,7 @@ export const FeedCard: React.FC<FeedCardProps> = ({
                             {/* Reference Model image */}
                             <div className="absolute inset-0 z-0">
                               {selectedAvatarUrl ? (
-                                <img 
-                                  src={selectedAvatarUrl} 
+                                <img src={selectedAvatarUrl || null} 
                                   alt="Reference Body Map" 
                                   className="w-full h-full object-cover transition-all duration-300"
                                   style={{
@@ -1192,7 +1196,7 @@ export const FeedCard: React.FC<FeedCardProps> = ({
                   </div>
 
                   <div className="flex gap-3 items-center bg-white/[0.02] border border-white/5 p-3 rounded-xl text-left">
-                    <img src={item.imageUrl} alt={item.title} className="w-14 h-18 object-cover rounded-md border border-white/10 flex-shrink-0" />
+                    <img src={item.imageUrl || null} alt={item.title} className="w-14 h-18 object-cover rounded-md border border-white/10 flex-shrink-0" />
                     <div>
                       <h5 className="font-serif text-sm text-neutral-100 font-light leading-snug">{item.title}</h5>
                       <p className="text-[10px] text-white/40 font-mono tracking-tight">{item.shopName || "Boutique Partner"}</p>
@@ -1470,13 +1474,38 @@ export const FeedCard: React.FC<FeedCardProps> = ({
 
       {/* 1. Primary Image Section (Image First) */}
       {item.imageUrl && (
-        <div className="relative aspect-[3/4] overflow-hidden rounded-xl border border-white/5 bg-[#080808]">
+        <div 
+          onClick={() => {
+            window.dispatchEvent(new CustomEvent('lookvision_open_lightbox', {
+              detail: {
+                id: item.id,
+                imageUrl: item.imageUrl,
+                title: item.title,
+                description: item.description,
+                category: item.category || 'Feed Item',
+                creatorName: item.shopName || 'Sartorial Hub',
+                creatorAvatar: item.shopAvatarUrl,
+                isSaved: isSaved
+              }
+            }));
+          }}
+          className="relative aspect-[3/4] overflow-hidden rounded-xl border border-white/5 bg-[#080808] cursor-pointer group/img"
+          title="Click to view full image in Lightbox"
+        >
           <ImageWithFade src={item.imageUrl} alt={item.title} />
+
+          {/* Full Screen Hint Overlay on Hover */}
+          <div className="absolute top-3 left-3 bg-black/70 backdrop-blur-md px-2 py-1 rounded-md border border-white/10 text-[9px] font-mono uppercase text-zinc-300 opacity-0 group-hover/img:opacity-100 transition-opacity z-10 flex items-center gap-1">
+            <Eye className="w-3 h-3 text-violet-400" /> Full View
+          </div>
 
           {/* Try On Button overlay */}
           {(item.type === 'shop_product' || item.type === 'budget_pick' || item.type === 'trending_fashion') && (
             <button
-              onClick={startTryon}
+              onClick={(e) => {
+                e.stopPropagation();
+                startTryon();
+              }}
               className="absolute bottom-3 right-3 bg-black/60 hover:bg-black/85 backdrop-blur-md border border-white/10 px-3 py-1 text-[9px] font-mono uppercase text-white hover:text-white/80 transition-colors z-10 flex items-center gap-1 cursor-pointer rounded-md shadow-lg"
             >
               <Sparkle className="w-2.5 h-2.5 text-amber-400 fill-amber-400" />
@@ -1500,7 +1529,7 @@ export const FeedCard: React.FC<FeedCardProps> = ({
         {item.type === 'shop_product' || item.type === 'budget_pick' ? (
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-full overflow-hidden border border-white/15 bg-neutral-900 flex-shrink-0">
-              <img src={item.shopAvatarUrl} alt={item.shopName} className="w-full h-full object-cover" />
+              <img src={item.shopAvatarUrl || null} alt={item.shopName} className="w-full h-full object-cover" />
             </div>
             <div>
               <div className="flex items-center gap-1">

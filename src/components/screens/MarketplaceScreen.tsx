@@ -627,8 +627,7 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({
                 onClick={() => setSelectedCreatorCapsule(cap)}
                 className="group relative aspect-[16/10] rounded-2xl overflow-hidden border border-white/5 hover:border-violet-500/30 transition-all cursor-pointer bg-zinc-950 p-4 flex flex-col justify-between shadow-xl"
               >
-                <img
-                  src={cap.featuredImage}
+                <img src={cap.featuredImage || null}
                   alt={cap.title}
                   className="absolute inset-0 w-full h-full object-cover opacity-35 group-hover:scale-105 transition-transform duration-700"
                 />
@@ -636,8 +635,7 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({
 
                 <div className="relative z-10 flex justify-between items-start">
                   <div className="flex items-center gap-2">
-                    <img
-                      src={cap.avatar}
+                    <img src={cap.avatar || null}
                       alt={cap.creatorName}
                       className="w-7 h-7 rounded-full object-cover border border-white/20"
                     />
@@ -698,8 +696,7 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({
               >
                 {/* Visual Cover Artwork */}
                 <div className="relative aspect-[4/5] bg-[#09090f] overflow-hidden">
-                  <img
-                    src={product.imageUrl}
+                  <img src={product.imageUrl || null}
                     alt={product.title}
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-104 grayscale-[30%] group-hover:grayscale-0"
                     onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1544441893-675973e31985?q=80&w=200&auto=format&fit=crop"; }}
@@ -894,8 +891,7 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({
 
                         <div className="flex gap-3 text-xs">
                           {ord.productImageUrl ? (
-                            <img 
-                              src={ord.productImageUrl} 
+                            <img src={ord.productImageUrl || null} 
                               alt={ord.productTitle} 
                               className="w-14 h-18 object-cover rounded-lg border border-white/5 flex-shrink-0 bg-[#080808]"
                               referrerPolicy="no-referrer"
@@ -1038,8 +1034,7 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({
                     {/* Order Receipt Item Card */}
                     <div className="bg-zinc-50 border border-zinc-200 rounded-xl p-4 flex gap-4 my-4">
                       {selectedEmailLog.productImageUrl && (
-                        <img
-                          src={selectedEmailLog.productImageUrl}
+                        <img src={selectedEmailLog.productImageUrl || null}
                           alt={selectedEmailLog.productTitle}
                           className="w-16 h-20 object-cover rounded-lg border border-zinc-200"
                           referrerPolicy="no-referrer"
@@ -1158,8 +1153,7 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({
                       <div className="grid grid-cols-2 gap-3 text-xs">
                         {[itemA, itemB].map((item, idx) => (
                           <div key={item.id} className="space-y-2 p-2 bg-black/40 rounded-xl border border-white/5">
-                            <img
-                              src={item.imageUrl}
+                            <img src={item.imageUrl || null}
                               alt={item.title}
                               className="w-full aspect-[4/5] object-cover rounded-lg"
                               referrerPolicy="no-referrer"
@@ -1215,8 +1209,7 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({
                               : 'border-white/5 hover:border-white/10'
                           }`}
                         >
-                          <img
-                            src={p.imageUrl}
+                          <img src={p.imageUrl || null}
                             alt={p.title}
                             className="w-14 h-18 object-cover rounded-lg border border-white/5 shrink-0"
                             referrerPolicy="no-referrer"
@@ -1287,8 +1280,7 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({
             >
               {/* Header Banner */}
               <div className="h-36 w-full relative bg-zinc-900 overflow-hidden shrink-0">
-                <img
-                  src={selectedCreatorCapsule.featuredImage}
+                <img src={selectedCreatorCapsule.featuredImage || null}
                   alt={selectedCreatorCapsule.title}
                   className="w-full h-full object-cover opacity-60"
                 />
@@ -1304,8 +1296,7 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({
               {/* Creator Metainfo */}
               <div className="p-6 space-y-4 overflow-y-auto no-scrollbar -mt-10 relative z-10">
                 <div className="flex items-end gap-3">
-                  <img
-                    src={selectedCreatorCapsule.avatar}
+                  <img src={selectedCreatorCapsule.avatar || null}
                     alt={selectedCreatorCapsule.creatorName}
                     className="w-16 h-16 rounded-2xl object-cover border-2 border-[#0b0b12] shadow-xl bg-zinc-900"
                   />
@@ -1339,7 +1330,7 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({
                       .slice(0, 2)
                       .map(p => (
                         <div key={p.id} className="bg-black/40 border border-white/5 rounded-xl p-3 flex gap-3 items-center">
-                          <img src={p.imageUrl} alt={p.title} className="w-12 h-16 object-cover rounded-lg" />
+                          <img src={p.imageUrl || null} alt={p.title} className="w-12 h-16 object-cover rounded-lg" />
                           <div className="space-y-1 flex-1 min-w-0">
                             <h5 className="text-xs font-semibold text-white truncate">{p.title}</h5>
                             <p className="text-xs font-bold text-emerald-400">${p.price}</p>

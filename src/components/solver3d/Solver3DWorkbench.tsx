@@ -361,8 +361,7 @@ export const Solver3DWorkbench: React.FC<Solver3DWorkbenchProps> = ({
               >
                 {/* Image Thumbnail Preview */}
                 <div className="relative w-full aspect-[4/3] rounded-lg overflow-hidden bg-black mb-2 border border-white/5">
-                  <img
-                    src={preset.previewImg}
+                  <img src={preset.previewImg || null}
                     alt={preset.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />

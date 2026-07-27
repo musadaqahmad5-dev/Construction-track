@@ -24,6 +24,8 @@ export interface WardrobeItem {
   placedElsewhere?: boolean;                      // Placed elsewhere (put away flag)
   lastWornMoment?: string;                       // Moment of day last worn
   worksWith?: string;                            // Optional coordinate text (e.g. "white shoes")
+  isPrivate?: boolean;                           // Visibility flag (true = Private to My Closet, false = Public to World)
+  isPublic?: boolean;                            // Public status in community feed
 }
 
 export interface OutfitSuggestion {

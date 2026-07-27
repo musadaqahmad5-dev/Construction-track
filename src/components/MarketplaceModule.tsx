@@ -108,7 +108,7 @@ export const MarketplaceModule: React.FC<MarketplaceModuleProps> = ({ onAddShopP
                         selectedImage === p.url ? 'border-white ring-1 ring-white/20' : 'border-white/5 opacity-60 hover:opacity-90'
                       }`}
                     >
-                      <img src={p.url} alt={p.label} className="w-full h-full object-cover grayscale" />
+                      <img src={p.url || null} alt={p.label} className="w-full h-full object-cover grayscale" />
                       <div className="absolute inset-0 bg-black/40 flex items-end p-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                         <span className="text-[8px] font-mono text-white tracking-tight truncate">{p.label}</span>
                       </div>

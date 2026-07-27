@@ -174,8 +174,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
         {/* Left Side: Portrait Product Illustration Artwork */}
         <div className="lg:col-span-5 space-y-4">
           <div className="relative aspect-[3/4] rounded-3xl overflow-hidden border border-white/5 bg-[#09090f] shadow-2xl group">
-            <img 
-              src={product.imageUrl} 
+            <img src={product.imageUrl || null} 
               alt={product.title} 
               className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-102"
               referrerPolicy="no-referrer"
@@ -320,8 +319,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                         }}
                       >
                         <div className="aspect-[4/5] overflow-hidden bg-neutral-900 rounded-lg">
-                          <img 
-                            src={item.imageUrl} 
+                          <img src={item.imageUrl || null} 
                             alt={item.title} 
                             className="w-full h-full object-cover"
                             referrerPolicy="no-referrer"

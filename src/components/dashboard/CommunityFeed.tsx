@@ -85,8 +85,7 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
             {/* Community Header with Avatar & Time */}
             <div className="p-3.5 flex items-center justify-between text-left border-b border-white/[0.02]">
               <div className="flex items-center gap-3">
-                <img 
-                  src={item.userAvatar} 
+                <img src={item.userAvatar || null} 
                   className="w-8 h-8 rounded-full object-cover border border-white/10"
                   alt="" 
                 />
@@ -105,8 +104,7 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
             </div>
 
             <div className="relative aspect-[3/4] overflow-hidden bg-zinc-950">
-              <img 
-                src={item.imageUrl} 
+              <img src={item.imageUrl || null} 
                 alt="" 
                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                 onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=200&auto=format&fit=crop"; }}

@@ -206,7 +206,23 @@ export const ImageExperienceModal: React.FC<ImageExperienceModalProps> = ({
                     alt={creation.title}
                     animate={{ scale: zoomLevel }}
                     transition={{ type: 'spring', damping: 25, stiffness: 120 }}
-                    className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl"
+                    onClick={() => {
+                      window.dispatchEvent(new CustomEvent('lookvision_open_lightbox', {
+                        detail: {
+                          id: creation.id,
+                          imageUrl: creation.imageUrl,
+                          title: creation.title,
+                          description: creation.prompt,
+                          category: creation.style,
+                          creatorName: creation.creator.name,
+                          creatorAvatar: creation.creator.avatar,
+                          isSaved: isSaved,
+                          onDelete: onDelete
+                        }
+                      }));
+                    }}
+                    className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl cursor-pointer hover:opacity-95 transition-opacity"
+                    title="Click for High-Res Fullscreen View"
                     referrerPolicy="no-referrer"
                     onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?q=80&w=200&auto=format&fit=crop"; }}
                   />
@@ -236,8 +252,7 @@ export const ImageExperienceModal: React.FC<ImageExperienceModalProps> = ({
                     className="absolute inset-0 z-10"
                     style={{ clipPath: `polygon(0 0, ${beforeAfterSplit}% 0, ${beforeAfterSplit}% 100%, 0 100%)` }}
                   >
-                    <img 
-                      src={creation.imageUrl} 
+                    <img src={creation.imageUrl || null} 
                       alt="After" 
                       className="w-full h-full object-cover animate-fade-in"
                       referrerPolicy="no-referrer"
@@ -299,7 +314,7 @@ export const ImageExperienceModal: React.FC<ImageExperienceModalProps> = ({
                           selectedVariationIndex === vIdx ? 'border-violet-500 scale-95 shadow-md' : 'border-white/5 opacity-50 hover:opacity-100'
                         }`}
                       >
-                        <img src={vImg} className="w-full h-full object-cover" />
+                        <img src={vImg || null} className="w-full h-full object-cover" />
                       </button>
                     )) || (
                       <span className="text-[10px] text-zinc-500 font-mono">No variations generated yet.</span>
@@ -342,7 +357,7 @@ export const ImageExperienceModal: React.FC<ImageExperienceModalProps> = ({
               <div className="w-full h-full flex items-center justify-center p-6 gap-4 select-none">
                 {/* Image 1 */}
                 <div className="flex-1 max-h-[440px] aspect-[3/4.2] relative overflow-hidden rounded-2xl shadow-xl border border-white/5">
-                  <img src={creation.imageUrl} className="w-full h-full object-cover" />
+                  <img src={creation.imageUrl || null} className="w-full h-full object-cover" />
                   <div className="absolute bottom-3 left-3 bg-black/80 px-2 py-0.5 rounded border border-white/10 text-[9px] font-mono text-zinc-400">
                     Active Render
                   </div>
@@ -462,8 +477,7 @@ export const ImageExperienceModal: React.FC<ImageExperienceModalProps> = ({
                 onClick={() => onVisitCreator(creation.creator.id)}
                 className="flex items-center gap-3 cursor-pointer group/creator"
               >
-                <img
-                  src={creation.creator.avatar}
+                <img src={creation.creator.avatar || null}
                   alt={creation.creator.name}
                   className="w-10 h-10 rounded-full object-cover border border-white/10 group-hover/creator:border-violet-500/40 transition-all shadow-md"
                 />

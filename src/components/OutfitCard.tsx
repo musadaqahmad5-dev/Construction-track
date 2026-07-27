@@ -78,8 +78,7 @@ export const OutfitCard: React.FC<OutfitCardProps> = ({ outfit, onWear, onSkip, 
                 className="flex items-center gap-3 p-2.5 rounded-lg bg-white/[0.01] border border-white/5 hover:bg-white/[0.02] transition-colors"
               >
                 {item.imageUrl ? (
-                  <img 
-                    src={item.imageUrl} 
+                  <img src={item.imageUrl || null} 
                     alt={item.title} 
                     referrerPolicy="no-referrer"
                     className="w-10 h-10 object-cover rounded bg-zinc-900" 

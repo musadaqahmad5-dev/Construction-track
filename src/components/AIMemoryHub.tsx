@@ -297,8 +297,7 @@ export const AIMemoryHub: React.FC<AIMemoryHubProps> = ({ user, onNavigateTab })
                   <div className="space-y-3">
                     {/* Image Preview */}
                     <div className="relative aspect-square bg-zinc-950 overflow-hidden">
-                      <img
-                        src={draft.imageUrl}
+                      <img src={draft.imageUrl || null}
                         alt={draft.titleSuggestion}
                         className="w-full h-full object-cover group-hover:scale-105 transition-all duration-300"
                       />
@@ -391,8 +390,7 @@ export const AIMemoryHub: React.FC<AIMemoryHubProps> = ({ user, onNavigateTab })
                 >
                   <div className="space-y-3">
                     <div className="relative aspect-square bg-zinc-950 overflow-hidden">
-                      <img
-                        src={asset.imageUrl}
+                      <img src={asset.imageUrl || null}
                         alt={asset.title}
                         className="w-full h-full object-cover group-hover:scale-105 transition-all duration-300"
                       />
@@ -454,7 +452,7 @@ export const AIMemoryHub: React.FC<AIMemoryHubProps> = ({ user, onNavigateTab })
               </div>
 
               <div className="flex gap-4 items-center p-3 bg-white/[0.02] border border-white/5 rounded-2xl">
-                <img src={selectedImportDraft.imageUrl} alt="Asset" className="w-24 h-24 object-cover rounded-xl shrink-0" />
+                <img src={selectedImportDraft.imageUrl || null} alt="Asset" className="w-24 h-24 object-cover rounded-xl shrink-0" />
                 <div className="space-y-1">
                   <span className="px-2 py-0.5 bg-violet-500/10 border border-violet-500/20 text-violet-300 text-[9px] font-mono rounded">
                     Origin: {selectedImportDraft.originModule}
@@ -529,7 +527,7 @@ export const AIMemoryHub: React.FC<AIMemoryHubProps> = ({ user, onNavigateTab })
               </div>
 
               <div className="max-h-[60vh] overflow-hidden rounded-2xl bg-zinc-950 flex items-center justify-center">
-                <img src={previewAsset.imageUrl} alt="Full Preview" className="max-h-[60vh] w-auto object-contain" />
+                <img src={previewAsset.imageUrl || null} alt="Full Preview" className="max-h-[60vh] w-auto object-contain" />
               </div>
 
               <div className="flex items-center justify-between pt-2">

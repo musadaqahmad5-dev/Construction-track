@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, Loader2, Trash2, Shield, PlusCircle, Wind, Sparkles, Command, X, HelpCircle } from 'lucide-react';
+import { Search, Loader2, Trash2, Shield, PlusCircle, Wind, Sparkles, Command, X, HelpCircle, Lock, Globe, Eye, Maximize2 } from 'lucide-react';
 import { WardrobeItem, ClothingCategory } from '../types';
 
 interface WardrobeGridProps {
@@ -8,6 +8,7 @@ interface WardrobeGridProps {
   onDelete: (item: WardrobeItem) => void;
   onSelect?: (item: WardrobeItem) => void;
   onAddTrigger?: () => void;
+  onTogglePrivacy?: (item: WardrobeItem) => void;
   categories: ClothingCategory[];
   id?: string;
 }
@@ -139,6 +140,7 @@ export const WardrobeGrid: React.FC<WardrobeGridProps> = ({
   onDelete,
   onSelect,
   onAddTrigger,
+  onTogglePrivacy,
   categories,
   id
 }) => {
@@ -147,6 +149,7 @@ export const WardrobeGrid: React.FC<WardrobeGridProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [selectedSeason, setSelectedSeason] = useState<string>('ALL');
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [privacyMap, setPrivacyMap] = useState<Record<string, boolean>>({});
   
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -495,15 +498,44 @@ export const WardrobeGrid: React.FC<WardrobeGridProps> = ({
                     </span>
                   </div>
 
-                  <h4 className="text-sm font-mono font-medium text-white truncate block">
-                    <HighlightText text={item.title} query={debouncedSearch} />
-                  </h4>
+                  <div className="flex items-start gap-2.5">
+                    {item.imageUrl && (
+                      <div 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          window.dispatchEvent(new CustomEvent('lookvision_open_lightbox', {
+                            detail: {
+                              id: item.id,
+                              imageUrl: item.imageUrl,
+                              title: item.title,
+                              description: item.description,
+                              category: item.category,
+                              isSaved: true,
+                              isPrivate: item.isPrivate !== false
+                            }
+                          }));
+                        }}
+                        className="w-12 h-12 shrink-0 rounded-lg overflow-hidden border border-white/10 relative group/img cursor-pointer"
+                        title="Click to view image in full screen Lightbox"
+                      >
+                        <img src={item.imageUrl} alt={item.title} className="w-full h-full object-cover group-hover/img:scale-110 transition-transform duration-300" />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 flex items-center justify-center transition-opacity">
+                          <Maximize2 className="w-3.5 h-3.5 text-white" />
+                        </div>
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <h4 className="text-sm font-mono font-medium text-white truncate block">
+                        <HighlightText text={item.title} query={debouncedSearch} />
+                      </h4>
 
-                  {item.description && (
-                    <p className="text-[10px] font-serif italic text-white/45 leading-relaxed line-clamp-2">
-                      <HighlightText text={item.description} query={debouncedSearch} />
-                    </p>
-                  )}
+                      {item.description && (
+                        <p className="text-[10px] font-serif italic text-white/45 leading-relaxed line-clamp-2">
+                          <HighlightText text={item.description} query={debouncedSearch} />
+                        </p>
+                      )}
+                    </div>
+                  </div>
 
                   {/* Semantic matching reasons inside item card */}
                   {debouncedSearch && insights.length > 0 && (
@@ -531,35 +563,95 @@ export const WardrobeGrid: React.FC<WardrobeGridProps> = ({
                       </span>
                     )}
                     {item.primaryColor && (
-                      <span className="text-[9px] font-mono text-white/30 block truncate max-w-[120px]">
+                      <span className="text-[9px] font-mono text-white/30 block truncate max-w-[100px]">
                         COLOR: <span className="text-white/60 font-light">{item.primaryColor}</span>
                       </span>
                     )}
                   </div>
 
-                   <button
-                    id={`btn-delete-${item.id}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (deletingId === item.id) {
-                        onDelete(item);
-                        setDeletingId(null);
-                      } else {
-                        setDeletingId(item.id);
-                        setTimeout(() => {
-                          setDeletingId(prev => prev === item.id ? null : prev);
-                        }, 4000);
-                      }
-                    }}
-                    className={`p-1.5 rounded-md cursor-pointer transition-all relative z-20 border ${
-                      deletingId === item.id 
-                        ? 'bg-red-500/20 border-red-500 text-red-400 animate-pulse' 
-                        : 'bg-white/[0.02] border-white/5 text-white/30 hover:bg-red-950/30 hover:text-red-400 hover:border-red-900/20'
-                    }`}
-                    title={deletingId === item.id ? "Click again to confirm delete" : "Remove item"}
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    {/* Public / Private Toggle Button for My Closet Items */}
+                    {(() => {
+                      const isPrivate = privacyMap[item.id] !== undefined 
+                        ? privacyMap[item.id] 
+                        : (item.isPrivate !== false);
+
+                      return (
+                        <button
+                          id={`btn-privacy-${item.id}`}
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const newPrivateState = !isPrivate;
+                            setPrivacyMap(prev => ({ ...prev, [item.id]: newPrivateState }));
+                            item.isPrivate = newPrivateState;
+                            item.isPublic = !newPrivateState;
+                            
+                            // Save updated privacy status to localStorage
+                            try {
+                              const stored = JSON.parse(localStorage.getItem('local_wardrobe_items') || '[]');
+                              const updated = stored.map((w: any) => 
+                                w.id === item.id ? { ...w, isPrivate: newPrivateState, isPublic: !newPrivateState } : w
+                              );
+                              localStorage.setItem('local_wardrobe_items', JSON.stringify(updated));
+                            } catch (e) {}
+
+                            if (onTogglePrivacy) {
+                              onTogglePrivacy(item);
+                            }
+
+                            window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
+                              detail: newPrivateState 
+                                ? '🔒 Item is now PRIVATE in My Closet!' 
+                                : '🌐 Item is now PUBLIC in Community World Gallery!'
+                            }));
+                          }}
+                          className={`px-2 py-1 rounded-md text-[9px] font-mono uppercase font-semibold flex items-center gap-1 transition-all cursor-pointer border ${
+                            isPrivate
+                              ? 'bg-zinc-800/80 text-zinc-300 border-white/10 hover:border-violet-500/40 hover:text-white'
+                              : 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/25'
+                          }`}
+                          title={isPrivate ? "Click to publish to Public World Gallery" : "Click to make Private in My Closet"}
+                        >
+                          {isPrivate ? (
+                            <>
+                              <Lock className="w-3 h-3 text-zinc-400" />
+                              <span>Private</span>
+                            </>
+                          ) : (
+                            <>
+                              <Globe className="w-3 h-3 text-emerald-400" />
+                              <span>Public</span>
+                            </>
+                          )}
+                        </button>
+                      );
+                    })()}
+
+                    <button
+                      id={`btn-delete-${item.id}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (deletingId === item.id) {
+                          onDelete(item);
+                          setDeletingId(null);
+                        } else {
+                          setDeletingId(item.id);
+                          setTimeout(() => {
+                            setDeletingId(prev => prev === item.id ? null : prev);
+                          }, 4000);
+                        }
+                      }}
+                      className={`p-1.5 rounded-md cursor-pointer transition-all relative z-20 border ${
+                        deletingId === item.id 
+                          ? 'bg-red-500/20 border-red-500 text-red-400 animate-pulse' 
+                          : 'bg-white/[0.02] border-white/5 text-white/30 hover:bg-red-950/30 hover:text-red-400 hover:border-red-900/20'
+                      }`}
+                      title={deletingId === item.id ? "Click again to confirm delete" : "Remove item"}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
               </motion.div>
             );

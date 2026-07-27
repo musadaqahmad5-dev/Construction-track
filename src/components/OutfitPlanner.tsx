@@ -565,8 +565,7 @@ export const OutfitPlanner: React.FC<OutfitPlannerProps> = ({ wardrobe, themeObj
                         <div className="flex gap-4 items-center">
                           <div className="w-14 h-18 bg-zinc-950/80 rounded overflow-hidden border border-white/10 shrink-0 relative flex items-center justify-center">
                             {hasItems && itemPic ? (
-                              <img
-                                src={itemPic}
+                              <img src={itemPic || null}
                                 alt=""
                                 className="w-full h-full object-cover"
                                 referrerPolicy="no-referrer"

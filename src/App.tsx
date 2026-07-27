@@ -12,6 +12,8 @@ import { motion } from 'motion/react';
 import { AIStyleHub } from './components/AIStyleHub';
 import { UnifiedFashionOS } from './features/ai-core/UnifiedFashionOS';
 import { AIStyleHubV17Architecture } from './features/global/AIStyleHubV17Architecture';
+import { SEOStructuredData } from './components/SEOStructuredData';
+import { ImageLightboxModal } from './components/ImageLightboxModal';
 
 // Temporal light rules mapper
 export function getTemporalTheme() {
@@ -373,6 +375,22 @@ export default function App() {
   ) => {
     if (!user) return;
 
+    // Deduplication Protection: Check if item with same title & image already exists in wardrobe
+    const isDuplicate = wardrobe.some(item => {
+      if (extraOptions?.imageUrl && item.imageUrl && item.imageUrl === extraOptions.imageUrl) {
+        return true;
+      }
+      return item.title.trim().toLowerCase() === title.trim().toLowerCase() && 
+             item.category === category;
+    });
+
+    if (isDuplicate) {
+      window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
+        detail: '⚠️ Item is already saved in your wardrobe collection!'
+      }));
+      return;
+    }
+
     // Guest Mode local isolation
     if (user.isAnonymous || user.uid.startsWith('guest-')) {
       const localItem: WardrobeItem = {
@@ -678,6 +696,8 @@ export default function App() {
 
   return (
     <ErrorBoundary>
+      <SEOStructuredData />
+      <ImageLightboxModal />
       
       {/* Stripe payment success banner */}
       {stripeSuccessMessage && (

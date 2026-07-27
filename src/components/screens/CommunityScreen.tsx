@@ -3,10 +3,10 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   Users, Heart, Bookmark, MessageSquare, Send, Plus, Award, 
   Tag, Sparkles, Image as ImageIcon, Check, Info, Flame, Eye, 
-  TrendingUp, Compass, Shield, RefreshCw, Star, Share2, 
+  TrendingUp, Compass, Shield, ShieldCheck, RefreshCw, Star, Share2, 
   ChevronRight, ChevronLeft, CheckCircle2, Copy, FolderPlus, PlusCircle, 
-  X, HelpCircle, Layers, Grid, SlidersHorizontal, ArrowUpRight,
-  Loader2, Upload, ThumbsDown, Slash, Download, Trash2
+  X, HelpCircle, Layers, Grid, SlidersHorizontal, ArrowUpRight, Maximize2,
+  Loader2, Upload, ThumbsDown, Slash, Download, Trash2, Video, Lock, Globe, Save
 } from 'lucide-react';
 import { WardrobeItem } from '../../types';
 import { db, auth } from '../../firebase';
@@ -739,7 +739,10 @@ export const CommunityScreen: React.FC<CommunityScreenProps> = ({
     followersCount?: number;
     followingCount?: number;
     bannerUrl?: string;
+    isClosetPrivate?: boolean;
   } | null>(null);
+
+  const [creatorModalTab, setCreatorModalTab] = useState<'CREATIONS' | 'CLOSET'>('CREATIONS');
 
   const [followedCreators, setFollowedCreators] = useState<Record<string, boolean>>(() => {
     try {
@@ -925,6 +928,7 @@ export const CommunityScreen: React.FC<CommunityScreenProps> = ({
       followersCount: number;
       followingCount: number;
       bannerUrl: string;
+      isClosetPrivate: boolean;
       postsCount: number;
       totalLikes: number;
     }>();
@@ -936,6 +940,7 @@ export const CommunityScreen: React.FC<CommunityScreenProps> = ({
         isVerified: true,
         followersCount: 142000,
         followingCount: 380,
+        isClosetPrivate: true,
         bannerUrl: 'https://images.unsplash.com/photo-1509631179647-0177331693ae?q=80&w=1200&auto=format&fit=crop'
       },
       '@julian_cyber': {
@@ -944,6 +949,7 @@ export const CommunityScreen: React.FC<CommunityScreenProps> = ({
         isVerified: true,
         followersCount: 98000,
         followingCount: 215,
+        isClosetPrivate: false,
         bannerUrl: 'https://images.unsplash.com/photo-1544441893-675973e31985?q=80&w=1200&auto=format&fit=crop'
       },
       '@clara_couture': {
@@ -952,6 +958,7 @@ export const CommunityScreen: React.FC<CommunityScreenProps> = ({
         isVerified: true,
         followersCount: 210000,
         followingCount: 512,
+        isClosetPrivate: true,
         bannerUrl: 'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?q=80&w=1200&auto=format&fit=crop'
       },
       '@kaelen_nordic': {
@@ -960,6 +967,7 @@ export const CommunityScreen: React.FC<CommunityScreenProps> = ({
         isVerified: false,
         followersCount: 64000,
         followingCount: 190,
+        isClosetPrivate: false,
         bannerUrl: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=1200&auto=format&fit=crop'
       }
     };
@@ -979,6 +987,7 @@ export const CommunityScreen: React.FC<CommunityScreenProps> = ({
           followersCount: def.followersCount || Math.floor(Math.random() * 50000) + 12000,
           followingCount: def.followingCount || Math.floor(Math.random() * 400) + 80,
           bannerUrl: def.bannerUrl || post.imageUrl,
+          isClosetPrivate: def.isClosetPrivate ?? (handle.includes('elena') || handle.includes('clara') || handle.includes('private')),
           postsCount: 1,
           totalLikes: post.likes || 0
         });
@@ -1544,6 +1553,19 @@ SCENE COORDS:
         {/* Action button to open private Studio Ledger */}
         <div className="flex flex-wrap gap-3">
           <button
+            onClick={() => {
+              setActiveTab('COMMUNITY_GENERATOR');
+              window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
+                detail: '🎥 Opening 4K Video Generator Studio!'
+              }));
+            }}
+            className="px-5 py-3 bg-gradient-to-r from-cyan-500 via-indigo-600 to-purple-600 hover:from-cyan-400 hover:via-indigo-500 hover:to-purple-500 text-white font-mono text-[10.5px] uppercase tracking-wider rounded-xl flex items-center gap-2.5 shadow-lg shadow-cyan-900/30 transition-all duration-300 transform active:scale-95 font-bold cursor-pointer border border-cyan-400/30"
+          >
+            <Video className="w-4 h-4 text-cyan-200 animate-pulse" />
+            <span>Generate 4K Video</span>
+          </button>
+
+          <button
             onClick={() => setIsGeneratorOpen(true)}
             className="px-5 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-mono text-[10.5px] uppercase tracking-wider rounded-xl flex items-center gap-2.5 shadow-lg shadow-emerald-600/15 transition-all duration-300 transform active:scale-95 font-bold cursor-pointer border border-emerald-400/20"
           >
@@ -1618,7 +1640,44 @@ SCENE COORDS:
         )}
       </section>
 
-      {/* 1C. HUMAN FASHION CATEGORY SELECTOR RIBBON */}
+      {/* 1C. COMMUNITY MAIN VIEW BOARD - 4K MOTION VIDEO GENERATOR FEATURE BANNER */}
+      <section className="max-w-7xl mx-auto mb-8 p-6 bg-gradient-to-r from-cyan-950/70 via-indigo-950/70 to-purple-950/70 border border-cyan-500/40 rounded-3xl flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl relative overflow-hidden group">
+        <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="space-y-2 text-left z-10 max-w-3xl">
+          <div className="flex items-center gap-2">
+            <span className="px-2.5 py-1 bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 text-[9px] font-mono font-bold rounded-lg uppercase tracking-wider flex items-center gap-1.5">
+              <Video className="w-3.5 h-3.5 text-cyan-300 animate-pulse" />
+              AI Studio 4K Video Motion Studio
+            </span>
+            <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest hidden sm:inline-block">
+              ✦ 360° Spin • Runway Walk • Cinematic Zoom • Ray-Tracing
+            </span>
+          </div>
+          <h2 className="font-serif text-xl sm:text-2xl text-white font-light tracking-tight">
+            Synthesize 4K Runway & Cinematic Video Motion Reels
+          </h2>
+          <p className="text-xs text-zinc-300 font-light leading-relaxed">
+            Transform static outfit looks into high-resolution 4K motion videos. Filter community prompt assets, choose custom camera paths, adjust camera motion controls, and register provenance directly in the AI Studio Ledger.
+          </p>
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-center gap-3 z-10 shrink-0 w-full md:w-auto">
+          <button
+            onClick={() => {
+              setActiveTab('COMMUNITY_GENERATOR');
+              window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
+                detail: '🎥 Launching 4K Video Motion Studio!'
+              }));
+            }}
+            className="w-full sm:w-auto px-6 py-3.5 bg-gradient-to-r from-cyan-500 via-indigo-600 to-purple-600 hover:from-cyan-400 hover:via-indigo-500 hover:to-purple-500 text-white font-mono text-xs uppercase font-bold tracking-wider rounded-2xl flex items-center justify-center gap-2.5 shadow-xl shadow-cyan-900/40 transition-all duration-300 transform active:scale-95 cursor-pointer border border-cyan-300/40"
+          >
+            <Video className="w-4 h-4 text-cyan-100 animate-pulse" />
+            <span>Generate 4K Video</span>
+          </button>
+        </div>
+      </section>
+
+      {/* 1D. HUMAN FASHION CATEGORY SELECTOR RIBBON */}
       <section className="max-w-7xl mx-auto mb-8 text-left">
         <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest block mb-2.5 font-semibold">
           Human Fashion Category Filter
@@ -1925,8 +1984,7 @@ SCENE COORDS:
                 <div className="absolute inset-0 z-20 pointer-events-none opacity-[0.06] mix-blend-overlay" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/45 to-transparent z-10 duration-500 group-hover:via-black/50" />
                 
-                <img 
-                  src={spotlight.imageUrl} 
+                <img src={spotlight.imageUrl || null} 
                   alt="Spotlight campaign" 
                   className="absolute inset-0 w-full h-full object-cover transition-transform duration-[2000ms] ease-out group-hover:scale-[1.03]"
                   referrerPolicy="no-referrer"
@@ -1955,7 +2013,7 @@ SCENE COORDS:
 
                   <div className="flex flex-col items-start md:items-end gap-3 shrink-0">
                     <div className="flex items-center gap-3 bg-black/40 backdrop-blur-md px-4 py-2 border border-white/5 rounded-2xl">
-                      <img src={spotlight.author.avatar} alt={spotlight.author.name} className="w-6 h-6 rounded-full object-cover border border-white/10" />
+                      <img src={spotlight.author.avatar || null} alt={spotlight.author.name} className="w-6 h-6 rounded-full object-cover border border-white/10" />
                       <div className="text-left">
                         <span className="block text-[11px] font-bold text-white leading-tight">{spotlight.author.name}</span>
                         <span className="block text-[9px] font-mono text-zinc-500 leading-none">{spotlight.author.handle}</span>
@@ -1999,8 +2057,7 @@ SCENE COORDS:
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
-                      <img
-                        src={creator.avatar}
+                      <img src={creator.avatar || null}
                         alt={creator.name}
                         className="w-11 h-11 rounded-xl object-cover border border-white/10 group-hover:scale-105 transition-transform"
                       />
@@ -2082,8 +2139,7 @@ SCENE COORDS:
                   
                   {/* Image container - hero of the card */}
                   <div className="relative aspect-[4/5] w-full overflow-hidden bg-zinc-950">
-                    <img
-                      src={post.imageUrl}
+                    <img src={post.imageUrl || null}
                       alt="Campaign piece"
                       className="w-full h-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.03]"
                       referrerPolicy="no-referrer"
@@ -2140,21 +2196,38 @@ SCENE COORDS:
                       ) : (
                         <div className="flex items-center justify-between gap-2 w-full">
                           <div className="flex items-center gap-2.5 bg-black/45 backdrop-blur-md p-1.5 pr-3 rounded-2xl w-fit border border-white/5">
-                            <img src={post.author.avatar} alt={post.author.name} className="w-5.5 h-5.5 rounded-full object-cover border border-white/10" />
+                            <img src={post.author.avatar || null} alt={post.author.name} className="w-5.5 h-5.5 rounded-full object-cover border border-white/10" />
                             <div className="text-left">
                               <span className="block text-[10px] font-bold text-white leading-tight">{post.author.name}</span>
                               <span className="block text-[8px] font-mono text-zinc-500 leading-none">{post.author.handle}</span>
                             </div>
                           </div>
 
-                          <button
-                            onClick={(e) => handleRemixPost(e, post)}
-                            className="px-2.5 py-1.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-mono text-[9px] uppercase font-bold rounded-xl flex items-center gap-1.5 shadow-md shadow-violet-600/20 transition-all active:scale-95 cursor-pointer border border-violet-400/30 shrink-0"
-                            title="Remix this look in AI Studio Generator"
-                          >
-                            <Sparkles className="w-3 h-3 text-amber-300 animate-pulse" />
-                            <span>Remix Look</span>
-                          </button>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveTab('COMMUNITY_GENERATOR');
+                                window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
+                                  detail: `🎥 Launching 4K Video Studio for "${post.caption?.slice(0, 25)}..."`
+                                }));
+                              }}
+                              className="px-2.5 py-1.5 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white font-mono text-[9px] uppercase font-bold rounded-xl flex items-center gap-1 shadow-md shadow-cyan-900/30 transition-all active:scale-95 cursor-pointer border border-cyan-400/30"
+                              title="Synthesize 4K motion video from this look"
+                            >
+                              <Video className="w-3 h-3 text-cyan-200 animate-pulse" />
+                              <span>Generate Video</span>
+                            </button>
+
+                            <button
+                              onClick={(e) => handleRemixPost(e, post)}
+                              className="px-2.5 py-1.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-mono text-[9px] uppercase font-bold rounded-xl flex items-center gap-1 shadow-md shadow-violet-600/20 transition-all active:scale-95 cursor-pointer border border-violet-400/30"
+                              title="Remix this look in AI Studio Generator"
+                            >
+                              <Sparkles className="w-3 h-3 text-amber-300 animate-pulse" />
+                              <span>Remix</span>
+                            </button>
+                          </div>
                         </div>
                       )}
 
@@ -2312,7 +2385,7 @@ SCENE COORDS:
                     </button>
 
                     <div className="p-4 bg-white/[0.01] border border-white/5 rounded-2xl flex gap-4 items-center">
-                      <img src={publishingLook.imageUrl} className="w-16 h-20 object-cover rounded-lg border border-white/10" alt="" />
+                      <img src={publishingLook.imageUrl || null} className="w-16 h-20 object-cover rounded-lg border border-white/10" alt="" />
                       <div>
                         <span className="text-[10px] font-mono text-zinc-500 uppercase block">Selected Studio Concept</span>
                         <h4 className="text-sm font-serif font-bold text-white mt-1">{publishingLook.vibe || 'Sartorial AI Concept'}</h4>
@@ -2390,7 +2463,7 @@ SCENE COORDS:
                           return (
                             <div key={look.id} className="bg-white/[0.01] border border-white/5 rounded-2xl p-4 flex flex-col space-y-3 justify-between hover:border-white/10 transition-colors">
                               <div className="aspect-[4/5] overflow-hidden rounded-xl bg-zinc-950 relative border border-white/5">
-                                <img src={look.imageUrl} className="w-full h-full object-cover" alt="" referrerPolicy="no-referrer" />
+                                <img src={look.imageUrl || null} className="w-full h-full object-cover" alt="" referrerPolicy="no-referrer" />
                                 <div className="absolute top-2 right-2 bg-black/70 px-2 py-1 border border-white/5 rounded-lg backdrop-blur-md">
                                   <span className="text-[8px] font-mono text-white/50">{look.vibe || 'Studio'}</span>
                                 </div>
@@ -2445,12 +2518,27 @@ SCENE COORDS:
               className="w-full max-w-6xl h-full max-h-[85vh] bg-[#07070c] border border-white/5 rounded-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row relative"
             >
               {/* Left Half: Art Presentation (Images are the Hero) */}
-              <div className="md:w-1/2 h-1/2 md:h-full bg-zinc-950 relative overflow-hidden flex items-center justify-center border-b md:border-b-0 md:border-r border-white/5 group">
+              <div 
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('lookvision_open_lightbox', {
+                    detail: {
+                      id: selectedPost.id,
+                      imageUrl: selectedPost.imageUrl,
+                      title: selectedPost.vibeTags?.[0] ? `${selectedPost.vibeTags[0].toUpperCase()} Design` : 'Community Post',
+                      description: selectedPost.caption,
+                      category: selectedPost.vibeTags?.[0] || 'Community',
+                      creatorName: selectedPost.author.name,
+                      creatorAvatar: selectedPost.author.avatar
+                    }
+                  }));
+                }}
+                className="md:w-1/2 h-1/2 md:h-full bg-zinc-950 relative overflow-hidden flex items-center justify-center border-b md:border-b-0 md:border-r border-white/5 group cursor-pointer"
+                title="Click to open image in full resolution Lightbox"
+              >
                 {/* Micro Film grain overlay for textured photo realism */}
                 <div className="absolute inset-0 z-20 pointer-events-none opacity-[0.07] mix-blend-overlay" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
                 
-                <img 
-                  src={selectedPost.imageUrl} 
+                <img src={selectedPost.imageUrl || null} 
                   alt="Presentation view" 
                   className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.01]" 
                   referrerPolicy="no-referrer"
@@ -2461,6 +2549,29 @@ SCENE COORDS:
                   <span className="text-[8px] font-mono text-zinc-500 uppercase tracking-widest block">CAMPAIGN PREVIEW</span>
                   <span className="text-[10px] font-mono text-white font-bold">{selectedPost.vibeTags[0]?.toUpperCase()}</span>
                 </div>
+
+                {/* Full Screen Lightbox Button */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    window.dispatchEvent(new CustomEvent('lookvision_open_lightbox', {
+                      detail: {
+                        id: selectedPost.id,
+                        imageUrl: selectedPost.imageUrl,
+                        title: selectedPost.vibeTags?.[0] ? `${selectedPost.vibeTags[0].toUpperCase()} Design` : 'Community Post',
+                        description: selectedPost.caption,
+                        category: selectedPost.vibeTags?.[0] || 'Community',
+                        creatorName: selectedPost.author.name,
+                        creatorAvatar: selectedPost.author.avatar
+                      }
+                    }));
+                  }}
+                  className="absolute top-4 right-4 z-20 p-2 bg-black/80 hover:bg-violet-600 backdrop-blur-md border border-white/10 text-white rounded-xl transition-all cursor-pointer shadow-lg flex items-center gap-1 text-[10px] font-mono"
+                >
+                  <Maximize2 className="w-3.5 h-3.5" />
+                  <span>Full View</span>
+                </button>
               </div>
 
               {/* Right Half: Design Intelligence & Information */}
@@ -2471,7 +2582,7 @@ SCENE COORDS:
                   {/* Creator Credits & Coherence metrics */}
                   <div className="flex justify-between items-start gap-4 pb-4 border-b border-white/5">
                     <div className="flex items-center gap-3">
-                      <img src={selectedPost.author.avatar} alt="" className="w-10 h-10 rounded-full object-cover border border-white/10" />
+                      <img src={selectedPost.author.avatar || null} alt="" className="w-10 h-10 rounded-full object-cover border border-white/10" />
                       <div>
                         <h4 className="text-sm font-bold text-white leading-tight">{selectedPost.author.name}</h4>
                         <span className="text-[10px] font-mono text-zinc-500 block mt-0.5">{selectedPost.author.handle}</span>
@@ -2553,6 +2664,34 @@ SCENE COORDS:
                       <div className="flex justify-between"><span className="text-zinc-500">Lighting Matrix:</span> <span className="text-zinc-300">{selectedPost.sceneBlueprint?.lighting}</span></div>
                       <div className="flex justify-between"><span className="text-zinc-500">Capture System:</span> <span className="text-zinc-300">{selectedPost.sceneBlueprint?.camera}</span></div>
                     </div>
+                  </div>
+
+                  {/* 4B. HIGH-FIDELITY 4K COMMUNITY VIDEO GENERATOR CTA */}
+                  <div className="p-4 bg-gradient-to-r from-cyan-950/50 via-indigo-950/50 to-purple-950/50 border border-cyan-500/40 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg shadow-cyan-950/30">
+                    <div className="space-y-1 text-left">
+                      <span className="text-[9px] font-mono text-cyan-300 uppercase tracking-wider font-bold flex items-center gap-1">
+                        <Video className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+                        AI Studio 4K Motion Studio
+                      </span>
+                      <p className="text-xs text-zinc-200 font-serif font-light">
+                        Transform this community look into a 360° runway video animation
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedPost(null);
+                        setActiveTab('COMMUNITY_GENERATOR');
+                        window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
+                          detail: `🎥 Launching 4K Video Generator for "${selectedPost.caption?.slice(0, 25)}..."`
+                        }));
+                      }}
+                      className="px-4 py-2.5 bg-gradient-to-r from-cyan-500 via-indigo-600 to-purple-600 hover:from-cyan-400 hover:via-indigo-500 hover:to-purple-500 text-white font-mono text-[10px] uppercase font-bold tracking-wider rounded-xl transition-all shadow-lg shadow-cyan-900/40 cursor-pointer border border-cyan-300/40 shrink-0 transform active:scale-95 flex items-center gap-1.5"
+                    >
+                      <Video className="w-3.5 h-3.5 text-cyan-100" />
+                      <span>Generate 4K Video</span>
+                    </button>
                   </div>
 
                   {/* 5. USER ENGAGEMENT & FEEDBACK ENGINE PANEL */}
@@ -2643,11 +2782,11 @@ SCENE COORDS:
 
                       <button
                         onClick={() => handleImportToCloset(selectedPost)}
-                        className="py-2.5 bg-white/10 hover:bg-white/20 text-white border border-white/10 font-mono text-[9.5px] uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer font-bold"
-                        title="Acquire Blueprint Layout"
+                        className="py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white border border-emerald-400/30 font-mono text-[9.5px] uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer font-bold shadow-lg shadow-emerald-900/30"
+                        title="Save this look directly into My Closet & World"
                       >
-                        <Tag className="w-3.5 h-3.5 text-white" />
-                        Blueprint
+                        <Save className="w-3.5 h-3.5 text-amber-300" />
+                        Save to Closet
                       </button>
                     </div>
                   </div>
@@ -2684,8 +2823,7 @@ SCENE COORDS:
                                 className="group/rec bg-[#0c0c16]/30 border border-white/5 hover:border-violet-500/20 p-2.5 rounded-2xl cursor-pointer transition-all duration-300 transform active:scale-98 flex sm:flex-col gap-3 relative overflow-hidden"
                               >
                                 <div className="w-16 h-16 sm:w-full sm:h-28 rounded-xl overflow-hidden shrink-0 relative bg-zinc-900 border border-white/5">
-                                  <img
-                                    src={post.imageUrl}
+                                  <img src={post.imageUrl || null}
                                     alt="Recommendation"
                                     className="w-full h-full object-cover group-hover/rec:scale-105 transition-transform duration-500"
                                     referrerPolicy="no-referrer"
@@ -2910,7 +3048,7 @@ SCENE COORDS:
                 <span className="text-zinc-600 block leading-none"># COORDINATE DOSSIER EXPORT</span>
                 
                 <div className="flex gap-4 items-center py-2 border-b border-white/[0.03]">
-                  <img src={shareDossierPost.imageUrl} className="w-12 h-16 object-cover rounded-lg border border-white/5" alt="" />
+                  <img src={shareDossierPost.imageUrl || null} className="w-12 h-16 object-cover rounded-lg border border-white/5" alt="" />
                   <div>
                     <span className="text-white block font-bold text-xs">{shareDossierPost.vibeTags[0]?.toUpperCase() || 'CONCEPT'} DESIGN</span>
                     <span className="text-zinc-400 block mt-0.5 font-bold">Author: {shareDossierPost.author.name}</span>
@@ -3005,8 +3143,7 @@ SCENE COORDS:
 
                   {uploadedImage ? (
                     <div className="absolute inset-0 w-full h-full">
-                      <img 
-                        src={uploadedImage} 
+                      <img src={uploadedImage || null} 
                         alt="Reference Silhouette" 
                         className="w-full h-full object-cover opacity-30"
                       />
@@ -3108,8 +3245,7 @@ SCENE COORDS:
                     <div className="grid grid-cols-1 md:grid-cols-5 gap-4 bg-black/40 border border-white/5 rounded-2xl p-4 overflow-hidden">
                       {/* Left: 3:4 aspect image frame */}
                       <div className="md:col-span-2 aspect-[3/4] w-full rounded-xl overflow-hidden border border-white/5 relative bg-zinc-950">
-                        <img 
-                          src={generatedResult.imageUrl} 
+                        <img src={generatedResult.imageUrl || null} 
                           alt="Generated Look" 
                           className="w-full h-full object-cover"
                         />
@@ -3190,8 +3326,7 @@ SCENE COORDS:
             >
               {/* Profile Cover Banner */}
               <div className="h-32 w-full relative bg-zinc-900 overflow-hidden shrink-0">
-                <img
-                  src={selectedCreator.bannerUrl}
+                <img src={selectedCreator.bannerUrl || null}
                   alt="Banner"
                   className="w-full h-full object-cover opacity-60"
                 />
@@ -3208,8 +3343,7 @@ SCENE COORDS:
               <div className="px-6 pb-6 relative flex-1 overflow-y-auto no-scrollbar space-y-5 -mt-10">
                 <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
                   <div className="flex items-end gap-4">
-                    <img
-                      src={selectedCreator.avatar}
+                    <img src={selectedCreator.avatar || null}
                       alt={selectedCreator.name}
                       className="w-20 h-20 rounded-2xl object-cover border-2 border-[#0b0b10] shadow-xl relative z-10 bg-zinc-900"
                     />
@@ -3284,36 +3418,145 @@ SCENE COORDS:
                   </div>
                 </div>
 
-                {/* Creator Portfolio Grid */}
-                <div className="space-y-3 pt-2">
-                  <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest block font-bold">
-                    Creator Lookbook Gallery
-                  </span>
+                {/* Creator Navigation Tabs (Creations vs My Closet & World) */}
+                <div className="flex items-center gap-2 border-b border-white/10 pb-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setCreatorModalTab('CREATIONS')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      creatorModalTab === 'CREATIONS'
+                        ? 'bg-violet-600/20 text-violet-300 border border-violet-500/40'
+                        : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    <span>Lookbook Gallery</span>
+                  </button>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {allPosts
-                      .filter(p => (p.author.handle || '').toLowerCase() === selectedCreator.handle.toLowerCase() || p.author.name === selectedCreator.name)
-                      .map((p) => (
-                        <div
-                          key={p.id}
-                          onClick={() => {
-                            setSelectedPost(p);
-                          }}
-                          className="group relative aspect-[3/4] rounded-xl overflow-hidden border border-white/5 hover:border-violet-500/30 cursor-pointer bg-zinc-950 transition-all"
-                        >
-                          <img
-                            src={p.imageUrl}
-                            alt={p.caption}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-2.5 flex flex-col justify-end text-left">
-                            <span className="text-[9px] font-bold text-white truncate">{p.caption}</span>
-                            <span className="text-[8px] font-mono text-violet-300">Coherence {p.aiScore}%</span>
-                          </div>
-                        </div>
-                      ))}
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setCreatorModalTab('CLOSET')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      creatorModalTab === 'CLOSET'
+                        ? 'bg-violet-600/20 text-violet-300 border border-violet-500/40'
+                        : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    {selectedCreator.isClosetPrivate ? (
+                      <>
+                        <Lock className="w-3 h-3 text-amber-400" />
+                        <span>My Closet & World (Private)</span>
+                      </>
+                    ) : (
+                      <>
+                        <Globe className="w-3 h-3 text-emerald-400" />
+                        <span>My Closet & World (Public)</span>
+                      </>
+                    )}
+                  </button>
                 </div>
+
+                {/* TAB 1: CREATIONS / LOOKBOOK GALLERY */}
+                {creatorModalTab === 'CREATIONS' && (
+                  <div className="space-y-3 pt-1">
+                    <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest block font-bold">
+                      Creator Lookbook Gallery
+                    </span>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {allPosts
+                        .filter(p => (p.author.handle || '').toLowerCase() === selectedCreator.handle.toLowerCase() || p.author.name === selectedCreator.name)
+                        .map((p) => (
+                          <div
+                            key={p.id}
+                            onClick={() => {
+                              setSelectedPost(p);
+                            }}
+                            className="group relative aspect-[3/4] rounded-xl overflow-hidden border border-white/5 hover:border-violet-500/30 cursor-pointer bg-zinc-950 transition-all"
+                          >
+                            <img src={p.imageUrl || null}
+                              alt={p.caption}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-2.5 flex flex-col justify-end text-left">
+                              <span className="text-[9px] font-bold text-white truncate">{p.caption}</span>
+                              <span className="text-[8px] font-mono text-violet-300">Coherence {p.aiScore}%</span>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 2: MY CLOSET & WORLD (SAVED ASSETS & INTERESTS) */}
+                {creatorModalTab === 'CLOSET' && (
+                  <div className="space-y-3 pt-1">
+                    {selectedCreator.isClosetPrivate ? (
+                      <div className="p-8 bg-[#07070c] border border-amber-500/20 rounded-2xl text-center space-y-3 my-2 shadow-inner">
+                        <div className="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mx-auto text-amber-400 shadow-xl">
+                          <Lock className="w-6 h-6 text-amber-400" />
+                        </div>
+                        <h4 className="font-serif text-base font-medium text-white">
+                          {selectedCreator.name}'s Closet & World is Private
+                        </h4>
+                        <p className="text-xs text-zinc-400 font-light max-w-md mx-auto leading-relaxed">
+                          {selectedCreator.name} has configured their My Closet & World to Private mode. Searchers and community visitors cannot view their saved closet items or personal collections.
+                        </p>
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-zinc-900 border border-amber-500/30 rounded-full text-[10px] font-mono text-amber-300">
+                          <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+                          <span>🔒 Private Closet Protected</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-3 my-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-mono text-emerald-400 uppercase tracking-widest font-bold flex items-center gap-1.5">
+                            <Globe className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+                            <span>Public Saved Closet & Style Interests</span>
+                          </span>
+                          <span className="text-[10px] font-mono text-zinc-500">
+                            3 Saved Fashion Items
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                          {[
+                            {
+                              id: 'c-saved-1',
+                              title: 'Architectural Wool Overcoat',
+                              category: 'outerwear',
+                              imageUrl: 'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?q=80&w=800'
+                            },
+                            {
+                              id: 'c-saved-2',
+                              title: 'Structured Monolithic Blazer',
+                              category: 'tops',
+                              imageUrl: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=800'
+                            },
+                            {
+                              id: 'c-saved-3',
+                              title: 'Deconstructed Silk Trousers',
+                              category: 'bottoms',
+                              imageUrl: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=800'
+                            }
+                          ].map(item => (
+                            <div key={item.id} className="p-3 bg-[#07070c] border border-white/10 rounded-2xl space-y-2 hover:border-emerald-500/30 transition-all group">
+                              <div className="aspect-square rounded-xl overflow-hidden bg-zinc-950 relative">
+                                <img src={item.imageUrl} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                <span className="absolute top-2 right-2 px-2 py-0.5 bg-emerald-950/90 border border-emerald-500/40 text-emerald-300 rounded-md text-[8px] font-mono uppercase font-bold">
+                                  Public
+                                </span>
+                              </div>
+                              <div>
+                                <h5 className="font-serif text-xs font-medium text-white truncate">{item.title}</h5>
+                                <span className="text-[9.5px] font-mono text-emerald-400/80 capitalize block">{item.category}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </motion.div>
           </div>

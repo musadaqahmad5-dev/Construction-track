@@ -136,7 +136,7 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({
                 </span>
                 
                 <div className="w-8 h-8 rounded-lg overflow-hidden border border-white/10 shadow-lg shrink-0">
-                  <img src={thumbnail} className="w-full h-full object-cover" />
+                  <img src={thumbnail || null} className="w-full h-full object-cover" />
                 </div>
               </div>
             </div>
@@ -163,8 +163,7 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({
         {/* Banner Details Block */}
         <div className="relative p-6 z-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-6 pb-8">
           <div className="flex flex-col sm:flex-row items-center sm:items-end gap-5 text-center sm:text-left">
-            <img
-              src={creator.avatar}
+            <img src={creator.avatar || null}
               alt={creator.name}
               className="w-20 h-20 rounded-2xl object-cover border-2 border-white/10 shadow-2xl relative -mb-2 bg-zinc-900 shrink-0"
             />

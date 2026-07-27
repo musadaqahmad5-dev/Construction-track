@@ -190,7 +190,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 onClick={() => setCarouselIndex(leftIdx)}
                 className="absolute left-[8%] top-1/2 -translate-y-1/2 w-[110px] h-[180px] z-10 opacity-30 hover:opacity-50 transition-all duration-300 rounded-2xl overflow-hidden border border-white/5 -rotate-[8deg] cursor-pointer shadow-2xl group select-none hover:scale-105"
               >
-                <img src={slide.imageUrl} alt="" className="w-full h-full object-cover grayscale opacity-80" />
+                <img src={slide.imageUrl || null} alt="" className="w-full h-full object-cover grayscale opacity-80" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
               </div>
             );
@@ -206,7 +206,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 }}
                 className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[150px] h-[225px] z-20 transition-all duration-500 rounded-3xl overflow-hidden border-2 border-violet-500/20 cursor-pointer shadow-[0_15px_35px_rgba(124,58,237,0.25)] group select-none hover:scale-[1.02]"
               >
-                <img src={slide.imageUrl} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                <img src={slide.imageUrl || null} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent pointer-events-none" />
                 
                 {/* AI Generated Pill Overlay at the Bottom of center card */}
@@ -227,7 +227,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 onClick={() => setCarouselIndex(rightIdx)}
                 className="absolute right-[8%] top-1/2 -translate-y-1/2 w-[110px] h-[180px] z-10 opacity-30 hover:opacity-50 transition-all duration-300 rounded-2xl overflow-hidden border border-white/5 rotate-[8deg] cursor-pointer shadow-2xl group select-none hover:scale-105"
               >
-                <img src={slide.imageUrl} alt="" className="w-full h-full object-cover grayscale opacity-80" />
+                <img src={slide.imageUrl || null} alt="" className="w-full h-full object-cover grayscale opacity-80" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
               </div>
             );

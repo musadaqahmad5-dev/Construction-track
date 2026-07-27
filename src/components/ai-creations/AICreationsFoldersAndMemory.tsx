@@ -297,8 +297,7 @@ export const AICreationsFoldersAndMemory: React.FC<AICreationsFoldersAndMemoryPr
                   >
                     <div className="space-y-2">
                       <div className="relative aspect-square bg-zinc-950 overflow-hidden">
-                        <img
-                          src={asset.imageUrl}
+                        <img src={asset.imageUrl || null}
                           alt={asset.title}
                           className="w-full h-full object-cover group-hover:scale-105 transition-all duration-300"
                         />
@@ -367,8 +366,7 @@ export const AICreationsFoldersAndMemory: React.FC<AICreationsFoldersAndMemoryPr
                 >
                   <div className="space-y-3">
                     <div className="relative aspect-square bg-zinc-950 overflow-hidden">
-                      <img
-                        src={draft.imageUrl}
+                      <img src={draft.imageUrl || null}
                         alt={draft.titleSuggestion}
                         className="w-full h-full object-cover group-hover:scale-105 transition-all duration-300"
                       />
@@ -501,7 +499,7 @@ export const AICreationsFoldersAndMemory: React.FC<AICreationsFoldersAndMemoryPr
               </div>
 
               <div className="flex gap-4 items-center p-3 bg-white/[0.02] border border-white/5 rounded-2xl">
-                <img src={selectedPublicDraft.imageUrl} alt="Draft" className="w-20 h-20 object-cover rounded-xl shrink-0" />
+                <img src={selectedPublicDraft.imageUrl || null} alt="Draft" className="w-20 h-20 object-cover rounded-xl shrink-0" />
                 <p className="text-xs text-zinc-300 font-light">
                   Claim this anonymous AI creation from Public Memory, assign your name/title, select a personal folder, and import it directly into HomeHub!
                 </p>
@@ -584,7 +582,7 @@ export const AICreationsFoldersAndMemory: React.FC<AICreationsFoldersAndMemoryPr
               </div>
 
               <div className="max-h-[60vh] overflow-hidden rounded-2xl bg-zinc-950 flex items-center justify-center">
-                <img src={previewAsset.imageUrl} alt="Full View" className="max-h-[60vh] w-auto object-contain" />
+                <img src={previewAsset.imageUrl || null} alt="Full View" className="max-h-[60vh] w-auto object-contain" />
               </div>
 
               <div className="flex items-center justify-between pt-2">

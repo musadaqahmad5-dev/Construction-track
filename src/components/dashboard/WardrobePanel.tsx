@@ -83,8 +83,7 @@ export const WardrobePanel: React.FC<WardrobePanelProps> = ({
             className="relative aspect-[3/4] rounded-2xl overflow-hidden border border-white/5 bg-[#07070c] hover:border-violet-500/30 hover:scale-[1.01] duration-300 transition-all group shadow-2xl flex flex-col"
           >
             <div className="absolute inset-0 bg-zinc-950">
-              <img 
-                src={item.imageUrl} 
+              <img src={item.imageUrl || null} 
                 alt={item.title} 
                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                 onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?q=80&w=200&auto=format&fit=crop"; }}

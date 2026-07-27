@@ -4,7 +4,7 @@ import {
   Sparkles, Globe, User, Crown, Wand2, Palette, Box, Tag, Layers, 
   Eye, RefreshCw, Check, ArrowRight, Info, ShieldCheck, Award, Share2, 
   Bookmark, Heart, Sliders, Cpu, Compass, FileText, CheckCircle2, Zap,
-  ThumbsDown, AlertCircle, Download, Send, Trash2, FolderOpen,
+  ThumbsDown, AlertCircle, Download, Send, Trash2, FolderOpen, Maximize2,
   Video, Image as ImageIcon, Play, Pause, Volume2, VolumeX, Film, FastForward
 } from 'lucide-react';
 import { AICreationsFoldersAndMemory } from './AICreationsFoldersAndMemory';
@@ -1036,8 +1036,8 @@ export const AICreationsUniverseStudio: React.FC<AICreationsUniverseStudioProps>
                   <button
                     type="button"
                     onClick={() => {
-                      if (onNavigateTab) {
-                        onNavigateTab('MARKETPLACE');
+                      if (onNavigateToTab) {
+                        onNavigateToTab('MARKETPLACE');
                         window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
                           detail: { message: '🛍️ Opening Marketplace to list registered design!', type: 'info' }
                         }));
@@ -1147,7 +1147,25 @@ export const AICreationsUniverseStudio: React.FC<AICreationsUniverseStudioProps>
               </div>
 
               {/* MEDIA RESULT CANVAS (IMAGE OR INTERACTIVE VIDEO PLAYER) */}
-              <div className="aspect-square rounded-2xl overflow-hidden border border-white/10 relative group bg-black">
+              <div 
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('lookvision_open_lightbox', {
+                    detail: {
+                      id: generatedResult.id,
+                      imageUrl: generatedResult.imageUrl,
+                      videoUrl: generatedResult.videoUrl,
+                      isVideo: generatedResult.mediaType === 'video' || !!generatedResult.videoUrl,
+                      title: generatedResult.title,
+                      description: generatedResult.prompt,
+                      category: category,
+                      creatorName: 'AI Studio Generator',
+                      isSaved: isSavedToFolder
+                    }
+                  }));
+                }}
+                className="aspect-square rounded-2xl overflow-hidden border border-white/10 relative group bg-black cursor-pointer"
+                title="Click to view full screen in Lightbox"
+              >
                 {generatedResult.videoUrl || generatedResult.mediaType === 'video' ? (
                   <>
                     <video 
@@ -1161,7 +1179,7 @@ export const AICreationsUniverseStudio: React.FC<AICreationsUniverseStudioProps>
                     />
 
                     {/* VIDEO OVERLAY CONTROLS */}
-                    <div className="absolute top-3 left-3 right-3 flex justify-between items-center z-10">
+                    <div className="absolute top-3 left-3 right-3 flex justify-between items-center z-10 pointer-events-auto">
                       <span className="text-[9px] font-mono font-bold bg-cyan-950/80 text-cyan-300 px-2.5 py-1 rounded-full border border-cyan-500/30 flex items-center gap-1.5 shadow-lg backdrop-blur-md">
                         <Video className="w-3 h-3 text-cyan-400 animate-pulse" /> 4K Motion Video
                       </span>
@@ -1169,7 +1187,8 @@ export const AICreationsUniverseStudio: React.FC<AICreationsUniverseStudioProps>
                       <div className="flex items-center gap-1 bg-black/70 backdrop-blur-md p-1 rounded-xl border border-white/10">
                         <button
                           type="button"
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             if (videoRef.current) {
                               if (isVideoPlaying) {
                                 videoRef.current.pause();
@@ -1188,7 +1207,10 @@ export const AICreationsUniverseStudio: React.FC<AICreationsUniverseStudioProps>
 
                         <button
                           type="button"
-                          onClick={() => setIsVideoMuted(!isVideoMuted)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setIsVideoMuted(!isVideoMuted);
+                          }}
                           className="p-1.5 hover:bg-white/10 rounded-lg text-white transition-all cursor-pointer"
                           title={isVideoMuted ? "Unmute" : "Mute"}
                         >
@@ -1198,7 +1220,8 @@ export const AICreationsUniverseStudio: React.FC<AICreationsUniverseStudioProps>
                         {/* Speed dropdown */}
                         <button
                           type="button"
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             const nextSpeed = videoPlaybackSpeed === 1.0 ? 1.5 : videoPlaybackSpeed === 1.5 ? 0.5 : 1.0;
                             setVideoPlaybackSpeed(nextSpeed);
                             if (videoRef.current) videoRef.current.playbackRate = nextSpeed;
@@ -1208,15 +1231,59 @@ export const AICreationsUniverseStudio: React.FC<AICreationsUniverseStudioProps>
                         >
                           {videoPlaybackSpeed}x
                         </button>
+
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            window.dispatchEvent(new CustomEvent('lookvision_open_lightbox', {
+                              detail: {
+                                id: generatedResult.id,
+                                imageUrl: generatedResult.imageUrl,
+                                videoUrl: generatedResult.videoUrl,
+                                isVideo: true,
+                                title: generatedResult.title,
+                                description: generatedResult.prompt,
+                                category: category
+                              }
+                            }));
+                          }}
+                          className="p-1.5 bg-violet-600/50 hover:bg-violet-600 rounded-lg text-white transition-all cursor-pointer"
+                          title="Full Screen Lightbox View"
+                        >
+                          <Maximize2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </div>
                   </>
                 ) : (
-                  <img 
-                    src={generatedResult.imageUrl} 
-                    alt={generatedResult.title}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
+                  <>
+                    <img src={generatedResult.imageUrl || null} 
+                      alt={generatedResult.title}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                    
+                    {/* Full View Floating Button */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.dispatchEvent(new CustomEvent('lookvision_open_lightbox', {
+                          detail: {
+                            id: generatedResult.id,
+                            imageUrl: generatedResult.imageUrl,
+                            title: generatedResult.title,
+                            description: generatedResult.prompt,
+                            category: category
+                          }
+                        }));
+                      }}
+                      className="absolute top-3 right-3 p-2 bg-black/70 hover:bg-violet-600/80 backdrop-blur-md border border-white/10 text-white rounded-xl transition-all cursor-pointer opacity-0 group-hover:opacity-100 shadow-xl flex items-center gap-1 text-[10px] font-mono"
+                    >
+                      <Maximize2 className="w-3.5 h-3.5" />
+                      <span>Full View</span>
+                    </button>
+                  </>
                 )}
 
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-80 pointer-events-none" />

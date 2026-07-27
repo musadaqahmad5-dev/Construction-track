@@ -859,7 +859,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({ user, onClose,
                               prodImageUrl === img.url ? 'border-white ring-1 ring-white/10' : 'border-white/5 opacity-55'
                             }`}
                           >
-                            <img src={img.url} alt={img.label} className="w-full h-full object-cover grayscale" />
+                            <img src={img.url || null} alt={img.label} className="w-full h-full object-cover grayscale" />
                           </button>
                         ))}
                       </div>
@@ -907,7 +907,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({ user, onClose,
                       className="border border-white/5 bg-white/[0.015] rounded-2xl p-4 flex gap-4 transition-colors hover:bg-white/[0.03]"
                     >
                       <div className="w-16 h-20 bg-neutral-900 border border-white/10 overflow-hidden shrink-0 rounded-lg">
-                        <img src={prod.imageUrl} alt={prod.title} className="w-full h-full object-cover grayscale" />
+                        <img src={prod.imageUrl || null} alt={prod.title} className="w-full h-full object-cover grayscale" />
                       </div>
                       <div className="flex-1 flex flex-col justify-between min-w-0">
                         <div>

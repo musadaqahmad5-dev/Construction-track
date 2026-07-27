@@ -121,8 +121,7 @@ export const CADRenderCanvas: React.FC<CADRenderCanvasProps> = ({
         {!isRendering && renderResult && (
           <div className="absolute inset-0 w-full h-full flex flex-col justify-between">
             {/* Render Image Background */}
-            <img 
-              src={renderResult.imageUrl} 
+            <img src={renderResult.imageUrl || null} 
               alt={renderResult.title}
               className="absolute inset-0 w-full h-full object-cover"
             />
