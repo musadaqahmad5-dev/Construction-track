@@ -2,11 +2,54 @@ import "./src/server-polyfill.ts";
 import express from "express";
 import path from "path";
 import fs from "fs";
+import { randomUUID } from "crypto";
 import { getApps, initializeApp, cert } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import Stripe from "stripe";
 import { createServer as createViteServer } from "vite";
+
+// Structured Production Logging Interface & Function
+interface StructuredLogPayload {
+  level: "INFO" | "WARN" | "ERROR";
+  requestId?: string;
+  timestamp?: string;
+  method?: string;
+  path?: string;
+  status?: number;
+  durationMs?: number;
+  userId?: string;
+  clientIp?: string;
+  userAgent?: string;
+  message?: string;
+  error?: {
+    message?: string;
+    stack?: string;
+    endpoint?: string;
+  };
+  bodyTruncated?: boolean;
+  bodySize?: number;
+  [key: string]: any;
+}
+
+function logStructured(payload: StructuredLogPayload) {
+  try {
+    const logData = {
+      ...payload,
+      timestamp: payload.timestamp || new Date().toISOString(),
+    };
+    const jsonOutput = JSON.stringify(logData);
+    if (payload.level === "ERROR") {
+      console.error(jsonOutput);
+    } else if (payload.level === "WARN") {
+      console.warn(jsonOutput);
+    } else {
+      console.log(jsonOutput);
+    }
+  } catch (_) {
+    console.error("[Structured Logger Error] Failed to serialize log payload");
+  }
+}
 import { GoogleGenAI, Type } from "@google/genai";
 import { 
   FashionAI,
@@ -23,6 +66,49 @@ import {
   DeviceReactionEngine
 } from "./src/engine";
 import { handler as recommendMvpHandler } from "./netlify/functions/recommend-mvp";
+import tryOnRouter from "./tryOnRouter";
+import stripePaymentGatewayRouter from "./stripePaymentGatewayRouter";
+
+// --- Production Request Validation Suite ---
+function validateType(value: any, expectedType: "string" | "number" | "boolean" | "array" | "object"): boolean {
+  if (value === undefined || value === null) return true;
+  if (expectedType === "string") return typeof value === "string";
+  if (expectedType === "number") return typeof value === "number" && !isNaN(value) && isFinite(value);
+  if (expectedType === "boolean") return typeof value === "boolean";
+  if (expectedType === "array") return Array.isArray(value);
+  if (expectedType === "object") return typeof value === "object" && value !== null && !Array.isArray(value);
+  return false;
+}
+
+function validateEnum<T>(value: any, allowedValues: readonly T[]): boolean {
+  if (value === undefined || value === null) return true;
+  return allowedValues.includes(value);
+}
+
+function sanitizeInputString(value: any, maxLen = 10000): string {
+  if (typeof value !== "string") return "";
+  const trimmed = value.trim();
+  return trimmed.length > maxLen ? trimmed.substring(0, maxLen) : trimmed;
+}
+
+function sanitizePayloadObject(obj: any): any {
+  if (obj === null || typeof obj !== "object") return obj;
+  if (Array.isArray(obj)) return obj.map(sanitizePayloadObject);
+  const cleanObj: Record<string, any> = {};
+  for (const key of Object.keys(obj)) {
+    if (key === "__proto__" || key === "constructor" || key === "prototype") continue;
+    cleanObj[key] = sanitizePayloadObject(obj[key]);
+  }
+  return cleanObj;
+}
+
+function sendValidationError(res: express.Response, errors: string[], statusCode = 422) {
+  return res.status(statusCode).json({
+    success: false,
+    error: "Validation failed",
+    details: errors
+  });
+}
 
 function parseTopOutfits(primary: any, alternatives: any[]): any[] {
   const list: any[] = [];
@@ -56,6 +142,51 @@ function parseTopOutfits(primary: any, alternatives: any[]): any[] {
 async function startServer() {
   const app = express();
   const PORT = 3000;
+
+  // Request ID & Structured Request Logging Middleware
+  app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const requestId = (req.headers["x-request-id"] as string) || (typeof randomUUID === "function" ? randomUUID() : `req_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`);
+    (req as any).requestId = requestId;
+    res.setHeader("X-Request-Id", requestId);
+
+    const startTime = Date.now();
+
+    res.on("finish", () => {
+      const durationMs = Date.now() - startTime;
+      const status = res.statusCode;
+      const level: "INFO" | "WARN" | "ERROR" = status >= 500 ? "ERROR" : status >= 400 ? "WARN" : "INFO";
+
+      const userId = (req as any).user?.uid || (req.headers["x-user-id"] as string) || undefined;
+      const clientIp = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.socket?.remoteAddress || undefined;
+      const userAgent = (req.headers["user-agent"] as string) || undefined;
+
+      let bodyInfo: { bodyTruncated?: boolean; bodySize?: number } = {};
+      if (req.body) {
+        try {
+          const bodyStr = typeof req.body === "string" ? req.body : (Buffer.isBuffer(req.body) ? req.body.toString("utf-8") : JSON.stringify(req.body));
+          if (bodyStr.length > 5120) {
+            bodyInfo = { bodyTruncated: true, bodySize: bodyStr.length };
+          }
+        } catch (_) {}
+      }
+
+      logStructured({
+        level,
+        requestId,
+        timestamp: new Date().toISOString(),
+        method: req.method,
+        path: req.originalUrl || req.url,
+        status,
+        durationMs,
+        ...(userId ? { userId } : {}),
+        ...(clientIp ? { clientIp } : {}),
+        ...(userAgent ? { userAgent } : {}),
+        ...bodyInfo
+      });
+    });
+
+    next();
+  });
 
   // Initialize Firebase Admin SDK
   const projectId = process.env.VITE_FIREBASE_PROJECT_ID || "fashion-ai-56bd2";
@@ -336,6 +467,118 @@ async function startServer() {
     }
   };
 
+  // --- IN-MEMORY AI REQUEST CACHE & INFLIGHT DEDUPLICATION ENGINE ---
+  interface AiCacheEntry<T> {
+    data: T;
+    timestamp: number;
+  }
+
+  const AI_CACHE_TTL_MS = 60000; // 60 seconds TTL
+  const aiCacheMap = new Map<string, AiCacheEntry<any>>();
+  const aiInflightMap = new Map<string, Promise<any>>();
+
+  // Automatic periodic cleanup of expired entries
+  setInterval(() => {
+    try {
+      const now = Date.now();
+      for (const [key, entry] of aiCacheMap.entries()) {
+        if (now - entry.timestamp > AI_CACHE_TTL_MS) {
+          aiCacheMap.delete(key);
+        }
+      }
+    } catch (_) {}
+  }, 30000).unref();
+
+  function generateDeterministicCacheKey(prefix: string, payload: any): string {
+    try {
+      const sortObjectKeys = (obj: any): any => {
+        if (obj === null || typeof obj !== 'object') {
+          return obj;
+        }
+        if (Array.isArray(obj)) {
+          return obj.map(sortObjectKeys);
+        }
+        const sortedKeys = Object.keys(obj).sort();
+        const sortedObj: Record<string, any> = {};
+        for (const key of sortedKeys) {
+          sortedObj[key] = sortObjectKeys(obj[key]);
+        }
+        return sortedObj;
+      };
+      return `${prefix}:${JSON.stringify(sortObjectKeys(payload))}`;
+    } catch (_) {
+      return `${prefix}:${JSON.stringify(payload)}`;
+    }
+  }
+
+  async function executeCachedAiRequest<T>(
+    prefix: string,
+    payload: any,
+    fn: () => Promise<T>
+  ): Promise<T> {
+    let cacheKey: string | null = null;
+
+    try {
+      cacheKey = generateDeterministicCacheKey(prefix, payload);
+
+      // 1. Check in-memory cache
+      const cached = aiCacheMap.get(cacheKey);
+      if (cached) {
+        if (Date.now() - cached.timestamp <= AI_CACHE_TTL_MS) {
+          return cached.data;
+        } else {
+          aiCacheMap.delete(cacheKey);
+        }
+      }
+
+      // 2. Check inflight map for concurrent duplicate requests
+      const inflightPromise = aiInflightMap.get(cacheKey);
+      if (inflightPromise) {
+        return await inflightPromise;
+      }
+    } catch (err) {
+      console.warn("[AI Cache Warning] Error reading cache:", err);
+    }
+
+    // 3. Execute request & track inflight promise
+    const executionPromise = (async () => {
+      const result = await fn();
+      if (cacheKey && result !== undefined && result !== null) {
+        const isObject = typeof result === "object";
+        const isFailed = isObject && (result as any).success === false;
+        if (!isFailed) {
+          try {
+            aiCacheMap.set(cacheKey, {
+              data: result,
+              timestamp: Date.now()
+            });
+          } catch (err) {
+            console.warn("[AI Cache Warning] Error writing to cache:", err);
+          }
+        }
+      }
+      return result;
+    })();
+
+    if (cacheKey) {
+      try {
+        aiInflightMap.set(cacheKey, executionPromise);
+      } catch (err) {
+        console.warn("[AI Cache Warning] Error setting inflight request:", err);
+      }
+    }
+
+    try {
+      return await executionPromise;
+    } finally {
+      if (cacheKey) {
+        try {
+          aiInflightMap.delete(cacheKey);
+        } catch (_) {}
+      }
+    }
+  }
+
   // --- STRIPE CONFIGURATION & INITIALIZATION ---
   let stripeClient: Stripe | null = null;
   const getStripe = (): Stripe => {
@@ -523,17 +766,70 @@ async function startServer() {
   );
 
   // Middleware
-  app.use(express.json({ limit: "15mb" })); // handle potential image base64 posts
+  app.use(express.json({ limit: "50mb" }));
+  app.use(express.urlencoded({ extended: true, limit: "50mb" }));
+
+  // Content-Type Guard Middleware for API POST/PUT/PATCH endpoints
+  app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (["POST", "PUT", "PATCH"].includes(req.method) && req.path.startsWith("/api/")) {
+      const contentLength = req.headers["content-length"];
+      const contentType = req.headers["content-type"];
+      if (contentLength && contentLength !== "0") {
+        if (contentType && !contentType.includes("application/json") && !contentType.includes("multipart/form-data") && !contentType.includes("application/x-www-form-urlencoded")) {
+          return res.status(415).json({
+            success: false,
+            error: "Unsupported Media Type",
+            details: ["Content-Type must be 'application/json' or 'multipart/form-data'"]
+          });
+        }
+      }
+    }
+    next();
+  });
 
   // API Routes (Registered FIRST)
+  app.use("/api/tryon", tryOnRouter);
+  app.use(stripePaymentGatewayRouter);
+
+  const serverStartTime = Date.now();
+
   app.get("/api/health", (req, res) => {
-    res.json({ status: "ok", time: new Date().toISOString() });
+    try {
+      const mem = process.memoryUsage();
+      const formatMb = (bytes: number) => Number((bytes / (1024 * 1024)).toFixed(2));
+
+      res.json({
+        status: "ok",
+        time: new Date().toISOString(),
+        timestamp: new Date().toISOString(),
+        serverUptime: Math.floor((Date.now() - serverStartTime) / 1000),
+        processUptime: Math.floor(process.uptime()),
+        nodeEnv: process.env.NODE_ENV || "development",
+        version: "2.4.0",
+        pid: process.pid,
+        memoryUsage: {
+          heapUsedMb: formatMb(mem.heapUsed),
+          heapTotalMb: formatMb(mem.heapTotal),
+          rssMb: formatMb(mem.rss),
+          externalMb: formatMb(mem.external || 0)
+        }
+      });
+    } catch (err: any) {
+      res.json({
+        status: "ok",
+        time: new Date().toISOString(),
+        fallback: true
+      });
+    }
   });
 
   app.post("/api/log-client-error", (req, res) => {
-    const errorData = req.body || {};
-    // Keep server console clean and quiet from browser-side telemetry noise
-    const cleanMsg = (errorData.message || "").replace(/[^a-zA-Z0-9\s:._-]/g, "");
+    if (!req.body || typeof req.body !== "object") {
+      return res.status(400).json({ status: "error", error: "Invalid payload format" });
+    }
+    const errorData = sanitizePayloadObject(req.body);
+    const rawMsg = typeof errorData.message === "string" ? errorData.message : "";
+    const cleanMsg = rawMsg.substring(0, 2000).replace(/[^a-zA-Z0-9\s:._-]/g, "");
     console.log(`[Client Diagnostic]: ${cleanMsg}`);
     res.json({ status: "logged" });
   });
@@ -541,18 +837,37 @@ async function startServer() {
   // Backend Device Reaction & Adaptive Layout Engine API
   app.post("/api/adaptive-layout", (req, res) => {
     try {
-      const telemetry = req.body || {};
+      if (!req.body || typeof req.body !== "object") {
+        return sendValidationError(res, ["Request body must be a valid JSON object"], 400);
+      }
+      const telemetry = sanitizePayloadObject(req.body);
+      const errors: string[] = [];
+
+      if (telemetry.width !== undefined && (!validateType(Number(telemetry.width), "number") || Number(telemetry.width) < 0)) {
+        errors.push("width must be a non-negative number");
+      }
+      if (telemetry.height !== undefined && (!validateType(Number(telemetry.height), "number") || Number(telemetry.height) < 0)) {
+        errors.push("height must be a non-negative number");
+      }
+      if (telemetry.viewportMode !== undefined && !validateEnum(telemetry.viewportMode, ["AUTO", "MOBILE", "DESKTOP", "TABLET"] as const)) {
+        errors.push("viewportMode must be one of: 'AUTO', 'MOBILE', 'DESKTOP', 'TABLET'");
+      }
+
+      if (errors.length > 0) {
+        return sendValidationError(res, errors, 422);
+      }
+
       const layoutAnalysis = DeviceReactionEngine.analyzeClientDevice({
         width: Number(telemetry.width) || 1280,
         height: Number(telemetry.height) || 800,
         pixelRatio: Number(telemetry.pixelRatio) || 1,
-        orientation: telemetry.orientation,
-        userAgent: req.headers["user-agent"] || telemetry.userAgent,
+        orientation: (telemetry.orientation === "PORTRAIT" || telemetry.orientation === "LANDSCAPE") ? telemetry.orientation : undefined,
+        userAgent: typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : (typeof telemetry.userAgent === "string" ? sanitizeInputString(telemetry.userAgent, 500) : undefined),
         viewportMode: telemetry.viewportMode || "AUTO",
         touchCapable: Boolean(telemetry.touchCapable),
-        connectionType: telemetry.connectionType,
-        colorScheme: telemetry.colorScheme || "dark",
-        userId: telemetry.userId || "anonymous"
+        connectionType: typeof telemetry.connectionType === "string" ? sanitizeInputString(telemetry.connectionType, 50) : undefined,
+        colorScheme: telemetry.colorScheme === "light" ? "light" : "dark",
+        userId: typeof telemetry.userId === "string" ? sanitizeInputString(telemetry.userId, 100) : "anonymous"
       });
 
       res.json({
@@ -560,24 +875,64 @@ async function startServer() {
         data: layoutAnalysis
       });
     } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
+      res.status(500).json({ success: false, error: "Adaptive layout calculation failed" });
     }
   });
 
   app.post("/api/device-preference", (req, res) => {
     try {
-      const { userId = "anonymous", viewportMode = "AUTO" } = req.body || {};
-      DeviceReactionEngine.setPreference(userId, viewportMode);
+      if (!req.body || typeof req.body !== "object") {
+        return sendValidationError(res, ["Request body must be a valid JSON object"], 400);
+      }
+      const { userId = "anonymous", viewportMode = "AUTO" } = sanitizePayloadObject(req.body);
+      
+      const errors: string[] = [];
+      if (typeof userId !== "string") {
+        errors.push("userId must be a string");
+      }
+      if (!validateEnum(viewportMode, ["AUTO", "MOBILE", "DESKTOP", "TABLET"] as const)) {
+        errors.push("viewportMode must be one of: 'AUTO', 'MOBILE', 'DESKTOP', 'TABLET'");
+      }
+
+      if (errors.length > 0) {
+        return sendValidationError(res, errors, 422);
+      }
+
+      DeviceReactionEngine.setPreference(sanitizeInputString(userId, 100), viewportMode);
       res.json({ success: true, mode: viewportMode });
     } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
+      res.status(500).json({ success: false, error: "Setting device preference failed" });
     }
   });
 
   // AI Video Director & Temporal Sequence Endpoint
   app.post("/api/video-timeline/generate", async (req, res) => {
     try {
-      const { prompt, duration = 10, aspectRatio = "9:16", styleTheme = "Cyberpunk High-Fashion Runway" } = req.body || {};
+      if (!req.body || typeof req.body !== "object") {
+        return sendValidationError(res, ["Request body must be a valid JSON object"], 400);
+      }
+      const body = sanitizePayloadObject(req.body);
+      const errors: string[] = [];
+
+      if (body.prompt !== undefined && typeof body.prompt !== "string") {
+        errors.push("prompt must be a string");
+      }
+      if (body.duration !== undefined && (!validateType(Number(body.duration), "number") || Number(body.duration) <= 0 || Number(body.duration) > 300)) {
+        errors.push("duration must be a positive number up to 300 seconds");
+      }
+      if (body.aspectRatio !== undefined && !validateEnum(body.aspectRatio, ["9:16", "16:9", "1:1", "4:3", "3:4"] as const)) {
+        errors.push("aspectRatio must be one of: '9:16', '16:9', '1:1', '4:3', '3:4'");
+      }
+
+      if (errors.length > 0) {
+        return sendValidationError(res, errors, 422);
+      }
+
+      const prompt = sanitizeInputString(body.prompt || "", 2000);
+      const duration = Number(body.duration) || 10;
+      const aspectRatio = body.aspectRatio || "9:16";
+      const styleTheme = sanitizeInputString(body.styleTheme || "Cyberpunk High-Fashion Runway", 200);
+
       const apiKey = process.env.GEMINI_API_KEY;
 
       if (apiKey) {
@@ -649,8 +1004,27 @@ Return ONLY raw JSON with properties: totalDurationSec, aspectRatio, styleTheme,
   // Real Stripe Checkout Session API Route
   app.post("/api/billing/create-checkout-session", verifyAuthToken, async (req, res) => {
     try {
+      if (!req.body || typeof req.body !== "object") {
+        return sendValidationError(res, ["Request body must be a valid JSON object"], 400);
+      }
       const user = (req as any).user;
-      const { priceId, tier, successUrl, cancelUrl, productId, productTitle, productPrice, productImageUrl, shopName } = req.body;
+      const body = sanitizePayloadObject(req.body);
+      const errors: string[] = [];
+
+      const { priceId, tier, successUrl, cancelUrl, productId, productTitle, productPrice, productImageUrl, shopName } = body;
+
+      if (priceId !== undefined && typeof priceId !== "string") errors.push("priceId must be a string");
+      if (tier !== undefined && typeof tier !== "string") errors.push("tier must be a string");
+      if (productId !== undefined && typeof productId !== "string") errors.push("productId must be a string");
+      if (productPrice !== undefined && (!validateType(Number(productPrice), "number") || Number(productPrice) < 0)) errors.push("productPrice must be a non-negative number");
+
+      if (errors.length > 0) {
+        return sendValidationError(res, errors, 422);
+      }
+
+      if (!((priceId && tier) || productId)) {
+        return sendValidationError(res, ["Either (priceId and tier) or (productId, productTitle, and productPrice) must be provided."], 422);
+      }
 
       const stripe = getStripe();
 
@@ -699,7 +1073,7 @@ Return ONLY raw JSON with properties: totalDurationSec, aspectRatio, styleTheme,
             },
           },
         };
-      } else if (productId) {
+      } else {
         // --- One-Time Product Purchase Mode ---
         sessionParams = {
           mode: "payment",
@@ -732,9 +1106,6 @@ Return ONLY raw JSON with properties: totalDurationSec, aspectRatio, styleTheme,
             type: "product_purchase",
           },
         };
-      } else {
-        res.status(400).json({ error: "Either (priceId and tier) or (productId, productTitle, and productPrice) must be provided." });
-        return;
       }
 
       const session = await stripe.checkout.sessions.create(sessionParams);
@@ -748,6 +1119,23 @@ Return ONLY raw JSON with properties: totalDurationSec, aspectRatio, styleTheme,
   // Production AI Stylist Pipeline
   app.post("/api/stylist/generate", verifyAuthToken, async (req, res) => {
     try {
+      if (!req.body || typeof req.body !== "object") {
+        return sendValidationError(res, ["Request body must be a valid JSON object"], 400);
+      }
+      const body = sanitizePayloadObject(req.body);
+      const errors: string[] = [];
+
+      if (body.wardrobe !== undefined && !Array.isArray(body.wardrobe)) {
+        errors.push("wardrobe must be an array of garment items");
+      }
+      if (body.userProfile !== undefined && !validateType(body.userProfile, "object")) {
+        errors.push("userProfile must be an object");
+      }
+
+      if (errors.length > 0) {
+        return sendValidationError(res, errors, 422);
+      }
+
       const user = (req as any).user;
       const quotaCheck = await checkAndDeductQuota(user.uid, "recommendations");
       if (!quotaCheck.allowed) {
@@ -755,38 +1143,42 @@ Return ONLY raw JSON with properties: totalDurationSec, aspectRatio, styleTheme,
         return;
       }
 
-      const { wardrobe, userProfile } = req.body;
+      const { wardrobe, userProfile } = body;
       const wardrobeItems = Array.isArray(wardrobe) ? wardrobe : [];
-      
-      // Seed wardrobe items to the global state (in-memory for this server request)
-      if (wardrobeItems.length > 0) {
-        UnifiedFashionOS.syncWardrobeItems(wardrobeItems);
-      }
-      
-      // Seed user preference weights vector if provided
-      if (userProfile?.user_preferences_vector) {
-        UnifiedFashionOS.getState().unifiedStyleMemory.user_preferences_vector = userProfile.user_preferences_vector;
-      }
-      
-      // Execute the completed 3-core engine layers
-      UnifiedFashionOS.generateOutfit(wardrobeItems, "Today's Styled Spread");
-      UnifiedFashionOS.recalculateGoLiveGate(); // triggers Governor Loop updates dynamically!
-      
-      const state = UnifiedFashionOS.getState();
-      const currentSuggestion = state.activeSuggestion;
-      
-      // Gather top 10 suggestions (using alternativeOutfits array)
-      const parsedAlternatives = state.alternativeOutfits || [];
-      const suggestions = parseTopOutfits(currentSuggestion, parsedAlternatives);
-      
-      res.json({
-        success: true,
-        outfits: suggestions.slice(0, 10),
-        styleIdentity: 'Balanced Slate Aesthetic',
-        gravityMatch: 'High',
-        stylistNotes: (currentSuggestion as any)?.explanation || 'A curated selection adapted for your temporal rhythm.',
-        governorReport: state.systemGovernorReport
+
+      const result = await executeCachedAiRequest("stylist:generate", { wardrobe, userProfile }, async () => {
+        // Seed wardrobe items to the global state (in-memory for this server request)
+        if (wardrobeItems.length > 0) {
+          UnifiedFashionOS.syncWardrobeItems(wardrobeItems);
+        }
+        
+        // Seed user preference weights vector if provided
+        if (userProfile?.user_preferences_vector) {
+          UnifiedFashionOS.getState().unifiedStyleMemory.user_preferences_vector = userProfile.user_preferences_vector;
+        }
+        
+        // Execute the completed 3-core engine layers
+        UnifiedFashionOS.generateOutfit(wardrobeItems, "Today's Styled Spread");
+        UnifiedFashionOS.recalculateGoLiveGate(); // triggers Governor Loop updates dynamically!
+        
+        const state = UnifiedFashionOS.getState();
+        const currentSuggestion = state.activeSuggestion;
+        
+        // Gather top 10 suggestions (using alternativeOutfits array)
+        const parsedAlternatives = state.alternativeOutfits || [];
+        const suggestions = parseTopOutfits(currentSuggestion, parsedAlternatives);
+        
+        return {
+          success: true,
+          outfits: suggestions.slice(0, 10),
+          styleIdentity: 'Balanced Slate Aesthetic',
+          gravityMatch: 'High',
+          stylistNotes: (currentSuggestion as any)?.explanation || 'A curated selection adapted for your temporal rhythm.',
+          governorReport: state.systemGovernorReport
+        };
       });
+
+      res.json(result);
     } catch (err: any) {
       console.error("[API ERROR] Stylist generation pipeline failed:", err);
       res.status(500).json({ error: "SaaS generation failed: " + err.message });
@@ -796,6 +1188,20 @@ Return ONLY raw JSON with properties: totalDurationSec, aspectRatio, styleTheme,
   // Outfit Recommendation Endpoint
   app.post("/api/ai/recommend", verifyAuthToken, async (req, res) => {
     try {
+      if (!req.body || typeof req.body !== "object") {
+        return sendValidationError(res, ["Request body must be a valid JSON object"], 400);
+      }
+      const body = sanitizePayloadObject(req.body);
+      const errors: string[] = [];
+
+      if (body.wardrobe !== undefined && !Array.isArray(body.wardrobe)) {
+        errors.push("wardrobe must be an array");
+      }
+
+      if (errors.length > 0) {
+        return sendValidationError(res, errors, 422);
+      }
+
       const user = (req as any).user;
       const quotaCheck = await checkAndDeductQuota(user.uid, "recommendations");
       if (!quotaCheck.allowed) {
@@ -803,14 +1209,16 @@ Return ONLY raw JSON with properties: totalDurationSec, aspectRatio, styleTheme,
         return;
       }
 
-      const { wardrobe, condition, tempRange, vibe, agenda, userId } = req.body;
-      const result = await FashionOrchestrator.recommend({
-        userId: userId || 'active_user',
-        wardrobe,
-        weatherCondition: condition,
-        tempRange,
-        vibe,
-        agenda
+      const { wardrobe, condition, tempRange, vibe, agenda, userId } = body;
+      const result = await executeCachedAiRequest("ai:recommend", body, async () => {
+        return await FashionOrchestrator.recommend({
+          userId: userId || 'active_user',
+          wardrobe,
+          weatherCondition: condition,
+          tempRange,
+          vibe,
+          agenda
+        });
       });
       res.json(result);
     } catch (err: any) {
@@ -822,6 +1230,11 @@ Return ONLY raw JSON with properties: totalDurationSec, aspectRatio, styleTheme,
   // --- CORE SYSTEM (Phase 1 & 2 FINAL MVP) ---
   app.post(["/api/ai/recommend-mvp", "/.netlify/functions/recommend-mvp"], verifyAuthToken, async (req, res) => {
     try {
+      if (!req.body || typeof req.body !== "object") {
+        return sendValidationError(res, ["Request body must be a valid JSON object"], 400);
+      }
+      const body = sanitizePayloadObject(req.body);
+
       const user = (req as any).user;
       const quotaCheck = await checkAndDeductQuota(user.uid, "recommendations");
       if (!quotaCheck.allowed) {
@@ -829,13 +1242,14 @@ Return ONLY raw JSON with properties: totalDurationSec, aspectRatio, styleTheme,
         return;
       }
 
-      const event = {
-        httpMethod: "POST",
-        body: JSON.stringify(req.body),
-        headers: req.headers,
-      };
-      
-      const result = await recommendMvpHandler(event, {});
+      const result = await executeCachedAiRequest("ai:recommend-mvp", body, async () => {
+        const event = {
+          httpMethod: "POST",
+          body: JSON.stringify(body),
+          headers: req.headers,
+        };
+        return await recommendMvpHandler(event, {});
+      });
       
       // Propagate secure CORS and API response headers
       if (result.headers) {
@@ -860,6 +1274,20 @@ Return ONLY raw JSON with properties: totalDurationSec, aspectRatio, styleTheme,
   // Outfit Single Strategy Endpoint
   app.post("/api/ai/strategy", verifyAuthToken, async (req, res) => {
     try {
+      if (!req.body || typeof req.body !== "object") {
+        return sendValidationError(res, ["Request body must be a valid JSON object"], 400);
+      }
+      const body = sanitizePayloadObject(req.body);
+      const errors: string[] = [];
+
+      if (body.title !== undefined && typeof body.title !== "string") errors.push("title must be a string");
+      if (body.category !== undefined && typeof body.category !== "string") errors.push("category must be a string");
+      if (body.description !== undefined && typeof body.description !== "string") errors.push("description must be a string");
+
+      if (errors.length > 0) {
+        return sendValidationError(res, errors, 422);
+      }
+
       const user = (req as any).user;
       const quotaCheck = await checkAndDeductQuota(user.uid, "recommendations");
       if (!quotaCheck.allowed) {
@@ -867,9 +1295,15 @@ Return ONLY raw JSON with properties: totalDurationSec, aspectRatio, styleTheme,
         return;
       }
 
-      const { title, category, description } = req.body;
-      const strategy = await FashionAI.generateStylingStrategy(title, category, description);
-      res.json({ strategy });
+      const title = sanitizeInputString(body.title, 500);
+      const category = sanitizeInputString(body.category, 200);
+      const description = sanitizeInputString(body.description, 2000);
+
+      const result = await executeCachedAiRequest("ai:strategy", { title, category, description }, async () => {
+        const strategy = await FashionAI.generateStylingStrategy(title, category, description);
+        return { strategy };
+      });
+      res.json(result);
     } catch (err: any) {
       console.error("[API ERROR] Strategy generation failed:", err);
       res.status(500).json({ error: "Failed to generate styling strategy: " + err.message });
@@ -879,6 +1313,15 @@ Return ONLY raw JSON with properties: totalDurationSec, aspectRatio, styleTheme,
   // Vision Understanding Enpoint (Mocks vision tags)
   app.post("/api/ai/analyze-visual", verifyAuthToken, async (req, res) => {
     try {
+      if (!req.body || typeof req.body !== "object") {
+        return sendValidationError(res, ["Request body must be a valid JSON object"], 400);
+      }
+      const body = sanitizePayloadObject(req.body);
+
+      if (!body.base64Image || typeof body.base64Image !== "string" || !body.base64Image.trim()) {
+        return sendValidationError(res, ["base64Image is required and must be a non-empty string"], 422);
+      }
+
       const user = (req as any).user;
       const quotaCheck = await checkAndDeductQuota(user.uid, "recommendations");
       if (!quotaCheck.allowed) {
@@ -886,8 +1329,10 @@ Return ONLY raw JSON with properties: totalDurationSec, aspectRatio, styleTheme,
         return;
       }
 
-      const { base64Image } = req.body;
-      const result = await FashionAI.analyzeOutfitVisual(base64Image);
+      const { base64Image } = body;
+      const result = await executeCachedAiRequest("ai:analyze-visual", { base64Image }, async () => {
+        return await FashionAI.analyzeOutfitVisual(base64Image);
+      });
       res.json(result);
     } catch (err: any) {
       console.error("[API ERROR] Visual analysis failed:", err);
@@ -898,6 +1343,23 @@ Return ONLY raw JSON with properties: totalDurationSec, aspectRatio, styleTheme,
   // Real Image Generation API Route
   app.post("/api/image-generation/generate", verifyAuthToken, async (req, res) => {
     try {
+      if (!req.body || typeof req.body !== "object") {
+        return sendValidationError(res, ["Request body must be a valid JSON object"], 400);
+      }
+      const body = sanitizePayloadObject(req.body);
+      const errors: string[] = [];
+
+      if (body.gender !== undefined && !validateEnum(body.gender, ["male", "female", "unisex"] as const)) {
+        errors.push("gender must be one of: 'male', 'female', 'unisex'");
+      }
+      if (body.garments !== undefined && !Array.isArray(body.garments)) {
+        errors.push("garments must be an array");
+      }
+
+      if (errors.length > 0) {
+        return sendValidationError(res, errors, 422);
+      }
+
       const user = (req as any).user;
       const quotaCheck = await checkAndDeductQuota(user.uid, "images");
       if (!quotaCheck.allowed) {
@@ -905,7 +1367,7 @@ Return ONLY raw JSON with properties: totalDurationSec, aspectRatio, styleTheme,
         return;
       }
 
-      const { theme, vibe, garments, gender, formality, season, setting, provider, hasUploadedUserImage, isAICreationsModule } = req.body;
+      const { theme, vibe, garments, gender, formality, season, setting, provider, hasUploadedUserImage, isAICreationsModule } = body;
       
       // Strict Sarto-Guardrail for Image Generation
       const testVibe = (vibe || "").toLowerCase();
@@ -930,34 +1392,38 @@ Return ONLY raw JSON with properties: totalDurationSec, aspectRatio, styleTheme,
         });
         return;
       }
-      
-      const prompt = FashionPromptBuilder.buildOutfitPrompt({
-        theme, vibe, garments, gender, formality, season, setting, hasUploadedUserImage: Boolean(hasUploadedUserImage), isAICreationsModule: Boolean(isAICreationsModule)
-      });
 
-      const result = await ImageGenerationRegistry.generate(prompt, { aspectRatio: '3:4' }, provider);
-      
-      if (result.success && result.imageUrl) {
-        // Save look to database history
-        await ImageStorage.persistLook(result.imageUrl, {
-          prompt,
-          provider: result.provider,
-          vibe,
-          season,
-          userId: user.uid,
-          qualityScores: result.qualityScores,
-          criticFeedback: result.criticFeedback
+      const result = await executeCachedAiRequest("image-generation:generate", body, async () => {
+        const prompt = FashionPromptBuilder.buildOutfitPrompt({
+          theme, vibe, garments, gender, formality, season, setting, hasUploadedUserImage: Boolean(hasUploadedUserImage), isAICreationsModule: Boolean(isAICreationsModule)
         });
-      }
 
-      res.json({ 
-        success: result.success, 
-        imageUrl: result.imageUrl, 
-        provider: result.provider, 
-        error: result.error,
-        qualityScores: result.qualityScores,
-        criticFeedback: result.criticFeedback
+        const genResult = await ImageGenerationRegistry.generate(prompt, { aspectRatio: '3:4' }, provider);
+        
+        if (genResult.success && genResult.imageUrl) {
+          // Save look to database history
+          await ImageStorage.persistLook(genResult.imageUrl, {
+            prompt,
+            provider: genResult.provider,
+            vibe,
+            season,
+            userId: user.uid,
+            qualityScores: genResult.qualityScores,
+            criticFeedback: genResult.criticFeedback
+          });
+        }
+
+        return { 
+          success: genResult.success, 
+          imageUrl: genResult.imageUrl, 
+          provider: genResult.provider, 
+          error: genResult.error,
+          qualityScores: genResult.qualityScores,
+          criticFeedback: genResult.criticFeedback
+        };
       });
+
+      res.json(result);
     } catch (err: any) {
       console.error("[API ERROR] Image generation failed:", err);
       res.status(500).json({ error: "Failed to generate fashion image: " + err.message });
@@ -967,6 +1433,27 @@ Return ONLY raw JSON with properties: totalDurationSec, aspectRatio, styleTheme,
   // Real Community Body-Style Mapping API Route
   app.post("/api/community/process-image", verifyAuthToken, async (req, res) => {
     try {
+      if (!req.body || typeof req.body !== "object") {
+        return sendValidationError(res, ["Request body must be a valid JSON object"], 400);
+      }
+      const body = sanitizePayloadObject(req.body);
+
+      if (!body.base64Image || typeof body.base64Image !== "string" || !body.base64Image.trim()) {
+        return sendValidationError(res, ["base64Image is required and must be a non-empty base64 string or data URL"], 422);
+      }
+
+      const errors: string[] = [];
+      if (body.aspectRatio !== undefined && !validateEnum(body.aspectRatio, ["1:1", "3:4", "4:3", "9:16", "16:9"] as const)) {
+        errors.push("aspectRatio must be one of: '1:1', '3:4', '4:3', '9:16', '16:9'");
+      }
+      if (body.styleTransferWeight !== undefined && (!validateType(Number(body.styleTransferWeight), "number") || Number(body.styleTransferWeight) < 0 || Number(body.styleTransferWeight) > 1)) {
+        errors.push("styleTransferWeight must be a number between 0 and 1");
+      }
+
+      if (errors.length > 0) {
+        return sendValidationError(res, errors, 422);
+      }
+
       const user = (req as any).user;
       const quotaCheck = await checkAndDeductQuota(user.uid, "images");
       if (!quotaCheck.allowed) {
@@ -974,68 +1461,65 @@ Return ONLY raw JSON with properties: totalDurationSec, aspectRatio, styleTheme,
         return;
       }
 
-      const { base64Image, qualityMode, aspectRatio, styleTransferWeight, selectedDemographic, selectedInstructor, customPrompt, selectedCategory } = req.body;
-      if (!base64Image) {
-        res.status(400).json({ error: "No image data provided. Please upload an image." });
-        return;
-      }
+      const { base64Image, qualityMode, aspectRatio, styleTransferWeight, selectedDemographic, selectedInstructor, customPrompt, selectedCategory } = body;
 
-      let base64Data = base64Image;
-      let mimeType = "image/jpeg";
+      const finalPayload = await executeCachedAiRequest("community:process-image", req.body, async () => {
+        let base64Data = base64Image;
+        let mimeType = "image/jpeg";
 
-      if (base64Image.startsWith("data:")) {
-        const matches = base64Image.match(/^data:([^;]+);base64,(.*)$/);
-        if (matches && matches.length === 3) {
-          mimeType = matches[1];
-          base64Data = matches[2];
+        if (base64Image.startsWith("data:")) {
+          const matches = base64Image.match(/^data:([^;]+);base64,(.*)$/);
+          if (matches && matches.length === 3) {
+            mimeType = matches[1];
+            base64Data = matches[2];
+          }
         }
-      }
 
-      let demographicFocusText = "General Audience styling focus.";
-      if (selectedDemographic === "youth") {
-        demographicFocusText = "The target pupil demographic is the Youth Division (ages 12-18). Optimize styling recommendation for Vibrant Cyberpunk Streetwear & Athletic Fusion, prioritizing fast-fashion agility & energetic street expression.";
-      } else if (selectedDemographic === "young-adults") {
-        demographicFocusText = "The target pupil demographic is Young Adults (ages 19-25). Optimize styling recommendation for Deconstructed Minimalist & Eco-Conscious Thrift, prioritizing expressive sustainability & digital style passports.";
-      } else if (selectedDemographic === "professionals") {
-        demographicFocusText = "The target pupil demographic is Active Professionals (ages 26-45). Optimize styling recommendation for Quiet Luxury, Precision Tailoring & High-Performance Outerwear, prioritizing sleek corporate minimalism & high-efficiency wardrobes.";
-      } else if (selectedDemographic === "elders") {
-        demographicFocusText = "The target pupil demographic is Noble Elders (ages 46+). Optimize styling recommendation for Classic Editorial, Premium Organic Linens & Fine Merino, prioritizing ergonomic comfort & timeless legacy heritage.";
-      }
-
-      let instructorFocusText = "Standard styling logic and expertise supervision.";
-      if (selectedInstructor === "pattern_maker") {
-        instructorFocusText = "The analysis must be conducted under supervision of the Artisan Pattern Maker (Cage Alpha - Structure). Detail CAD mesh topologies, kinetic drape physics weights, precise fabric thickness calculations, and seam/fit specifications.";
-      } else if (selectedInstructor === "trend_scout") {
-        instructorFocusText = "The analysis must be conducted under supervision of the Trend Ingestion Scout (Cage Beta - Intelligence). Focus heavily on social ingestion telemetry, viral style tags, Vogue crawl trends, and sourcing analytics.";
-      } else if (selectedInstructor === "prompt_alchemist") {
-        instructorFocusText = "The analysis must be conducted under supervision of the Prompt Styling Alchemist (Cage Gamma - Visuals). Focus on absolute maximum aesthetic quality, realistic lighting integration, cinematic rim lighting, and photorealistic detail prompts.";
-      } else if (selectedInstructor === "decision_oracle") {
-        instructorFocusText = "The analysis must be conducted under supervision of the Sartorial Decision Oracle (Cage Delta - Judgment). Focus on highly personalized matching logic, climate adaptation, preference learning database matches, and pragmatic styling rules.";
-      }
-
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        throw new Error("Gemini API key is not configured on the server.");
-      }
-
-      const ai = new GoogleGenAI({
-        apiKey,
-        httpOptions: { headers: { "User-Agent": "aistudio-build" } }
-      });
-
-      console.log(`[Community Generator] Calling Gemini API (gemini-3.5-flash) with qualityMode=${qualityMode}, selectedDemographic=${selectedDemographic}, selectedInstructor=${selectedInstructor}...`);
-
-      const imagePart = {
-        inlineData: {
-          mimeType,
-          data: base64Data
+        let demographicFocusText = "General Audience styling focus.";
+        if (selectedDemographic === "youth") {
+          demographicFocusText = "The target pupil demographic is the Youth Division (ages 12-18). Optimize styling recommendation for Vibrant Cyberpunk Streetwear & Athletic Fusion, prioritizing fast-fashion agility & energetic street expression.";
+        } else if (selectedDemographic === "young-adults") {
+          demographicFocusText = "The target pupil demographic is Young Adults (ages 19-25). Optimize styling recommendation for Deconstructed Minimalist & Eco-Conscious Thrift, prioritizing expressive sustainability & digital style passports.";
+        } else if (selectedDemographic === "professionals") {
+          demographicFocusText = "The target pupil demographic is Active Professionals (ages 26-45). Optimize styling recommendation for Quiet Luxury, Precision Tailoring & High-Performance Outerwear, prioritizing sleek corporate minimalism & high-efficiency wardrobes.";
+        } else if (selectedDemographic === "elders") {
+          demographicFocusText = "The target pupil demographic is Noble Elders (ages 46+). Optimize styling recommendation for Classic Editorial, Premium Organic Linens & Fine Merino, prioritizing ergonomic comfort & timeless legacy heritage.";
         }
-      };
 
-      const userPromptText = customPrompt ? `User Design Vibe & Prompt Directives: "${customPrompt}". Target Category: ${selectedCategory || 'Casual'}.` : `Target Category: ${selectedCategory || 'Casual'}.`;
+        let instructorFocusText = "Standard styling logic and expertise supervision.";
+        if (selectedInstructor === "pattern_maker") {
+          instructorFocusText = "The analysis must be conducted under supervision of the Artisan Pattern Maker (Cage Alpha - Structure). Detail CAD mesh topologies, kinetic drape physics weights, precise fabric thickness calculations, and seam/fit specifications.";
+        } else if (selectedInstructor === "trend_scout") {
+          instructorFocusText = "The analysis must be conducted under supervision of the Trend Ingestion Scout (Cage Beta - Intelligence). Focus heavily on social ingestion telemetry, viral style tags, Vogue crawl trends, and sourcing analytics.";
+        } else if (selectedInstructor === "prompt_alchemist") {
+          instructorFocusText = "The analysis must be conducted under supervision of the Prompt Styling Alchemist (Cage Gamma - Visuals). Focus on absolute maximum aesthetic quality, realistic lighting integration, cinematic rim lighting, and photorealistic detail prompts.";
+        } else if (selectedInstructor === "decision_oracle") {
+          instructorFocusText = "The analysis must be conducted under supervision of the Sartorial Decision Oracle (Cage Delta - Judgment). Focus on highly personalized matching logic, climate adaptation, preference learning database matches, and pragmatic styling rules.";
+        }
 
-      const promptPart = {
-        text: `You are an elite, world-class virtual fashion consultant, anatomist, and expert luxury sartorial stylist.
+        const apiKey = process.env.GEMINI_API_KEY;
+        if (!apiKey) {
+          throw new Error("Gemini API key is not configured on the server.");
+        }
+
+        const ai = new GoogleGenAI({
+          apiKey,
+          httpOptions: { headers: { "User-Agent": "aistudio-build" } }
+        });
+
+        console.log(`[Community Generator] Calling Gemini API (gemini-3.5-flash) with qualityMode=${qualityMode}, selectedDemographic=${selectedDemographic}, selectedInstructor=${selectedInstructor}...`);
+
+        const imagePart = {
+          inlineData: {
+            mimeType,
+            data: base64Data
+          }
+        };
+
+        const userPromptText = customPrompt ? `User Design Vibe & Prompt Directives: "${customPrompt}". Target Category: ${selectedCategory || 'Casual'}.` : `Target Category: ${selectedCategory || 'Casual'}.`;
+
+        const promptPart = {
+          text: `You are an elite, world-class virtual fashion consultant, anatomist, and expert luxury sartorial stylist.
 Analyze the user's uploaded body photo to perform high-fidelity, professional "body-style mapping" (silhouette type, vertical balance, posture, matching style coordinates).
 
 You must incorporate the following specific State Governor & Fashion Instructor directives:
@@ -1063,117 +1547,120 @@ You MUST respond strictly with a valid JSON object. No Markdown code fences (do 
   "afterStylingTransformation": "A beautiful description of the elevated, stylized After outcome, detailing the proposed silhouette draping, tailored fabric textures, posture adjustments, and environment lighting harmony.",
   "afterLookPrompt": "A highly descriptive, artistic, professional, editorial prompt (80-120 words) for generating an absolute luxury look representation of this recommended style. The prompt MUST incorporate: 1) Anatomical Precision (matching the model's pose and frame to the user's physical stance), 2) Texture Rendering (vividly detailing realistic fabric textures like cashmere weave, wool grain, seams, and folds), 3) Lighting Integration (inheriting the precise light source, angle, temperature, and shadows of the original photo). Frame the subject in an elegant setting, focusing strictly on outfit realism and physical authenticity."
 }`
-      };
-
-      const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
-        contents: { parts: [imagePart, promptPart] }
-      });
-
-      const responseText = response.text || "";
-      console.log(`[Community Generator] Gemini raw response length:`, responseText.length);
-
-      let parsedResult;
-      try {
-        let cleanedText = responseText.trim();
-        if (cleanedText.startsWith("```json")) {
-          cleanedText = cleanedText.slice(7);
-        }
-        if (cleanedText.startsWith("```")) {
-          cleanedText = cleanedText.slice(3);
-        }
-        if (cleanedText.endsWith("```")) {
-          cleanedText = cleanedText.slice(0, -3);
-        }
-        cleanedText = cleanedText.trim();
-        parsedResult = JSON.parse(cleanedText);
-      } catch (parseErr: any) {
-        console.error("[Community Generator] Failed to parse Gemini response as JSON:", parseErr.message);
-        parsedResult = {
-          bodyShapeClassification: "Balanced Column",
-          silhouetteDescription: "A highly proportional silhouette with balanced shoulder and hip dimensions, showcasing clean lines.",
-          stylingSymmetries: "Highlight horizontal axes with a high-waisted cinched belt or structured outer drape.",
-          recommendedFormulas: [
-            "Oversized double-breasted blazers paired with flowing silk wide-leg trousers",
-            "Structured organic linen tunics over slim knitted columns"
-          ],
-          colorHarmonySuggestion: "Charcoal Slate blended with Pearlescent Warm White for deep aesthetic contrast.",
-          idealGarmentCategories: ["Outerwear", "Tops", "Pants"],
-          beforeAnalysisText: "Baseline visual shows classic daily coordinates with relaxed, unstructured proportions.",
-          afterStylingTransformation: "Elevated into a high-contrast editorial look with layered textures, clean shoulder contours, and flowing motion.",
-          afterLookPrompt: "Editorial fashion portrait of a model wearing a luxurious charcoal wool double-breasted blazer, draped wide-leg silk trousers, posing in a minimalist brutalist stone atrium, soft cinematic rim lighting, warm golden hour."
         };
-      }
 
-      console.log(`[Community Generator] Generating "After" image with qualityMode=${qualityMode}, aspectRatio=${aspectRatio || '3:4'}, styleTransferWeight=${styleTransferWeight}`);
-      const providerName = process.env.GEMINI_API_KEY ? 'Gemini-3.1-Flash-Image' : 'Fashion-Picsum-Deterministic';
-      
-      const config = {
-        aspectRatio: aspectRatio || '3:4',
-        highResMode: qualityMode || false,
-        styleTransferWeight: styleTransferWeight !== undefined ? Number(styleTransferWeight) : 0.85,
-        imageSize: qualityMode ? '2K' as any : '1K' as any,
-        quality: qualityMode ? 'high' as any : 'standard' as any
-      };
+        const response = await ai.models.generateContent({
+          model: "gemini-3.5-flash",
+          contents: { parts: [imagePart, promptPart] }
+        });
 
-      const imageResult = await ImageGenerationRegistry.generate(
-        parsedResult.afterLookPrompt,
-        config,
-        providerName
-      );
+        const responseText = response.text || "";
+        console.log(`[Community Generator] Gemini raw response length:`, responseText.length);
 
-      const afterImageUrl = imageResult.success && imageResult.imageUrl 
-        ? imageResult.imageUrl 
-        : "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=800&auto=format&fit=crop";
-
-      const { creationCategory, creativeMode, cameraFraming, regionalContext } = req.body;
-      const intelAnalysis = CommunityVisualIntelligence.analyzePromptIntent(
-        customPrompt || parsedResult.afterLookPrompt,
-        creationCategory,
-        creativeMode
-      );
-      if (cameraFraming) intelAnalysis.framingMode = cameraFraming;
-      if (regionalContext) intelAnalysis.regionalContext = regionalContext;
-
-      const enhancementOptions = CommunityVisualIntelligence.getEnhancementOptions(intelAnalysis);
-      const qualityEvaluation = CommunityVisualIntelligence.evaluateQuality(intelAnalysis, afterImageUrl);
-
-      const finalPayload = {
-        userId: user.uid,
-        uploadedImageUrl: base64Image,
-        afterImageUrl: afterImageUrl,
-        bodyShapeClassification: parsedResult.bodyShapeClassification,
-        silhouetteDescription: parsedResult.silhouetteDescription,
-        stylingSymmetries: parsedResult.stylingSymmetries,
-        recommendedFormulas: parsedResult.recommendedFormulas,
-        colorHarmonySuggestion: parsedResult.colorHarmonySuggestion,
-        idealGarmentCategories: parsedResult.idealGarmentCategories,
-        beforeAnalysisText: parsedResult.beforeAnalysisText,
-        afterStylingTransformation: parsedResult.afterStylingTransformation,
-        qualityModeEnabled: qualityMode || false,
-        aspectRatioUsed: aspectRatio || '3:4',
-        styleTransferWeightUsed: styleTransferWeight || 0.85,
-        communityIntel: {
-          creationCategory: intelAnalysis.category,
-          creativeMode: intelAnalysis.creativeMode,
-          framingMode: intelAnalysis.framingMode,
-          visualFocus: intelAnalysis.visualFocus,
-          regionalContext: intelAnalysis.regionalContext || 'Universal High-Fashion',
-          enhancementOptions,
-          qualityEvaluation
-        },
-        createdAt: new Date().toISOString()
-      };
-
-      if (!isFirestoreDisabled) {
+        let parsedResult;
         try {
-          const db = getFirestore();
-          await db.collection("bodyStyleMappings").add(finalPayload);
-          console.log(`[Community Generator] Successfully saved body style mapping to Firestore for user: ${user.uid}`);
-        } catch (dbErr: any) {
-          console.warn("[Community Generator] Failed to save mapping to Firestore:", dbErr.message);
+          let cleanedText = responseText.trim();
+          if (cleanedText.startsWith("```json")) {
+            cleanedText = cleanedText.slice(7);
+          }
+          if (cleanedText.startsWith("```")) {
+            cleanedText = cleanedText.slice(3);
+          }
+          if (cleanedText.endsWith("```")) {
+            cleanedText = cleanedText.slice(0, -3);
+          }
+          cleanedText = cleanedText.trim();
+          parsedResult = JSON.parse(cleanedText);
+        } catch (parseErr: any) {
+          console.error("[Community Generator] Failed to parse Gemini response as JSON:", parseErr.message);
+          parsedResult = {
+            bodyShapeClassification: "Balanced Column",
+            silhouetteDescription: "A highly proportional silhouette with balanced shoulder and hip dimensions, showcasing clean lines.",
+            stylingSymmetries: "Highlight horizontal axes with a high-waisted cinched belt or structured outer drape.",
+            recommendedFormulas: [
+              "Oversized double-breasted blazers paired with flowing silk wide-leg trousers",
+              "Structured organic linen tunics over slim knitted columns"
+            ],
+            colorHarmonySuggestion: "Charcoal Slate blended with Pearlescent Warm White for deep aesthetic contrast.",
+            idealGarmentCategories: ["Outerwear", "Tops", "Pants"],
+            beforeAnalysisText: "Baseline visual shows classic daily coordinates with relaxed, unstructured proportions.",
+            afterStylingTransformation: "Elevated into a high-contrast editorial look with layered textures, clean shoulder contours, and flowing motion.",
+            afterLookPrompt: "Editorial fashion portrait of a model wearing a luxurious charcoal wool double-breasted blazer, draped wide-leg silk trousers, posing in a minimalist brutalist stone atrium, soft cinematic rim lighting, warm golden hour."
+          };
         }
-      }
+
+        console.log(`[Community Generator] Generating "After" image with qualityMode=${qualityMode}, aspectRatio=${aspectRatio || '3:4'}, styleTransferWeight=${styleTransferWeight}`);
+        const providerName = process.env.GEMINI_API_KEY ? 'Gemini-3.1-Flash-Image' : 'Fashion-Picsum-Deterministic';
+        
+        const config = {
+          aspectRatio: aspectRatio || '3:4',
+          highResMode: qualityMode || false,
+          styleTransferWeight: styleTransferWeight !== undefined ? Number(styleTransferWeight) : 0.85,
+          imageSize: qualityMode ? '2K' as any : '1K' as any,
+          quality: qualityMode ? 'high' as any : 'standard' as any
+        };
+
+        const imageResult = await ImageGenerationRegistry.generate(
+          parsedResult.afterLookPrompt,
+          config,
+          providerName
+        );
+
+        const afterImageUrl = imageResult.success && imageResult.imageUrl 
+          ? imageResult.imageUrl 
+          : "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=800&auto=format&fit=crop";
+
+        const { creationCategory, creativeMode, cameraFraming, regionalContext } = req.body;
+        const intelAnalysis = CommunityVisualIntelligence.analyzePromptIntent(
+          customPrompt || parsedResult.afterLookPrompt,
+          creationCategory,
+          creativeMode
+        );
+        if (cameraFraming) intelAnalysis.framingMode = cameraFraming;
+        if (regionalContext) intelAnalysis.regionalContext = regionalContext;
+
+        const enhancementOptions = CommunityVisualIntelligence.getEnhancementOptions(intelAnalysis);
+        const qualityEvaluation = CommunityVisualIntelligence.evaluateQuality(intelAnalysis, afterImageUrl);
+
+        const payload = {
+          userId: user.uid,
+          uploadedImageUrl: base64Image,
+          afterImageUrl: afterImageUrl,
+          bodyShapeClassification: parsedResult.bodyShapeClassification,
+          silhouetteDescription: parsedResult.silhouetteDescription,
+          stylingSymmetries: parsedResult.stylingSymmetries,
+          recommendedFormulas: parsedResult.recommendedFormulas,
+          colorHarmonySuggestion: parsedResult.colorHarmonySuggestion,
+          idealGarmentCategories: parsedResult.idealGarmentCategories,
+          beforeAnalysisText: parsedResult.beforeAnalysisText,
+          afterStylingTransformation: parsedResult.afterStylingTransformation,
+          qualityModeEnabled: qualityMode || false,
+          aspectRatioUsed: aspectRatio || '3:4',
+          styleTransferWeightUsed: styleTransferWeight || 0.85,
+          communityIntel: {
+            creationCategory: intelAnalysis.category,
+            creativeMode: intelAnalysis.creativeMode,
+            framingMode: intelAnalysis.framingMode,
+            visualFocus: intelAnalysis.visualFocus,
+            regionalContext: intelAnalysis.regionalContext || 'Universal High-Fashion',
+            enhancementOptions,
+            qualityEvaluation
+          },
+          createdAt: new Date().toISOString()
+        };
+
+        if (!isFirestoreDisabled) {
+          try {
+            const db = getFirestore();
+            await db.collection("bodyStyleMappings").add(payload);
+            console.log(`[Community Generator] Successfully saved body style mapping to Firestore for user: ${user.uid}`);
+          } catch (dbErr: any) {
+            console.warn("[Community Generator] Failed to save mapping to Firestore:", dbErr.message);
+          }
+        }
+
+        return payload;
+      });
 
       res.json({
         success: true,
@@ -1189,6 +1676,23 @@ You MUST respond strictly with a valid JSON object. No Markdown code fences (do 
   // C02 — Community Image Enhancement API Route
   app.post("/api/community/enhance-image", verifyAuthToken, async (req, res) => {
     try {
+      if (!req.body || typeof req.body !== "object") {
+        return sendValidationError(res, ["Request body must be a valid JSON object"], 400);
+      }
+      const body = sanitizePayloadObject(req.body);
+      const errors: string[] = [];
+
+      if (body.prompt !== undefined && typeof body.prompt !== "string") {
+        errors.push("prompt must be a string");
+      }
+      if (body.config !== undefined && !validateType(body.config, "object")) {
+        errors.push("config must be an object");
+      }
+
+      if (errors.length > 0) {
+        return sendValidationError(res, errors, 422);
+      }
+
       const user = (req as any).user;
       const quotaCheck = await checkAndDeductQuota(user.uid, "images");
       if (!quotaCheck.allowed) {
@@ -1196,38 +1700,263 @@ You MUST respond strictly with a valid JSON object. No Markdown code fences (do 
         return;
       }
 
-      const { prompt, enhancementId, optionSuffix, config, creationCategory, creativeMode, cameraFraming, regionalContext } = req.body;
-      const enhancedPrompt = `${prompt || 'Luxury high-fashion editorial look'} ${optionSuffix || ''}`.trim();
-      const providerName = process.env.GEMINI_API_KEY ? 'Gemini-3.1-Flash-Image' : 'Fashion-Picsum-Deterministic';
+      const { prompt, enhancementId, optionSuffix, config, creationCategory, creativeMode, cameraFraming, regionalContext } = body;
 
-      console.log(`[Community Generator] Enhancing image with enhancementId=${enhancementId}...`);
+      const finalPayload = await executeCachedAiRequest("community:enhance-image", body, async () => {
+        const enhancedPrompt = `${prompt || 'Luxury high-fashion editorial look'} ${optionSuffix || ''}`.trim();
+        const providerName = process.env.GEMINI_API_KEY ? 'Gemini-3.1-Flash-Image' : 'Fashion-Picsum-Deterministic';
 
-      const imageResult = await ImageGenerationRegistry.generate(
-        enhancedPrompt,
-        config || { aspectRatio: '3:4', quality: 'high' },
-        providerName
-      );
+        console.log(`[Community Generator] Enhancing image with enhancementId=${enhancementId}...`);
 
-      const imageUrl = imageResult.success && imageResult.imageUrl 
-        ? imageResult.imageUrl 
-        : "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=800&auto=format&fit=crop";
+        const imageResult = await ImageGenerationRegistry.generate(
+          enhancedPrompt,
+          config || { aspectRatio: '3:4', quality: 'high' },
+          providerName
+        );
 
-      const intelAnalysis = CommunityVisualIntelligence.analyzePromptIntent(enhancedPrompt, creationCategory, creativeMode);
-      if (cameraFraming) intelAnalysis.framingMode = cameraFraming;
-      if (regionalContext) intelAnalysis.regionalContext = regionalContext;
+        const imageUrl = imageResult.success && imageResult.imageUrl 
+          ? imageResult.imageUrl 
+          : "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=800&auto=format&fit=crop";
 
-      const qualityEval = CommunityVisualIntelligence.evaluateQuality(intelAnalysis, imageUrl);
+        const intelAnalysis = CommunityVisualIntelligence.analyzePromptIntent(enhancedPrompt, creationCategory, creativeMode);
+        if (cameraFraming) intelAnalysis.framingMode = cameraFraming;
+        if (regionalContext) intelAnalysis.regionalContext = regionalContext;
+
+        const qualityEval = CommunityVisualIntelligence.evaluateQuality(intelAnalysis, imageUrl);
+
+        return {
+          imageUrl,
+          enhancedPrompt,
+          enhancementId,
+          qualityEvaluation: qualityEval
+        };
+      });
 
       res.json({
         success: true,
-        imageUrl,
-        enhancedPrompt,
-        enhancementId,
-        qualityEvaluation: qualityEval
+        ...finalPayload
       });
     } catch (err: any) {
       console.error("[API ERROR] Community image enhancement failed:", err);
       res.status(500).json({ error: "Failed to enhance image: " + err.message });
+    }
+  });
+
+  // Production-Grade Paginated Community Feed API for AI Creations
+  app.get("/api/community/feed", async (req: express.Request, res: express.Response): Promise<void> => {
+    try {
+      // 1. Parse & validate query parameters
+      const limitRaw = req.query.limit;
+      let limit = 12;
+      if (limitRaw !== undefined && limitRaw !== "") {
+        const parsedLimit = parseInt(limitRaw as string, 10);
+        if (isNaN(parsedLimit) || parsedLimit <= 0) {
+          res.status(400).json({ error: "Invalid 'limit' query parameter. Must be a positive integer." });
+          return;
+        }
+        limit = Math.min(parsedLimit, 100);
+      }
+
+      const mediaTypeRaw = req.query.mediaType;
+      let mediaType = "all";
+      if (mediaTypeRaw !== undefined && mediaTypeRaw !== "") {
+        const mediaTypeStr = String(mediaTypeRaw).toLowerCase().trim();
+        if (!["image", "video", "all"].includes(mediaTypeStr)) {
+          res.status(400).json({
+            error: "Invalid 'mediaType' query parameter. Supported values: 'image', 'video', 'all'."
+          });
+          return;
+        }
+        mediaType = mediaTypeStr;
+      }
+
+      const lastVisibleDocId = typeof req.query.lastVisibleDocId === "string" && req.query.lastVisibleDocId.trim() !== ""
+        ? req.query.lastVisibleDocId.trim()
+        : null;
+
+      // Handle fallback if Firestore is marked disabled
+      if (isFirestoreDisabled) {
+        res.status(200).json({
+          assets: [],
+          lastVisibleDocId: null,
+          hasMore: false
+        });
+        return;
+      }
+
+      const db = getFirestore();
+
+      // Read documents from existing community creations collection used by LOOK VISION
+      const candidateCollections = ["community_posts", "communityPosts", "community_creations", "generatedLooks"];
+      let targetCollection = candidateCollections[0];
+
+      for (const colName of candidateCollections) {
+        try {
+          const checkSnap = await db.collection(colName).limit(1).get();
+          if (!checkSnap.empty) {
+            targetCollection = colName;
+            break;
+          }
+        } catch (_) {}
+      }
+
+      // 2. Cursor boundary lookup
+      let cursorDocSnap: FirebaseFirestore.DocumentSnapshot | null = null;
+      if (lastVisibleDocId) {
+        try {
+          const docRef = db.collection(targetCollection).doc(lastVisibleDocId);
+          const docSnap = await docRef.get();
+          if (!docSnap.exists) {
+            let foundDoc: FirebaseFirestore.DocumentSnapshot | null = null;
+            for (const colName of candidateCollections) {
+              if (colName === targetCollection) continue;
+              const altSnap = await db.collection(colName).doc(lastVisibleDocId).get();
+              if (altSnap.exists) {
+                foundDoc = altSnap;
+                targetCollection = colName;
+                break;
+              }
+            }
+            if (foundDoc) {
+              cursorDocSnap = foundDoc;
+            } else {
+              res.status(400).json({
+                error: `Invalid cursor parameter: Document with ID '${lastVisibleDocId}' was not found.`
+              });
+              return;
+            }
+          } else {
+            cursorDocSnap = docSnap;
+          }
+        } catch (err: any) {
+          res.status(400).json({
+            error: `Error retrieving cursor document '${lastVisibleDocId}': ${err.message}`
+          });
+          return;
+        }
+      }
+
+      // 3. Query construction: createdAt descending
+      let query: FirebaseFirestore.Query = db.collection(targetCollection);
+
+      if (mediaType !== "all") {
+        query = query.where("mediaType", "==", mediaType);
+      }
+
+      query = query.orderBy("createdAt", "desc");
+
+      if (cursorDocSnap) {
+        query = query.startAfter(cursorDocSnap);
+      }
+
+      // Fetch limit + 1 documents to determine hasMore
+      query = query.limit(limit + 1);
+
+      let snapshot: FirebaseFirestore.QuerySnapshot;
+      try {
+        snapshot = await query.get();
+      } catch (queryErr: any) {
+        console.warn(`[Community Feed API] Primary query failed on '${targetCollection}':`, queryErr.message);
+
+        // Handle missing indexes or missing composite query index gracefully
+        if (queryErr.code === 9 || (queryErr.message && queryErr.message.toLowerCase().includes("index"))) {
+          try {
+            let fallbackQuery: FirebaseFirestore.Query = db.collection(targetCollection).orderBy("createdAt", "desc");
+            if (cursorDocSnap) {
+              fallbackQuery = fallbackQuery.startAfter(cursorDocSnap);
+            }
+            fallbackQuery = fallbackQuery.limit((limit + 1) * 3);
+            const fallbackSnap = await fallbackQuery.get();
+
+            let filteredDocs = fallbackSnap.docs;
+            if (mediaType !== "all") {
+              filteredDocs = filteredDocs.filter(doc => {
+                const data = doc.data();
+                const mType = data.mediaType || (data.videoUrl ? "video" : "image");
+                return mType === mediaType;
+              });
+            }
+
+            const hasMoreFallback = filteredDocs.length > limit;
+            const resultDocsFallback = hasMoreFallback ? filteredDocs.slice(0, limit) : filteredDocs;
+
+            const assetsFallback = resultDocsFallback.map(doc => {
+              const data = doc.data();
+              const sanitizedData: Record<string, any> = {};
+              for (const key of Object.keys(data)) {
+                if (key.startsWith("_")) continue;
+                const val = data[key];
+                if (val && typeof val === "object" && typeof val.toDate === "function") {
+                  sanitizedData[key] = val.toDate().toISOString();
+                } else {
+                  sanitizedData[key] = val;
+                }
+              }
+              return {
+                id: doc.id,
+                ...sanitizedData
+              };
+            });
+
+            const nextCursorFallback = assetsFallback.length > 0 ? assetsFallback[assetsFallback.length - 1].id : null;
+
+            res.status(200).json({
+              assets: assetsFallback,
+              lastVisibleDocId: nextCursorFallback,
+              hasMore: hasMoreFallback
+            });
+            return;
+          } catch (fallbackErr: any) {
+            res.status(500).json({
+              error: "Database query failed: " + fallbackErr.message
+            });
+            return;
+          }
+        }
+
+        res.status(500).json({
+          error: "Database operation failed: " + queryErr.message
+        });
+        return;
+      }
+
+      const docs = snapshot.docs;
+      const hasMore = docs.length > limit;
+      const resultDocs = hasMore ? docs.slice(0, limit) : docs;
+
+      // 4. Strip internal Firestore metadata and map application fields
+      const assets = resultDocs.map(doc => {
+        const data = doc.data();
+        const sanitizedData: Record<string, any> = {};
+
+        for (const key of Object.keys(data)) {
+          if (key.startsWith("_")) continue;
+          const val = data[key];
+          if (val && typeof val === "object" && typeof val.toDate === "function") {
+            sanitizedData[key] = val.toDate().toISOString();
+          } else {
+            sanitizedData[key] = val;
+          }
+        }
+
+        return {
+          id: doc.id,
+          ...sanitizedData
+        };
+      });
+
+      const nextLastVisibleDocId = assets.length > 0 ? assets[assets.length - 1].id : null;
+
+      res.status(200).json({
+        assets,
+        lastVisibleDocId: nextLastVisibleDocId,
+        hasMore
+      });
+    } catch (err: any) {
+      console.error("[Community Feed API Error]", err);
+      res.status(500).json({
+        error: "Internal server error while fetching community feed: " + (err.message || String(err))
+      });
     }
   });
 
@@ -1480,6 +2209,36 @@ You MUST respond strictly with a valid JSON object. No Markdown code fences (do 
     });
   }, 60 * 60 * 1000);
 
+  // Global Express Error Handler for API Uncaught Exceptions
+  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const reqId = (req as any).requestId || "unknown";
+    const endpoint = req.route?.path || req.originalUrl || req.url;
+    const message = err?.message || String(err);
+    const stack = err?.stack || "";
+
+    logStructured({
+      level: "ERROR",
+      requestId: reqId,
+      timestamp: new Date().toISOString(),
+      method: req.method,
+      path: req.originalUrl || req.url,
+      status: res.statusCode >= 400 ? res.statusCode : 500,
+      message,
+      error: {
+        message,
+        stack,
+        endpoint
+      }
+    });
+
+    if (!res.headersSent) {
+      res.status(500).json({
+        error: "Internal server error",
+        requestId: reqId
+      });
+    }
+  });
+
   // Vite development integration or static serving
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
@@ -1495,9 +2254,82 @@ You MUST respond strictly with a valid JSON object. No Markdown code fences (do 
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`[Fashion Server Hub] Running on http://0.0.0.0:${PORT}`);
+  const server = app.listen(PORT, "0.0.0.0", () => {
+    console.log(`[Fashion Server Hub] Running on http://0.0.0.0:${PORT} (PID: ${process.pid}, ENV: ${process.env.NODE_ENV || 'development'})`);
   });
+
+  let isShuttingDown = false;
+
+  const handleShutdown = (signal: string) => {
+    if (isShuttingDown) {
+      console.log(`[Server Shutdown] ${signal} received while shutdown is already in progress. Ignoring duplicate signal.`);
+      return;
+    }
+    isShuttingDown = true;
+    console.log(`[Server Shutdown] Received ${signal}. Stopping HTTP server and waiting for active connections...`);
+
+    const shutdownTimeout = setTimeout(() => {
+      console.error("[Server Shutdown] Graceful shutdown timeout reached (10s). Forcing process termination.");
+      process.exit(1);
+    }, 10000);
+    shutdownTimeout.unref();
+
+    server.close((err) => {
+      clearTimeout(shutdownTimeout);
+      if (err) {
+        console.error("[Server Shutdown] Error closing HTTP server:", err.message || err);
+        process.exit(1);
+      } else {
+        console.log("[Server Shutdown] HTTP server closed cleanly. Exiting process.");
+        process.exit(0);
+      }
+    });
+  };
+
+  process.on("SIGTERM", () => handleShutdown("SIGTERM"));
+  process.on("SIGINT", () => handleShutdown("SIGINT"));
 }
+
+function sanitizeErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.stack || error.message;
+  }
+  if (typeof error === "object" && error !== null) {
+    try {
+      return JSON.stringify(error);
+    } catch (_) {
+      return String(error);
+    }
+  }
+  return String(error);
+}
+
+process.on("uncaughtException", (error: Error) => {
+  logStructured({
+    level: "ERROR",
+    requestId: "system-uncaught-exception",
+    timestamp: new Date().toISOString(),
+    message: error?.message || String(error),
+    error: {
+      message: error?.message || String(error),
+      stack: error?.stack || ""
+    }
+  });
+});
+
+process.on("unhandledRejection", (reason: unknown) => {
+  const errMsg = reason instanceof Error ? reason.message : String(reason);
+  const errStack = reason instanceof Error ? reason.stack : "";
+  logStructured({
+    level: "ERROR",
+    requestId: "system-unhandled-rejection",
+    timestamp: new Date().toISOString(),
+    message: errMsg,
+    error: {
+      message: errMsg,
+      stack: errStack
+    }
+  });
+});
 
 startServer();

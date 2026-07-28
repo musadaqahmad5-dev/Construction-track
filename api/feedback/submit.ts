@@ -2,10 +2,18 @@ import { UnifiedFashionOS } from "../../src/features/ai-core/UnifiedFashionOS";
 
 export default async function handler(req: any, res: any) {
   if (req.method !== "POST") {
-    return res.status(455).json({ error: "Method Not Allowed" });
+    return res.status(405).json({ success: false, error: "Method Not Allowed" });
   }
 
   try {
+    if (!req.body || typeof req.body !== "object") {
+      return res.status(400).json({
+        success: false,
+        error: "Validation failed",
+        details: ["Request body must be a valid JSON object"]
+      });
+    }
+
     const {
       outfitId,
       outfitName,
@@ -18,9 +26,22 @@ export default async function handler(req: any, res: any) {
       optionalNote
     } = req.body || {};
 
-    if (!outfitId || !outfitName || !signal) {
-      return res.status(400).json({
-        error: "Missing required parameters: outfitId, outfitName, or signal are required."
+    const errors: string[] = [];
+    if (!outfitId || typeof outfitId !== "string" || !outfitId.trim()) {
+      errors.push("outfitId is required and must be a non-empty string");
+    }
+    if (!outfitName || typeof outfitName !== "string" || !outfitName.trim()) {
+      errors.push("outfitName is required and must be a non-empty string");
+    }
+    if (!signal || typeof signal !== "string" || !signal.trim()) {
+      errors.push("signal is required and must be a non-empty string");
+    }
+
+    if (errors.length > 0) {
+      return res.status(422).json({
+        success: false,
+        error: "Validation failed",
+        details: errors
       });
     }
 

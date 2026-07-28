@@ -31,11 +31,28 @@ function parseTopOutfits(primary: any, alternatives: any[]): any[] {
 
 export default async function handler(req: any, res: any) {
   if (req.method !== "POST") {
-    return res.status(455).json({ error: "Method Not Allowed" });
+    return res.status(405).json({ success: false, error: "Method Not Allowed" });
   }
 
   try {
+    if (!req.body || typeof req.body !== "object") {
+      return res.status(400).json({
+        success: false,
+        error: "Validation failed",
+        details: ["Request body must be a valid JSON object"]
+      });
+    }
+
     const { wardrobe, userProfile } = req.body || {};
+
+    if (wardrobe !== undefined && !Array.isArray(wardrobe)) {
+      return res.status(422).json({
+        success: false,
+        error: "Validation failed",
+        details: ["wardrobe must be an array of garment items"]
+      });
+    }
+
     const wardrobeItems = Array.isArray(wardrobe) ? wardrobe : [];
     
     // Seed wardrobe items to the global state (in-memory for this server request)

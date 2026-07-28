@@ -2,14 +2,26 @@ import { UnifiedFashionOS } from "../../src/features/ai-core/UnifiedFashionOS";
 
 export default async function handler(req: any, res: any) {
   if (req.method !== "POST") {
-    return res.status(455).json({ error: "Method Not Allowed" });
+    return res.status(405).json({ success: false, error: "Method Not Allowed" });
   }
 
   try {
+    if (!req.body || typeof req.body !== "object") {
+      return res.status(400).json({
+        success: false,
+        error: "Validation failed",
+        details: ["Request body must be a valid JSON object"]
+      });
+    }
+
     const { userId, styleVector, vibe } = req.body || {};
 
-    if (!userId) {
-      return res.status(400).json({ error: "Missing required parameter: userId" });
+    if (!userId || typeof userId !== "string" || !userId.trim()) {
+      return res.status(422).json({
+        success: false,
+        error: "Validation failed",
+        details: ["userId is required and must be a non-empty string"]
+      });
     }
 
     // Sync state into UnifiedFashionOS in-memory store
