@@ -123,17 +123,18 @@ export const AuthModule: React.FC<AuthModuleProps> = ({ onGuestMode }) => {
     try {
       await signInWithGoogle();
     } catch (err: any) {
-      console.error("Google sign in error:", err);
       let friendlyMessage = "Failed to authenticate with your Google Identity.";
-      if (err.code === 'auth/popup-closed-by-user') {
+      if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
         friendlyMessage = "Google sign-in window was closed. Please try again.";
-      } else if (err.code === 'auth/cancelled-popup-request') {
-        friendlyMessage = "Only one identity request can be handled at a time. Please wait or refresh.";
-      } else if (err.code === 'auth/popup-blocked') {
+        console.info("Google sign in window closed by user.");
+      } else {
+        console.error("Google sign in error:", err);
+      }
+      if (err.code === 'auth/popup-blocked') {
         friendlyMessage = "A popup blocker stopped Google Sign-In. Please allow popups for this boutique domain.";
       } else if (err.code === 'auth/unauthorized-domain') {
         friendlyMessage = "auth/unauthorized-domain";
-      } else if (err.message) {
+      } else if (err.message && err.code !== 'auth/popup-closed-by-user') {
         friendlyMessage = err.message;
       }
       setError(friendlyMessage);

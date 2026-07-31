@@ -1,6 +1,11 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { Users, MoreVertical, Heart, MessageCircle, Bookmark, ChevronRight } from 'lucide-react';
+import { 
+  useThemeIntelligence, 
+  ThemeCoatRenderer, 
+  FoundationInteractionWrapper 
+} from '../../engine';
 
 interface CommunityFeedProps {
   communityTab: string;
@@ -23,13 +28,30 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
   toggleBookmark,
   bookmarkedPosts
 }) => {
-  return (
+  // Connect to Theme Intelligence Engine
+  let themeCtx: ReturnType<typeof useThemeIntelligence> | null = null;
+  try {
+    themeCtx = useThemeIntelligence();
+  } catch {
+    themeCtx = null;
+  }
+
+  const themeDNA = themeCtx?.themeDNA;
+  const coatDNA = themeCtx?.coatDNA;
+  const sequenceId = themeCtx?.sequenceId;
+
+  const renderContent = () => (
     <div className="lg:col-span-1 space-y-6 bg-gradient-to-b from-[#07070c] to-transparent p-5 rounded-3xl border border-white/5 shadow-2xl">
       <div className="space-y-2 pb-3 border-b border-white/5 text-left">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Users className="w-4.5 h-4.5 text-blue-400 fill-blue-400/5" />
             <h3 className="text-sm font-bold font-sans uppercase tracking-wider text-white">Community</h3>
+            {sequenceId && (
+              <span className="text-[9px] font-mono text-zinc-600 bg-white/5 px-2 py-0.5 rounded-full border border-white/5 hidden lg:inline-block">
+                SEQ: {sequenceId.substring(0, 10)}...
+              </span>
+            )}
           </div>
           <span className="text-[9px] font-mono bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded">Live Feed</span>
         </div>
@@ -38,17 +60,18 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
         {/* Elegant sub-tabs */}
         <div className="flex flex-wrap gap-1.5 pt-3">
           {['Following', 'Popular', 'New', 'Challenge'].map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setCommunityTab(tab)}
-              className={`px-3 py-1.5 rounded-xl text-[10px] font-sans font-semibold transition-all cursor-pointer ${
-                communityTab === tab 
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25' 
-                  : 'bg-[#0f0f18]/60 text-zinc-400 hover:bg-white/5 hover:text-white border border-white/5'
-              }`}
-            >
-              {tab}
-            </button>
+            <FoundationInteractionWrapper key={tab} themeDNA={themeDNA}>
+              <button
+                onClick={() => setCommunityTab(tab)}
+                className={`px-3 py-1.5 rounded-xl text-[10px] font-sans font-semibold transition-all cursor-pointer ${
+                  communityTab === tab 
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25' 
+                    : 'bg-[#0f0f18]/60 text-zinc-400 hover:bg-white/5 hover:text-white border border-white/5'
+                }`}
+              >
+                {tab}
+              </button>
+            </FoundationInteractionWrapper>
           ))}
         </div>
       </div>
@@ -95,12 +118,14 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
                 </div>
               </div>
               
-              <button 
-                onClick={() => window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: 'Connecting to stylist network node.' }))}
-                className="p-1.5 text-zinc-400 hover:text-white bg-[#0e0e18] hover:bg-white/5 rounded-xl border border-white/5 transition-all cursor-pointer"
-              >
-                <MoreVertical className="w-3.5 h-3.5" />
-              </button>
+              <FoundationInteractionWrapper themeDNA={themeDNA}>
+                <button 
+                  onClick={() => window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: 'Connecting to stylist network node.' }))}
+                  className="p-1.5 text-zinc-400 hover:text-white bg-[#0e0e18] hover:bg-white/5 rounded-xl border border-white/5 transition-all cursor-pointer"
+                >
+                  <MoreVertical className="w-3.5 h-3.5" />
+                </button>
+              </FoundationInteractionWrapper>
             </div>
 
             <div className="relative aspect-[3/4] overflow-hidden bg-zinc-950">
@@ -117,37 +142,54 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
             <div className="p-3.5 text-left bg-[#080810]">
               <div className="flex justify-between items-center text-[10.5px] font-mono text-zinc-400">
                 <div className="flex gap-4">
-                  <button onClick={() => toggleLike(item.id)} className={`flex items-center gap-1.5 hover:text-rose-400 transition-colors ${likedPosts[item.id] ? 'text-rose-400' : ''}`}>
-                    <Heart className={`w-3.5 h-3.5 ${likedPosts[item.id] ? 'fill-rose-500 text-rose-500' : ''}`} />
-                    <span>{item.likesCount}</span>
-                  </button>
+                  <FoundationInteractionWrapper themeDNA={themeDNA}>
+                    <button onClick={() => toggleLike(item.id)} className={`flex items-center gap-1.5 hover:text-rose-400 transition-colors cursor-pointer ${likedPosts[item.id] ? 'text-rose-400' : ''}`}>
+                      <Heart className={`w-3.5 h-3.5 ${likedPosts[item.id] ? 'fill-rose-500 text-rose-500' : ''}`} />
+                      <span>{item.likesCount}</span>
+                    </button>
+                  </FoundationInteractionWrapper>
                   <span className="flex items-center gap-1.5 text-zinc-500">
                     <MessageCircle className="w-3.5 h-3.5" />
                     <span>{item.commentsCount || 12}</span>
                   </span>
                 </div>
                 
-                <button
-                  onClick={() => toggleBookmark(item.id)}
-                  className={`hover:text-violet-400 flex items-center gap-1.5 transition-colors p-1.5 rounded-lg bg-[#0e0e18] border border-white/5 ${bookmarkedPosts[item.id] ? 'text-violet-400' : 'text-zinc-500'}`}
-                >
-                  <Bookmark className={`w-3.5 h-3.5 ${bookmarkedPosts[item.id] ? 'fill-violet-400 text-violet-400' : ''}`} />
-                </button>
+                <FoundationInteractionWrapper themeDNA={themeDNA}>
+                  <button
+                    onClick={() => toggleBookmark(item.id)}
+                    className={`hover:text-violet-400 flex items-center gap-1.5 transition-colors p-1.5 rounded-lg bg-[#0e0e18] border border-white/5 cursor-pointer ${bookmarkedPosts[item.id] ? 'text-violet-400' : 'text-zinc-500'}`}
+                  >
+                    <Bookmark className={`w-3.5 h-3.5 ${bookmarkedPosts[item.id] ? 'fill-violet-400 text-violet-400' : ''}`} />
+                  </button>
+                </FoundationInteractionWrapper>
               </div>
             </div>
           </motion.div>
         ))}
       </div>
 
-      <button 
-        onClick={() => {
-          window.dispatchEvent(new CustomEvent('lookvision_navigate', { detail: 'COMMUNITY_ROOM' }));
-        }}
-        className="w-full py-3 bg-[#0d0d18]/80 hover:bg-blue-950/20 border border-blue-500/15 hover:border-blue-500/30 rounded-xl text-[10px] font-sans font-bold uppercase tracking-widest text-blue-400 hover:text-blue-300 flex items-center justify-center gap-2 transition-colors cursor-pointer"
-      >
-        <span>Explore Community Archives</span>
-        <ChevronRight className="w-4 h-4 animate-pulse" />
-      </button>
+      <FoundationInteractionWrapper themeDNA={themeDNA}>
+        <button 
+          onClick={() => {
+            window.dispatchEvent(new CustomEvent('lookvision_navigate', { detail: 'COMMUNITY_ROOM' }));
+          }}
+          className="w-full py-3 bg-[#0d0d18]/80 hover:bg-blue-950/20 border border-blue-500/15 hover:border-blue-500/30 rounded-xl text-[10px] font-sans font-bold uppercase tracking-widest text-blue-400 hover:text-blue-300 flex items-center justify-center gap-2 transition-colors cursor-pointer"
+        >
+          <span>Explore Community Archives</span>
+          <ChevronRight className="w-4 h-4 animate-pulse" />
+        </button>
+      </FoundationInteractionWrapper>
     </div>
   );
+
+  if (coatDNA) {
+    return (
+      <ThemeCoatRenderer coatDNA={coatDNA} className="w-full h-full">
+        {renderContent()}
+      </ThemeCoatRenderer>
+    );
+  }
+
+  return renderContent();
 };
+

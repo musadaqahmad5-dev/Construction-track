@@ -7,7 +7,12 @@ import {
 } from 'lucide-react';
 import { auth } from '../firebase';
 import { WardrobeItem } from '../platform';
-import { UnifiedFashionOS } from '../engine';
+import { 
+  UnifiedFashionOS, 
+  useThemeIntelligence, 
+  ThemeCoatRenderer, 
+  FoundationInteractionWrapper 
+} from '../engine';
 
 interface Message {
   id: string;
@@ -51,6 +56,18 @@ const LUXURY_TEMPLATES = [
 ];
 
 export const AIAssistantStudio: React.FC<AIAssistantStudioProps> = ({ wardrobe, onNavigateToTab }) => {
+  // Connect to Theme Intelligence Engine
+  let themeCtx: ReturnType<typeof useThemeIntelligence> | null = null;
+  try {
+    themeCtx = useThemeIntelligence();
+  } catch {
+    themeCtx = null;
+  }
+
+  const themeDNA = themeCtx?.themeDNA;
+  const coatDNA = themeCtx?.coatDNA;
+  const sequenceId = themeCtx?.sequenceId;
+
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'welcome',
@@ -263,7 +280,7 @@ export const AIAssistantStudio: React.FC<AIAssistantStudioProps> = ({ wardrobe, 
     }
   };
 
-  return (
+  const renderStudioContent = () => (
     <div className="w-full h-full flex flex-col gap-6" id="ai-assistant-studio-container">
       
       {/* 1. Header Information Bar */}
@@ -342,19 +359,24 @@ export const AIAssistantStudio: React.FC<AIAssistantStudioProps> = ({ wardrobe, 
                         </div>
                         <h4 className="text-xs font-mono font-bold text-white uppercase">{msg.suggestedOutfit.name || msg.suggestedOutfit.style_title}</h4>
                         <div className="flex gap-2">
-                          <button
-                            onClick={() => loadOutfitToWorkspace(msg.suggestedOutfit)}
-                            className="flex-1 py-2 px-3 bg-violet-600 hover:bg-violet-700 text-white rounded-lg text-[10px] font-mono uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-                          >
-                            <ShieldCheck className="w-3.5 h-3.5" />
-                            <span>Load Look</span>
-                          </button>
-                          <button
-                            onClick={() => setSelectedOutfit(msg.suggestedOutfit)}
-                            className="py-2 px-3 bg-zinc-900 hover:bg-zinc-800 border border-white/5 text-zinc-300 rounded-lg text-[10px] font-mono uppercase tracking-wider flex items-center justify-center transition-all cursor-pointer"
-                          >
-                            Inspect
-                          </button>
+                          <FoundationInteractionWrapper themeDNA={themeDNA}>
+                            <button
+                              onClick={() => loadOutfitToWorkspace(msg.suggestedOutfit)}
+                              className="flex-1 py-2 px-3 bg-violet-600 hover:bg-violet-700 text-white rounded-lg text-[10px] font-mono uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                            >
+                              <ShieldCheck className="w-3.5 h-3.5" />
+                              <span>Load Look</span>
+                            </button>
+                          </FoundationInteractionWrapper>
+
+                          <FoundationInteractionWrapper themeDNA={themeDNA}>
+                            <button
+                              onClick={() => setSelectedOutfit(msg.suggestedOutfit)}
+                              className="py-2 px-3 bg-zinc-900 hover:bg-zinc-800 border border-white/5 text-zinc-300 rounded-lg text-[10px] font-mono uppercase tracking-wider flex items-center justify-center transition-all cursor-pointer"
+                            >
+                              Inspect
+                            </button>
+                          </FoundationInteractionWrapper>
                         </div>
                       </div>
                     )}
@@ -380,19 +402,20 @@ export const AIAssistantStudio: React.FC<AIAssistantStudioProps> = ({ wardrobe, 
               {LUXURY_TEMPLATES.map((tmpl) => {
                 const IconComp = tmpl.icon;
                 return (
-                  <button
-                    key={tmpl.title}
-                    onClick={() => executeStylingQuery(tmpl.prompt)}
-                    className="p-3 rounded-xl bg-zinc-950/40 border border-white/5 hover:border-violet-500/30 text-left hover:bg-zinc-950 transition-all group cursor-pointer"
-                  >
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <div className="p-1.5 rounded-md bg-white/5 text-zinc-400 group-hover:text-violet-400 transition-colors">
-                        <IconComp className="w-3.5 h-3.5" />
+                  <FoundationInteractionWrapper key={tmpl.title} themeDNA={themeDNA}>
+                    <button
+                      onClick={() => executeStylingQuery(tmpl.prompt)}
+                      className="p-3 rounded-xl bg-zinc-950/40 border border-white/5 hover:border-violet-500/30 text-left hover:bg-zinc-950 transition-all group cursor-pointer w-full"
+                    >
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <div className="p-1.5 rounded-md bg-white/5 text-zinc-400 group-hover:text-violet-400 transition-colors">
+                          <IconComp className="w-3.5 h-3.5" />
+                        </div>
+                        <span className="text-xs font-mono font-bold text-zinc-300 group-hover:text-white transition-colors">{tmpl.title}</span>
                       </div>
-                      <span className="text-xs font-mono font-bold text-zinc-300 group-hover:text-white transition-colors">{tmpl.title}</span>
-                    </div>
-                    <p className="text-[10px] text-zinc-500 leading-normal">{tmpl.description}</p>
-                  </button>
+                      <p className="text-[10px] text-zinc-500 leading-normal">{tmpl.description}</p>
+                    </button>
+                  </FoundationInteractionWrapper>
                 );
               })}
             </div>
@@ -411,13 +434,15 @@ export const AIAssistantStudio: React.FC<AIAssistantStudioProps> = ({ wardrobe, 
               className="flex-1 bg-zinc-950 border border-white/5 rounded-xl px-4 py-3 text-xs font-mono text-white placeholder-zinc-600 focus:outline-none focus:border-violet-500/50"
               disabled={isLoading}
             />
-            <button
-              onClick={() => executeStylingQuery(input)}
-              className="p-3 rounded-xl bg-white text-black hover:bg-neutral-200 transition-all flex items-center justify-center shrink-0 cursor-pointer disabled:opacity-50"
-              disabled={isLoading || !input.trim()}
-            >
-              <Send className="w-4 h-4" />
-            </button>
+            <FoundationInteractionWrapper themeDNA={themeDNA}>
+              <button
+                onClick={() => executeStylingQuery(input)}
+                className="p-3 rounded-xl bg-white text-black hover:bg-neutral-200 transition-all flex items-center justify-center shrink-0 cursor-pointer disabled:opacity-50"
+                disabled={isLoading || !input.trim()}
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            </FoundationInteractionWrapper>
           </div>
         </div>
 
@@ -504,17 +529,19 @@ export const AIAssistantStudio: React.FC<AIAssistantStudioProps> = ({ wardrobe, 
             </div>
 
             {selectedOutfit && (
-              <button
-                onClick={() => loadOutfitToWorkspace(selectedOutfit)}
-                className="w-full mt-6 py-2.5 bg-white text-black hover:bg-neutral-200 font-mono text-xs uppercase tracking-wider rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer font-bold"
-              >
-                <span>Synchronize Lookboard</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
+              <FoundationInteractionWrapper themeDNA={themeDNA}>
+                <button
+                  onClick={() => loadOutfitToWorkspace(selectedOutfit)}
+                  className="w-full mt-6 py-2.5 bg-white text-black hover:bg-neutral-200 font-mono text-xs uppercase tracking-wider rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer font-bold"
+                >
+                  <span>Synchronize Lookboard</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </FoundationInteractionWrapper>
             )}
           </div>
 
-          {/* SRE LIVE METRICS MONITOR (Rule 4: Realistic Telemetry logging) */}
+          {/* SRE LIVE METRICS MONITOR */}
           <div className="bg-zinc-950 border border-white/5 rounded-2xl p-5 space-y-4">
             <div className="flex justify-between items-center border-b border-white/5 pb-2">
               <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-zinc-500 font-bold flex items-center gap-1.5">
@@ -564,9 +591,12 @@ export const AIAssistantStudio: React.FC<AIAssistantStudioProps> = ({ wardrobe, 
               </div>
             </div>
 
-            <div className="p-3 bg-black/40 border border-white/5 rounded-xl flex items-center justify-between text-[10px] font-mono text-zinc-500">
+            <div className="p-3 bg-black/40 border border-white/5 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-[10px] font-mono text-zinc-500">
               <span>REQUEST ID: <strong className="text-zinc-400">{latestTelemetry.requestId}</strong></span>
-              <span>ANOMALY DETECTED: <strong className={latestTelemetry.anomalyFlag ? 'text-red-400' : 'text-zinc-400'}>{latestTelemetry.anomalyFlag ? 'TRUE' : 'FALSE'}</strong></span>
+              {sequenceId && (
+                <span>THEME SEQ: <strong className="text-violet-400">{sequenceId.substring(0, 12)}...</strong></span>
+              )}
+              <span>ANOMALY: <strong className={latestTelemetry.anomalyFlag ? 'text-red-400' : 'text-zinc-400'}>{latestTelemetry.anomalyFlag ? 'TRUE' : 'FALSE'}</strong></span>
             </div>
           </div>
 
@@ -576,4 +606,15 @@ export const AIAssistantStudio: React.FC<AIAssistantStudioProps> = ({ wardrobe, 
 
     </div>
   );
+
+  if (coatDNA) {
+    return (
+      <ThemeCoatRenderer coatDNA={coatDNA} className="w-full h-full">
+        {renderStudioContent()}
+      </ThemeCoatRenderer>
+    );
+  }
+
+  return renderStudioContent();
 };
+

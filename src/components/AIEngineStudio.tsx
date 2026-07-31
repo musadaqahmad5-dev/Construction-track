@@ -21,6 +21,7 @@ import { PortfolioSection } from './ai-creations/PortfolioSection';
 import { DiscoverySection } from './ai-creations/DiscoverySection';
 import { AICreationsUniverseStudio } from './ai-creations/AICreationsUniverseStudio';
 import { Solver3DWorkbench } from './solver3d/Solver3DWorkbench';
+import { AdminVirtualThemePanel } from './AdminVirtualThemePanel';
 import { PromptIntelligenceEngine } from '../features/image-generation/PromptIntelligenceEngine';
 import { GenerationIntelligenceEngine } from '../features/image-generation/GenerationIntelligenceEngine';
 import { ImageGenerationRegistry } from '../features/image-generation/imageGenerationProvider';
@@ -1218,7 +1219,8 @@ export const AIEngineStudio: React.FC<AIEngineStudioProps> = ({
             { id: 'DISCOVERY', label: '🔥 Discovery Feed', icon: Compass },
             { id: 'GALLERY', label: '🖼️ Showroom', icon: Layers },
             { id: 'PORTFOLIO', label: '👤 My Portfolio', icon: User },
-            { id: '3D_LAB', label: '⚡ 3D Garment Lab', icon: Cpu }
+            { id: '3D_LAB', label: '⚡ 3D Garment Lab', icon: Cpu },
+            { id: 'VIRTUAL_THEME', label: '👑 Virtual Theme Engine', icon: Crown }
           ].map(tab => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -1457,6 +1459,18 @@ export const AIEngineStudio: React.FC<AIEngineStudioProps> = ({
             exit={{ opacity: 0, y: -15 }}
           >
             <Solver3DWorkbench onSaveToWardrobe={onAddGarment} />
+          </motion.div>
+        )}
+
+        {/* TAB 5: VIRTUAL THEME ENGINE (Admin & User Theme Intelligence) */}
+        {activeTab === 'VIRTUAL_THEME' && (
+          <motion.div
+            key="virtual_theme"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+          >
+            <AdminVirtualThemePanel />
           </motion.div>
         )}
 

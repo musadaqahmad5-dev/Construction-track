@@ -157,7 +157,7 @@ export async function runPreemptiveFirestoreBootTest() {
     await getDoc(testDocRef);
   } catch (err: any) {
     isFirestoreOfflineFallbackActive = true;
-    console.warn(`[Quota System] Preemptive Firestore boot-test status: Offline/Fallback mode active. (Detail: ${err?.message || err})`);
+    console.debug(`[Quota System] In-memory quota fallback active.`);
     try {
       localStorage.setItem('firestore_offline_fallback_active', 'true');
     } catch (_) {}

@@ -3,6 +3,11 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Store, Plus, Trash2, Edit3, BarChart2, DollarSign, Eye, Award, CheckCircle2, ShoppingBag, Settings, Sparkles, Sliders, ArrowUpRight, Percent, RefreshCw } from 'lucide-react';
 import { WardrobeItem } from '../../types';
 import { FounderDashboard } from '../FounderDashboard';
+import { 
+  useThemeIntelligence, 
+  ThemeCoatRenderer, 
+  FoundationInteractionWrapper 
+} from '../../engine';
 
 interface CreatorWorkspaceScreenProps {
   user: any;
@@ -17,6 +22,17 @@ export const CreatorWorkspaceScreen: React.FC<CreatorWorkspaceScreenProps> = ({
   onAddGarment,
   onNavigateToTab
 }) => {
+  let themeCtx: ReturnType<typeof useThemeIntelligence> | null = null;
+  try {
+    themeCtx = useThemeIntelligence();
+  } catch {
+    themeCtx = null;
+  }
+
+  const themeDNA = themeCtx?.themeDNA;
+  const coatDNA = themeCtx?.coatDNA;
+  const sequenceId = themeCtx?.sequenceId;
+
   const [activeTab, setActiveTab] = useState<'analytics' | 'listings' | 'predictions' | 'profile' | 'seller'>('analytics');
   
   // Local products catalog state
@@ -84,16 +100,23 @@ export const CreatorWorkspaceScreen: React.FC<CreatorWorkspaceScreenProps> = ({
   const totalSalesCount = useMemo(() => listings.reduce((sum, x) => sum + x.sales, 0), [listings]);
   const estimatedRevenue = useMemo(() => listings.reduce((sum, x) => sum + (x.sales * x.price), 0).toFixed(2), [listings]);
 
-  return (
+  const renderContent = () => (
     <div className="w-full min-h-screen bg-[#05050a] text-zinc-100 p-4 sm:p-6 lg:p-8 select-none">
       
       {/* Visual Title Header */}
       <div className="max-w-6xl mx-auto space-y-3 pb-8 border-b border-white/5 text-left">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
-            <span className="text-[10px] font-mono tracking-[0.25em] text-zinc-500 uppercase block font-light">
-              CREATOR DESIGN WORKSPACE
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-mono tracking-[0.25em] text-zinc-500 uppercase block font-light">
+                CREATOR DESIGN WORKSPACE
+              </span>
+              {sequenceId && (
+                <span className="text-[9px] font-mono text-zinc-600 bg-white/5 px-2 py-0.5 rounded-full border border-white/5 hidden lg:inline-block">
+                  SEQ: {sequenceId.substring(0, 10)}...
+                </span>
+              )}
+            </div>
             <h1 className="font-serif font-light tracking-tight text-4xl text-white flex items-center gap-2">
               <Store className="w-8 h-8 text-violet-400" /> {shopName}
             </h1>
@@ -108,17 +131,18 @@ export const CreatorWorkspaceScreen: React.FC<CreatorWorkspaceScreenProps> = ({
               { id: 'profile', label: 'Shop Profile' },
               { id: 'seller', label: 'Seller Hub' }
             ].map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-mono uppercase tracking-wider transition-all cursor-pointer ${
-                  activeTab === tab.id 
-                    ? 'bg-violet-600 text-white font-bold' 
-                    : 'text-zinc-400 hover:text-white'
-                }`}
-              >
-                {tab.label}
-              </button>
+              <FoundationInteractionWrapper key={tab.id} themeDNA={themeDNA}>
+                <button
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-mono uppercase tracking-wider transition-all cursor-pointer ${
+                    activeTab === tab.id 
+                      ? 'bg-violet-600 text-white font-bold' 
+                      : 'text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              </FoundationInteractionWrapper>
             ))}
           </div>
         </div>
@@ -181,13 +205,15 @@ export const CreatorWorkspaceScreen: React.FC<CreatorWorkspaceScreenProps> = ({
           <div className="space-y-6 animate-fade-in">
             <div className="flex justify-between items-center pb-2 border-b border-white/5">
               <h3 className="text-sm font-bold font-mono uppercase tracking-widest text-white">Active Catalog Listings ({listings.length})</h3>
-              <button
-                onClick={() => setIsNewListingFormOpen(true)}
-                className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white font-mono text-xs uppercase tracking-wider rounded-xl flex items-center gap-2 transition-colors cursor-pointer"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Publish Garment</span>
-              </button>
+              <FoundationInteractionWrapper themeDNA={themeDNA}>
+                <button
+                  onClick={() => setIsNewListingFormOpen(true)}
+                  className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white font-mono text-xs uppercase tracking-wider rounded-xl flex items-center gap-2 transition-colors cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Publish Garment</span>
+                </button>
+              </FoundationInteractionWrapper>
             </div>
 
             {/* List entries */}
@@ -210,13 +236,15 @@ export const CreatorWorkspaceScreen: React.FC<CreatorWorkspaceScreenProps> = ({
 
                   <div className="pt-3 border-t border-white/[0.03] mt-4 flex justify-between items-center">
                     <span className="text-[10px] font-mono text-emerald-400">{item.sales} Units Sold</span>
-                    <button
-                      onClick={() => handleDeleteListing(item.id)}
-                      className="p-2 text-zinc-500 hover:text-rose-400 transition-colors cursor-pointer"
-                      title="Delete Listing"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <FoundationInteractionWrapper themeDNA={themeDNA}>
+                      <button
+                        onClick={() => handleDeleteListing(item.id)}
+                        className="p-2 text-zinc-500 hover:text-rose-400 transition-colors cursor-pointer"
+                        title="Delete Listing"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </FoundationInteractionWrapper>
                   </div>
                 </div>
               ))}
@@ -297,12 +325,14 @@ export const CreatorWorkspaceScreen: React.FC<CreatorWorkspaceScreenProps> = ({
                 />
               </div>
 
-              <button
-                type="submit"
-                className="w-full py-3 bg-violet-600 hover:bg-violet-500 transition-colors text-white font-mono text-xs uppercase tracking-widest rounded-xl cursor-pointer font-bold"
-              >
-                Save Atelier Profile
-              </button>
+              <FoundationInteractionWrapper themeDNA={themeDNA}>
+                <button
+                  type="submit"
+                  className="w-full py-3 bg-violet-600 hover:bg-violet-500 transition-colors text-white font-mono text-xs uppercase tracking-widest rounded-xl cursor-pointer font-bold"
+                >
+                  Save Atelier Profile
+                </button>
+              </FoundationInteractionWrapper>
 
               {shopProfileSaved && (
                 <span className="text-[10px] font-mono text-emerald-400 uppercase tracking-wider block text-center">✓ Brand contract successfully synchronized.</span>
@@ -333,12 +363,14 @@ export const CreatorWorkspaceScreen: React.FC<CreatorWorkspaceScreenProps> = ({
                   <span className="text-[9px] font-mono text-zinc-500 uppercase block">LOCAL MERCHANT GATEWAY</span>
                   <h3 className="font-serif text-lg text-white">List Brand Garment</h3>
                 </div>
-                <button
-                  onClick={() => setIsNewListingFormOpen(false)}
-                  className="text-xs font-mono text-zinc-500 hover:text-white cursor-pointer"
-                >
-                  [ CLOSE ]
-                </button>
+                <FoundationInteractionWrapper themeDNA={themeDNA}>
+                  <button
+                    onClick={() => setIsNewListingFormOpen(false)}
+                    className="text-xs font-mono text-zinc-500 hover:text-white cursor-pointer"
+                  >
+                    [ CLOSE ]
+                  </button>
+                </FoundationInteractionWrapper>
               </div>
 
               <form onSubmit={handleCreateListing} className="space-y-4 text-left">
@@ -403,12 +435,14 @@ export const CreatorWorkspaceScreen: React.FC<CreatorWorkspaceScreenProps> = ({
                   />
                 </div>
 
-                <button
-                  type="submit"
-                  className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 transition-colors text-black font-mono text-xs uppercase tracking-widest rounded-xl font-bold mt-2"
-                >
-                  List to Social Stream
-                </button>
+                <FoundationInteractionWrapper themeDNA={themeDNA}>
+                  <button
+                    type="submit"
+                    className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 transition-colors text-black font-mono text-xs uppercase tracking-widest rounded-xl font-bold mt-2"
+                  >
+                    List to Social Stream
+                  </button>
+                </FoundationInteractionWrapper>
 
                 {listingSuccess && (
                   <span className="text-[10px] font-mono text-emerald-400 uppercase tracking-widest block text-center">✓ Product published successfully!</span>
@@ -421,4 +455,14 @@ export const CreatorWorkspaceScreen: React.FC<CreatorWorkspaceScreenProps> = ({
 
     </div>
   );
+
+  if (coatDNA) {
+    return (
+      <ThemeCoatRenderer coatDNA={coatDNA}>
+        {renderContent()}
+      </ThemeCoatRenderer>
+    );
+  }
+
+  return renderContent();
 };

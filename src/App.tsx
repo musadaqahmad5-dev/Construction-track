@@ -14,6 +14,7 @@ import { UnifiedFashionOS } from './features/ai-core/UnifiedFashionOS';
 import { AIStyleHubV17Architecture } from './features/global/AIStyleHubV17Architecture';
 import { SEOStructuredData } from './components/SEOStructuredData';
 import { ImageLightboxModal } from './components/ImageLightboxModal';
+import { UIShellProvider, ThemeIntelligenceAppBridge } from './engine';
 
 // Temporal light rules mapper
 export function getTemporalTheme() {
@@ -597,171 +598,149 @@ export default function App() {
     UnifiedFashionOS.restartJourney();
   };
 
-  // 1. Loading screen / Opening moment (staged room entrance)
-  if (loading) {
-    const theme = getTemporalTheme();
-    const openingPhrases = [
-      "Take your time.",
-      "Not everything needs choosing.",
-      "Style is easier when nothing competes."
-    ];
-    // Consistently select based on the current hour/minute to rotate beautifully
-    const phrase = openingPhrases[(new Date().getHours() + new Date().getMinutes()) % openingPhrases.length];
-
-    return (
-      <div id="opening-moment" className={`min-h-screen ${theme.bg} ${theme.text} flex flex-col justify-center items-center py-10 px-4 select-none`}>
-        <div className="text-center space-y-10 max-w-md mx-auto">
-          
-          {/* Greeting: Step 1 */}
-          <motion.span 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: loaderStage >= 1 ? 0.45 : 0 }}
-            transition={{ duration: 0.8 }}
-            className="text-[11px] font-mono uppercase tracking-[0.25em] block font-light"
-          >
-            AI Fashion
-          </motion.span>
-
-          {/* Settle: Step 2 */}
-          <motion.h1 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: loaderStage >= 2 ? 1 : 0 }}
-            transition={{ duration: 1.0, ease: "easeOut" }}
-            className="font-serif font-light text-5xl tracking-[-0.03em] text-white"
-          >
-            Marketplace
-          </motion.h1>
-
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: loaderStage >= 2 ? 0.2 : 0 }}
-            className="h-px w-8 bg-white mx-auto"
-          />
-
-          {/* Short poetic line: Step 3 */}
-          <motion.p 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: loaderStage >= 3 ? 0.4 : 0 }}
-            transition={{ duration: 0.9 }}
-            className="text-sm font-serif italic tracking-wide leading-relaxed"
-          >
-            "{phrase}"
-          </motion.p>
-
-        </div>
-      </div>
-    );
-  }
-
-  // 8. LAST SCREEN: Meditative Silence View
-  if (isSilent) {
-    const theme = getTemporalTheme();
-    return (
-      <div className={`min-h-screen ${theme.bg} ${theme.text} flex flex-col justify-center items-center py-10 px-4 select-none animate-fade-in`}>
-        <div className="text-center space-y-4">
-          <p className="text-white/40 text-2xl font-light">—</p>
-          <p className="font-serif italic text-lg text-white/55 tracking-wide">
-            Until next time.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // 2. Wrap everything in ErrorBoundary for guaranteed runtime resilience
   const theme = getTemporalTheme();
 
-  // If we are logged in, we check the COVER view first
-  if (user && showCover) {
-    return (
-      <div 
-        id="magazine-cover" 
-        onClick={() => setShowCover(false)}
-        className={`min-h-screen ${theme.bg} ${theme.text} flex flex-col justify-center items-center py-24 px-6 cursor-pointer select-none animate-fade-in`}
-      >
-        <div className="text-center space-y-4 max-w-lg mx-auto">
-          <span className="text-[10px] font-mono uppercase tracking-[0.3em] opacity-40 block font-light">
-            wardrobe companion / vol. xi
-          </span>
-          <h1 className="font-serif font-light text-7xl md:text-8xl tracking-[-0.04em] leading-none mb-1 text-white">
-            Quiet hours
-          </h1>
-          <p className="text-sm font-serif italic opacity-45 tracking-wide leading-relaxed pt-2">
-            "Collected slowly."
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <ErrorBoundary>
-      <SEOStructuredData />
-      <ImageLightboxModal />
-      
-      {/* Stripe payment success banner */}
-      {stripeSuccessMessage && (
-        <div className="bg-emerald-950/40 border-b border-emerald-500/20 text-emerald-300 text-xs font-mono py-4 px-6 z-50 flex items-center justify-between gap-4 uppercase tracking-wider animate-fade-in" id="stripe-success-banner">
-          <span>{stripeSuccessMessage}</span>
-          <button 
-            onClick={() => setStripeSuccessMessage(null)}
-            className="text-emerald-400/60 hover:text-emerald-300 font-mono text-[10px] bg-white/5 border border-emerald-500/15 py-1 px-3 rounded uppercase tracking-widest cursor-pointer"
-          >
-            Dismiss
-          </button>
-        </div>
-      )}
+    <ThemeIntelligenceAppBridge userId={user?.uid || 'guest-sartorialist-user-100'} initialThemeName="cyber ai">
+      <UIShellProvider initialTheme="cyber ai" initialMode="dynamic">
+        {loading ? (
+          <div id="opening-moment" className={`min-h-screen ${theme.bg} ${theme.text} flex flex-col justify-center items-center py-10 px-4 select-none`}>
+            <div className="text-center space-y-10 max-w-md mx-auto">
+              {/* Greeting: Step 1 */}
+              <motion.span 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: loaderStage >= 1 ? 0.45 : 0 }}
+                transition={{ duration: 0.8 }}
+                className="text-[11px] font-mono uppercase tracking-[0.25em] block font-light"
+              >
+                AI Fashion
+              </motion.span>
 
-      {/* Stripe payment error banner */}
-      {stripeErrorMessage && (
-        <div className="bg-rose-950/40 border-b border-rose-500/20 text-rose-350 text-xs font-mono py-4 px-6 z-50 flex items-center justify-between gap-4 uppercase tracking-wider animate-fade-in" id="stripe-error-banner">
-          <span>{stripeErrorMessage}</span>
-          <button 
-            onClick={() => setStripeErrorMessage(null)}
-            className="text-rose-400/60 hover:text-rose-350 font-mono text-[10px] bg-white/5 border border-rose-500/15 py-1 px-3 rounded uppercase tracking-widest cursor-pointer"
-          >
-            Dismiss
-          </button>
-        </div>
-      )}
+              {/* Settle: Step 2 */}
+              <motion.h1 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: loaderStage >= 2 ? 1 : 0 }}
+                transition={{ duration: 1.0, ease: "easeOut" }}
+                className="font-serif font-light text-5xl tracking-[-0.03em] text-white"
+              >
+                Marketplace
+              </motion.h1>
 
-      {/* Offline mode banner alert */}
-      {!isOnline && (
-        <div className="bg-[#111111] border-b border-dashed border-[rgba(255,255,255,0.2)] text-white text-[10px] font-mono tracking-wider text-center py-2.5 px-4 z-50 flex items-center justify-center gap-2 uppercase font-light">
-          <WifiOff size={11} className="shrink-0" />
-          <span>Running in Offline Mode</span>
-          <span className="opacity-75 font-light text-[9.5px] lowercase hidden sm:inline">— utilizing local memory fallback</span>
-        </div>
-      )}
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: loaderStage >= 2 ? 0.2 : 0 }}
+                className="h-px w-8 bg-white mx-auto"
+              />
 
-      {/* Auth Screening */}
-      {!user ? (
-        <AuthModule onGuestMode={handleGuestActivation} />
-      ) : (
-        /* LOOK VISION: Premium fashion OS persistent shell workspace */
-        <div className={`h-screen w-screen overflow-hidden ${theme.bg} ${theme.text} selection:bg-white/20 selection:text-white antialiased font-sans`}>
-          <React.Suspense fallback={
-            <div className="flex flex-col items-center justify-center min-h-screen text-center space-y-4 bg-black">
-              <div className="w-10 h-10 border-2 border-white/10 border-t-white rounded-full animate-spin" />
-              <p className="font-mono text-[10px] uppercase tracking-widest text-white/40">Initializing Fashion AI...</p>
+              {/* Short poetic line: Step 3 */}
+              <motion.p 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: loaderStage >= 3 ? 0.4 : 0 }}
+                transition={{ duration: 0.9 }}
+                className="text-sm font-serif italic tracking-wide leading-relaxed"
+              >
+                "Take your time."
+              </motion.p>
             </div>
-          }>
-            <AIStyleHub 
-              wardrobe={allItems}
-              onAddGarment={async (title, desc, category, extra) => {
-                await handleAddGarment(title, desc, category, extra);
-              }}
-              onDeleteGarment={handleDeleteGarment}
-              user={user}
-              onLogout={handleLogout}
-              onReset={handleReset}
-              onLoadSamples={handleAddSampleWardrobe}
-              isResetting={isResetting}
-              onEnterSilence={() => setIsSilent(true)}
-            />
-          </React.Suspense>
-        </div>
-      )}
-    </ErrorBoundary>
+          </div>
+        ) : isSilent ? (
+          <div className={`min-h-screen ${theme.bg} ${theme.text} flex flex-col justify-center items-center py-10 px-4 select-none animate-fade-in`}>
+            <div className="text-center space-y-4">
+              <p className="text-white/40 text-2xl font-light">—</p>
+              <p className="font-serif italic text-lg text-white/55 tracking-wide">
+                Until next time.
+              </p>
+            </div>
+          </div>
+        ) : user && showCover ? (
+          <div 
+            id="magazine-cover" 
+            onClick={() => setShowCover(false)}
+            className={`min-h-screen ${theme.bg} ${theme.text} flex flex-col justify-center items-center py-24 px-6 cursor-pointer select-none animate-fade-in`}
+          >
+            <div className="text-center space-y-4 max-w-lg mx-auto">
+              <span className="text-[10px] font-mono uppercase tracking-[0.3em] opacity-40 block font-light">
+                wardrobe companion / vol. xi
+              </span>
+              <h1 className="font-serif font-light text-7xl md:text-8xl tracking-[-0.04em] leading-none mb-1 text-white">
+                Quiet hours
+              </h1>
+              <p className="text-sm font-serif italic opacity-45 tracking-wide leading-relaxed pt-2">
+                "Collected slowly."
+              </p>
+            </div>
+          </div>
+        ) : (
+          <ErrorBoundary>
+            <SEOStructuredData />
+            <ImageLightboxModal />
+            
+            {/* Stripe payment success banner */}
+            {stripeSuccessMessage && (
+              <div className="bg-emerald-950/40 border-b border-emerald-500/20 text-emerald-300 text-xs font-mono py-4 px-6 z-50 flex items-center justify-between gap-4 uppercase tracking-wider animate-fade-in" id="stripe-success-banner">
+                <span>{stripeSuccessMessage}</span>
+                <button 
+                  onClick={() => setStripeSuccessMessage(null)}
+                  className="text-emerald-400/60 hover:text-emerald-300 font-mono text-[10px] bg-white/5 border border-emerald-500/15 py-1 px-3 rounded uppercase tracking-widest cursor-pointer"
+                >
+                  Dismiss
+                </button>
+              </div>
+            )}
+
+            {/* Stripe payment error banner */}
+            {stripeErrorMessage && (
+              <div className="bg-rose-950/40 border-b border-rose-500/20 text-rose-350 text-xs font-mono py-4 px-6 z-50 flex items-center justify-between gap-4 uppercase tracking-wider animate-fade-in" id="stripe-error-banner">
+                <span>{stripeErrorMessage}</span>
+                <button 
+                  onClick={() => setStripeErrorMessage(null)}
+                  className="text-rose-400/60 hover:text-rose-350 font-mono text-[10px] bg-white/5 border border-rose-500/15 py-1 px-3 rounded uppercase tracking-widest cursor-pointer"
+                >
+                  Dismiss
+                </button>
+              </div>
+            )}
+
+            {/* Offline mode banner alert */}
+            {!isOnline && (
+              <div className="bg-[#111111] border-b border-dashed border-[rgba(255,255,255,0.2)] text-white text-[10px] font-mono tracking-wider text-center py-2.5 px-4 z-50 flex items-center justify-center gap-2 uppercase font-light">
+                <WifiOff size={11} className="shrink-0" />
+                <span>Running in Offline Mode</span>
+                <span className="opacity-75 font-light text-[9.5px] lowercase hidden sm:inline">— utilizing local memory fallback</span>
+              </div>
+            )}
+
+            {/* Auth Screening */}
+            {!user ? (
+              <AuthModule onGuestMode={handleGuestActivation} />
+            ) : (
+              /* LOOK VISION: Premium fashion OS persistent shell workspace */
+              <div className={`h-screen w-screen overflow-hidden ${theme.bg} ${theme.text} selection:bg-white/20 selection:text-white antialiased font-sans`}>
+                <React.Suspense fallback={
+                  <div className="flex flex-col items-center justify-center min-h-screen text-center space-y-4 bg-black">
+                    <div className="w-10 h-10 border-2 border-white/10 border-t-white rounded-full animate-spin" />
+                    <p className="font-mono text-[10px] uppercase tracking-widest text-white/40">Initializing Fashion AI...</p>
+                  </div>
+                }>
+                  <AIStyleHub 
+                    wardrobe={allItems}
+                    onAddGarment={async (title, desc, category, extra) => {
+                      await handleAddGarment(title, desc, category, extra);
+                    }}
+                    onDeleteGarment={handleDeleteGarment}
+                    user={user}
+                    onLogout={handleLogout}
+                    onReset={handleReset}
+                    onLoadSamples={handleAddSampleWardrobe}
+                    isResetting={isResetting}
+                    onEnterSilence={() => setIsSilent(true)}
+                  />
+                </React.Suspense>
+              </div>
+            )}
+          </ErrorBoundary>
+        )}
+      </UIShellProvider>
+    </ThemeIntelligenceAppBridge>
   );
 }

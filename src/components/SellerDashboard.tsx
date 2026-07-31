@@ -115,15 +115,16 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({ user, onClose,
       await signInWithPopup(auth, provider);
       // Success will trigger the onAuthStateChanged in App.tsx and cascade user state down.
     } catch (err: any) {
-      console.error("Merchant Google Sign-In Failed:", err);
       let friendlyMessage = "Failed to authenticate with your Google Identity.";
-      if (err.code === 'auth/popup-closed-by-user') {
+      if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
         friendlyMessage = "Google sign-in window was closed. Please try again.";
-      } else if (err.code === 'auth/cancelled-popup-request') {
-        friendlyMessage = "Only one identity request can be handled at a time. Please wait or refresh.";
-      } else if (err.code === 'auth/popup-blocked') {
+        console.info("Merchant sign-in popup closed by user.");
+      } else {
+        console.error("Merchant Google Sign-In Failed:", err);
+      }
+      if (err.code === 'auth/popup-blocked') {
         friendlyMessage = "Enable popups for login";
-      } else if (err.message) {
+      } else if (err.message && err.code !== 'auth/popup-closed-by-user') {
         friendlyMessage = err.message;
       }
       setAuthError(friendlyMessage);

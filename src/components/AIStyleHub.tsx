@@ -6,7 +6,7 @@ import {
   ChevronRight, Compass, Eye, Cpu, Database, Activity, CloudSun, User, Fingerprint,
   Bell, PenSquare, X, ChevronDown, Award, Check,
   Home, Users, Heart, Layers, MessageSquare, Mail, Crown, MoreVertical, Moon, Menu,
-  Camera, Upload, Calendar, Smartphone, Monitor, Tablet, Zap, Wifi, BatteryCharging, Globe, Maximize2, Minimize2
+  Camera, Upload, Calendar, Smartphone, Monitor, Tablet, Zap, Wifi, BatteryCharging, Globe, Maximize2, Minimize2, CreditCard
 } from 'lucide-react';
 import { WardrobeItem, ProfileService, type StyleProfile, type StylistHistoryEntry } from '../platform';
 import { getGarmentImage } from '../features/feed/AIEngine';
@@ -15,7 +15,10 @@ import {
   UnifiedFashionOS, 
   type UnifiedState,
   type UnifiedOutfit,
-  VisualSuggestion
+  VisualSuggestion,
+  useThemeIntelligence,
+  ThemeCoatRenderer,
+  FoundationInteractionWrapper
 } from '../engine';
 import { db } from '../firebase';
 import { updateDoc, doc } from 'firebase/firestore';
@@ -51,6 +54,9 @@ import { OutfitPlanner } from './OutfitPlanner';
 import { FashionInstructorWorkspace } from './screens/FashionInstructorWorkspace';
 import { AIAssistantStudio } from './AIAssistantStudio';
 import { AIMemoryHub } from './AIMemoryHub';
+import { MatureFashionStudio } from './MatureFashionStudio';
+import { SocialHubView } from './social/SocialHubView';
+import { SubscriptionHubView } from './payment/SubscriptionHubView';
 
 export interface LookVisionTheme {
   id: string;
@@ -498,6 +504,18 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
   isResetting = false,
   onEnterSilence
 }) => {
+  // Connect to Theme Intelligence Engine
+  let themeCtx: ReturnType<typeof useThemeIntelligence> | null = null;
+  try {
+    themeCtx = useThemeIntelligence();
+  } catch {
+    themeCtx = null;
+  }
+
+  const themeDNA = themeCtx?.themeDNA;
+  const coatDNA = themeCtx?.coatDNA;
+  const sequenceId = themeCtx?.sequenceId;
+
   const [state, setState] = useState<UnifiedState>(() => UnifiedFashionOS.getState());
   
   // Design Sandbox & Figma Mockup Overlay states
@@ -544,7 +562,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
       window.removeEventListener('lookvision_update_sandbox_settings', handleUpdateSandboxSettings);
     };
   }, []);
-  const [activeSubTab, setActiveSubTab] = useState<'PRODUCT_HOME' | 'PRODUCT_AI_CREATIONS' | 'PRODUCT_COMMUNITY' | 'PRODUCT_MARKETPLACE' | 'ECOSYSTEM_GENERATE' | 'ECOSYSTEM_CREATE' | 'HOME' | 'AI_STUDIO' | 'WARDROBE' | 'DASHBOARD' | 'PROFILE' | 'SYSTEM_ROOM' | 'OUTFIT_GEN' | 'VIRTUAL_TRY' | 'COLLECTIONS' | 'HISTORY' | 'MESSAGES' | 'FAVORITES' | 'MARKETPLACE_ROOM' | 'COMMUNITY_ROOM' | 'DISCOVER' | 'CREATOR_WORKSPACE' | 'PRODUCT_DETAIL' | 'PLANNER' | 'FASHION_INSTRUCTOR' | 'AI_ASSISTANT'>(() => {
+  const [activeSubTab, setActiveSubTab] = useState<'PRODUCT_HOME' | 'PRODUCT_AI_CREATIONS' | 'PRODUCT_COMMUNITY' | 'PRODUCT_MARKETPLACE' | 'ECOSYSTEM_GENERATE' | 'ECOSYSTEM_CREATE' | 'HOME' | 'AI_STUDIO' | 'WARDROBE' | 'DASHBOARD' | 'PROFILE' | 'SYSTEM_ROOM' | 'OUTFIT_GEN' | 'VIRTUAL_TRY' | 'COLLECTIONS' | 'HISTORY' | 'MESSAGES' | 'FAVORITES' | 'MARKETPLACE_ROOM' | 'COMMUNITY_ROOM' | 'DISCOVER' | 'CREATOR_WORKSPACE' | 'PRODUCT_DETAIL' | 'PLANNER' | 'FASHION_INSTRUCTOR' | 'AI_ASSISTANT' | 'MATURE_FASHION_STUDIO' | 'SOCIAL_HUB' | 'SUBSCRIPTION_HUB'>(() => {
     let saved = localStorage.getItem('last_active_place_subtab');
     if (saved === 'HOME') saved = 'PRODUCT_HOME';
     else if (saved === 'COMMUNITY_ROOM') saved = 'PRODUCT_COMMUNITY';
@@ -553,12 +571,12 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
     else if (saved === 'OUTFIT_GEN') saved = 'ECOSYSTEM_GENERATE';
     else if (saved === 'FASHION_INSTRUCTOR') saved = 'PRODUCT_COMMUNITY';
 
-    if (saved && ['PRODUCT_HOME', 'PRODUCT_AI_CREATIONS', 'PRODUCT_COMMUNITY', 'PRODUCT_MARKETPLACE', 'ECOSYSTEM_GENERATE', 'ECOSYSTEM_CREATE', 'HOME', 'AI_STUDIO', 'WARDROBE', 'DASHBOARD', 'PROFILE', 'SYSTEM_ROOM', 'OUTFIT_GEN', 'VIRTUAL_TRY', 'COLLECTIONS', 'HISTORY', 'MESSAGES', 'FAVORITES', 'MARKETPLACE_ROOM', 'COMMUNITY_ROOM', 'DISCOVER', 'CREATOR_WORKSPACE', 'PRODUCT_DETAIL', 'PLANNER', 'FASHION_INSTRUCTOR', 'AI_ASSISTANT'].includes(saved)) {
+    if (saved && ['PRODUCT_HOME', 'PRODUCT_AI_CREATIONS', 'PRODUCT_COMMUNITY', 'PRODUCT_MARKETPLACE', 'ECOSYSTEM_GENERATE', 'ECOSYSTEM_CREATE', 'HOME', 'AI_STUDIO', 'WARDROBE', 'DASHBOARD', 'PROFILE', 'SYSTEM_ROOM', 'OUTFIT_GEN', 'VIRTUAL_TRY', 'COLLECTIONS', 'HISTORY', 'MESSAGES', 'FAVORITES', 'MARKETPLACE_ROOM', 'COMMUNITY_ROOM', 'DISCOVER', 'CREATOR_WORKSPACE', 'PRODUCT_DETAIL', 'PLANNER', 'FASHION_INSTRUCTOR', 'AI_ASSISTANT', 'MATURE_FASHION_STUDIO', 'SOCIAL_HUB', 'SUBSCRIPTION_HUB'].includes(saved)) {
       return saved as any;
     }
     return 'PRODUCT_COMMUNITY';
   });
-  const [activeCockpitSubTab, setActiveCockpitSubTab] = useState<'PRODUCT_HOME' | 'PRODUCT_AI_CREATIONS' | 'PRODUCT_COMMUNITY' | 'PRODUCT_MARKETPLACE' | 'ECOSYSTEM_GENERATE' | 'ECOSYSTEM_CREATE' | 'HOME' | 'AI_STUDIO' | 'WARDROBE' | 'DASHBOARD' | 'PROFILE' | 'SYSTEM_ROOM' | 'OUTFIT_GEN' | 'VIRTUAL_TRY' | 'COLLECTIONS' | 'HISTORY' | 'MESSAGES' | 'FAVORITES' | 'MARKETPLACE_ROOM' | 'COMMUNITY_ROOM' | 'DISCOVER' | 'CREATOR_WORKSPACE' | 'PRODUCT_DETAIL' | 'PLANNER' | 'FASHION_INSTRUCTOR'>('PRODUCT_COMMUNITY');
+  const [activeCockpitSubTab, setActiveCockpitSubTab] = useState<'PRODUCT_HOME' | 'PRODUCT_AI_CREATIONS' | 'PRODUCT_COMMUNITY' | 'PRODUCT_MARKETPLACE' | 'ECOSYSTEM_GENERATE' | 'ECOSYSTEM_CREATE' | 'HOME' | 'AI_STUDIO' | 'WARDROBE' | 'DASHBOARD' | 'PROFILE' | 'SYSTEM_ROOM' | 'OUTFIT_GEN' | 'VIRTUAL_TRY' | 'COLLECTIONS' | 'HISTORY' | 'MESSAGES' | 'FAVORITES' | 'MARKETPLACE_ROOM' | 'COMMUNITY_ROOM' | 'DISCOVER' | 'CREATOR_WORKSPACE' | 'PRODUCT_DETAIL' | 'PLANNER' | 'FASHION_INSTRUCTOR' | 'MATURE_FASHION_STUDIO' | 'SOCIAL_HUB' | 'SUBSCRIPTION_HUB'>('PRODUCT_COMMUNITY');
   const [showFounderConsole, setShowFounderConsole] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showMobileProfileMenu, setShowMobileProfileMenu] = useState(false);
@@ -2048,8 +2066,11 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
 
     const navigationItems = [
       { id: 'HOME', label: 'Home Hub', icon: Home, route: 'PRODUCT_HOME' },
+      { id: 'SUBSCRIPTION', label: 'Monetization & Plans', icon: CreditCard, route: 'SUBSCRIPTION_HUB', badge: 'PRO' },
+      { id: 'SOCIAL_HUB', label: 'Social Graph', icon: Globe, route: 'SOCIAL_HUB', badge: 'NEW' },
       { id: 'COMMUNITY', label: 'Community', icon: Users, route: 'PRODUCT_COMMUNITY' },
       { id: 'AI_CREATIONS', label: 'AI Creations', icon: Sparkles, route: 'PRODUCT_AI_CREATIONS' },
+      { id: 'MATURE_STUDIO', label: 'Mature Fashion', icon: Crown, route: 'MATURE_FASHION_STUDIO' },
       { id: 'MARKETPLACE', label: 'Marketplace', icon: ShoppingBag, route: 'PRODUCT_MARKETPLACE' },
       { id: 'PLANNER', label: 'Outfit Planner', icon: Calendar, route: 'PLANNER' },
       { id: 'AUTHENTICATION', label: user && !user.isAnonymous && !user.uid.startsWith('guest-') ? 'Sign Out' : 'Sign In', icon: LogOut, action: 'AUTHENTICATION' },
@@ -2088,9 +2109,15 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
                 let isSelected = false;
                 if (tab.id === 'HOME' && (activeSubTabForRendering === 'PRODUCT_HOME' || activeSubTabForRendering === 'HOME')) {
                   isSelected = true;
+                } else if (tab.id === 'SUBSCRIPTION' && activeSubTabForRendering === 'SUBSCRIPTION_HUB') {
+                  isSelected = true;
+                } else if (tab.id === 'SOCIAL_HUB' && activeSubTabForRendering === 'SOCIAL_HUB') {
+                  isSelected = true;
                 } else if (tab.id === 'COMMUNITY' && (activeSubTabForRendering === 'PRODUCT_COMMUNITY' || activeSubTabForRendering === 'COMMUNITY_ROOM')) {
                   isSelected = true;
                 } else if (tab.id === 'AI_CREATIONS' && (activeSubTabForRendering === 'PRODUCT_AI_CREATIONS' || activeSubTabForRendering === 'AI_STUDIO' || activeSubTabForRendering === 'ECOSYSTEM_CREATE')) {
+                  isSelected = true;
+                } else if (tab.id === 'MATURE_STUDIO' && activeSubTabForRendering === 'MATURE_FASHION_STUDIO') {
                   isSelected = true;
                 } else if (tab.id === 'MARKETPLACE' && (activeSubTabForRendering === 'PRODUCT_MARKETPLACE' || activeSubTabForRendering === 'MARKETPLACE_ROOM')) {
                   isSelected = true;
@@ -4218,6 +4245,41 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
               />
             )}
 
+            {/* ROOM: MATURE FASHION STUDIO */}
+            {activeSubTab === 'MATURE_FASHION_STUDIO' && (
+              <div className="max-w-7xl mx-auto py-2 px-2 sm:px-4 animate-fade-in">
+                <MatureFashionStudio
+                  userId={user?.uid || 'anon_creator'}
+                  onSendToTryOn={(assetUrl, title) => {
+                    handleNavigate('VIRTUAL_TRY');
+                    window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: `👕 Sent "${title}" to Virtual 3D Try-On Studio` }));
+                  }}
+                  onSaveToWardrobe={(asset) => {
+                    onAddGarment?.(asset.title, asset.prompt, asset.category || 'Couture', { imageUrl: asset.generatedAsset });
+                    window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: `✨ Saved "${asset.title}" to Digital Wardrobe!` }));
+                  }}
+                  onPublishToCommunity={(asset) => {
+                    handleNavigate('PRODUCT_COMMUNITY');
+                    window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: `🌐 Published "${asset.title}" to Public Community Feed` }));
+                  }}
+                />
+              </div>
+            )}
+
+            {/* ROOM: SOCIAL FASHION ECOSYSTEM */}
+            {activeSubTab === 'SOCIAL_HUB' && (
+              <div className="max-w-7xl mx-auto py-2 px-2 sm:px-4 animate-fade-in">
+                <SocialHubView wardrobe={activeWardrobeList} />
+              </div>
+            )}
+
+            {/* ROOM: MONETIZATION & SUBSCRIPTION HUB */}
+            {activeSubTab === 'SUBSCRIPTION_HUB' && (
+              <div className="max-w-7xl mx-auto py-2 px-2 sm:px-4 animate-fade-in">
+                <SubscriptionHubView />
+              </div>
+            )}
+
             </motion.div>
           </AnimatePresence>
         </div>
@@ -4652,5 +4714,15 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
   );
 };
 
-  return renderAppStructure(false);
+  const appContent = renderAppStructure(false);
+
+  if (coatDNA) {
+    return (
+      <ThemeCoatRenderer coatDNA={coatDNA} className="w-full h-full min-h-screen">
+        {appContent}
+      </ThemeCoatRenderer>
+    );
+  }
+
+  return appContent;
 };

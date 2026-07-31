@@ -57,5 +57,5 @@ export interface AICreation {
   };
 }
 
-export type AICreationTab = 'GALLERY' | 'DISCOVERY' | 'PORTFOLIO' | '3D_LAB' | 'CREATE_WITH_AI' | 'UNIVERSE_STUDIO';
+export type AICreationTab = 'GALLERY' | 'DISCOVERY' | 'PORTFOLIO' | '3D_LAB' | 'CREATE_WITH_AI' | 'UNIVERSE_STUDIO' | 'VIRTUAL_THEME';
 

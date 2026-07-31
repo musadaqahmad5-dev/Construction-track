@@ -273,10 +273,13 @@ export const FeedCard: React.FC<FeedCardProps> = ({
       await signInWithGoogle();
       setCheckoutStep('cart');
     } catch (e: any) {
-      console.error("[Checkout Login] Error:", e);
-      if (e.code === 'auth/unauthorized-domain') {
+      if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') {
+        setFormErrors({ login: "Google sign-in window was closed." });
+        console.info("Checkout Google Sign-In popup closed by user.");
+      } else if (e.code === 'auth/unauthorized-domain') {
         setFormErrors({ login: 'auth/unauthorized-domain' });
       } else {
+        console.error("[Checkout Login] Error:", e);
         setFormErrors({ login: e.message || "Failed to authenticate account via Google popup." });
       }
     }

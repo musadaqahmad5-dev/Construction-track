@@ -7,6 +7,11 @@ import {
   Settings, HelpCircle as HelpIcon, ArrowRight, Smartphone, Laptop, Tablet, Eye,
   Activity, Gauge, Terminal, CheckSquare, FileText, Lightbulb, Zap, Stars
 } from 'lucide-react';
+import { 
+  useThemeIntelligence, 
+  ThemeCoatRenderer, 
+  FoundationInteractionWrapper 
+} from '../../engine';
 
 interface StudentGroup {
   id: string;
@@ -41,6 +46,17 @@ interface IntegrationTask {
 }
 
 export const FashionInstructorWorkspace: React.FC = () => {
+  let themeCtx: ReturnType<typeof useThemeIntelligence> | null = null;
+  try {
+    themeCtx = useThemeIntelligence();
+  } catch {
+    themeCtx = null;
+  }
+
+  const themeDNA = themeCtx?.themeDNA;
+  const coatDNA = themeCtx?.coatDNA;
+  const sequenceId = themeCtx?.sequenceId;
+
   // Parent workspace tab: GOVERNANCE or ACADEMY
   const [activeWorkspaceTab, setActiveWorkspaceTab] = useState<'GOVERNANCE' | 'ACADEMY'>('GOVERNANCE');
 
@@ -631,8 +647,6 @@ export const FashionInstructorWorkspace: React.FC = () => {
     };
   }, []);
 
-
-
   const handleRunSemesterSimulation = () => {
     setIsSimulatingSemester(true);
     
@@ -881,7 +895,7 @@ export const FashionInstructorWorkspace: React.FC = () => {
     }, (activeWorkers.length + 1.5) * 400);
   };
 
-  return (
+  const renderContent = () => (
     <div className="w-full space-y-8 animate-fade-in text-left select-none" id="fashion-instructor-workspace-root">
       
       {/* 1. Evolved Header Banner */}
@@ -896,6 +910,11 @@ export const FashionInstructorWorkspace: React.FC = () => {
               <span className="text-[10px] font-mono tracking-[0.25em] uppercase text-violet-400 font-bold">
                 Unified Engineering & Style Intelligence
               </span>
+              {sequenceId && (
+                <span className="text-[9px] font-mono text-zinc-600 bg-white/5 px-2 py-0.5 rounded-full border border-white/5 hidden lg:inline-block">
+                  SEQ: {sequenceId.substring(0, 10)}...
+                </span>
+              )}
             </div>
             <h1 className="text-3xl sm:text-4xl font-serif font-light text-white tracking-tight">
               Fashion OS Control Center
@@ -920,28 +939,32 @@ export const FashionInstructorWorkspace: React.FC = () => {
 
       {/* 2. Parent Workspace Tab Switcher */}
       <div className="flex bg-[#07070c]/90 border border-white/5 p-1 rounded-2xl max-w-md select-none">
-        <button
-          onClick={() => setActiveWorkspaceTab('GOVERNANCE')}
-          className={`flex-1 py-3 px-4 rounded-xl text-xs font-mono font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 ${
-            activeWorkspaceTab === 'GOVERNANCE'
-              ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-500/10'
-              : 'text-zinc-500 hover:text-zinc-300'
-          }`}
-        >
-          <Shield className="w-4 h-4" />
-          Technical Governance
-        </button>
-        <button
-          onClick={() => setActiveWorkspaceTab('ACADEMY')}
-          className={`flex-1 py-3 px-4 rounded-xl text-xs font-mono font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 ${
-            activeWorkspaceTab === 'ACADEMY'
-              ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-500/10'
-              : 'text-zinc-500 hover:text-zinc-300'
-          }`}
-        >
-          <Users className="w-4 h-4" />
-          Sartorial Academy
-        </button>
+        <FoundationInteractionWrapper themeDNA={themeDNA}>
+          <button
+            onClick={() => setActiveWorkspaceTab('GOVERNANCE')}
+            className={`flex-1 py-3 px-4 rounded-xl text-xs font-mono font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 ${
+              activeWorkspaceTab === 'GOVERNANCE'
+                ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-500/10'
+                : 'text-zinc-500 hover:text-zinc-300'
+            }`}
+          >
+            <Shield className="w-4 h-4" />
+            Technical Governance
+          </button>
+        </FoundationInteractionWrapper>
+        <FoundationInteractionWrapper themeDNA={themeDNA}>
+          <button
+            onClick={() => setActiveWorkspaceTab('ACADEMY')}
+            className={`flex-1 py-3 px-4 rounded-xl text-xs font-mono font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 ${
+              activeWorkspaceTab === 'ACADEMY'
+                ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-500/10'
+                : 'text-zinc-500 hover:text-zinc-300'
+            }`}
+          >
+            <Users className="w-4 h-4" />
+            Sartorial Academy
+          </button>
+        </FoundationInteractionWrapper>
       </div>
 
       <AnimatePresence mode="wait">
@@ -992,53 +1015,54 @@ export const FashionInstructorWorkspace: React.FC = () => {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {integrationTasks.map((task) => (
-                      <div
-                        key={task.id}
-                        onClick={() => toggleTaskStatus(task.id)}
-                        className={`p-4 rounded-2xl border transition-all duration-300 cursor-pointer flex flex-col justify-between gap-3 text-left relative overflow-hidden group select-none ${
-                          task.status === 'completed'
-                            ? 'bg-emerald-950/5 border-emerald-500/20 hover:border-emerald-500/40 shadow-sm shadow-emerald-950/10'
-                            : 'bg-zinc-900/10 border-white/5 hover:border-violet-500/20'
-                        }`}
-                      >
-                        <div className="space-y-1">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[9px] font-mono uppercase text-zinc-500 tracking-wider">
-                              {task.category}
-                            </span>
-                            <div className="flex items-center gap-1.5">
-                              <span className={`text-[8px] font-mono font-bold px-1.5 py-0.5 rounded ${
-                                task.status === 'completed'
-                                  ? 'text-emerald-400 bg-emerald-950/30 border border-emerald-500/20'
-                                  : 'text-amber-400 bg-amber-950/30 border border-amber-500/20'
-                              }`}>
-                                {task.status === 'completed' ? 'READY' : 'INTEGRATING'}
+                      <FoundationInteractionWrapper key={task.id} themeDNA={themeDNA}>
+                        <div
+                          onClick={() => toggleTaskStatus(task.id)}
+                          className={`p-4 rounded-2xl border transition-all duration-300 cursor-pointer flex flex-col justify-between gap-3 text-left relative overflow-hidden group select-none ${
+                            task.status === 'completed'
+                              ? 'bg-emerald-950/5 border-emerald-500/20 hover:border-emerald-500/40 shadow-sm shadow-emerald-950/10'
+                              : 'bg-zinc-900/10 border-white/5 hover:border-violet-500/20'
+                          }`}
+                        >
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[9px] font-mono uppercase text-zinc-500 tracking-wider">
+                                {task.category}
                               </span>
-                              
-                              <div className={`w-4.5 h-4.5 rounded border flex items-center justify-center transition-all ${
-                                task.status === 'completed'
-                                  ? 'border-emerald-500 bg-emerald-500/20 text-emerald-400'
-                                  : 'border-white/10 bg-black/40 text-transparent'
-                              }`}>
-                                <Check className="w-3.5 h-3.5" strokeWidth={3} />
+                              <div className="flex items-center gap-1.5">
+                                <span className={`text-[8px] font-mono font-bold px-1.5 py-0.5 rounded ${
+                                  task.status === 'completed'
+                                    ? 'text-emerald-400 bg-emerald-950/30 border border-emerald-500/20'
+                                    : 'text-amber-400 bg-amber-950/30 border border-amber-500/20'
+                                }`}>
+                                  {task.status === 'completed' ? 'READY' : 'INTEGRATING'}
+                                </span>
+                                
+                                <div className={`w-4.5 h-4.5 rounded border flex items-center justify-center transition-all ${
+                                  task.status === 'completed'
+                                    ? 'border-emerald-500 bg-emerald-500/20 text-emerald-400'
+                                    : 'border-white/10 bg-black/40 text-transparent'
+                                }`}>
+                                  <Check className="w-3.5 h-3.5" strokeWidth={3} />
+                                </div>
                               </div>
                             </div>
+                            <h3 className="text-xs font-bold text-white tracking-wide group-hover:text-violet-400 transition-colors">
+                              {task.label}
+                            </h3>
+                            <p className="text-[10px] text-zinc-400 leading-normal font-sans">
+                              {task.description}
+                            </p>
                           </div>
-                          <h3 className="text-xs font-bold text-white tracking-wide group-hover:text-violet-400 transition-colors">
-                            {task.label}
-                          </h3>
-                          <p className="text-[10px] text-zinc-400 leading-normal font-sans">
-                            {task.description}
-                          </p>
-                        </div>
 
-                        <div className="flex items-center justify-between border-t border-white/[0.03] pt-2">
-                          <span className="text-[9px] font-mono text-zinc-500 uppercase">Integrity Index</span>
-                          <span className={`text-[10px] font-mono font-bold ${
-                            task.status === 'completed' ? 'text-emerald-400' : 'text-amber-400'
-                          }`}>{task.percentage}%</span>
+                          <div className="flex items-center justify-between border-t border-white/[0.03] pt-2">
+                            <span className="text-[9px] font-mono text-zinc-500 uppercase">Integrity Index</span>
+                            <span className={`text-[10px] font-mono font-bold ${
+                              task.status === 'completed' ? 'text-emerald-400' : 'text-amber-400'
+                            }`}>{task.percentage}%</span>
+                          </div>
                         </div>
-                      </div>
+                      </FoundationInteractionWrapper>
                     ))}
                   </div>
                 </div>
@@ -1050,32 +1074,34 @@ export const FashionInstructorWorkspace: React.FC = () => {
                       2. Live CI/CD Production Build Pipeline
                     </span>
 
-                    <button
-                      onClick={runBuildPipeline}
-                      disabled={isCompiling}
-                      className={`w-full py-3 px-6 bg-gradient-to-r ${
-                        systemMaturity === 100
-                          ? 'from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500'
-                          : 'from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500'
-                      } text-white rounded-xl text-xs font-mono uppercase tracking-widest font-bold flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-98 shadow-md disabled:opacity-50`}
-                    >
-                      {isCompiling ? (
-                        <>
-                          <RefreshCw className="w-4 h-4 animate-spin text-white" />
-                          <span>Compiling Applet Bundle...</span>
-                        </>
-                      ) : systemMaturity === 100 ? (
-                        <>
-                          <ShieldCheck className="w-4 h-4 text-white" />
-                          <span>Ecosystem Deployed (100% Mature)</span>
-                        </>
-                      ) : (
-                        <>
-                          <Play className="w-4 h-4 text-white" />
-                          <span>Execute Full Compiler Scan & Deploy</span>
-                        </>
-                      )}
-                    </button>
+                    <FoundationInteractionWrapper themeDNA={themeDNA}>
+                      <button
+                        onClick={runBuildPipeline}
+                        disabled={isCompiling}
+                        className={`w-full py-3 px-6 bg-gradient-to-r ${
+                          systemMaturity === 100
+                            ? 'from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500'
+                            : 'from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500'
+                        } text-white rounded-xl text-xs font-mono uppercase tracking-widest font-bold flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-98 shadow-md disabled:opacity-50`}
+                      >
+                        {isCompiling ? (
+                          <>
+                            <RefreshCw className="w-4 h-4 animate-spin text-white" />
+                            <span>Compiling Applet Bundle...</span>
+                          </>
+                        ) : systemMaturity === 100 ? (
+                          <>
+                            <ShieldCheck className="w-4 h-4 text-white" />
+                            <span>Ecosystem Deployed (100% Mature)</span>
+                          </>
+                        ) : (
+                          <>
+                            <Play className="w-4 h-4 text-white" />
+                            <span>Execute Full Compiler Scan & Deploy</span>
+                          </>
+                        )}
+                      </button>
+                    </FoundationInteractionWrapper>
                   </div>
 
                   {/* Pipeline Console Terminal */}
@@ -1092,7 +1118,7 @@ export const FashionInstructorWorkspace: React.FC = () => {
                       {pipelineLogs.length === 0 ? (
                         <div className="text-zinc-600 italic h-full flex flex-col items-center justify-center gap-2 select-none">
                           <Terminal className="w-8 h-8 text-zinc-800 animate-pulse" />
-                          <span className="text-[9px]">Terminal idle. Click \"Execute Full Compiler Scan\" to verify.</span>
+                          <span className="text-[9px]">Terminal idle. Click "Execute Full Compiler Scan" to verify.</span>
                         </div>
                       ) : (
                         pipelineLogs.map((log, idx) => (
@@ -1139,36 +1165,42 @@ export const FashionInstructorWorkspace: React.FC = () => {
                     1. Select Generative Feature to Audit
                   </label>
                   <div className="grid grid-cols-3 gap-1.5">
-                    <button
-                      onClick={() => setAuditFeature('create_with_ai')}
-                      className={`py-1.5 px-2 text-[9px] font-sans rounded-xl border text-center transition-all cursor-pointer truncate ${
-                        auditFeature === 'create_with_ai'
-                          ? 'bg-violet-950/40 border-violet-500/40 text-violet-300 font-bold'
-                          : 'bg-black/20 border-white/5 text-zinc-400 hover:border-white/10'
-                      }`}
-                    >
-                      Create with AI
-                    </button>
-                    <button
-                      onClick={() => setAuditFeature('generate_style')}
-                      className={`py-1.5 px-2 text-[9px] font-sans rounded-xl border text-center transition-all cursor-pointer truncate ${
-                        auditFeature === 'generate_style'
-                          ? 'bg-violet-950/40 border-violet-500/40 text-violet-300 font-bold'
-                          : 'bg-black/20 border-white/5 text-zinc-400 hover:border-white/10'
-                      }`}
-                    >
-                      Generate Style
-                    </button>
-                    <button
-                      onClick={() => setAuditFeature('chat_gpr_logic')}
-                      className={`py-1.5 px-2 text-[9px] font-sans rounded-xl border text-center transition-all cursor-pointer truncate ${
-                        auditFeature === 'chat_gpr_logic'
-                          ? 'bg-violet-950/40 border-violet-500/40 text-violet-300 font-bold'
-                          : 'bg-black/20 border-white/5 text-zinc-400 hover:border-white/10'
-                      }`}
-                    >
-                      Chat GPR
-                    </button>
+                    <FoundationInteractionWrapper themeDNA={themeDNA}>
+                      <button
+                        onClick={() => setAuditFeature('create_with_ai')}
+                        className={`w-full py-1.5 px-2 text-[9px] font-sans rounded-xl border text-center transition-all cursor-pointer truncate ${
+                          auditFeature === 'create_with_ai'
+                            ? 'bg-violet-950/40 border-violet-500/40 text-violet-300 font-bold'
+                            : 'bg-black/20 border-white/5 text-zinc-400 hover:border-white/10'
+                        }`}
+                      >
+                        Create with AI
+                      </button>
+                    </FoundationInteractionWrapper>
+                    <FoundationInteractionWrapper themeDNA={themeDNA}>
+                      <button
+                        onClick={() => setAuditFeature('generate_style')}
+                        className={`w-full py-1.5 px-2 text-[9px] font-sans rounded-xl border text-center transition-all cursor-pointer truncate ${
+                          auditFeature === 'generate_style'
+                            ? 'bg-violet-950/40 border-violet-500/40 text-violet-300 font-bold'
+                            : 'bg-black/20 border-white/5 text-zinc-400 hover:border-white/10'
+                        }`}
+                      >
+                        Generate Style
+                      </button>
+                    </FoundationInteractionWrapper>
+                    <FoundationInteractionWrapper themeDNA={themeDNA}>
+                      <button
+                        onClick={() => setAuditFeature('chat_gpr_logic')}
+                        className={`w-full py-1.5 px-2 text-[9px] font-sans rounded-xl border text-center transition-all cursor-pointer truncate ${
+                          auditFeature === 'chat_gpr_logic'
+                            ? 'bg-violet-950/40 border-violet-500/40 text-violet-300 font-bold'
+                            : 'bg-black/20 border-white/5 text-zinc-400 hover:border-white/10'
+                        }`}
+                      >
+                        Chat GPR
+                      </button>
+                    </FoundationInteractionWrapper>
                   </div>
                 </div>
 
@@ -1185,43 +1217,46 @@ export const FashionInstructorWorkspace: React.FC = () => {
                     ].map((p) => {
                       const Icon = p.icon;
                       return (
-                        <button
-                          key={p.id}
-                          onClick={() => setAuditPlatform(p.id as any)}
-                          className={`p-2 rounded-xl border text-center flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                            auditPlatform === p.id
-                              ? 'bg-violet-950/30 border-violet-500/30 text-violet-300'
-                              : 'bg-black/20 border-white/5 text-zinc-500 hover:border-white/10 hover:text-zinc-300'
-                          }`}
-                        >
-                          <Icon className="w-3.5 h-3.5" />
-                          <span className="text-[9px] font-mono tracking-tight truncate w-full">{p.name}</span>
-                        </button>
+                        <FoundationInteractionWrapper key={p.id} themeDNA={themeDNA}>
+                          <button
+                            onClick={() => setAuditPlatform(p.id as any)}
+                            className={`w-full p-2 rounded-xl border text-center flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                              auditPlatform === p.id
+                                ? 'bg-violet-950/30 border-violet-500/30 text-violet-300'
+                                : 'bg-black/20 border-white/5 text-zinc-500 hover:border-white/10 hover:text-zinc-300'
+                            }`}
+                          >
+                            <Icon className="w-3.5 h-3.5" />
+                            <span className="text-[9px] font-mono tracking-tight truncate w-full">{p.name}</span>
+                          </button>
+                        </FoundationInteractionWrapper>
                       );
                     })}
                   </div>
                 </div>
 
                 <div className="md:col-span-3">
-                  <button
-                    onClick={runAuditTest}
-                    disabled={isAuditing}
-                    className={`w-full py-2.5 px-4 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white rounded-xl text-xs font-mono uppercase tracking-wider font-bold flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-98 shadow-md ${
-                      isAuditing ? 'opacity-50 cursor-not-allowed' : ''
-                    }`}
-                  >
-                    {isAuditing ? (
-                      <>
-                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                        <span>Auditing...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Activity className="w-3.5 h-3.5" />
-                        <span>Run Usability Audit</span>
-                      </>
-                    )}
-                  </button>
+                  <FoundationInteractionWrapper themeDNA={themeDNA}>
+                    <button
+                      onClick={runAuditTest}
+                      disabled={isAuditing}
+                      className={`w-full py-2.5 px-4 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white rounded-xl text-xs font-mono uppercase tracking-wider font-bold flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-98 shadow-md ${
+                        isAuditing ? 'opacity-50 cursor-not-allowed' : ''
+                      }`}
+                    >
+                      {isAuditing ? (
+                        <>
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          <span>Auditing...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Activity className="w-3.5 h-3.5" />
+                          <span>Run Usability Audit</span>
+                        </>
+                      )}
+                    </button>
+                  </FoundationInteractionWrapper>
                 </div>
               </div>
 
@@ -1319,12 +1354,14 @@ export const FashionInstructorWorkspace: React.FC = () => {
                       <span className="text-[10px] text-zinc-500 italic">
                         Scores dynamically scale with worker agents.
                       </span>
-                      <button
-                        onClick={commitAuditToRegistry}
-                        className="px-3 py-1.5 text-[9px] font-mono uppercase bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 text-emerald-400 rounded-lg transition-colors cursor-pointer font-bold"
-                      >
-                        Commit Scorecard
-                      </button>
+                      <FoundationInteractionWrapper themeDNA={themeDNA}>
+                        <button
+                          onClick={commitAuditToRegistry}
+                          className="px-3 py-1.5 text-[9px] font-mono uppercase bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 text-emerald-400 rounded-lg transition-colors cursor-pointer font-bold"
+                        >
+                          Commit Scorecard
+                        </button>
+                      </FoundationInteractionWrapper>
                     </div>
                   </div>
                 </div>
@@ -1461,19 +1498,20 @@ export const FashionInstructorWorkspace: React.FC = () => {
                 ].map((sub) => {
                   const Icon = sub.icon;
                   return (
-                    <button
-                      key={sub.id}
-                      type="button"
-                      onClick={() => setSimulatorSubTab(sub.id as any)}
-                      className={`px-4 py-2 rounded-lg flex items-center gap-1.5 cursor-pointer transition-all shrink-0 ${
-                        simulatorSubTab === sub.id
-                          ? 'bg-violet-600/20 text-violet-300 font-bold border border-violet-500/30 shadow-sm'
-                          : 'text-zinc-500 hover:text-zinc-300 border border-transparent'
-                      }`}
-                    >
-                      <Icon className="w-3.5 h-3.5" />
-                      <span>{sub.label}</span>
-                    </button>
+                    <FoundationInteractionWrapper key={sub.id} themeDNA={themeDNA}>
+                      <button
+                        type="button"
+                        onClick={() => setSimulatorSubTab(sub.id as any)}
+                        className={`px-4 py-2 rounded-lg flex items-center gap-1.5 cursor-pointer transition-all shrink-0 ${
+                          simulatorSubTab === sub.id
+                            ? 'bg-violet-600/20 text-violet-300 font-bold border border-violet-500/30 shadow-sm'
+                            : 'text-zinc-500 hover:text-zinc-300 border border-transparent'
+                        }`}
+                      >
+                        <Icon className="w-3.5 h-3.5" />
+                        <span>{sub.label}</span>
+                      </button>
+                    </FoundationInteractionWrapper>
                   );
                 })}
               </div>
@@ -1555,28 +1593,29 @@ export const FashionInstructorWorkspace: React.FC = () => {
                         { id: 'corp_layer', title: 'High-Performance Corporate Layering', desc: 'Optimal for active professional wardrobes.' },
                         { id: 'heritage_tailor', title: 'Classic Editorial Legacy Tailoring', desc: 'Optimal for majestic elder organic fit designs.' }
                       ].map((t) => (
-                        <button
-                          key={t.id}
-                          type="button"
-                          onClick={() => {
-                            setCurriculumTopic(t.id);
-                            if (typeof localStorage !== 'undefined') {
-                              localStorage.setItem('look_vision_curriculum_topic', t.id);
-                            }
-                            window.dispatchEvent(new Event('lookvision_sync_instructor'));
-                          }}
-                          className={`p-3 rounded-xl text-left border transition-all duration-200 cursor-pointer ${
-                            curriculumTopic === t.id
-                              ? 'bg-violet-950/20 border-violet-500/50 text-white shadow-md'
-                              : 'bg-[#11111a]/40 border-white/5 text-zinc-400 hover:bg-zinc-900/20 hover:border-white/10 hover:text-white'
-                          }`}
-                        >
-                          <div className="text-xs font-bold font-sans flex items-center justify-between">
-                            <span>{t.title}</span>
-                            {curriculumTopic === t.id && <span className="w-1.5 h-1.5 bg-violet-400 rounded-full" />}
-                          </div>
-                          <p className="text-[10px] text-zinc-500 mt-1 leading-normal font-sans">{t.desc}</p>
-                        </button>
+                        <FoundationInteractionWrapper key={t.id} themeDNA={themeDNA}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCurriculumTopic(t.id);
+                              if (typeof localStorage !== 'undefined') {
+                                localStorage.setItem('look_vision_curriculum_topic', t.id);
+                              }
+                              window.dispatchEvent(new Event('lookvision_sync_instructor'));
+                            }}
+                            className={`w-full p-3 rounded-xl text-left border transition-all duration-200 cursor-pointer ${
+                              curriculumTopic === t.id
+                                ? 'bg-violet-950/20 border-violet-500/50 text-white shadow-md'
+                                : 'bg-[#11111a]/40 border-white/5 text-zinc-400 hover:bg-zinc-900/20 hover:border-white/10 hover:text-white'
+                            }`}
+                          >
+                            <div className="text-xs font-bold font-sans flex items-center justify-between">
+                              <span>{t.title}</span>
+                              {curriculumTopic === t.id && <span className="w-1.5 h-1.5 bg-violet-400 rounded-full" />}
+                            </div>
+                            <p className="text-[10px] text-zinc-500 mt-1 leading-normal font-sans">{t.desc}</p>
+                          </button>
+                        </FoundationInteractionWrapper>
                       ))}
                     </div>
                   </div>
@@ -1640,26 +1679,28 @@ export const FashionInstructorWorkspace: React.FC = () => {
 
                   {/* Execute Button */}
                   <div className="space-y-3 pt-2 text-left">
-                    <button
-                      type="button"
-                      onClick={handleRunSemesterSimulation}
-                      disabled={isSimulatingSemester}
-                      className={`w-full py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-mono text-[11px] uppercase tracking-wider rounded-xl font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                        isSimulatingSemester ? 'opacity-50 cursor-not-allowed' : ''
-                      }`}
-                    >
-                      {isSimulatingSemester ? (
-                        <>
-                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                          <span>Evaluating Academic Synergy...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Play className="w-3.5 h-3.5" />
-                          <span>Execute Dynamic Semester Simulation</span>
-                        </>
-                      )}
-                    </button>
+                    <FoundationInteractionWrapper themeDNA={themeDNA}>
+                      <button
+                        type="button"
+                        onClick={handleRunSemesterSimulation}
+                        disabled={isSimulatingSemester}
+                        className={`w-full py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-mono text-[11px] uppercase tracking-wider rounded-xl font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                          isSimulatingSemester ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
+                      >
+                        {isSimulatingSemester ? (
+                          <>
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                            <span>Evaluating Academic Synergy...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Play className="w-3.5 h-3.5" />
+                            <span>Execute Dynamic Semester Simulation</span>
+                          </>
+                        )}
+                      </button>
+                    </FoundationInteractionWrapper>
 
                     {/* Simulation results panel */}
                     {semesterResults && !isSimulatingSemester && (
@@ -1760,17 +1801,19 @@ export const FashionInstructorWorkspace: React.FC = () => {
                             <span className="text-[9px] font-mono text-zinc-500 uppercase truncate">
                               {worker.cageId}
                             </span>
-                            <button
-                              type="button"
-                              onClick={() => toggleWorkerSelection(worker.id)}
-                              className={`px-2 py-0.5 text-[8px] font-mono uppercase rounded border transition-colors cursor-pointer shrink-0 ${
-                                worker.isChosen
-                                  ? 'bg-violet-950/40 border-violet-500/30 text-violet-300 font-bold'
-                                  : 'bg-black/40 border-white/5 text-zinc-500 hover:text-white hover:border-white/10'
-                              }`}
-                            >
-                              {worker.isChosen ? '● Active' : 'Standby'}
-                            </button>
+                            <FoundationInteractionWrapper themeDNA={themeDNA}>
+                              <button
+                                type="button"
+                                onClick={() => toggleWorkerSelection(worker.id)}
+                                className={`px-2 py-0.5 text-[8px] font-mono uppercase rounded border transition-colors cursor-pointer shrink-0 ${
+                                  worker.isChosen
+                                    ? 'bg-violet-950/40 border-violet-500/30 text-violet-300 font-bold'
+                                    : 'bg-black/40 border-white/5 text-zinc-500 hover:text-white hover:border-white/10'
+                                }`}
+                              >
+                                {worker.isChosen ? '● Active' : 'Standby'}
+                              </button>
+                            </FoundationInteractionWrapper>
                           </div>
                           <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
                             {worker.name}
@@ -1801,29 +1844,31 @@ export const FashionInstructorWorkspace: React.FC = () => {
                             </span>
                           </div>
 
-                          <button
-                            type="button"
-                            onClick={() => handleTrainWorker(worker.id)}
-                            disabled={trainingWorkerId !== null || worker.efficiency >= 100}
-                            className={`px-2 py-1 text-[8.5px] font-mono uppercase rounded transition-all cursor-pointer shrink-0 ${
-                              worker.efficiency >= 100
-                                ? 'border border-emerald-500/20 text-emerald-500 bg-emerald-500/5 opacity-55 cursor-default'
-                                : worker.id === trainingWorkerId
-                                ? 'bg-amber-500/20 border border-amber-500/40 text-amber-400 animate-pulse font-semibold'
-                                : 'bg-violet-500/10 border border-violet-500/20 text-violet-400 hover:bg-violet-500/20 hover:text-white'
-                            }`}
-                          >
-                            {worker.id === trainingWorkerId ? (
-                              <span className="flex items-center gap-1">
-                                <RefreshCw className="w-2.5 h-2.5 animate-spin" />
-                                {trainingProgress}%
-                              </span>
-                            ) : worker.efficiency >= 100 ? (
-                              'Certified'
-                            ) : (
-                              'Train'
-                            )}
-                          </button>
+                          <FoundationInteractionWrapper themeDNA={themeDNA}>
+                            <button
+                              type="button"
+                              onClick={() => handleTrainWorker(worker.id)}
+                              disabled={trainingWorkerId !== null || worker.efficiency >= 100}
+                              className={`px-2 py-1 text-[8.5px] font-mono uppercase rounded transition-all cursor-pointer shrink-0 ${
+                                worker.efficiency >= 100
+                                  ? 'border border-emerald-500/20 text-emerald-500 bg-emerald-500/5 opacity-55 cursor-default'
+                                  : worker.id === trainingWorkerId
+                                  ? 'bg-amber-500/20 border border-amber-500/40 text-amber-400 animate-pulse font-semibold'
+                                  : 'bg-violet-500/10 border border-violet-500/20 text-violet-400 hover:bg-violet-500/20 hover:text-white'
+                              }`}
+                            >
+                              {worker.id === trainingWorkerId ? (
+                                <span className="flex items-center gap-1">
+                                  <RefreshCw className="w-2.5 h-2.5 animate-spin" />
+                                  {trainingProgress}%
+                                </span>
+                              ) : worker.efficiency >= 100 ? (
+                                'Certified'
+                              ) : (
+                                'Train'
+                              )}
+                            </button>
+                          </FoundationInteractionWrapper>
                         </div>
                       </div>
                     ))}
@@ -1862,26 +1907,28 @@ export const FashionInstructorWorkspace: React.FC = () => {
                       Once you have certified the working needs of your commissioned worker divisions, execute the regional style dispatch. This will spread fashion instructors across the state lands to upgrade student closets.
                     </p>
 
-                    <button
-                      type="button"
-                      onClick={handleDispatchWorkers}
-                      disabled={isDispatching}
-                      className={`w-full py-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white rounded-xl text-[10px] font-mono uppercase tracking-widest font-bold flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-98 shadow-md ${
-                        isDispatching ? 'opacity-55 cursor-not-allowed' : ''
-                      }`}
-                    >
-                      {isDispatching ? (
-                        <>
-                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                          <span>Dispatching Instructors...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Play className="w-3.5 h-3.5" />
-                          <span>Dispatch Fashion Instructors</span>
-                        </>
-                      )}
-                    </button>
+                    <FoundationInteractionWrapper themeDNA={themeDNA}>
+                      <button
+                        type="button"
+                        onClick={handleDispatchWorkers}
+                        disabled={isDispatching}
+                        className={`w-full py-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white rounded-xl text-[10px] font-mono uppercase tracking-widest font-bold flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-98 shadow-md ${
+                          isDispatching ? 'opacity-55 cursor-not-allowed' : ''
+                        }`}
+                      >
+                        {isDispatching ? (
+                          <>
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                            <span>Dispatching Instructors...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Play className="w-3.5 h-3.5" />
+                            <span>Dispatch Fashion Instructors</span>
+                          </>
+                        )}
+                      </button>
+                    </FoundationInteractionWrapper>
 
                     {/* Console Logs */}
                     <div className="space-y-1.5 pt-2">
@@ -1905,23 +1952,27 @@ export const FashionInstructorWorkspace: React.FC = () => {
               {/* History Panels */}
               <div className="pt-2 text-left">
                 <div className="flex items-center justify-between">
-                  <button
-                    type="button"
-                    onClick={() => setShowHistoryPanel(!showHistoryPanel)}
-                    className="text-[10px] font-mono text-zinc-400 hover:text-white transition-all uppercase flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <span>{showHistoryPanel ? '▼ Hide Past Semesters Registry' : '▶ View Past Semesters Registry'}</span>
-                    <span className="text-[8.5px] bg-zinc-800 text-zinc-400 px-1.5 py-0.2 rounded font-sans">{semesterHistory.length}</span>
-                  </button>
-
-                  {semesterHistory.length > 0 && showHistoryPanel && (
+                  <FoundationInteractionWrapper themeDNA={themeDNA}>
                     <button
                       type="button"
-                      onClick={handleResetSimulatorHistory}
-                      className="text-[9px] font-mono text-rose-400 hover:text-rose-300 transition-colors uppercase cursor-pointer font-bold"
+                      onClick={() => setShowHistoryPanel(!showHistoryPanel)}
+                      className="text-[10px] font-mono text-zinc-400 hover:text-white transition-all uppercase flex items-center gap-1.5 cursor-pointer"
                     >
-                      Purge Registry
+                      <span>{showHistoryPanel ? '▼ Hide Past Semesters Registry' : '▶ View Past Semesters Registry'}</span>
+                      <span className="text-[8.5px] bg-zinc-800 text-zinc-400 px-1.5 py-0.2 rounded font-sans">{semesterHistory.length}</span>
                     </button>
+                  </FoundationInteractionWrapper>
+
+                  {semesterHistory.length > 0 && showHistoryPanel && (
+                    <FoundationInteractionWrapper themeDNA={themeDNA}>
+                      <button
+                        type="button"
+                        onClick={handleResetSimulatorHistory}
+                        className="text-[9px] font-mono text-rose-400 hover:text-rose-300 transition-colors uppercase cursor-pointer font-bold"
+                      >
+                        Purge Registry
+                      </button>
+                    </FoundationInteractionWrapper>
                   )}
                 </div>
 
@@ -1967,4 +2018,14 @@ export const FashionInstructorWorkspace: React.FC = () => {
       </AnimatePresence>
     </div>
   );
+
+  if (coatDNA) {
+    return (
+      <ThemeCoatRenderer coatDNA={coatDNA}>
+        {renderContent()}
+      </ThemeCoatRenderer>
+    );
+  }
+
+  return renderContent();
 };

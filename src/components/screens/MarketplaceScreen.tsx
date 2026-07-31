@@ -8,6 +8,11 @@ import {
 import { WardrobeItem } from '../../types';
 import { collection, query, onSnapshot, addDoc, serverTimestamp, where, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
+import { 
+  useThemeIntelligence, 
+  ThemeCoatRenderer, 
+  FoundationInteractionWrapper 
+} from '../../engine';
 
 interface MarketplaceScreenProps {
   onAddGarment?: (title: string, description: string, category: any, extraOptions?: any) => Promise<void>;
@@ -180,6 +185,17 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({
   onOpenSellerDashboard,
   user
 }) => {
+  let themeCtx: ReturnType<typeof useThemeIntelligence> | null = null;
+  try {
+    themeCtx = useThemeIntelligence();
+  } catch {
+    themeCtx = null;
+  }
+
+  const themeDNA = themeCtx?.themeDNA;
+  const coatDNA = themeCtx?.coatDNA;
+  const sequenceId = themeCtx?.sequenceId;
+
   const [searchQuery, setSearchQuery] = useState(() => {
     return localStorage.getItem('marketplace_search_query') || '';
   });
@@ -379,7 +395,7 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({
     });
   }, [combinedProducts, searchQuery, activeSubTab, selectedCategory, selectedStoreType, priceRange]);
 
-  return (
+  const renderContent = () => (
     <div className="w-full min-h-screen bg-[#05050a] text-zinc-100 p-4 sm:p-6 lg:p-8 select-none">
       
       {/* Editorial Title Header */}
@@ -412,32 +428,36 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({
             </div>
 
             {/* Wishlist & Style Comparison Drawer Trigger */}
-            <button
-              onClick={() => setIsWishlistOpen(true)}
-              className="p-3 bg-rose-500/5 hover:bg-rose-500/10 border border-rose-500/20 hover:border-rose-500/40 rounded-xl flex items-center gap-3 transition-all cursor-pointer text-left"
-              title="Open Wishlist & Comparison Matrix"
-            >
-              <Heart className="w-4 h-4 text-rose-400 fill-rose-400/20" />
-              <div className="text-left font-mono">
-                <span className="block text-[8px] uppercase text-rose-300">Wishlist Matrix</span>
-                <span className="block text-xs text-rose-400 font-bold">
-                  {Object.values(likedMap).filter(Boolean).length} Saved
-                </span>
-              </div>
-            </button>
+            <FoundationInteractionWrapper themeDNA={themeDNA}>
+              <button
+                onClick={() => setIsWishlistOpen(true)}
+                className="p-3 bg-rose-500/5 hover:bg-rose-500/10 border border-rose-500/20 hover:border-rose-500/40 rounded-xl flex items-center gap-3 transition-all cursor-pointer text-left"
+                title="Open Wishlist & Comparison Matrix"
+              >
+                <Heart className="w-4 h-4 text-rose-400 fill-rose-400/20" />
+                <div className="text-left font-mono">
+                  <span className="block text-[8px] uppercase text-rose-300">Wishlist Matrix</span>
+                  <span className="block text-xs text-rose-400 font-bold">
+                    {Object.values(likedMap).filter(Boolean).length} Saved
+                  </span>
+                </div>
+              </button>
+            </FoundationInteractionWrapper>
 
             {/* Interactive Shopping Cart Reservations button */}
-            <button 
-              onClick={() => setIsOrdersOpen(true)}
-              className="p-3 bg-emerald-500/5 hover:bg-emerald-500/10 border border-emerald-500/20 hover:border-emerald-500/40 rounded-xl flex items-center gap-3 transition-all cursor-pointer text-left"
-              title="View Active Reservations"
-            >
-              <ShoppingCart className="w-4 h-4 text-emerald-400 animate-pulse" />
-              <div className="text-left font-mono">
-                <span className="block text-[8px] uppercase text-emerald-300">Your Cart</span>
-                <span className="block text-xs text-emerald-400 font-bold">{orders.length} Active</span>
-              </div>
-            </button>
+            <FoundationInteractionWrapper themeDNA={themeDNA}>
+              <button 
+                onClick={() => setIsOrdersOpen(true)}
+                className="p-3 bg-emerald-500/5 hover:bg-emerald-500/10 border border-emerald-500/20 hover:border-emerald-500/40 rounded-xl flex items-center gap-3 transition-all cursor-pointer text-left"
+                title="View Active Reservations"
+              >
+                <ShoppingCart className="w-4 h-4 text-emerald-400 animate-pulse" />
+                <div className="text-left font-mono">
+                  <span className="block text-[8px] uppercase text-emerald-300">Your Cart</span>
+                  <span className="block text-xs text-emerald-400 font-bold">{orders.length} Active</span>
+                </div>
+              </button>
+            </FoundationInteractionWrapper>
           </div>
         </div>
         <p className="text-xs text-zinc-400 leading-relaxed max-w-xl font-light">
@@ -458,19 +478,21 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({
             Connect your physical atelier or online storefront, list your seasonal lines, configure WhatsApp/Instagram ordering, and tap into AI-powered local fashion demand cycles.
           </p>
         </div>
-        <button
-          onClick={() => {
-            if (onOpenSellerDashboard) {
-              onOpenSellerDashboard();
-            } else {
-              window.dispatchEvent(new CustomEvent('lookvision_open_seller_dashboard'));
-            }
-          }}
-          className="px-5 py-3 bg-white/5 hover:bg-white/10 text-white border border-white/10 hover:border-emerald-500/30 rounded-xl text-xs font-mono uppercase tracking-widest transition-all cursor-pointer flex items-center gap-2 shrink-0 shadow-md group"
-        >
-          <span>[ Connect Storefront ]</span>
-          <ArrowUpRight className="w-3.5 h-3.5 text-zinc-400 group-hover:text-emerald-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
-        </button>
+        <FoundationInteractionWrapper themeDNA={themeDNA}>
+          <button
+            onClick={() => {
+              if (onOpenSellerDashboard) {
+                onOpenSellerDashboard();
+              } else {
+                window.dispatchEvent(new CustomEvent('lookvision_open_seller_dashboard'));
+              }
+            }}
+            className="px-5 py-3 bg-white/5 hover:bg-white/10 text-white border border-white/10 hover:border-emerald-500/30 rounded-xl text-xs font-mono uppercase tracking-widest transition-all cursor-pointer flex items-center gap-2 shrink-0 shadow-md group"
+          >
+            <span>[ Connect Storefront ]</span>
+            <ArrowUpRight className="w-3.5 h-3.5 text-zinc-400 group-hover:text-emerald-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+          </button>
+        </FoundationInteractionWrapper>
       </div>
 
       {/* Control Utility Bar (Search & Filter triggers) */}
@@ -491,36 +513,39 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({
         {/* Subtab Pill Navigation */}
         <div className="flex gap-1.5 overflow-x-auto w-full md:w-auto no-scrollbar py-1">
           {['All', 'Creator Drops', 'New In', 'Brands', 'Sale'].map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveSubTab(tab as any)}
-              className={`px-4 py-2 rounded-xl text-xs font-sans font-semibold transition-all cursor-pointer whitespace-nowrap ${
-                activeSubTab === tab 
-                  ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400' 
-                  : 'bg-white/[0.02] border border-white/5 text-zinc-400 hover:text-white hover:bg-white/[0.05]'
-              }`}
-            >
-              {tab}
-            </button>
+            <FoundationInteractionWrapper key={tab} themeDNA={themeDNA}>
+              <button
+                onClick={() => setActiveSubTab(tab as any)}
+                className={`px-4 py-2 rounded-xl text-xs font-sans font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                  activeSubTab === tab 
+                    ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400' 
+                    : 'bg-white/[0.02] border border-white/5 text-zinc-400 hover:text-white hover:bg-white/[0.05]'
+                }`}
+              >
+                {tab}
+              </button>
+            </FoundationInteractionWrapper>
           ))}
         </div>
 
         {/* Filters Toggle Button */}
-        <button
-          onClick={() => setShowFilters(!showFilters)}
-          className={`px-4 py-2 rounded-xl text-xs font-mono uppercase tracking-wider flex items-center gap-2 border transition-all cursor-pointer ${
-            showFilters || selectedCategory !== 'All' || selectedStoreType !== 'All' || priceRange < 300
-              ? 'border-emerald-500/30 bg-emerald-500/5 text-emerald-400 font-bold'
-              : 'border-white/5 bg-white/[0.02] text-zinc-400 hover:text-white'
-          }`}
-        >
-          <SlidersHorizontal className="w-4 h-4" />
-          <span>
-            [ Filters {((selectedCategory !== 'All' ? 1 : 0) + (selectedStoreType !== 'All' ? 1 : 0)) > 0 
-              ? `· ${((selectedCategory !== 'All' ? 1 : 0) + (selectedStoreType !== 'All' ? 1 : 0))}` 
-              : ''} ]
-          </span>
-        </button>
+        <FoundationInteractionWrapper themeDNA={themeDNA}>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={`px-4 py-2 rounded-xl text-xs font-mono uppercase tracking-wider flex items-center gap-2 border transition-all cursor-pointer ${
+              showFilters || selectedCategory !== 'All' || selectedStoreType !== 'All' || priceRange < 300
+                ? 'border-emerald-500/30 bg-emerald-500/5 text-emerald-400 font-bold'
+                : 'border-white/5 bg-white/[0.02] text-zinc-400 hover:text-white'
+            }`}
+          >
+            <SlidersHorizontal className="w-4 h-4" />
+            <span>
+              [ Filters {((selectedCategory !== 'All' ? 1 : 0) + (selectedStoreType !== 'All' ? 1 : 0)) > 0 
+                ? `· ${((selectedCategory !== 'All' ? 1 : 0) + (selectedStoreType !== 'All' ? 1 : 0))}` 
+                : ''} ]
+            </span>
+          </button>
+        </FoundationInteractionWrapper>
 
       </div>
 
@@ -540,17 +565,18 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({
                 <span className="text-[10px] font-mono uppercase text-zinc-500 tracking-wider block">Classification Filter</span>
                 <div className="flex flex-wrap gap-2">
                   {['All', 'Casual', 'Formal', 'Outerwear', 'Sportswear', 'Accessories'].map(cat => (
-                    <button
-                      key={cat}
-                      onClick={() => setSelectedCategory(cat)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all cursor-pointer ${
-                        selectedCategory === cat 
-                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' 
-                          : 'bg-zinc-950/40 border border-white/[0.03] text-zinc-400 hover:text-white hover:bg-white/[0.03]'
-                      }`}
-                    >
-                      {cat}
-                    </button>
+                    <FoundationInteractionWrapper key={cat} themeDNA={themeDNA}>
+                      <button
+                        onClick={() => setSelectedCategory(cat)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all cursor-pointer ${
+                          selectedCategory === cat 
+                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' 
+                            : 'bg-zinc-950/40 border border-white/[0.03] text-zinc-400 hover:text-white hover:bg-white/[0.03]'
+                        }`}
+                      >
+                        {cat}
+                      </button>
+                    </FoundationInteractionWrapper>
                   ))}
                 </div>
               </div>
@@ -565,17 +591,18 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({
                     { id: 'ONLINE_STORE', label: 'Online Stores' },
                     { id: 'HYBRID_BRAND', label: 'Hybrid Brands' }
                   ].map(storeOpt => (
-                    <button
-                      key={storeOpt.id}
-                      onClick={() => setSelectedStoreType(storeOpt.id)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all cursor-pointer ${
-                        selectedStoreType === storeOpt.id 
-                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' 
-                          : 'bg-zinc-950/40 border border-white/[0.03] text-zinc-400 hover:text-white hover:bg-white/[0.03]'
-                      }`}
-                    >
-                      {storeOpt.label}
-                    </button>
+                    <FoundationInteractionWrapper key={storeOpt.id} themeDNA={themeDNA}>
+                      <button
+                        onClick={() => setSelectedStoreType(storeOpt.id)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all cursor-pointer ${
+                          selectedStoreType === storeOpt.id 
+                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' 
+                            : 'bg-zinc-950/40 border border-white/[0.03] text-zinc-400 hover:text-white hover:bg-white/[0.03]'
+                        }`}
+                      >
+                        {storeOpt.label}
+                      </button>
+                    </FoundationInteractionWrapper>
                   ))}
                 </div>
               </div>
@@ -622,46 +649,47 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {CREATOR_CAPSULES.map((cap, idx) => (
-              <div
-                key={idx}
-                onClick={() => setSelectedCreatorCapsule(cap)}
-                className="group relative aspect-[16/10] rounded-2xl overflow-hidden border border-white/5 hover:border-violet-500/30 transition-all cursor-pointer bg-zinc-950 p-4 flex flex-col justify-between shadow-xl"
-              >
-                <img src={cap.featuredImage || null}
-                  alt={cap.title}
-                  className="absolute inset-0 w-full h-full object-cover opacity-35 group-hover:scale-105 transition-transform duration-700"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#07070c] via-[#07070c]/50 to-transparent" />
+              <FoundationInteractionWrapper key={idx} themeDNA={themeDNA}>
+                <div
+                  onClick={() => setSelectedCreatorCapsule(cap)}
+                  className="group relative aspect-[16/10] rounded-2xl overflow-hidden border border-white/5 hover:border-violet-500/30 transition-all cursor-pointer bg-zinc-950 p-4 flex flex-col justify-between shadow-xl"
+                >
+                  <img src={cap.featuredImage || null}
+                    alt={cap.title}
+                    className="absolute inset-0 w-full h-full object-cover opacity-35 group-hover:scale-105 transition-transform duration-700"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#07070c] via-[#07070c]/50 to-transparent" />
 
-                <div className="relative z-10 flex justify-between items-start">
-                  <div className="flex items-center gap-2">
-                    <img src={cap.avatar || null}
-                      alt={cap.creatorName}
-                      className="w-7 h-7 rounded-full object-cover border border-white/20"
-                    />
-                    <div>
-                      <span className="text-[10px] font-bold text-white block leading-tight">{cap.creatorName}</span>
-                      <span className="text-[8px] font-mono text-violet-300 block">{cap.creatorHandle}</span>
+                  <div className="relative z-10 flex justify-between items-start">
+                    <div className="flex items-center gap-2">
+                      <img src={cap.avatar || null}
+                        alt={cap.creatorName}
+                        className="w-7 h-7 rounded-full object-cover border border-white/20"
+                      />
+                      <div>
+                        <span className="text-[10px] font-bold text-white block leading-tight">{cap.creatorName}</span>
+                        <span className="text-[8px] font-mono text-violet-300 block">{cap.creatorHandle}</span>
+                      </div>
                     </div>
-                  </div>
-                  <span className="text-[8px] font-mono bg-violet-500/20 text-violet-300 border border-violet-500/30 px-2 py-0.5 rounded-md font-bold">
-                    {cap.royaltyShare}
-                  </span>
-                </div>
-
-                <div className="relative z-10 space-y-1">
-                  <h4 className="font-serif text-sm font-semibold text-white group-hover:text-violet-200 transition-colors">
-                    {cap.title}
-                  </h4>
-                  <p className="text-[10px] text-zinc-400 font-light line-clamp-1">{cap.tagline}</p>
-                  <div className="pt-2 flex items-center justify-between text-[9px] font-mono text-violet-300">
-                    <span>[ {cap.itemCount} Exclusive Pieces ]</span>
-                    <span className="flex items-center gap-1 font-bold group-hover:translate-x-1 transition-transform">
-                      Explore Drop <ArrowRight className="w-3 h-3" />
+                    <span className="text-[8px] font-mono bg-violet-500/20 text-violet-300 border border-violet-500/30 px-2 py-0.5 rounded-md font-bold">
+                      {cap.royaltyShare}
                     </span>
                   </div>
+
+                  <div className="relative z-10 space-y-1">
+                    <h4 className="font-serif text-sm font-semibold text-white group-hover:text-violet-200 transition-colors">
+                      {cap.title}
+                    </h4>
+                    <p className="text-[10px] text-zinc-400 font-light line-clamp-1">{cap.tagline}</p>
+                    <div className="pt-2 flex items-center justify-between text-[9px] font-mono text-violet-300">
+                      <span>[ {cap.itemCount} Exclusive Pieces ]</span>
+                      <span className="flex items-center gap-1 font-bold group-hover:translate-x-1 transition-transform">
+                        Explore Drop <ArrowRight className="w-3 h-3" />
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              </FoundationInteractionWrapper>
             ))}
           </div>
         </div>
@@ -674,135 +702,144 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({
             <span className="text-zinc-600 text-3xl block">◇</span>
             <h3 className="font-serif text-lg text-zinc-400">No Listings Matched Your Filters</h3>
             <p className="text-xs text-zinc-600 max-w-xs mx-auto">Try refining your filter ranges or reset active tags.</p>
-            <button
-              onClick={() => {
-                setSearchQuery('');
-                setActiveSubTab('All');
-                setSelectedCategory('All');
-                setPriceRange(300);
-              }}
-              className="px-4 py-2 mt-4 text-[10px] font-mono uppercase bg-white/5 border border-white/10 hover:border-white/30 rounded-lg cursor-pointer transition-colors"
-            >
-              [ Clear All Filters ]
-            </button>
+            <FoundationInteractionWrapper themeDNA={themeDNA}>
+              <button
+                onClick={() => {
+                  setSearchQuery('');
+                  setActiveSubTab('All');
+                  setSelectedCategory('All');
+                  setPriceRange(300);
+                }}
+                className="px-4 py-2 mt-4 text-[10px] font-mono uppercase bg-white/5 border border-white/10 hover:border-white/30 rounded-lg cursor-pointer transition-colors"
+              >
+                [ Clear All Filters ]
+              </button>
+            </FoundationInteractionWrapper>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 pb-12">
             {filteredProducts.map((product) => (
-              <div
-                key={product.id}
-                onClick={() => onSelectProduct(product)}
-                className="group flex flex-col justify-between bg-[#08080f]/40 border border-white/5 rounded-2xl overflow-hidden hover:border-emerald-500/20 hover:scale-[1.01] duration-300 transition-all cursor-pointer shadow-2xl relative"
-              >
-                {/* Visual Cover Artwork */}
-                <div className="relative aspect-[4/5] bg-[#09090f] overflow-hidden">
-                  <img src={product.imageUrl || null}
-                    alt={product.title}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-104 grayscale-[30%] group-hover:grayscale-0"
-                    onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1544441893-675973e31985?q=80&w=200&auto=format&fit=crop"; }}
-                    referrerPolicy="no-referrer"
-                  />
+              <FoundationInteractionWrapper key={product.id} themeDNA={themeDNA}>
+                <div
+                  onClick={() => onSelectProduct(product)}
+                  className="group flex flex-col justify-between bg-[#08080f]/40 border border-white/5 rounded-2xl overflow-hidden hover:border-emerald-500/20 hover:scale-[1.01] duration-300 transition-all cursor-pointer shadow-2xl relative"
+                >
+                  {/* Visual Cover Artwork */}
+                  <div className="relative aspect-[4/5] bg-[#09090f] overflow-hidden">
+                    <img src={product.imageUrl || null}
+                      alt={product.title}
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-104 grayscale-[30%] group-hover:grayscale-0"
+                      onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1544441893-675973e31985?q=80&w=200&auto=format&fit=crop"; }}
+                      referrerPolicy="no-referrer"
+                    />
 
-                  {/* Promo Badge overlay */}
-                  {product.discount && (
-                    <div className="absolute top-4 left-4">
-                      <span className="text-[8.5px] font-mono font-bold uppercase tracking-wider bg-rose-600 text-white px-2.5 py-1 rounded-lg border border-rose-500/20 shadow-md">
-                        {product.discount}
+                    {/* Promo Badge overlay */}
+                    {product.discount && (
+                      <div className="absolute top-4 left-4">
+                        <span className="text-[8.5px] font-mono font-bold uppercase tracking-wider bg-rose-600 text-white px-2.5 py-1 rounded-lg border border-rose-500/20 shadow-md">
+                          {product.discount}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Like/Favorite Toggle */}
+                    <FoundationInteractionWrapper themeDNA={themeDNA}>
+                      <button
+                        onClick={(e) => toggleLike(product.id, e)}
+                        className="absolute top-4 right-4 p-2 bg-black/60 backdrop-blur-md hover:bg-rose-500/20 text-white hover:text-rose-400 border border-white/10 rounded-full transition-all cursor-pointer"
+                      >
+                        <Heart className={`w-3.5 h-3.5 ${likedMap[product.id] ? 'fill-rose-500 text-rose-500' : ''}`} />
+                      </button>
+                    </FoundationInteractionWrapper>
+
+                    {/* High coherence matching score indicator */}
+                    <div className="absolute bottom-4 left-4">
+                      <span className="text-[8px] font-mono bg-violet-600/90 text-white font-bold px-2 py-1 rounded border border-violet-500/10">
+                        ★ AI Match 94%
                       </span>
                     </div>
-                  )}
-
-                  {/* Like/Favorite Toggle */}
-                  <button
-                    onClick={(e) => toggleLike(product.id, e)}
-                    className="absolute top-4 right-4 p-2 bg-black/60 backdrop-blur-md hover:bg-rose-500/20 text-white hover:text-rose-400 border border-white/10 rounded-full transition-all cursor-pointer"
-                  >
-                    <Heart className={`w-3.5 h-3.5 ${likedMap[product.id] ? 'fill-rose-500 text-rose-500' : ''}`} />
-                  </button>
-
-                  {/* High coherence matching score indicator */}
-                  <div className="absolute bottom-4 left-4">
-                    <span className="text-[8px] font-mono bg-violet-600/90 text-white font-bold px-2 py-1 rounded border border-violet-500/10">
-                      ★ AI Match 94%
-                    </span>
                   </div>
-                </div>
 
-                {/* Info and action panel */}
-                <div className="p-4 space-y-3 text-left">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-[9px] font-mono font-bold text-emerald-400 uppercase tracking-widest block">
-                        {product.brand}
-                      </span>
-                      <span className="text-[7.5px] px-1.5 py-0.5 rounded font-mono font-bold tracking-wider uppercase bg-white/5 border border-white/5 text-zinc-400">
-                        {product.storeType === 'LOCAL_BOUTIQUE' && 'Local Boutique'}
-                        {product.storeType === 'ONLINE_STORE' && 'Online Store'}
-                        {product.storeType === 'HYBRID_BRAND' && 'Hybrid Brand'}
-                        {!product.storeType && 'Curated Showroom'}
-                      </span>
-                    </div>
-                    
-                    <h4 className="text-sm text-white font-semibold mt-1 truncate group-hover:text-emerald-300 transition-colors">
-                      {product.title}
-                    </h4>
+                  {/* Info and action panel */}
+                  <div className="p-4 space-y-3 text-left">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-[9px] font-mono font-bold text-emerald-400 uppercase tracking-widest block">
+                          {product.brand}
+                        </span>
+                        <span className="text-[7.5px] px-1.5 py-0.5 rounded font-mono font-bold tracking-wider uppercase bg-white/5 border border-white/5 text-zinc-400">
+                          {product.storeType === 'LOCAL_BOUTIQUE' && 'Local Boutique'}
+                          {product.storeType === 'ONLINE_STORE' && 'Online Store'}
+                          {product.storeType === 'HYBRID_BRAND' && 'Hybrid Brand'}
+                          {!product.storeType && 'Curated Showroom'}
+                        </span>
+                      </div>
+                      
+                      <h4 className="text-sm text-white font-semibold mt-1 truncate group-hover:text-emerald-300 transition-colors">
+                        {product.title}
+                      </h4>
 
-                    {product.shopLocation && (
-                      <span className="text-[9.5px] font-mono text-zinc-500 block mt-0.5">
-                        📍 {product.shopLocation}
-                      </span>
-                    )}
-                    {product.storeType === 'ONLINE_STORE' && (product.instagramUrl || product.whatsAppNumber || product.websiteLink) && (
-                      <span className="text-[9.5px] font-mono text-violet-400/80 block mt-0.5">
-                        🌐 Social / Online
-                      </span>
-                    )}
-                    
-                    <div className="mt-2 flex items-center gap-2">
-                      <span className="text-white font-sans font-bold text-sm">${product.price}</span>
-                      {product.originalPrice && (
-                        <span className="text-zinc-500 line-through font-mono text-[11px]">${product.originalPrice}</span>
+                      {product.shopLocation && (
+                        <span className="text-[9.5px] font-mono text-zinc-500 block mt-0.5">
+                          📍 {product.shopLocation}
+                        </span>
                       )}
+                      {product.storeType === 'ONLINE_STORE' && (product.instagramUrl || product.whatsAppNumber || product.websiteLink) && (
+                        <span className="text-[9.5px] font-mono text-violet-400/80 block mt-0.5">
+                          🌐 Social / Online
+                        </span>
+                      )}
+                      
+                      <div className="mt-2 flex items-center gap-2">
+                        <span className="text-white font-sans font-bold text-sm">${product.price}</span>
+                        {product.originalPrice && (
+                          <span className="text-zinc-500 line-through font-mono text-[11px]">${product.originalPrice}</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center pt-2 border-t border-white/[0.04]">
+                      <div className="flex items-center gap-1 text-[10px] text-zinc-400 font-mono">
+                        <span className="text-amber-400">★</span>
+                        <span>{product.rating}</span>
+                        <span className="text-zinc-600">({product.reviews})</span>
+                      </div>
+
+                      {/* Quick CTAs: Virtual Try-On and Add to Closet */}
+                      <div className="flex items-center gap-1.5">
+                        <FoundationInteractionWrapper themeDNA={themeDNA}>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (onNavigateToTab) {
+                                onNavigateToTab('VIRTUAL_TRYON');
+                              } else {
+                                window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: 'Navigating to Virtual Fitting Room...' }));
+                              }
+                            }}
+                            className="px-2.5 py-1 rounded-xl bg-violet-500/10 hover:bg-violet-500/20 text-violet-300 border border-violet-500/20 text-[9px] font-mono uppercase tracking-wider flex items-center gap-1 transition-all cursor-pointer"
+                            title="Instant Virtual Fitting"
+                          >
+                            <Sparkles className="w-3 h-3 text-violet-400" />
+                            <span>Try On</span>
+                          </button>
+                        </FoundationInteractionWrapper>
+
+                        <FoundationInteractionWrapper themeDNA={themeDNA}>
+                          <button
+                            onClick={(e) => handleAcquire(product, e)}
+                            className="w-8 h-8 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black flex items-center justify-center cursor-pointer transition-all hover:scale-105 active:scale-90 shadow-md shadow-emerald-950/20"
+                            title="Acquire Garment to Closet"
+                          >
+                            <ShoppingBag className="w-3.5 h-3.5 text-black font-bold" />
+                          </button>
+                        </FoundationInteractionWrapper>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="flex justify-between items-center pt-2 border-t border-white/[0.04]">
-                    <div className="flex items-center gap-1 text-[10px] text-zinc-400 font-mono">
-                      <span className="text-amber-400">★</span>
-                      <span>{product.rating}</span>
-                      <span className="text-zinc-600">({product.reviews})</span>
-                    </div>
-
-                    {/* Quick CTAs: Virtual Try-On and Add to Closet */}
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (onNavigateToTab) {
-                            onNavigateToTab('VIRTUAL_TRYON');
-                          } else {
-                            window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: 'Navigating to Virtual Fitting Room...' }));
-                          }
-                        }}
-                        className="px-2.5 py-1 rounded-xl bg-violet-500/10 hover:bg-violet-500/20 text-violet-300 border border-violet-500/20 text-[9px] font-mono uppercase tracking-wider flex items-center gap-1 transition-all cursor-pointer"
-                        title="Instant Virtual Fitting"
-                      >
-                        <Sparkles className="w-3 h-3 text-violet-400" />
-                        <span>Try On</span>
-                      </button>
-
-                      <button
-                        onClick={(e) => handleAcquire(product, e)}
-                        className="w-8 h-8 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black flex items-center justify-center cursor-pointer transition-all hover:scale-105 active:scale-90 shadow-md shadow-emerald-950/20"
-                        title="Acquire Garment to Closet"
-                      >
-                        <ShoppingBag className="w-3.5 h-3.5 text-black font-bold" />
-                      </button>
-                    </div>
-                  </div>
                 </div>
-
-              </div>
+              </FoundationInteractionWrapper>
             ))}
           </div>
         )}
@@ -837,12 +874,14 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({
                   </h2>
                   <p className="text-[9px] font-mono uppercase tracking-widest text-emerald-400 mt-0.5">Real-time Order Ledger</p>
                 </div>
-                <button 
-                  onClick={() => setIsOrdersOpen(false)}
-                  className="text-white/40 hover:text-white font-mono text-[10px] uppercase font-bold cursor-pointer bg-white/5 px-3 py-1.5 rounded-lg border border-white/10"
-                >
-                  [ Close ]
-                </button>
+                <FoundationInteractionWrapper themeDNA={themeDNA}>
+                  <button 
+                    onClick={() => setIsOrdersOpen(false)}
+                    className="text-white/40 hover:text-white font-mono text-[10px] uppercase font-bold cursor-pointer bg-white/5 px-3 py-1.5 rounded-lg border border-white/10"
+                  >
+                    [ Close ]
+                  </button>
+                </FoundationInteractionWrapper>
               </div>
 
               {/* Scrollable Orders Contents */}
@@ -928,31 +967,35 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({
                           </div>
 
                           <div className="flex gap-2 pt-1 border-t border-white/[0.03]">
-                            <button
-                              onClick={() => setSelectedEmailLog(ord)}
-                              className="flex-1 py-2 bg-emerald-500/10 hover:bg-emerald-500/15 text-emerald-400 hover:text-emerald-300 rounded-lg text-[9.5px] font-mono uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 border border-emerald-500/20"
-                            >
-                              <Mail className="w-3 h-3" />
-                              <span>[ View Gmail Dispatch ]</span>
-                            </button>
-                            <button
-                              onClick={async () => {
-                                if (confirm("Cancel this reservation contract?")) {
-                                  try {
-                                    await deleteDoc(doc(db, 'orders', ord.id));
-                                    window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
-                                      detail: `Cancelled reservation of ${ord.productTitle}.`
-                                    }));
-                                  } catch (err) {
-                                    console.error(err);
+                            <FoundationInteractionWrapper themeDNA={themeDNA}>
+                              <button
+                                onClick={() => setSelectedEmailLog(ord)}
+                                className="flex-1 py-2 bg-emerald-500/10 hover:bg-emerald-500/15 text-emerald-400 hover:text-emerald-300 rounded-lg text-[9.5px] font-mono uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 border border-emerald-500/20"
+                              >
+                                <Mail className="w-3 h-3" />
+                                <span>[ View Gmail Dispatch ]</span>
+                              </button>
+                            </FoundationInteractionWrapper>
+                            <FoundationInteractionWrapper themeDNA={themeDNA}>
+                              <button
+                                onClick={async () => {
+                                  if (confirm("Cancel this reservation contract?")) {
+                                    try {
+                                      await deleteDoc(doc(db, 'orders', ord.id));
+                                      window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
+                                        detail: `Cancelled reservation of ${ord.productTitle}.`
+                                      }));
+                                    } catch (err) {
+                                      console.error(err);
+                                    }
                                   }
-                                }
-                              }}
-                              className="px-3 py-2 bg-rose-500/10 hover:bg-rose-500/15 text-rose-400 hover:text-rose-300 rounded-lg text-[9.5px] font-mono uppercase tracking-wider transition-all cursor-pointer border border-rose-500/20"
-                              title="Cancel Reservation"
-                            >
-                              <X className="w-3 h-3" />
-                            </button>
+                                }}
+                                className="px-3 py-2 bg-rose-500/10 hover:bg-rose-500/15 text-rose-400 hover:text-rose-300 rounded-lg text-[9.5px] font-mono uppercase tracking-wider transition-all cursor-pointer border border-rose-500/20"
+                                title="Cancel Reservation"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </FoundationInteractionWrapper>
                           </div>
                         </div>
                       </div>
@@ -991,12 +1034,14 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({
                     Google Workspace - Dispatch Notice Viewer
                   </span>
                 </div>
-                <button
-                  onClick={() => setSelectedEmailLog(null)}
-                  className="text-zinc-500 hover:text-white font-mono text-xs uppercase"
-                >
-                  [ Dismiss ]
-                </button>
+                <FoundationInteractionWrapper themeDNA={themeDNA}>
+                  <button
+                    onClick={() => setSelectedEmailLog(null)}
+                    className="text-zinc-500 hover:text-white font-mono text-xs uppercase cursor-pointer"
+                  >
+                    [ Dismiss ]
+                  </button>
+                </FoundationInteractionWrapper>
               </div>
 
               {/* Email Metainfo Block */}
@@ -1066,12 +1111,14 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({
 
               {/* Modal Footer Controls */}
               <div className="bg-[#0e0e18] p-4 border-t border-white/5 flex justify-end">
-                <button
-                  onClick={() => setSelectedEmailLog(null)}
-                  className="px-5 py-2.5 bg-white text-black font-mono text-xs uppercase tracking-widest hover:bg-zinc-200 rounded-xl font-bold cursor-pointer"
-                >
-                  [ Close Log ]
-                </button>
+                <FoundationInteractionWrapper themeDNA={themeDNA}>
+                  <button
+                    onClick={() => setSelectedEmailLog(null)}
+                    className="px-5 py-2.5 bg-white text-black font-mono text-xs uppercase tracking-widest hover:bg-zinc-200 rounded-xl font-bold cursor-pointer"
+                  >
+                    [ Close Log ]
+                  </button>
+                </FoundationInteractionWrapper>
               </div>
             </motion.div>
           </div>
@@ -1107,12 +1154,14 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({
                     Saved Favorites & Side-by-Side Comparison Engine
                   </p>
                 </div>
-                <button 
-                  onClick={() => setIsWishlistOpen(false)}
-                  className="text-white/40 hover:text-white font-mono text-[10px] uppercase font-bold cursor-pointer bg-white/5 px-3 py-1.5 rounded-lg border border-white/10"
-                >
-                  [ Close ]
-                </button>
+                <FoundationInteractionWrapper themeDNA={themeDNA}>
+                  <button 
+                    onClick={() => setIsWishlistOpen(false)}
+                    className="text-white/40 hover:text-white font-mono text-[10px] uppercase font-bold cursor-pointer bg-white/5 px-3 py-1.5 rounded-lg border border-white/10"
+                  >
+                    [ Close ]
+                  </button>
+                </FoundationInteractionWrapper>
               </div>
 
               {/* Scrollable Content */}
@@ -1127,12 +1176,14 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({
                         Comparing {comparedProductIds.length}/2 Garments
                       </span>
                     </div>
-                    <button
-                      onClick={() => setComparedProductIds([])}
-                      className="text-[9px] font-mono text-zinc-400 hover:text-white uppercase"
-                    >
-                      Clear Selection
-                    </button>
+                    <FoundationInteractionWrapper themeDNA={themeDNA}>
+                      <button
+                        onClick={() => setComparedProductIds([])}
+                        className="text-[9px] font-mono text-zinc-400 hover:text-white uppercase cursor-pointer"
+                      >
+                        Clear Selection
+                      </button>
+                    </FoundationInteractionWrapper>
                   </div>
                 )}
 
@@ -1168,12 +1219,14 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({
                               <p><span className="text-zinc-500">Rating:</span> ★ {item.rating}</p>
                               <p><span className="text-zinc-500">AI Compatibility:</span> <span className="text-emerald-400 font-bold">94% Match</span></p>
                             </div>
-                            <button
-                              onClick={(e) => handleAcquire(item, e)}
-                              className="w-full py-2 bg-emerald-500 hover:bg-emerald-400 text-black text-[9px] font-mono uppercase font-bold rounded-lg transition-all"
-                            >
-                              Acquire {idx === 0 ? 'Item A' : 'Item B'}
-                            </button>
+                            <FoundationInteractionWrapper themeDNA={themeDNA}>
+                              <button
+                                onClick={(e) => handleAcquire(item, e)}
+                                className="w-full py-2 bg-emerald-500 hover:bg-emerald-400 text-black text-[9px] font-mono uppercase font-bold rounded-lg transition-all cursor-pointer"
+                              >
+                                Acquire {idx === 0 ? 'Item A' : 'Item B'}
+                              </button>
+                            </FoundationInteractionWrapper>
                           </div>
                         ))}
                       </div>
@@ -1227,31 +1280,35 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({
                           </div>
 
                           <div className="flex flex-col gap-1.5 shrink-0">
-                            <button
-                              onClick={() => {
-                                if (comparedProductIds.includes(p.id)) {
-                                  setComparedProductIds(comparedProductIds.filter(id => id !== p.id));
-                                } else if (comparedProductIds.length < 2) {
-                                  setComparedProductIds([...comparedProductIds, p.id]);
-                                } else {
-                                  setComparedProductIds([comparedProductIds[1], p.id]);
-                                }
-                              }}
-                              className={`px-2 py-1 rounded text-[8px] font-mono uppercase tracking-wider border transition-all cursor-pointer ${
-                                comparedProductIds.includes(p.id)
-                                  ? 'bg-violet-500 text-white border-violet-400'
-                                  : 'bg-white/5 text-zinc-400 border-white/10 hover:text-white'
-                              }`}
-                            >
-                              {comparedProductIds.includes(p.id) ? 'Comparing' : '+ Compare'}
-                            </button>
+                            <FoundationInteractionWrapper themeDNA={themeDNA}>
+                              <button
+                                onClick={() => {
+                                  if (comparedProductIds.includes(p.id)) {
+                                    setComparedProductIds(comparedProductIds.filter(id => id !== p.id));
+                                  } else if (comparedProductIds.length < 2) {
+                                    setComparedProductIds([...comparedProductIds, p.id]);
+                                  } else {
+                                    setComparedProductIds([comparedProductIds[1], p.id]);
+                                  }
+                                }}
+                                className={`px-2 py-1 rounded text-[8px] font-mono uppercase tracking-wider border transition-all cursor-pointer ${
+                                  comparedProductIds.includes(p.id)
+                                    ? 'bg-violet-500 text-white border-violet-400'
+                                    : 'bg-white/5 text-zinc-400 border-white/10 hover:text-white'
+                                }`}
+                              >
+                                {comparedProductIds.includes(p.id) ? 'Comparing' : '+ Compare'}
+                              </button>
+                            </FoundationInteractionWrapper>
 
-                            <button
-                              onClick={(e) => handleAcquire(p, e)}
-                              className="px-2 py-1 bg-emerald-500 hover:bg-emerald-400 text-black rounded text-[8px] font-mono uppercase font-bold transition-all cursor-pointer"
-                            >
-                              Acquire
-                            </button>
+                            <FoundationInteractionWrapper themeDNA={themeDNA}>
+                              <button
+                                onClick={(e) => handleAcquire(p, e)}
+                                className="px-2 py-1 bg-emerald-500 hover:bg-emerald-400 text-black rounded text-[8px] font-mono uppercase font-bold transition-all cursor-pointer"
+                              >
+                                Acquire
+                              </button>
+                            </FoundationInteractionWrapper>
                           </div>
                         </div>
                       ))}
@@ -1285,12 +1342,14 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({
                   className="w-full h-full object-cover opacity-60"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0b0b12] via-[#0b0b12]/40 to-transparent" />
-                <button
-                  onClick={() => setSelectedCreatorCapsule(null)}
-                  className="absolute top-4 right-4 p-2 bg-black/60 hover:bg-black border border-white/10 rounded-full text-zinc-400 hover:text-white transition-all cursor-pointer z-10"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+                <FoundationInteractionWrapper themeDNA={themeDNA}>
+                  <button
+                    onClick={() => setSelectedCreatorCapsule(null)}
+                    className="absolute top-4 right-4 p-2 bg-black/60 hover:bg-black border border-white/10 rounded-full text-zinc-400 hover:text-white transition-all cursor-pointer z-10"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </FoundationInteractionWrapper>
               </div>
 
               {/* Creator Metainfo */}
@@ -1334,12 +1393,14 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({
                           <div className="space-y-1 flex-1 min-w-0">
                             <h5 className="text-xs font-semibold text-white truncate">{p.title}</h5>
                             <p className="text-xs font-bold text-emerald-400">${p.price}</p>
-                            <button
-                              onClick={(e) => handleAcquire(p, e)}
-                              className="px-2.5 py-1 bg-emerald-500 hover:bg-emerald-400 text-black text-[8px] font-mono uppercase font-bold rounded-md transition-all cursor-pointer"
-                            >
-                              Acquire Piece
-                            </button>
+                            <FoundationInteractionWrapper themeDNA={themeDNA}>
+                              <button
+                                onClick={(e) => handleAcquire(p, e)}
+                                className="px-2.5 py-1 bg-emerald-500 hover:bg-emerald-400 text-black text-[8px] font-mono uppercase font-bold rounded-md transition-all cursor-pointer"
+                              >
+                                Acquire Piece
+                              </button>
+                            </FoundationInteractionWrapper>
                           </div>
                         </div>
                       ))}
@@ -1352,4 +1413,14 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({
       </AnimatePresence>
     </div>
   );
+
+  if (coatDNA) {
+    return (
+      <ThemeCoatRenderer coatDNA={coatDNA}>
+        {renderContent()}
+      </ThemeCoatRenderer>
+    );
+  }
+
+  return renderContent();
 };

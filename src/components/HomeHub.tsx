@@ -22,6 +22,11 @@ import {
   PersonalFashionIdentity
 } from '../features/global/AIStyleHubV17Architecture';
 import { WardrobeItem } from '../types';
+import { 
+  useThemeIntelligence, 
+  ThemeCoatRenderer, 
+  FoundationInteractionWrapper 
+} from '../engine';
 
 interface HomeHubProps {
   wardrobe: WardrobeItem[];
@@ -39,6 +44,17 @@ export const HomeHub: React.FC<HomeHubProps> = ({
   onAddGarment,
   onDeleteGarment
 }) => {
+  let themeCtx: ReturnType<typeof useThemeIntelligence> | null = null;
+  try {
+    themeCtx = useThemeIntelligence();
+  } catch {
+    themeCtx = null;
+  }
+
+  const themeDNA = themeCtx?.themeDNA;
+  const coatDNA = themeCtx?.coatDNA;
+  const sequenceId = themeCtx?.sequenceId;
+
   // Main Navigation Tabs
   const [activeTab, setActiveTab] = useState<'FEED_STORIES' | 'SEARCH_DISCOVER' | 'MY_WORLD' | 'STYLE_DNA'>('FEED_STORIES');
 
@@ -402,7 +418,7 @@ export const HomeHub: React.FC<HomeHubProps> = ({
       ? 'w-full max-w-7xl mx-auto space-y-8 pb-20 px-6 sm:px-8 text-left font-sans'
       : 'w-full max-w-6xl mx-auto space-y-6 sm:space-y-8 pb-20 px-3 sm:px-6 text-left font-sans';
 
-  return (
+  const renderContent = () => (
     <div className={containerResponsiveClasses}>
       
       {/* VIEW MODE RESPONISVE TOGGLE BAR */}
@@ -410,39 +426,50 @@ export const HomeHub: React.FC<HomeHubProps> = ({
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-amber-400" />
           <span className="text-zinc-200 font-semibold uppercase tracking-wider text-[11px]">HomeHub Auto-Adaptive Layout</span>
+          {sequenceId && (
+            <span className="text-[9px] font-mono text-zinc-600 bg-white/5 px-2 py-0.5 rounded-full border border-white/5 hidden lg:inline-block">
+              SEQ: {sequenceId.substring(0, 10)}...
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-1 bg-black/40 p-1 rounded-xl border border-white/5">
-          <button
-            type="button"
-            onClick={() => setViewMode('AUTO')}
-            className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-              viewMode === 'AUTO' ? 'bg-violet-600 text-white font-bold' : 'text-zinc-400 hover:text-white'
-            }`}
-          >
-            <Compass className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Auto Adjust</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode('MOBILE')}
-            className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-              viewMode === 'MOBILE' ? 'bg-violet-600 text-white font-bold' : 'text-zinc-400 hover:text-white'
-            }`}
-          >
-            <Smartphone className="w-3.5 h-3.5 text-amber-300" />
-            <span>Mobile</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode('DESKTOP')}
-            className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-              viewMode === 'DESKTOP' ? 'bg-violet-600 text-white font-bold' : 'text-zinc-400 hover:text-white'
-            }`}
-          >
-            <Monitor className="w-3.5 h-3.5 text-cyan-300" />
-            <span className="hidden sm:inline">Full View</span>
-          </button>
+          <FoundationInteractionWrapper themeDNA={themeDNA}>
+            <button
+              type="button"
+              onClick={() => setViewMode('AUTO')}
+              className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                viewMode === 'AUTO' ? 'bg-violet-600 text-white font-bold' : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              <Compass className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Auto Adjust</span>
+            </button>
+          </FoundationInteractionWrapper>
+          <FoundationInteractionWrapper themeDNA={themeDNA}>
+            <button
+              type="button"
+              onClick={() => setViewMode('MOBILE')}
+              className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                viewMode === 'MOBILE' ? 'bg-violet-600 text-white font-bold' : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              <Smartphone className="w-3.5 h-3.5 text-amber-300" />
+              <span>Mobile</span>
+            </button>
+          </FoundationInteractionWrapper>
+          <FoundationInteractionWrapper themeDNA={themeDNA}>
+            <button
+              type="button"
+              onClick={() => setViewMode('DESKTOP')}
+              className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                viewMode === 'DESKTOP' ? 'bg-violet-600 text-white font-bold' : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              <Monitor className="w-3.5 h-3.5 text-cyan-300" />
+              <span className="hidden sm:inline">Full View</span>
+            </button>
+          </FoundationInteractionWrapper>
         </div>
       </div>
 
@@ -468,14 +495,16 @@ export const HomeHub: React.FC<HomeHubProps> = ({
                 alt="Profile Avatar"
                 className="w-20 h-20 sm:w-28 sm:h-28 rounded-2xl object-cover border-4 border-[#07070c] shadow-2xl bg-zinc-900 mx-auto sm:mx-0"
               />
-              <button
-                type="button"
-                onClick={() => setIsCreateStoryOpen(true)}
-                title="Add Story with Camera or Memories"
-                className="absolute -bottom-1 -right-1 p-2 bg-violet-600 text-white rounded-xl border-2 border-[#07070c] hover:bg-violet-500 transition-all cursor-pointer shadow-lg"
-              >
-                <Camera className="w-3.5 h-3.5" />
-              </button>
+              <FoundationInteractionWrapper themeDNA={themeDNA}>
+                <button
+                  type="button"
+                  onClick={() => setIsCreateStoryOpen(true)}
+                  title="Add Story with Camera or Memories"
+                  className="absolute -bottom-1 -right-1 p-2 bg-violet-600 text-white rounded-xl border-2 border-[#07070c] hover:bg-violet-500 transition-all cursor-pointer shadow-lg"
+                >
+                  <Camera className="w-3.5 h-3.5" />
+                </button>
+              </FoundationInteractionWrapper>
             </div>
 
             {/* Name & Bio */}
@@ -497,22 +526,26 @@ export const HomeHub: React.FC<HomeHubProps> = ({
 
           {/* Quick Action Buttons */}
           <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto justify-center">
-            <button
-              type="button"
-              onClick={() => setIsCreateStoryOpen(true)}
-              className="flex-1 sm:flex-none px-4 py-2.5 bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 text-amber-200 text-xs font-mono rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 min-h-[44px]"
-            >
-              <Camera className="w-4 h-4 text-amber-400" />
-              <span>+ Add Story</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsCreatePostOpen(true)}
-              className="flex-1 sm:flex-none px-4 py-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-xs font-mono font-medium rounded-xl transition-all cursor-pointer shadow-lg shadow-violet-950/40 flex items-center justify-center gap-2 min-h-[44px]"
-            >
-              <Plus className="w-4 h-4" />
-              <span>+ New Post</span>
-            </button>
+            <FoundationInteractionWrapper themeDNA={themeDNA}>
+              <button
+                type="button"
+                onClick={() => setIsCreateStoryOpen(true)}
+                className="flex-1 sm:flex-none px-4 py-2.5 bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 text-amber-200 text-xs font-mono rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 min-h-[44px]"
+              >
+                <Camera className="w-4 h-4 text-amber-400" />
+                <span>+ Add Story</span>
+              </button>
+            </FoundationInteractionWrapper>
+            <FoundationInteractionWrapper themeDNA={themeDNA}>
+              <button
+                type="button"
+                onClick={() => setIsCreatePostOpen(true)}
+                className="flex-1 sm:flex-none px-4 py-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-xs font-mono font-medium rounded-xl transition-all cursor-pointer shadow-lg shadow-violet-950/40 flex items-center justify-center gap-2 min-h-[44px]"
+              >
+                <Plus className="w-4 h-4" />
+                <span>+ New Post</span>
+              </button>
+            </FoundationInteractionWrapper>
           </div>
         </div>
 
@@ -557,19 +590,20 @@ export const HomeHub: React.FC<HomeHubProps> = ({
         ].map(tab => {
           const isSel = activeTab === tab.id;
           return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`px-4 sm:px-5 py-3 rounded-2xl text-xs font-mono font-medium transition-all cursor-pointer whitespace-nowrap text-left shrink-0 min-h-[44px] ${
-                isSel
-                  ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-950/40 border border-violet-400/30'
-                  : 'bg-white/[0.02] border border-white/5 text-zinc-400 hover:text-white hover:bg-white/[0.05]'
-              }`}
-            >
-              <span className="block font-semibold">{tab.label}</span>
-              <span className="block text-[9px] font-mono opacity-70 mt-0.5">{tab.desc}</span>
-            </button>
+            <FoundationInteractionWrapper key={tab.id} themeDNA={themeDNA}>
+              <button
+                type="button"
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`px-4 sm:px-5 py-3 rounded-2xl text-xs font-mono font-medium transition-all cursor-pointer whitespace-nowrap text-left shrink-0 min-h-[44px] ${
+                  isSel
+                    ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-950/40 border border-violet-400/30'
+                    : 'bg-white/[0.02] border border-white/5 text-zinc-400 hover:text-white hover:bg-white/[0.05]'
+                }`}
+              >
+                <span className="block font-semibold">{tab.label}</span>
+                <span className="block text-[9px] font-mono opacity-70 mt-0.5">{tab.desc}</span>
+              </button>
+            </FoundationInteractionWrapper>
           );
         })}
       </div>
@@ -598,46 +632,49 @@ export const HomeHub: React.FC<HomeHubProps> = ({
 
               <div className="flex items-center gap-3 sm:gap-4 overflow-x-auto pb-2 scrollbar-none pt-1">
                 {/* Create Story Circle */}
-                <button
-                  type="button"
-                  onClick={() => setIsCreateStoryOpen(true)}
-                  className="flex flex-col items-center gap-1.5 shrink-0 group cursor-pointer"
-                >
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-violet-600 to-indigo-600 p-0.5 shadow-lg group-hover:scale-105 transition-all">
-                    <div className="w-full h-full bg-[#07070c] rounded-[14px] flex flex-col items-center justify-center text-violet-300">
-                      <Plus className="w-5 h-5" />
+                <FoundationInteractionWrapper themeDNA={themeDNA}>
+                  <button
+                    type="button"
+                    onClick={() => setIsCreateStoryOpen(true)}
+                    className="flex flex-col items-center gap-1.5 shrink-0 group cursor-pointer"
+                  >
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-violet-600 to-indigo-600 p-0.5 shadow-lg group-hover:scale-105 transition-all">
+                      <div className="w-full h-full bg-[#07070c] rounded-[14px] flex flex-col items-center justify-center text-violet-300">
+                        <Plus className="w-5 h-5" />
+                      </div>
                     </div>
-                  </div>
-                  <span className="text-[10px] font-mono text-zinc-400 group-hover:text-white">Add Story</span>
-                </button>
+                    <span className="text-[10px] font-mono text-zinc-400 group-hover:text-white">Add Story</span>
+                  </button>
+                </FoundationInteractionWrapper>
 
                 {/* Published Stories */}
                 {stories.map(story => {
                   const isVideo = story.imageUrl.endsWith('.mp4') || story.imageUrl.includes('video');
                   return (
-                    <button
-                      key={story.id}
-                      type="button"
-                      onClick={() => setSelectedStory(story)}
-                      className="flex flex-col items-center gap-1.5 shrink-0 group cursor-pointer relative"
-                    >
-                      <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-amber-400 via-rose-500 to-violet-600 p-0.5 shadow-lg group-hover:scale-105 transition-all overflow-hidden relative">
-                        {isVideo ? (
-                          <div className="w-full h-full bg-zinc-900 rounded-[14px] flex items-center justify-center relative overflow-hidden">
-                            <video src={story.imageUrl || null} className="w-full h-full object-cover" muted />
-                            <Video className="w-4 h-4 text-white absolute inset-0 m-auto drop-shadow-md" />
-                          </div>
-                        ) : (
-                          <img src={story.imageUrl || null}
-                            alt="Story"
-                            className="w-full h-full object-cover rounded-[14px]"
-                          />
-                        )}
-                      </div>
-                      <span className="text-[10px] font-mono text-zinc-300 truncate max-w-[70px]">
-                        {story.authorName.split(' ')[0]}
-                      </span>
-                    </button>
+                    <FoundationInteractionWrapper key={story.id} themeDNA={themeDNA}>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedStory(story)}
+                        className="flex flex-col items-center gap-1.5 shrink-0 group cursor-pointer relative"
+                      >
+                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-amber-400 via-rose-500 to-violet-600 p-0.5 shadow-lg group-hover:scale-105 transition-all overflow-hidden relative">
+                          {isVideo ? (
+                            <div className="w-full h-full bg-zinc-900 rounded-[14px] flex items-center justify-center relative overflow-hidden">
+                              <video src={story.imageUrl || null} className="w-full h-full object-cover" muted />
+                              <Video className="w-4 h-4 text-white absolute inset-0 m-auto drop-shadow-md" />
+                            </div>
+                          ) : (
+                            <img src={story.imageUrl || null}
+                              alt="Story"
+                              className="w-full h-full object-cover rounded-[14px]"
+                            />
+                          )}
+                        </div>
+                        <span className="text-[10px] font-mono text-zinc-300 truncate max-w-[70px]">
+                          {story.authorName.split(' ')[0]}
+                        </span>
+                      </button>
+                    </FoundationInteractionWrapper>
                   );
                 })}
               </div>
@@ -651,37 +688,43 @@ export const HomeHub: React.FC<HomeHubProps> = ({
                   alt="Avatar"
                   className="w-10 h-10 rounded-xl object-cover border border-white/10 shrink-0"
                 />
-                <button
-                  type="button"
-                  onClick={() => setIsCreatePostOpen(true)}
-                  className="flex-1 px-4 py-3 bg-white/[0.03] border border-white/10 rounded-2xl text-left text-xs font-mono text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.05] transition-all cursor-pointer flex items-center justify-between min-h-[44px]"
-                >
-                  <span className="truncate">Share a story, fashion update, or style post...</span>
-                  <Send className="w-3.5 h-3.5 text-violet-400 shrink-0 ml-2" />
-                </button>
+                <FoundationInteractionWrapper themeDNA={themeDNA}>
+                  <button
+                    type="button"
+                    onClick={() => setIsCreatePostOpen(true)}
+                    className="flex-1 px-4 py-3 bg-white/[0.03] border border-white/10 rounded-2xl text-left text-xs font-mono text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.05] transition-all cursor-pointer flex items-center justify-between min-h-[44px]"
+                  >
+                    <span className="truncate">Share a story, fashion update, or style post...</span>
+                    <Send className="w-3.5 h-3.5 text-violet-400 shrink-0 ml-2" />
+                  </button>
+                </FoundationInteractionWrapper>
               </div>
 
               <div className="flex items-center justify-between pt-2 border-t border-white/5 text-xs font-mono text-zinc-400 flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsCreatePostOpen(true)}
-                  className="flex items-center gap-2 px-3 py-1.5 hover:bg-white/5 rounded-xl transition-all cursor-pointer"
-                >
-                  <ImageIcon className="w-4 h-4 text-emerald-400" />
-                  <span>Upload Image/Video</span>
-                </button>
+                <FoundationInteractionWrapper themeDNA={themeDNA}>
+                  <button
+                    type="button"
+                    onClick={() => setIsCreatePostOpen(true)}
+                    className="flex items-center gap-2 px-3 py-1.5 hover:bg-white/5 rounded-xl transition-all cursor-pointer"
+                  >
+                    <ImageIcon className="w-4 h-4 text-emerald-400" />
+                    <span>Upload Image/Video</span>
+                  </button>
+                </FoundationInteractionWrapper>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveTab('MY_WORLD');
-                    setMyWorldSubTab('IMPORT_MEMORY');
-                  }}
-                  className="flex items-center gap-2 px-3 py-1.5 hover:bg-white/5 rounded-xl transition-all cursor-pointer text-violet-300"
-                >
-                  <Wand2 className="w-4 h-4 text-violet-400" />
-                  <span>Import Memory (Give Name)</span>
-                </button>
+                <FoundationInteractionWrapper themeDNA={themeDNA}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('MY_WORLD');
+                      setMyWorldSubTab('IMPORT_MEMORY');
+                    }}
+                    className="flex items-center gap-2 px-3 py-1.5 hover:bg-white/5 rounded-xl transition-all cursor-pointer text-violet-300"
+                  >
+                    <Wand2 className="w-4 h-4 text-violet-400" />
+                    <span>Import Memory (Give Name)</span>
+                  </button>
+                </FoundationInteractionWrapper>
               </div>
             </div>
 
@@ -702,13 +745,15 @@ export const HomeHub: React.FC<HomeHubProps> = ({
                   <p className="text-xs text-zinc-400 font-light max-w-sm mx-auto">
                     Create your first post or import an anonymous fashion creation to build your personal fashion timeline!
                   </p>
-                  <button
-                    type="button"
-                    onClick={() => setIsCreatePostOpen(true)}
-                    className="px-4 py-2 bg-violet-600 text-white text-xs font-mono rounded-xl cursor-pointer hover:bg-violet-500"
-                  >
-                    + Create First Post
-                  </button>
+                  <FoundationInteractionWrapper themeDNA={themeDNA}>
+                    <button
+                      type="button"
+                      onClick={() => setIsCreatePostOpen(true)}
+                      className="px-4 py-2 bg-violet-600 text-white text-xs font-mono rounded-xl cursor-pointer hover:bg-violet-500"
+                    >
+                      + Create First Post
+                    </button>
+                  </FoundationInteractionWrapper>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 gap-6">
@@ -738,14 +783,16 @@ export const HomeHub: React.FC<HomeHubProps> = ({
                         </div>
 
                         {/* Save to Closet button */}
-                        <button
-                          type="button"
-                          onClick={() => handleSaveOtherUserAsset(post.title, post.imageUrl, 'outerwear')}
-                          className="px-3 py-1.5 bg-violet-500/10 border border-violet-500/30 hover:bg-violet-500/20 text-violet-200 rounded-xl text-[10px] font-mono flex items-center gap-1 cursor-pointer"
-                        >
-                          <Save className="w-3.5 h-3.5 text-amber-300" />
-                          <span className="hidden sm:inline">Save to Closet</span>
-                        </button>
+                        <FoundationInteractionWrapper themeDNA={themeDNA}>
+                          <button
+                            type="button"
+                            onClick={() => handleSaveOtherUserAsset(post.title, post.imageUrl, 'outerwear')}
+                            className="px-3 py-1.5 bg-violet-500/10 border border-violet-500/30 hover:bg-violet-500/20 text-violet-200 rounded-xl text-[10px] font-mono flex items-center gap-1 cursor-pointer"
+                          >
+                            <Save className="w-3.5 h-3.5 text-amber-300" />
+                            <span className="hidden sm:inline">Save to Closet</span>
+                          </button>
+                        </FoundationInteractionWrapper>
                       </div>
 
                       {/* Title & Caption */}
@@ -781,29 +828,33 @@ export const HomeHub: React.FC<HomeHubProps> = ({
 
                       {/* Post Actions Footer */}
                       <div className="flex items-center justify-between pt-3 border-t border-white/5 text-xs font-mono text-zinc-400">
-                        <button
-                          type="button"
-                          onClick={() => handleTogglePostLike(post.id)}
-                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
-                            post.isLiked ? 'text-rose-400 bg-rose-500/10 border border-rose-500/20' : 'hover:bg-white/5 text-zinc-400'
-                          }`}
-                        >
-                          <Heart className={`w-4 h-4 ${post.isLiked ? 'fill-current text-rose-400' : ''}`} />
-                          <span>{post.likesCount}</span>
-                        </button>
+                        <FoundationInteractionWrapper themeDNA={themeDNA}>
+                          <button
+                            type="button"
+                            onClick={() => handleTogglePostLike(post.id)}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
+                              post.isLiked ? 'text-rose-400 bg-rose-500/10 border border-rose-500/20' : 'hover:bg-white/5 text-zinc-400'
+                            }`}
+                          >
+                            <Heart className={`w-4 h-4 ${post.isLiked ? 'fill-current text-rose-400' : ''}`} />
+                            <span>{post.likesCount}</span>
+                          </button>
+                        </FoundationInteractionWrapper>
 
-                        <button
-                          type="button"
-                          onClick={() => {
-                            window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
-                              detail: '✦ Link copied to share post!'
-                            }));
-                          }}
-                          className="flex items-center gap-1.5 px-3 py-1.5 hover:bg-white/5 rounded-xl transition-all cursor-pointer"
-                        >
-                          <Share2 className="w-4 h-4 text-violet-400" />
-                          <span>Share</span>
-                        </button>
+                        <FoundationInteractionWrapper themeDNA={themeDNA}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
+                                detail: '✦ Link copied to share post!'
+                              }));
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 hover:bg-white/5 rounded-xl transition-all cursor-pointer"
+                          >
+                            <Share2 className="w-4 h-4 text-violet-400" />
+                            <span>Share</span>
+                          </button>
+                        </FoundationInteractionWrapper>
                       </div>
                     </div>
                   ))}
@@ -854,13 +905,15 @@ export const HomeHub: React.FC<HomeHubProps> = ({
                   className="w-full bg-white/[0.03] border border-white/10 rounded-2xl pl-11 pr-10 py-3.5 text-xs font-mono text-white placeholder-zinc-500 focus:outline-none focus:border-violet-500/50 transition-all shadow-inner"
                 />
                 {searchQuery && (
-                  <button
-                    type="button"
-                    onClick={() => setSearchQuery('')}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white cursor-pointer"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
+                  <FoundationInteractionWrapper themeDNA={themeDNA}>
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </FoundationInteractionWrapper>
                 )}
               </div>
 
@@ -875,19 +928,20 @@ export const HomeHub: React.FC<HomeHubProps> = ({
                   const isSel = searchCategory === cat.id;
                   const IconComp = cat.icon;
                   return (
-                    <button
-                      key={cat.id}
-                      type="button"
-                      onClick={() => setSearchCategory(cat.id as any)}
-                      className={`px-3.5 py-2 rounded-xl text-xs font-mono font-medium transition-all cursor-pointer flex items-center gap-2 shrink-0 ${
-                        isSel
-                          ? 'bg-violet-600 text-white shadow-lg shadow-violet-950/50 border border-violet-400/30'
-                          : 'bg-white/[0.02] border border-white/5 text-zinc-400 hover:text-white hover:bg-white/[0.05]'
-                      }`}
-                    >
-                      <IconComp className="w-3.5 h-3.5" />
-                      <span>{cat.label}</span>
-                    </button>
+                    <FoundationInteractionWrapper key={cat.id} themeDNA={themeDNA}>
+                      <button
+                        type="button"
+                        onClick={() => setSearchCategory(cat.id as any)}
+                        className={`px-3.5 py-2 rounded-xl text-xs font-mono font-medium transition-all cursor-pointer flex items-center gap-2 shrink-0 ${
+                          isSel
+                            ? 'bg-violet-600 text-white shadow-lg shadow-violet-950/50 border border-violet-400/30'
+                            : 'bg-white/[0.02] border border-white/5 text-zinc-400 hover:text-white hover:bg-white/[0.05]'
+                        }`}
+                      >
+                        <IconComp className="w-3.5 h-3.5" />
+                        <span>{cat.label}</span>
+                      </button>
+                    </FoundationInteractionWrapper>
                   );
                 })}
               </div>
@@ -922,21 +976,25 @@ export const HomeHub: React.FC<HomeHubProps> = ({
                       </div>
 
                       <div className="flex items-center gap-1.5 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => handleAcceptFriendRequest(req.id)}
-                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-[10px] font-mono flex items-center gap-1 cursor-pointer shadow-md"
-                        >
-                          <Check className="w-3 h-3" />
-                          <span>Accept</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDeclineFriendRequest(req.id)}
-                          className="px-2.5 py-1.5 bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white rounded-xl text-[10px] font-mono cursor-pointer"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
+                        <FoundationInteractionWrapper themeDNA={themeDNA}>
+                          <button
+                            type="button"
+                            onClick={() => handleAcceptFriendRequest(req.id)}
+                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-[10px] font-mono flex items-center gap-1 cursor-pointer shadow-md"
+                          >
+                            <Check className="w-3 h-3" />
+                            <span>Accept</span>
+                          </button>
+                        </FoundationInteractionWrapper>
+                        <FoundationInteractionWrapper themeDNA={themeDNA}>
+                          <button
+                            type="button"
+                            onClick={() => handleDeclineFriendRequest(req.id)}
+                            className="px-2.5 py-1.5 bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white rounded-xl text-[10px] font-mono cursor-pointer"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </FoundationInteractionWrapper>
                       </div>
                     </div>
                   ))}
@@ -1043,13 +1101,15 @@ export const HomeHub: React.FC<HomeHubProps> = ({
                                   <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
                                   <span>Friends & Connected</span>
                                 </span>
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeclineFriendRequest(item.id)}
-                                  className="text-[10px] font-mono text-zinc-500 hover:text-rose-400 cursor-pointer"
-                                >
-                                  Remove Friend
-                                </button>
+                                <FoundationInteractionWrapper themeDNA={themeDNA}>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeclineFriendRequest(item.id)}
+                                    className="text-[10px] font-mono text-zinc-500 hover:text-rose-400 cursor-pointer"
+                                  >
+                                    Remove Friend
+                                  </button>
+                                </FoundationInteractionWrapper>
                               </div>
                             ) : item.friendRequestStatus === 'PENDING_SENT' ? (
                               <button
@@ -1062,50 +1122,58 @@ export const HomeHub: React.FC<HomeHubProps> = ({
                               </button>
                             ) : item.friendRequestStatus === 'PENDING_RECEIVED' ? (
                               <div className="w-full flex items-center gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() => handleAcceptFriendRequest(item.id)}
-                                  className="flex-1 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-md"
-                                >
-                                  <Check className="w-3.5 h-3.5" />
-                                  <span>Accept Friend</span>
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeclineFriendRequest(item.id)}
-                                  className="px-3 py-2 bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white text-xs font-mono rounded-xl cursor-pointer"
-                                >
-                                  Decline
-                                </button>
+                                <FoundationInteractionWrapper themeDNA={themeDNA}>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleAcceptFriendRequest(item.id)}
+                                    className="flex-1 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-md"
+                                  >
+                                    <Check className="w-3.5 h-3.5" />
+                                    <span>Accept Friend</span>
+                                  </button>
+                                </FoundationInteractionWrapper>
+                                <FoundationInteractionWrapper themeDNA={themeDNA}>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeclineFriendRequest(item.id)}
+                                    className="px-3 py-2 bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white text-xs font-mono rounded-xl cursor-pointer"
+                                  >
+                                    Decline
+                                  </button>
+                                </FoundationInteractionWrapper>
                               </div>
                             ) : (
-                              <button
-                                type="button"
-                                onClick={() => handleSendFriendRequest(item.id)}
-                                className="w-full px-4 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-xs font-mono rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-violet-950/40"
-                              >
-                                <UserPlus className="w-3.5 h-3.5" />
-                                <span>+ Add Friend</span>
-                              </button>
+                              <FoundationInteractionWrapper themeDNA={themeDNA}>
+                                <button
+                                  type="button"
+                                  onClick={() => handleSendFriendRequest(item.id)}
+                                  className="w-full px-4 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-xs font-mono rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-violet-950/40"
+                                >
+                                  <UserPlus className="w-3.5 h-3.5" />
+                                  <span>+ Add Friend</span>
+                                </button>
+                              </FoundationInteractionWrapper>
                             )}
                           </>
                         ) : (
-                          <button
-                            type="button"
-                            onClick={() => handleToggleJoinOrFollow(item.id)}
-                            className={`w-full px-4 py-2 rounded-xl text-xs font-mono transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                              item.isJoinedOrFollowing
-                                ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-300'
-                                : 'bg-white/5 border border-white/10 text-white hover:bg-white/10'
-                            }`}
-                          >
-                            <CheckCircle className={`w-3.5 h-3.5 ${item.isJoinedOrFollowing ? 'text-emerald-400' : 'text-zinc-400'}`} />
-                            <span>
-                              {item.isJoinedOrFollowing
-                                ? item.category === 'GROUPS' ? 'Joined Group ✓' : 'Following Page ✓'
-                                : item.category === 'GROUPS' ? '+ Join Group' : '+ Follow Page'}
-                            </span>
-                          </button>
+                          <FoundationInteractionWrapper themeDNA={themeDNA}>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleJoinOrFollow(item.id)}
+                              className={`w-full px-4 py-2 rounded-xl text-xs font-mono transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                                item.isJoinedOrFollowing
+                                  ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-300'
+                                  : 'bg-white/5 border border-white/10 text-white hover:bg-white/10'
+                              }`}
+                            >
+                              <CheckCircle className={`w-3.5 h-3.5 ${item.isJoinedOrFollowing ? 'text-emerald-400' : 'text-zinc-400'}`} />
+                              <span>
+                                {item.isJoinedOrFollowing
+                                  ? item.category === 'GROUPS' ? 'Joined Group ✓' : 'Following Page ✓'
+                                  : item.category === 'GROUPS' ? '+ Join Group' : '+ Follow Page'}
+                              </span>
+                            </button>
+                          </FoundationInteractionWrapper>
                         )}
                       </div>
                     </div>
@@ -1136,19 +1204,20 @@ export const HomeHub: React.FC<HomeHubProps> = ({
                 const Icon = st.icon;
                 const isSel = myWorldSubTab === st.id;
                 return (
-                  <button
-                    key={st.id}
-                    type="button"
-                    onClick={() => setMyWorldSubTab(st.id as any)}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-mono transition-all cursor-pointer whitespace-nowrap shrink-0 min-h-[44px] ${
-                      isSel
-                        ? 'bg-violet-600/30 border border-violet-500/40 text-violet-200 font-bold'
-                        : 'bg-white/[0.02] border border-white/5 text-zinc-400 hover:text-white'
-                    }`}
-                  >
-                    <Icon className="w-3.5 h-3.5 text-amber-400" />
-                    <span>{st.label}</span>
-                  </button>
+                  <FoundationInteractionWrapper key={st.id} themeDNA={themeDNA}>
+                    <button
+                      type="button"
+                      onClick={() => setMyWorldSubTab(st.id as any)}
+                      className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-mono transition-all cursor-pointer whitespace-nowrap shrink-0 min-h-[44px] ${
+                        isSel
+                          ? 'bg-violet-600/30 border border-violet-500/40 text-violet-200 font-bold'
+                          : 'bg-white/[0.02] border border-white/5 text-zinc-400 hover:text-white'
+                      }`}
+                    >
+                      <Icon className="w-3.5 h-3.5 text-amber-400" />
+                      <span>{st.label}</span>
+                    </button>
+                  </FoundationInteractionWrapper>
                 );
               })}
             </div>
@@ -1175,39 +1244,41 @@ export const HomeHub: React.FC<HomeHubProps> = ({
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const newPrivacy = !isClosetGloballyPrivate;
-                        setIsClosetGloballyPrivate(newPrivacy);
-                        try {
-                          localStorage.setItem('user_closet_globally_private', JSON.stringify(newPrivacy));
-                        } catch (e) {}
-                        window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
-                          detail: newPrivacy 
-                            ? "🔒 My Closet & World is now PRIVATE. Other users searching for your profile will see that your closet is Private."
-                            : "🌐 My Closet & World is now PUBLIC. Searchers & community members can view your saved fashion items!"
-                        }));
-                      }}
-                      className={`px-4 py-2 rounded-xl text-xs font-mono font-bold flex items-center gap-2 cursor-pointer transition-all border shadow-lg ${
-                        isClosetGloballyPrivate
-                          ? 'bg-zinc-900 border-amber-500/40 text-amber-300 hover:bg-zinc-800 hover:border-amber-400'
-                          : 'bg-emerald-950/80 border-emerald-500/50 text-emerald-200 hover:bg-emerald-900/90 hover:border-emerald-400'
-                      }`}
-                      title={isClosetGloballyPrivate ? "Click to set My Closet & World PUBLIC to Community" : "Click to set My Closet & World PRIVATE"}
-                    >
-                      {isClosetGloballyPrivate ? (
-                        <>
-                          <Lock className="w-3.5 h-3.5 text-amber-400" />
-                          <span>🔒 Make Closet Public</span>
-                        </>
-                      ) : (
-                        <>
-                          <Globe className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-                          <span>🌐 Make Closet Private</span>
-                        </>
-                      )}
-                    </button>
+                    <FoundationInteractionWrapper themeDNA={themeDNA}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newPrivacy = !isClosetGloballyPrivate;
+                          setIsClosetGloballyPrivate(newPrivacy);
+                          try {
+                            localStorage.setItem('user_closet_globally_private', JSON.stringify(newPrivacy));
+                          } catch (e) {}
+                          window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
+                            detail: newPrivacy 
+                              ? "🔒 My Closet & World is now PRIVATE. Other users searching for your profile will see that your closet is Private."
+                              : "🌐 My Closet & World is now PUBLIC. Searchers & community members can view your saved fashion items!"
+                          }));
+                        }}
+                        className={`px-4 py-2 rounded-xl text-xs font-mono font-bold flex items-center gap-2 cursor-pointer transition-all border shadow-lg ${
+                          isClosetGloballyPrivate
+                            ? 'bg-zinc-900 border-amber-500/40 text-amber-300 hover:bg-zinc-800 hover:border-amber-400'
+                            : 'bg-emerald-950/80 border-emerald-500/50 text-emerald-200 hover:bg-emerald-900/90 hover:border-emerald-400'
+                        }`}
+                        title={isClosetGloballyPrivate ? "Click to set My Closet & World PUBLIC to Community" : "Click to set My Closet & World PRIVATE"}
+                      >
+                        {isClosetGloballyPrivate ? (
+                          <>
+                            <Lock className="w-3.5 h-3.5 text-amber-400" />
+                            <span>🔒 Make Closet Public</span>
+                          </>
+                        ) : (
+                          <>
+                            <Globe className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+                            <span>🌐 Make Closet Private</span>
+                          </>
+                        )}
+                      </button>
+                    </FoundationInteractionWrapper>
                   </div>
                 </div>
 
@@ -1262,8 +1333,6 @@ export const HomeHub: React.FC<HomeHubProps> = ({
               </div>
             )}
 
-
-
             {/* SUB TAB 3: PERSONAL COLLECTIONS */}
             {myWorldSubTab === 'COLLECTIONS' && (
               <div className="space-y-4">
@@ -1272,14 +1341,16 @@ export const HomeHub: React.FC<HomeHubProps> = ({
                     <h3 className="font-serif text-base font-medium text-white">Personal Collections</h3>
                     <p className="text-xs text-zinc-400 font-light">Custom moodboards and lookbooks created in HomeHub.</p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setIsCreateCollectionOpen(true)}
-                    className="px-3.5 py-2 bg-violet-600 hover:bg-violet-500 text-white text-xs font-mono rounded-xl cursor-pointer flex items-center gap-1.5"
-                  >
-                    <FolderPlus className="w-3.5 h-3.5" />
-                    <span>+ New Collection</span>
-                  </button>
+                  <FoundationInteractionWrapper themeDNA={themeDNA}>
+                    <button
+                      type="button"
+                      onClick={() => setIsCreateCollectionOpen(true)}
+                      className="px-3.5 py-2 bg-violet-600 hover:bg-violet-500 text-white text-xs font-mono rounded-xl cursor-pointer flex items-center gap-1.5"
+                    >
+                      <FolderPlus className="w-3.5 h-3.5" />
+                      <span>+ New Collection</span>
+                    </button>
+                  </FoundationInteractionWrapper>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
@@ -1360,17 +1431,19 @@ export const HomeHub: React.FC<HomeHubProps> = ({
                             {draft.originModule}
                           </span>
                           <h4 className="font-serif text-xs font-medium text-white">{draft.titleSuggestion || 'Anonymous Visual Creation'}</h4>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedImportDraft(draft);
-                              setImportGivenTitle(draft.titleSuggestion || '');
-                            }}
-                            className="px-3 py-1.5 bg-violet-600 hover:bg-violet-500 text-white text-[11px] font-mono rounded-xl transition-all cursor-pointer flex items-center gap-1"
-                          >
-                            <span>Import & Give Name</span>
-                            <ArrowRight className="w-3 h-3" />
-                          </button>
+                          <FoundationInteractionWrapper themeDNA={themeDNA}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedImportDraft(draft);
+                                setImportGivenTitle(draft.titleSuggestion || '');
+                              }}
+                              className="px-3 py-1.5 bg-violet-600 hover:bg-violet-500 text-white text-[11px] font-mono rounded-xl transition-all cursor-pointer flex items-center gap-1"
+                            >
+                              <span>Import & Give Name</span>
+                              <ArrowRight className="w-3 h-3" />
+                            </button>
+                          </FoundationInteractionWrapper>
                         </div>
                       </div>
                     ))}
@@ -1423,18 +1496,19 @@ export const HomeHub: React.FC<HomeHubProps> = ({
                     'Boho Chic',
                     'Classic Sartorial'
                   ].map(arch => (
-                    <button
-                      key={arch}
-                      type="button"
-                      onClick={() => setDnaArchetype(arch)}
-                      className={`py-2.5 px-3 rounded-xl border text-left transition-all cursor-pointer ${
-                        dnaArchetype === arch
-                          ? 'bg-violet-600 border-violet-400 text-white font-bold shadow-lg'
-                          : 'bg-white/5 border-white/5 text-zinc-300 hover:bg-white/10'
-                      }`}
-                    >
-                      {arch}
-                    </button>
+                    <FoundationInteractionWrapper key={arch} themeDNA={themeDNA}>
+                      <button
+                        type="button"
+                        onClick={() => setDnaArchetype(arch)}
+                        className={`py-2.5 px-3 rounded-xl border text-left transition-all cursor-pointer w-full ${
+                          dnaArchetype === arch
+                            ? 'bg-violet-600 border-violet-400 text-white font-bold shadow-lg'
+                            : 'bg-white/5 border-white/5 text-zinc-300 hover:bg-white/10'
+                        }`}
+                      >
+                        {arch}
+                      </button>
+                    </FoundationInteractionWrapper>
                   ))}
                 </div>
               </div>
@@ -1452,18 +1526,19 @@ export const HomeHub: React.FC<HomeHubProps> = ({
                     'Jewel Tones (Emerald & Sapphire)',
                     'High-Contrast Neon Cyber Accents'
                   ].map(col => (
-                    <button
-                      key={col}
-                      type="button"
-                      onClick={() => setDnaColorPersonality(col)}
-                      className={`py-2.5 px-3 rounded-xl border text-left transition-all cursor-pointer ${
-                        dnaColorPersonality === col
-                          ? 'bg-indigo-600 border-indigo-400 text-white font-bold shadow-lg'
-                          : 'bg-white/5 border-white/5 text-zinc-300 hover:bg-white/10'
-                      }`}
-                    >
-                      {col}
-                    </button>
+                    <FoundationInteractionWrapper key={col} themeDNA={themeDNA}>
+                      <button
+                        type="button"
+                        onClick={() => setDnaColorPersonality(col)}
+                        className={`py-2.5 px-3 rounded-xl border text-left transition-all cursor-pointer w-full ${
+                          dnaColorPersonality === col
+                            ? 'bg-indigo-600 border-indigo-400 text-white font-bold shadow-lg'
+                            : 'bg-white/5 border-white/5 text-zinc-300 hover:bg-white/10'
+                        }`}
+                      >
+                        {col}
+                      </button>
+                    </FoundationInteractionWrapper>
                   ))}
                 </div>
               </div>
@@ -1486,25 +1561,26 @@ export const HomeHub: React.FC<HomeHubProps> = ({
                   ].map(st => {
                     const isSelected = selectedStyles.includes(st);
                     return (
-                      <button
-                        key={st}
-                        type="button"
-                        onClick={() => {
-                          if (isSelected) {
-                            setSelectedStyles(selectedStyles.filter(s => s !== st));
-                          } else {
-                            setSelectedStyles([...selectedStyles, st]);
-                          }
-                        }}
-                        className={`py-2 px-3 rounded-xl border transition-all cursor-pointer flex items-center gap-1.5 ${
-                          isSelected
-                            ? 'bg-emerald-600 border-emerald-400 text-white font-bold'
-                            : 'bg-white/5 border-white/5 text-zinc-400 hover:text-white'
-                        }`}
-                      >
-                        {isSelected && <Check className="w-3.5 h-3.5 text-amber-300" />}
-                        <span>{st}</span>
-                      </button>
+                      <FoundationInteractionWrapper key={st} themeDNA={themeDNA}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (isSelected) {
+                              setSelectedStyles(selectedStyles.filter(s => s !== st));
+                            } else {
+                              setSelectedStyles([...selectedStyles, st]);
+                            }
+                          }}
+                          className={`py-2 px-3 rounded-xl border transition-all cursor-pointer flex items-center gap-1.5 ${
+                            isSelected
+                              ? 'bg-emerald-600 border-emerald-400 text-white font-bold'
+                              : 'bg-white/5 border-white/5 text-zinc-400 hover:text-white'
+                          }`}
+                        >
+                          {isSelected && <Check className="w-3.5 h-3.5 text-amber-300" />}
+                          <span>{st}</span>
+                        </button>
+                      </FoundationInteractionWrapper>
                     );
                   })}
                 </div>
@@ -1581,14 +1657,16 @@ export const HomeHub: React.FC<HomeHubProps> = ({
 
               {/* SAVE DNA ACTION BUTTON */}
               <div className="pt-3 border-t border-white/10 flex justify-end">
-                <button
-                  type="button"
-                  onClick={handleSaveStyleDNA}
-                  className="w-full sm:w-auto px-6 py-3.5 bg-gradient-to-r from-violet-600 via-indigo-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white rounded-2xl font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer shadow-xl shadow-violet-950/50"
-                >
-                  <Save className="w-4 h-4 text-amber-300" />
-                  <span>Save Style DNA & Personalize Application</span>
-                </button>
+                <FoundationInteractionWrapper themeDNA={themeDNA}>
+                  <button
+                    type="button"
+                    onClick={handleSaveStyleDNA}
+                    className="w-full sm:w-auto px-6 py-3.5 bg-gradient-to-r from-violet-600 via-indigo-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white rounded-2xl font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer shadow-xl shadow-violet-950/50"
+                  >
+                    <Save className="w-4 h-4 text-amber-300" />
+                    <span>Save Style DNA & Personalize Application</span>
+                  </button>
+                </FoundationInteractionWrapper>
               </div>
 
             </div>
@@ -1634,31 +1712,37 @@ export const HomeHub: React.FC<HomeHubProps> = ({
                   <Camera className="w-4 h-4 text-amber-400" />
                   <span>Add Fashion Story</span>
                 </h3>
-                <button type="button" onClick={() => setIsCreateStoryOpen(false)} className="text-zinc-500 hover:text-white cursor-pointer">
-                  <X className="w-5 h-5" />
-                </button>
+                <FoundationInteractionWrapper themeDNA={themeDNA}>
+                  <button type="button" onClick={() => setIsCreateStoryOpen(false)} className="text-zinc-500 hover:text-white cursor-pointer">
+                    <X className="w-5 h-5" />
+                  </button>
+                </FoundationInteractionWrapper>
               </div>
 
               {/* Story Source Tabs */}
               <div className="flex items-center gap-1.5 p-1 bg-white/5 rounded-xl text-xs font-mono">
-                <button
-                  type="button"
-                  onClick={() => setStorySourceTab('CAMERA_FILE')}
-                  className={`flex-1 py-1.5 rounded-lg transition-all text-center cursor-pointer ${
-                    storySourceTab === 'CAMERA_FILE' ? 'bg-violet-600 text-white font-bold' : 'text-zinc-400'
-                  }`}
-                >
-                  📷 Camera / Upload
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setStorySourceTab('MEMORY_PICKER')}
-                  className={`flex-1 py-1.5 rounded-lg transition-all text-center cursor-pointer ${
-                    storySourceTab === 'MEMORY_PICKER' ? 'bg-violet-600 text-white font-bold' : 'text-zinc-400'
-                  }`}
-                >
-                  🔒 Select Memory
-                </button>
+                <FoundationInteractionWrapper themeDNA={themeDNA}>
+                  <button
+                    type="button"
+                    onClick={() => setStorySourceTab('CAMERA_FILE')}
+                    className={`flex-1 py-1.5 rounded-lg transition-all text-center cursor-pointer ${
+                      storySourceTab === 'CAMERA_FILE' ? 'bg-violet-600 text-white font-bold' : 'text-zinc-400'
+                    }`}
+                  >
+                    📷 Camera / Upload
+                  </button>
+                </FoundationInteractionWrapper>
+                <FoundationInteractionWrapper themeDNA={themeDNA}>
+                  <button
+                    type="button"
+                    onClick={() => setStorySourceTab('MEMORY_PICKER')}
+                    className={`flex-1 py-1.5 rounded-lg transition-all text-center cursor-pointer ${
+                      storySourceTab === 'MEMORY_PICKER' ? 'bg-violet-600 text-white font-bold' : 'text-zinc-400'
+                    }`}
+                  >
+                    🔒 Select Memory
+                  </button>
+                </FoundationInteractionWrapper>
               </div>
 
               {storySourceTab === 'CAMERA_FILE' && (
@@ -1671,15 +1755,17 @@ export const HomeHub: React.FC<HomeHubProps> = ({
                     onChange={handleCameraFileUpload}
                     className="hidden"
                   />
-                  <button
-                    type="button"
-                    onClick={() => cameraFileInputRef.current?.click()}
-                    className="w-full py-4 border-2 border-dashed border-violet-500/40 hover:border-violet-400 bg-violet-950/20 hover:bg-violet-950/30 rounded-2xl text-xs font-mono text-violet-200 flex flex-col items-center justify-center gap-2 transition-all cursor-pointer"
-                  >
-                    <Camera className="w-6 h-6 text-amber-400" />
-                    <span className="font-bold">Snap Camera Photo / Video or Select File</span>
-                    <span className="text-[10px] text-zinc-400 font-normal">Supports images and videos directly from device</span>
-                  </button>
+                  <FoundationInteractionWrapper themeDNA={themeDNA}>
+                    <button
+                      type="button"
+                      onClick={() => cameraFileInputRef.current?.click()}
+                      className="w-full py-4 border-2 border-dashed border-violet-500/40 hover:border-violet-400 bg-violet-950/20 hover:bg-violet-950/30 rounded-2xl text-xs font-mono text-violet-200 flex flex-col items-center justify-center gap-2 transition-all cursor-pointer"
+                    >
+                      <Camera className="w-6 h-6 text-amber-400" />
+                      <span className="font-bold">Snap Camera Photo / Video or Select File</span>
+                      <span className="text-[10px] text-zinc-400 font-normal">Supports images and videos directly from device</span>
+                    </button>
+                  </FoundationInteractionWrapper>
                 </div>
               )}
 
@@ -1688,16 +1774,17 @@ export const HomeHub: React.FC<HomeHubProps> = ({
                   <span className="text-[10px] font-mono text-zinc-400 uppercase block">Select from Personal Memories / Closet:</span>
                   <div className="grid grid-cols-3 gap-2 max-h-44 overflow-y-auto pr-1">
                     {wardrobe.map(item => (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => setStoryImageUrl(item.imageUrl)}
-                        className={`aspect-square rounded-xl overflow-hidden border transition-all cursor-pointer ${
-                          storyImageUrl === item.imageUrl ? 'border-amber-400 ring-2 ring-amber-400/50' : 'border-white/10 opacity-70 hover:opacity-100'
-                        }`}
-                      >
-                        <img src={item.imageUrl || null} alt={item.title} className="w-full h-full object-cover" />
-                      </button>
+                      <FoundationInteractionWrapper key={item.id} themeDNA={themeDNA}>
+                        <button
+                          type="button"
+                          onClick={() => setStoryImageUrl(item.imageUrl)}
+                          className={`aspect-square rounded-xl overflow-hidden border transition-all cursor-pointer w-full ${
+                            storyImageUrl === item.imageUrl ? 'border-amber-400 ring-2 ring-amber-400/50' : 'border-white/10 opacity-70 hover:opacity-100'
+                          }`}
+                        >
+                          <img src={item.imageUrl || null} alt={item.title} className="w-full h-full object-cover" />
+                        </button>
+                      </FoundationInteractionWrapper>
                     ))}
                   </div>
                 </div>
@@ -1741,19 +1828,23 @@ export const HomeHub: React.FC<HomeHubProps> = ({
                 </div>
 
                 <div className="flex items-center justify-end gap-3 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsCreateStoryOpen(false)}
-                    className="px-4 py-2 text-xs font-mono text-zinc-400 hover:text-white cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-400 hover:to-rose-400 text-white text-xs font-mono font-bold rounded-xl cursor-pointer shadow-lg"
-                  >
-                    Publish to Stories
-                  </button>
+                  <FoundationInteractionWrapper themeDNA={themeDNA}>
+                    <button
+                      type="button"
+                      onClick={() => setIsCreateStoryOpen(false)}
+                      className="px-4 py-2 text-xs font-mono text-zinc-400 hover:text-white cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </FoundationInteractionWrapper>
+                  <FoundationInteractionWrapper themeDNA={themeDNA}>
+                    <button
+                      type="submit"
+                      className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-400 hover:to-rose-400 text-white text-xs font-mono font-bold rounded-xl cursor-pointer shadow-lg"
+                    >
+                      Publish to Stories
+                    </button>
+                  </FoundationInteractionWrapper>
                 </div>
               </form>
             </motion.div>
@@ -1773,9 +1864,11 @@ export const HomeHub: React.FC<HomeHubProps> = ({
             >
               <div className="flex items-center justify-between border-b border-white/10 pb-3">
                 <h3 className="font-serif text-base font-medium text-white">Create HomeHub Post</h3>
-                <button type="button" onClick={() => setIsCreatePostOpen(false)} className="text-zinc-500 hover:text-white cursor-pointer">
-                  <X className="w-5 h-5" />
-                </button>
+                <FoundationInteractionWrapper themeDNA={themeDNA}>
+                  <button type="button" onClick={() => setIsCreatePostOpen(false)} className="text-zinc-500 hover:text-white cursor-pointer">
+                    <X className="w-5 h-5" />
+                  </button>
+                </FoundationInteractionWrapper>
               </div>
 
               <form onSubmit={handleCreatePost} className="space-y-4">
@@ -1802,14 +1895,16 @@ export const HomeHub: React.FC<HomeHubProps> = ({
                     className="hidden"
                   />
                   
-                  <button
-                    type="button"
-                    onClick={() => postFileInputRef.current?.click()}
-                    className="w-full py-3 border border-dashed border-violet-500/40 hover:border-violet-400 bg-violet-950/20 hover:bg-violet-950/30 rounded-xl text-xs font-mono text-violet-200 flex items-center justify-center gap-2 transition-all cursor-pointer"
-                  >
-                    <Upload className="w-4 h-4 text-violet-400" />
-                    <span>Upload Image or Video File from Device</span>
-                  </button>
+                  <FoundationInteractionWrapper themeDNA={themeDNA}>
+                    <button
+                      type="button"
+                      onClick={() => postFileInputRef.current?.click()}
+                      className="w-full py-3 border border-dashed border-violet-500/40 hover:border-violet-400 bg-violet-950/20 hover:bg-violet-950/30 rounded-xl text-xs font-mono text-violet-200 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                    >
+                      <Upload className="w-4 h-4 text-violet-400" />
+                      <span>Upload Image or Video File from Device</span>
+                    </button>
+                  </FoundationInteractionWrapper>
 
                   <input
                     type="url"
@@ -1853,27 +1948,29 @@ export const HomeHub: React.FC<HomeHubProps> = ({
                 </div>
 
                 <div className="flex items-center justify-end gap-3 pt-3">
-                  <button
-                    type="button"
-                    onClick={() => setIsCreatePostOpen(false)}
-                    className="px-4 py-2 text-xs font-mono text-zinc-400 hover:text-white cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-5 py-2.5 bg-violet-600 hover:bg-violet-500 text-white text-xs font-mono rounded-xl cursor-pointer shadow-lg font-bold"
-                  >
-                    Publish Post
-                  </button>
+                  <FoundationInteractionWrapper themeDNA={themeDNA}>
+                    <button
+                      type="button"
+                      onClick={() => setIsCreatePostOpen(false)}
+                      className="px-4 py-2 text-xs font-mono text-zinc-400 hover:text-white cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </FoundationInteractionWrapper>
+                  <FoundationInteractionWrapper themeDNA={themeDNA}>
+                    <button
+                      type="submit"
+                      className="px-5 py-2.5 bg-violet-600 hover:bg-violet-500 text-white text-xs font-mono rounded-xl cursor-pointer shadow-lg font-bold"
+                    >
+                      Publish Post
+                    </button>
+                  </FoundationInteractionWrapper>
                 </div>
               </form>
             </motion.div>
           </div>
         )}
       </AnimatePresence>
-
-
 
       {/* MODAL: "UPLOAD FOR GIVE YOUR NAME" IMPORT DRAFT */}
       <AnimatePresence>
@@ -1890,9 +1987,11 @@ export const HomeHub: React.FC<HomeHubProps> = ({
                   <Wand2 className="w-4 h-4 text-amber-400" />
                   <span>Upload For Give Your Name Protocol</span>
                 </h3>
-                <button type="button" onClick={() => setSelectedImportDraft(null)} className="text-zinc-500 hover:text-white cursor-pointer">
-                  <X className="w-5 h-5" />
-                </button>
+                <FoundationInteractionWrapper themeDNA={themeDNA}>
+                  <button type="button" onClick={() => setSelectedImportDraft(null)} className="text-zinc-500 hover:text-white cursor-pointer">
+                    <X className="w-5 h-5" />
+                  </button>
+                </FoundationInteractionWrapper>
               </div>
 
               <div className="flex gap-4 items-center p-3 bg-white/[0.02] border border-white/5 rounded-2xl">
@@ -1932,19 +2031,23 @@ export const HomeHub: React.FC<HomeHubProps> = ({
                 </div>
 
                 <div className="flex items-center justify-end gap-3 pt-3">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedImportDraft(null)}
-                    className="px-4 py-2 text-xs font-mono text-zinc-400 hover:text-white cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-5 py-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-xs font-mono rounded-xl cursor-pointer shadow-lg"
-                  >
-                    Import to HomeHub Feed
-                  </button>
+                  <FoundationInteractionWrapper themeDNA={themeDNA}>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedImportDraft(null)}
+                      className="px-4 py-2 text-xs font-mono text-zinc-400 hover:text-white cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </FoundationInteractionWrapper>
+                  <FoundationInteractionWrapper themeDNA={themeDNA}>
+                    <button
+                      type="submit"
+                      className="px-5 py-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-xs font-mono rounded-xl cursor-pointer shadow-lg"
+                    >
+                      Import to HomeHub Feed
+                    </button>
+                  </FoundationInteractionWrapper>
                 </div>
               </form>
             </motion.div>
@@ -1964,9 +2067,11 @@ export const HomeHub: React.FC<HomeHubProps> = ({
             >
               <div className="flex items-center justify-between border-b border-white/10 pb-3">
                 <h3 className="font-serif text-base font-medium text-white">Create Personal Collection</h3>
-                <button type="button" onClick={() => setIsCreateCollectionOpen(false)} className="text-zinc-500 hover:text-white cursor-pointer">
-                  <X className="w-5 h-5" />
-                </button>
+                <FoundationInteractionWrapper themeDNA={themeDNA}>
+                  <button type="button" onClick={() => setIsCreateCollectionOpen(false)} className="text-zinc-500 hover:text-white cursor-pointer">
+                    <X className="w-5 h-5" />
+                  </button>
+                </FoundationInteractionWrapper>
               </div>
 
               <form onSubmit={handleCreateCollection} className="space-y-4">
@@ -1994,19 +2099,23 @@ export const HomeHub: React.FC<HomeHubProps> = ({
                 </div>
 
                 <div className="flex items-center justify-end gap-3 pt-3">
-                  <button
-                    type="button"
-                    onClick={() => setIsCreateCollectionOpen(false)}
-                    className="px-4 py-2 text-xs font-mono text-zinc-400 hover:text-white cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-5 py-2.5 bg-violet-600 hover:bg-violet-500 text-white text-xs font-mono rounded-xl cursor-pointer shadow-lg"
-                  >
-                    Create Collection
-                  </button>
+                  <FoundationInteractionWrapper themeDNA={themeDNA}>
+                    <button
+                      type="button"
+                      onClick={() => setIsCreateCollectionOpen(false)}
+                      className="px-4 py-2 text-xs font-mono text-zinc-400 hover:text-white cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </FoundationInteractionWrapper>
+                  <FoundationInteractionWrapper themeDNA={themeDNA}>
+                    <button
+                      type="submit"
+                      className="px-5 py-2.5 bg-violet-600 hover:bg-violet-500 text-white text-xs font-mono rounded-xl cursor-pointer shadow-lg"
+                    >
+                      Create Collection
+                    </button>
+                  </FoundationInteractionWrapper>
                 </div>
               </form>
             </motion.div>
@@ -2024,13 +2133,15 @@ export const HomeHub: React.FC<HomeHubProps> = ({
               exit={{ opacity: 0, scale: 0.9 }}
               className="relative max-w-sm w-full bg-[#0c0c14] border border-white/10 rounded-3xl overflow-hidden shadow-2xl space-y-3"
             >
-              <button
-                type="button"
-                onClick={() => setSelectedStory(null)}
-                className="absolute top-4 right-4 z-20 p-2 bg-black/60 text-white rounded-full hover:bg-black cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <FoundationInteractionWrapper themeDNA={themeDNA}>
+                <button
+                  type="button"
+                  onClick={() => setSelectedStory(null)}
+                  className="absolute top-4 right-4 z-20 p-2 bg-black/60 text-white rounded-full hover:bg-black cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </FoundationInteractionWrapper>
 
               <div className="relative aspect-[9/16] w-full bg-zinc-950">
                 {selectedStory.imageUrl.endsWith('.mp4') || selectedStory.imageUrl.includes('video') ? (
@@ -2065,4 +2176,14 @@ export const HomeHub: React.FC<HomeHubProps> = ({
 
     </div>
   );
+
+  if (coatDNA) {
+    return (
+      <ThemeCoatRenderer coatDNA={coatDNA}>
+        {renderContent()}
+      </ThemeCoatRenderer>
+    );
+  }
+
+  return renderContent();
 };

@@ -2,6 +2,11 @@ import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Compass, Sparkles, Search, ArrowRight, Heart, Bookmark, Eye, Award, Layers, Flame, TrendingUp } from 'lucide-react';
 import { WardrobeItem } from '../../types';
+import { 
+  useThemeIntelligence, 
+  ThemeCoatRenderer, 
+  FoundationInteractionWrapper 
+} from '../../engine';
 
 interface DiscoverScreenProps {
   userWardrobe: WardrobeItem[];
@@ -47,6 +52,18 @@ export const DiscoverScreen: React.FC<DiscoverScreenProps> = ({
   onNavigateToTab,
   onAddGarment
 }) => {
+  // Connect to Theme Intelligence Engine
+  let themeCtx: ReturnType<typeof useThemeIntelligence> | null = null;
+  try {
+    themeCtx = useThemeIntelligence();
+  } catch {
+    themeCtx = null;
+  }
+
+  const themeDNA = themeCtx?.themeDNA;
+  const coatDNA = themeCtx?.coatDNA;
+  const sequenceId = themeCtx?.sequenceId;
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedVibe, setSelectedVibe] = useState<string>('all');
   const [likesMap, setLikesMap] = useState<Record<string, boolean>>({});
@@ -90,7 +107,6 @@ export const DiscoverScreen: React.FC<DiscoverScreenProps> = ({
     
     return userWardrobe.filter(item => {
       const titleLower = item.title.toLowerCase();
-      const descLower = item.description.toLowerCase();
 
       if (selectedVibe === 'minimalist') {
         return titleLower.includes('linen') || titleLower.includes('white') || titleLower.includes('ecru') || titleLower.includes('clean') || titleLower.includes('relaxed');
@@ -108,16 +124,23 @@ export const DiscoverScreen: React.FC<DiscoverScreenProps> = ({
     });
   }, [selectedVibe, userWardrobe]);
 
-  return (
+  const renderContent = () => (
     <div className="w-full min-h-screen bg-[#05050a] text-zinc-100 p-4 sm:p-6 lg:p-8 select-none">
       
       {/* Visual Title Header */}
       <div className="max-w-6xl mx-auto space-y-3 pb-8 border-b border-white/5 text-left">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
-            <span className="text-[10px] font-mono tracking-[0.25em] text-zinc-500 uppercase block font-light">
-              EDITORIAL DESIGN LIBRARY
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-mono tracking-[0.25em] text-zinc-500 uppercase block font-light">
+                EDITORIAL DESIGN LIBRARY
+              </span>
+              {sequenceId && (
+                <span className="text-[9px] font-mono text-zinc-600 bg-white/5 px-2 py-0.5 rounded-full border border-white/5 hidden lg:inline-block">
+                  SEQ: {sequenceId.substring(0, 10)}...
+                </span>
+              )}
+            </div>
             <h1 className="font-serif font-light tracking-tight text-4xl text-white flex items-center gap-2">
               <Compass className="w-8 h-8 text-violet-400 animate-spin-slow" /> Discover & Explore
             </h1>
@@ -125,26 +148,30 @@ export const DiscoverScreen: React.FC<DiscoverScreenProps> = ({
 
           {/* Tab Selection */}
           <div className="flex bg-white/[0.02] border border-white/5 p-1 rounded-xl">
-            <button
-              onClick={() => setActiveTab('editorials')}
-              className={`px-4 py-2 rounded-lg text-xs font-mono uppercase tracking-wider transition-all cursor-pointer ${
-                activeTab === 'editorials' 
-                  ? 'bg-violet-600 text-white font-bold' 
-                  : 'text-zinc-400 hover:text-white'
-              }`}
-            >
-              Lookbooks
-            </button>
-            <button
-              onClick={() => setActiveTab('matcher')}
-              className={`px-4 py-2 rounded-lg text-xs font-mono uppercase tracking-wider transition-all cursor-pointer ${
-                activeTab === 'matcher' 
-                  ? 'bg-violet-600 text-white font-bold' 
-                  : 'text-zinc-400 hover:text-white'
-              }`}
-            >
-              Aesthetic Matcher
-            </button>
+            <FoundationInteractionWrapper themeDNA={themeDNA}>
+              <button
+                onClick={() => setActiveTab('editorials')}
+                className={`px-4 py-2 rounded-lg text-xs font-mono uppercase tracking-wider transition-all cursor-pointer ${
+                  activeTab === 'editorials' 
+                    ? 'bg-violet-600 text-white font-bold' 
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                Lookbooks
+              </button>
+            </FoundationInteractionWrapper>
+            <FoundationInteractionWrapper themeDNA={themeDNA}>
+              <button
+                onClick={() => setActiveTab('matcher')}
+                className={`px-4 py-2 rounded-lg text-xs font-mono uppercase tracking-wider transition-all cursor-pointer ${
+                  activeTab === 'matcher' 
+                    ? 'bg-violet-600 text-white font-bold' 
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                Aesthetic Matcher
+              </button>
+            </FoundationInteractionWrapper>
           </div>
         </div>
         <p className="text-xs text-zinc-400 leading-relaxed max-w-xl font-light">
@@ -158,17 +185,18 @@ export const DiscoverScreen: React.FC<DiscoverScreenProps> = ({
         {/* Dynamic Vibe Selector Chips */}
         <div className="flex gap-2 overflow-x-auto w-full sm:w-auto no-scrollbar py-1">
           {VIBES.map((vibe) => (
-            <button
-              key={vibe.id}
-              onClick={() => setSelectedVibe(vibe.id)}
-              className={`px-4 py-2 rounded-xl text-xs font-sans font-semibold transition-all cursor-pointer whitespace-nowrap ${
-                selectedVibe === vibe.id 
-                  ? 'bg-[#1e153e] border border-violet-500/35 text-violet-300 shadow-md shadow-violet-950/25' 
-                  : 'bg-white/[0.02] border border-white/5 text-zinc-400 hover:text-white hover:bg-white/[0.05]'
-              }`}
-            >
-              {vibe.label}
-            </button>
+            <FoundationInteractionWrapper key={vibe.id} themeDNA={themeDNA}>
+              <button
+                onClick={() => setSelectedVibe(vibe.id)}
+                className={`px-4 py-2 rounded-xl text-xs font-sans font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                  selectedVibe === vibe.id 
+                    ? 'bg-[#1e153e] border border-violet-500/35 text-violet-300 shadow-md shadow-violet-950/25' 
+                    : 'bg-white/[0.02] border border-white/5 text-zinc-400 hover:text-white hover:bg-white/[0.05]'
+                }`}
+              >
+                {vibe.label}
+              </button>
+            </FoundationInteractionWrapper>
           ))}
         </div>
 
@@ -191,7 +219,7 @@ export const DiscoverScreen: React.FC<DiscoverScreenProps> = ({
         {activeTab === 'editorials' ? (
           
           /* SECTION 1: EDITORIAL LOOKBOOKS GRID */
-          filteredEditorialList(filteredEditorials, toggleLike, toggleBookmark, likesMap, bookmarksMap)
+          filteredEditorialList(filteredEditorials, toggleLike, toggleBookmark, likesMap, bookmarksMap, themeDNA)
 
         ) : (
           
@@ -222,33 +250,36 @@ export const DiscoverScreen: React.FC<DiscoverScreenProps> = ({
                 {matchedWardrobeItems.length === 0 ? (
                   <div className="py-16 text-center border border-dashed border-white/5 rounded-2xl bg-[#08080f]/45">
                     <p className="text-xs text-zinc-500 italic">No pieces in your archive match this specific theme yet.</p>
-                    <button
-                      onClick={() => onNavigateToTab?.('WARDROBE')}
-                      className="px-4 py-2 mt-4 text-[9px] font-mono uppercase tracking-widest bg-white/5 border border-white/10 hover:border-white/30 rounded-lg cursor-pointer transition-colors"
-                    >
-                      [ Add Pieces to Shelves ]
-                    </button>
+                    <FoundationInteractionWrapper themeDNA={themeDNA}>
+                      <button
+                        onClick={() => onNavigateToTab?.('WARDROBE')}
+                        className="px-4 py-2 mt-4 text-[9px] font-mono uppercase tracking-widest bg-white/5 border border-white/10 hover:border-white/30 rounded-lg cursor-pointer transition-colors"
+                      >
+                        [ Add Pieces to Shelves ]
+                      </button>
+                    </FoundationInteractionWrapper>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     {matchedWardrobeItems.map(item => (
-                      <div
-                        key={item.id}
-                        onClick={() => {
-                          window.dispatchEvent(new CustomEvent('lookvision_show_toast', { 
-                            detail: `Loaded wardrobe detail view for ${item.title}` 
-                          }));
-                        }}
-                        className="p-3 bg-white/[0.01] border border-white/5 rounded-2xl space-y-3 hover:border-violet-500/20 hover:scale-[1.01] transition-all duration-300 cursor-pointer text-left"
-                      >
-                        <div className="aspect-[4/5] overflow-hidden bg-neutral-900 rounded-xl">
-                          <img src={item.imageUrl || null} alt={item.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      <FoundationInteractionWrapper key={item.id} themeDNA={themeDNA}>
+                        <div
+                          onClick={() => {
+                            window.dispatchEvent(new CustomEvent('lookvision_show_toast', { 
+                              detail: `Loaded wardrobe detail view for ${item.title}` 
+                            }));
+                          }}
+                          className="p-3 bg-white/[0.01] border border-white/5 rounded-2xl space-y-3 hover:border-violet-500/20 hover:scale-[1.01] transition-all duration-300 cursor-pointer text-left h-full"
+                        >
+                          <div className="aspect-[4/5] overflow-hidden bg-neutral-900 rounded-xl">
+                            <img src={item.imageUrl || null} alt={item.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          </div>
+                          <div className="space-y-1">
+                            <h4 className="text-xs font-semibold text-white truncate">{item.title}</h4>
+                            <span className="text-[9px] font-mono text-zinc-500 uppercase">{item.category}</span>
+                          </div>
                         </div>
-                        <div className="space-y-1">
-                          <h4 className="text-xs font-semibold text-white truncate">{item.title}</h4>
-                          <span className="text-[9px] font-mono text-zinc-500 uppercase">{item.category}</span>
-                        </div>
-                      </div>
+                      </FoundationInteractionWrapper>
                     ))}
                   </div>
                 )}
@@ -268,25 +299,29 @@ export const DiscoverScreen: React.FC<DiscoverScreenProps> = ({
                     { title: 'Oversized Charcoal Trench Coat', desc: 'Adds essential heavyweight draping to complete Tokyo Neo-Noir aesthetic.', img: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=200&auto=format&fit=crop' },
                     { title: 'Italian Brushed Suede Loafers', desc: 'The perfect coordinating footwear choice to polish Quiet Linen suits.', img: 'https://images.unsplash.com/photo-1543163521-1bf539c55dd2?q=80&w=200&auto=format&fit=crop' }
                   ].map((upgrade, uIdx) => (
-                    <div key={uIdx} className="flex gap-3 bg-white/[0.01] p-2.5 rounded-xl border border-white/5 hover:border-violet-500/10 transition-colors">
-                      <div className="w-14 h-16 rounded-lg overflow-hidden bg-zinc-950 shrink-0">
-                        <img src={upgrade.img || null} alt={upgrade.title} className="w-full h-full object-cover" />
+                    <FoundationInteractionWrapper key={uIdx} themeDNA={themeDNA}>
+                      <div className="flex gap-3 bg-white/[0.01] p-2.5 rounded-xl border border-white/5 hover:border-violet-500/10 transition-colors">
+                        <div className="w-14 h-16 rounded-lg overflow-hidden bg-zinc-950 shrink-0">
+                          <img src={upgrade.img || null} alt={upgrade.title} className="w-full h-full object-cover" />
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="text-[11.5px] font-bold text-white truncate">{upgrade.title}</h4>
+                          <p className="text-[9.5px] text-zinc-500 leading-relaxed font-sans line-clamp-2 mt-0.5">{upgrade.desc}</p>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <h4 className="text-[11.5px] font-bold text-white truncate">{upgrade.title}</h4>
-                        <p className="text-[9.5px] text-zinc-500 leading-relaxed font-sans line-clamp-2 mt-0.5">{upgrade.desc}</p>
-                      </div>
-                    </div>
+                    </FoundationInteractionWrapper>
                   ))}
                 </div>
 
-                <button
-                  onClick={() => onNavigateToTab?.('MARKETPLACE')}
-                  className="w-full py-3 bg-white text-black hover:bg-zinc-200 transition-colors font-mono text-[10px] uppercase tracking-widest rounded-xl flex items-center justify-center gap-2 cursor-pointer font-bold mt-2"
-                >
-                  <span>Explore Marketplace</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
+                <FoundationInteractionWrapper themeDNA={themeDNA}>
+                  <button
+                    onClick={() => onNavigateToTab?.('MARKETPLACE')}
+                    className="w-full py-3 bg-white text-black hover:bg-zinc-200 transition-colors font-mono text-[10px] uppercase tracking-widest rounded-xl flex items-center justify-center gap-2 cursor-pointer font-bold mt-2"
+                  >
+                    <span>Explore Marketplace</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </FoundationInteractionWrapper>
               </div>
 
             </div>
@@ -296,6 +331,16 @@ export const DiscoverScreen: React.FC<DiscoverScreenProps> = ({
 
     </div>
   );
+
+  if (coatDNA) {
+    return (
+      <ThemeCoatRenderer coatDNA={coatDNA} className="w-full h-full">
+        {renderContent()}
+      </ThemeCoatRenderer>
+    );
+  }
+
+  return renderContent();
 };
 
 // Internal component renderer
@@ -304,7 +349,8 @@ function filteredEditorialList(
   toggleLike: (id: string) => void,
   toggleBookmark: (id: string) => void,
   likesMap: Record<string, boolean>,
-  bookmarksMap: Record<string, boolean>
+  bookmarksMap: Record<string, boolean>,
+  themeDNA?: any
 ) {
   if (editorials.length === 0) {
     return (
@@ -319,79 +365,81 @@ function filteredEditorialList(
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pb-12">
       {editorials.map((ed) => (
-        <div
-          key={ed.id}
-          className="group flex flex-col justify-between bg-[#08080f]/40 border border-white/5 rounded-3xl overflow-hidden hover:border-violet-500/20 hover:scale-[1.005] duration-300 transition-all text-left shadow-2xl relative"
-        >
-          {/* Portrait Cover Illustration */}
-          <div className="relative aspect-[3/2] overflow-hidden bg-zinc-950">
-            <img src={ed.imageUrl || null}
-              alt={ed.title}
-              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-103 grayscale-[30%] group-hover:grayscale-0"
-              referrerPolicy="no-referrer"
-            />
-            
-            {/* Swipable Vibe overlay */}
-            <div className="absolute top-4 left-4">
-              <span className="text-[8px] font-mono tracking-widest uppercase bg-black/60 backdrop-blur-md text-violet-300 px-2.5 py-1 rounded-lg border border-white/10">
-                {ed.vibe}
-              </span>
-            </div>
-
-            {/* Quick action buttons */}
-            <div className="absolute top-4 right-4 flex gap-1.5">
-              <button
-                onClick={(e) => { e.stopPropagation(); toggleLike(ed.id); }}
-                className="p-2 bg-black/60 backdrop-blur-md hover:bg-rose-500/20 text-white hover:text-rose-400 border border-white/10 rounded-full transition-all cursor-pointer"
-              >
-                <Heart className={`w-3.5 h-3.5 ${likesMap[ed.id] ? 'fill-rose-500 text-rose-500' : ''}`} />
-              </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); toggleBookmark(ed.id); }}
-                className="p-2 bg-black/60 backdrop-blur-md hover:bg-violet-500/20 text-white hover:text-violet-400 border border-white/10 rounded-full transition-all cursor-pointer"
-              >
-                <Bookmark className={`w-3.5 h-3.5 ${bookmarksMap[ed.id] ? 'fill-violet-400 text-violet-400' : ''}`} />
-              </button>
-            </div>
-          </div>
-
-          {/* Details Content */}
-          <div className="p-6 space-y-4">
-            <div className="space-y-1">
-              <div className="flex justify-between items-center text-[10px] font-mono text-zinc-500">
-                <span>By {ed.author}</span>
-                <span>Active Concept</span>
+        <FoundationInteractionWrapper key={ed.id} themeDNA={themeDNA}>
+          <div
+            className="group flex flex-col justify-between bg-[#08080f]/40 border border-white/5 rounded-3xl overflow-hidden hover:border-violet-500/20 hover:scale-[1.005] duration-300 transition-all text-left shadow-2xl relative h-full"
+          >
+            {/* Portrait Cover Illustration */}
+            <div className="relative aspect-[3/2] overflow-hidden bg-zinc-950">
+              <img src={ed.imageUrl || null}
+                alt={ed.title}
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-103 grayscale-[30%] group-hover:grayscale-0"
+                referrerPolicy="no-referrer"
+              />
+              
+              {/* Swipable Vibe overlay */}
+              <div className="absolute top-4 left-4">
+                <span className="text-[8px] font-mono tracking-widest uppercase bg-black/60 backdrop-blur-md text-violet-300 px-2.5 py-1 rounded-lg border border-white/10">
+                  {ed.vibe}
+                </span>
               </div>
-              <h3 className="font-serif font-light text-2xl text-white group-hover:text-violet-300 transition-colors leading-snug">
-                {ed.title}
-              </h3>
-              <p className="text-xs font-serif italic text-zinc-400 leading-relaxed pt-1.5">
-                "{ed.subtitle}"
+
+              {/* Quick action buttons */}
+              <div className="absolute top-4 right-4 flex gap-1.5 z-10">
+                <button
+                  onClick={(e) => { e.stopPropagation(); toggleLike(ed.id); }}
+                  className="p-2 bg-black/60 backdrop-blur-md hover:bg-rose-500/20 text-white hover:text-rose-400 border border-white/10 rounded-full transition-all cursor-pointer"
+                >
+                  <Heart className={`w-3.5 h-3.5 ${likesMap[ed.id] ? 'fill-rose-500 text-rose-500' : ''}`} />
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); toggleBookmark(ed.id); }}
+                  className="p-2 bg-black/60 backdrop-blur-md hover:bg-violet-500/20 text-white hover:text-violet-400 border border-white/10 rounded-full transition-all cursor-pointer"
+                >
+                  <Bookmark className={`w-3.5 h-3.5 ${bookmarksMap[ed.id] ? 'fill-violet-400 text-violet-400' : ''}`} />
+                </button>
+              </div>
+            </div>
+
+            {/* Details Content */}
+            <div className="p-6 space-y-4">
+              <div className="space-y-1">
+                <div className="flex justify-between items-center text-[10px] font-mono text-zinc-500">
+                  <span>By {ed.author}</span>
+                  <span>Active Concept</span>
+                </div>
+                <h3 className="font-serif font-light text-2xl text-white group-hover:text-violet-300 transition-colors leading-snug">
+                  {ed.title}
+                </h3>
+                <p className="text-xs font-serif italic text-zinc-400 leading-relaxed pt-1.5">
+                  "{ed.subtitle}"
+                </p>
+              </div>
+
+              <p className="text-xs text-zinc-400 leading-relaxed font-sans font-light">
+                {ed.description}
               </p>
-            </div>
 
-            <p className="text-xs text-zinc-400 leading-relaxed font-sans font-light">
-              {ed.description}
-            </p>
-
-            {/* Featured Items list */}
-            <div className="pt-3 border-t border-white/[0.04]">
-              <span className="text-[9px] font-mono uppercase tracking-widest text-zinc-500 block font-bold mb-2">Featured Core Pieces:</span>
-              <div className="flex flex-wrap gap-2">
-                {ed.featuredItems.map((piece, pIdx) => (
-                  <span
-                    key={pIdx}
-                    className="px-2.5 py-1 bg-white/[0.01] hover:bg-white/5 border border-white/5 text-[9.5px] font-mono text-white/80 rounded-md cursor-pointer transition-colors"
-                  >
-                    + {piece}
-                  </span>
-                ))}
+              {/* Featured Items list */}
+              <div className="pt-3 border-t border-white/[0.04]">
+                <span className="text-[9px] font-mono uppercase tracking-widest text-zinc-500 block font-bold mb-2">Featured Core Pieces:</span>
+                <div className="flex flex-wrap gap-2">
+                  {ed.featuredItems.map((piece, pIdx) => (
+                    <span
+                      key={pIdx}
+                      className="px-2.5 py-1 bg-white/[0.01] hover:bg-white/5 border border-white/5 text-[9.5px] font-mono text-white/80 rounded-md cursor-pointer transition-colors"
+                    >
+                      + {piece}
+                    </span>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
 
-        </div>
+          </div>
+        </FoundationInteractionWrapper>
       ))}
     </div>
   );
 }
+

@@ -7,6 +7,11 @@ import {
   ZoomIn, ZoomOut, Maximize2, Move, HelpCircle, Save, Layers2, ArrowUp, ArrowDown
 } from 'lucide-react';
 import { WardrobeItem } from '../types';
+import { 
+  useThemeIntelligence, 
+  ThemeCoatRenderer, 
+  FoundationInteractionWrapper 
+} from '../engine';
 
 interface VirtualStudioTryOnProps {
   wardrobe: WardrobeItem[];
@@ -63,6 +68,18 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
   wardrobe, 
   onAddGarment 
 }) => {
+  // Connect Theme Intelligence Engine
+  let themeCtx: ReturnType<typeof useThemeIntelligence> | null = null;
+  try {
+    themeCtx = useThemeIntelligence();
+  } catch {
+    themeCtx = null;
+  }
+
+  const themeDNA = themeCtx?.themeDNA;
+  const coatDNA = themeCtx?.coatDNA;
+  const sequenceId = themeCtx?.sequenceId;
+
   // Avatar metrics state
   const [gender, setGender] = useState<'female' | 'male' | 'unisex'>('female');
   const [height, setHeight] = useState<number>(172); // cm
@@ -533,22 +550,26 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
           {isFocused && (
             <div className="absolute -inset-3 border border-indigo-500/80 rounded-lg pointer-events-none">
               {/* Rotation Handle */}
-              <div
-                className="absolute -top-7 left-1/2 -translate-x-1/2 w-5 h-5 bg-indigo-500 rounded-full border border-white cursor-alias pointer-events-auto flex items-center justify-center shadow-lg hover:scale-115 duration-200"
-                onPointerDown={(e) => handleInteractionPointerDown(layerKey, 'rotate', e)}
-                title="Drag to Rotate"
-              >
-                <RefreshCw className="w-3 h-3 text-white" />
-              </div>
+              <FoundationInteractionWrapper themeDNA={themeDNA}>
+                <div
+                  className="absolute -top-7 left-1/2 -translate-x-1/2 w-5 h-5 bg-indigo-500 rounded-full border border-white cursor-alias pointer-events-auto flex items-center justify-center shadow-lg hover:scale-115 duration-200"
+                  onPointerDown={(e) => handleInteractionPointerDown(layerKey, 'rotate', e)}
+                  title="Drag to Rotate"
+                >
+                  <RefreshCw className="w-3 h-3 text-white" />
+                </div>
+              </FoundationInteractionWrapper>
 
               {/* Resize Handle */}
-              <div
-                className="absolute -bottom-2.5 -right-2.5 w-5 h-5 bg-indigo-500 rounded-full border border-white cursor-se-resize pointer-events-auto flex items-center justify-center shadow-lg hover:scale-115 duration-200"
-                onPointerDown={(e) => handleInteractionPointerDown(layerKey, 'scale', e)}
-                title="Drag to Resize"
-              >
-                <Scale className="w-3 h-3 text-white" />
-              </div>
+              <FoundationInteractionWrapper themeDNA={themeDNA}>
+                <div
+                  className="absolute -bottom-2.5 -right-2.5 w-5 h-5 bg-indigo-500 rounded-full border border-white cursor-se-resize pointer-events-auto flex items-center justify-center shadow-lg hover:scale-115 duration-200"
+                  onPointerDown={(e) => handleInteractionPointerDown(layerKey, 'scale', e)}
+                  title="Drag to Resize"
+                >
+                  <Scale className="w-3 h-3 text-white" />
+                </div>
+              </FoundationInteractionWrapper>
             </div>
           )}
         </div>
@@ -556,7 +577,7 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
     );
   };
 
-  return (
+  const renderContent = () => (
     <div className="space-y-6 animate-fade-in text-white py-1">
       
       {/* INTRO SPECS HEADER */}
@@ -574,18 +595,22 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
         </div>
 
         <div className="flex flex-wrap gap-2 shrink-0 z-10">
-          <button 
-            onClick={handleResetCanvas}
-            className="px-3.5 py-1.5 border border-white/5 hover:border-indigo-500/20 rounded-xl text-[10px] font-mono uppercase tracking-wider text-zinc-400 hover:text-white transition-all cursor-pointer bg-white/[0.02]"
-          >
-            Reset Canvas
-          </button>
-          <button 
-            onClick={handleClearFitStack}
-            className="px-3.5 py-1.5 border border-rose-500/10 hover:border-rose-500/30 rounded-xl text-[10px] font-mono uppercase tracking-wider text-rose-400 hover:text-rose-300 transition-all cursor-pointer bg-rose-500/5"
-          >
-            Reset Stack
-          </button>
+          <FoundationInteractionWrapper themeDNA={themeDNA}>
+            <button 
+              onClick={handleResetCanvas}
+              className="px-3.5 py-1.5 border border-white/5 hover:border-indigo-500/20 rounded-xl text-[10px] font-mono uppercase tracking-wider text-zinc-400 hover:text-white transition-all cursor-pointer bg-white/[0.02]"
+            >
+              Reset Canvas
+            </button>
+          </FoundationInteractionWrapper>
+          <FoundationInteractionWrapper themeDNA={themeDNA}>
+            <button 
+              onClick={handleClearFitStack}
+              className="px-3.5 py-1.5 border border-rose-500/10 hover:border-rose-500/30 rounded-xl text-[10px] font-mono uppercase tracking-wider text-rose-400 hover:text-rose-300 transition-all cursor-pointer bg-rose-500/5"
+            >
+              Reset Stack
+            </button>
+          </FoundationInteractionWrapper>
         </div>
 
         {/* Background accent */}
@@ -602,20 +627,24 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
             </span>
           </div>
           <div className="flex gap-2">
-            <button 
-              onClick={() => moveLayerOrder(activeLayer, 'forward')}
-              className="p-1 hover:bg-white/5 rounded text-zinc-400 hover:text-white"
-              title="Bring Forward"
-            >
-              <ArrowUp className="w-3.5 h-3.5" />
-            </button>
-            <button 
-              onClick={() => moveLayerOrder(activeLayer, 'back')}
-              className="p-1 hover:bg-white/5 rounded text-zinc-400 hover:text-white"
-              title="Send Backward"
-            >
-              <ArrowDown className="w-3.5 h-3.5" />
-            </button>
+            <FoundationInteractionWrapper themeDNA={themeDNA}>
+              <button 
+                onClick={() => moveLayerOrder(activeLayer, 'forward')}
+                className="p-1 hover:bg-white/5 rounded text-zinc-400 hover:text-white cursor-pointer"
+                title="Bring Forward"
+              >
+                <ArrowUp className="w-3.5 h-3.5" />
+              </button>
+            </FoundationInteractionWrapper>
+            <FoundationInteractionWrapper themeDNA={themeDNA}>
+              <button 
+                onClick={() => moveLayerOrder(activeLayer, 'back')}
+                className="p-1 hover:bg-white/5 rounded text-zinc-400 hover:text-white cursor-pointer"
+                title="Send Backward"
+              >
+                <ArrowDown className="w-3.5 h-3.5" />
+              </button>
+            </FoundationInteractionWrapper>
           </div>
         </div>
       )}
@@ -636,13 +665,14 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
             {/* Model Gender selection */}
             <div className="grid grid-cols-3 gap-1 bg-[#11111a] p-1 rounded-xl border border-white/5 text-xs font-mono">
               {(['female', 'male', 'unisex'] as const).map(g => (
-                <button
-                  key={g}
-                  onClick={() => setGender(g)}
-                  className={`py-1.5 rounded-lg uppercase tracking-wider cursor-pointer text-[10px] ${gender === g ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/30' : 'text-zinc-500 hover:text-zinc-300'}`}
-                >
-                  {g}
-                </button>
+                <FoundationInteractionWrapper key={g} themeDNA={themeDNA}>
+                  <button
+                    onClick={() => setGender(g)}
+                    className={`w-full py-1.5 rounded-lg uppercase tracking-wider cursor-pointer text-[10px] ${gender === g ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/30' : 'text-zinc-500 hover:text-zinc-300'}`}
+                  >
+                    {g}
+                  </button>
+                </FoundationInteractionWrapper>
               ))}
             </div>
 
@@ -714,13 +744,14 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
               <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider block">Hairstyle preset:</span>
               <div className="flex flex-wrap gap-1">
                 {HAIRSTYLES.map(style => (
-                  <button
-                    key={style.id}
-                    onClick={() => setHairstyle(style.name)}
-                    className={`px-2.5 py-1 rounded-lg text-[9px] font-mono transition-all cursor-pointer border ${hairstyle === style.name ? 'bg-indigo-600/10 border-indigo-500 text-indigo-300' : 'bg-white/[0.01] border-white/5 text-zinc-400 hover:text-white'}`}
-                  >
-                    {style.name}
-                  </button>
+                  <FoundationInteractionWrapper key={style.id} themeDNA={themeDNA}>
+                    <button
+                      onClick={() => setHairstyle(style.name)}
+                      className={`px-2.5 py-1 rounded-lg text-[9px] font-mono transition-all cursor-pointer border ${hairstyle === style.name ? 'bg-indigo-600/10 border-indigo-500 text-indigo-300' : 'bg-white/[0.01] border-white/5 text-zinc-400 hover:text-white'}`}
+                    >
+                      {style.name}
+                    </button>
+                  </FoundationInteractionWrapper>
                 ))}
               </div>
             </div>
@@ -730,12 +761,13 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
               <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider block">Skin Shade matching:</span>
               <div className="flex gap-2">
                 {SKIN_TONES.map(tone => (
-                  <button
-                    key={tone.name}
-                    onClick={() => setSkinTone(tone.name)}
-                    className={`w-6 h-6 rounded-full border cursor-pointer ${tone.class} ${skinTone === tone.name ? 'ring-2 ring-indigo-500 ring-offset-2 ring-offset-black scale-110' : 'border-white/10 hover:scale-105'}`}
-                    title={tone.name}
-                  />
+                  <FoundationInteractionWrapper key={tone.name} themeDNA={themeDNA}>
+                    <button
+                      onClick={() => setSkinTone(tone.name)}
+                      className={`w-6 h-6 rounded-full border cursor-pointer ${tone.class} ${skinTone === tone.name ? 'ring-2 ring-indigo-500 ring-offset-2 ring-offset-black scale-110' : 'border-white/10 hover:scale-105'}`}
+                      title={tone.name}
+                    />
+                  </FoundationInteractionWrapper>
                 ))}
               </div>
             </div>
@@ -813,42 +845,52 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
 
               {/* Toolbar Zoom & Pan Controls */}
               <div className="flex items-center gap-1 bg-black/60 p-0.5 rounded border border-white/10">
-                <button 
-                  onClick={() => adjustZoom(0.15)} 
-                  className="p-1 hover:bg-white/5 text-zinc-400 hover:text-white rounded"
-                  title="Zoom In"
-                >
-                  <ZoomIn className="w-3 h-3" />
-                </button>
-                <button 
-                  onClick={() => adjustZoom(-0.15)} 
-                  className="p-1 hover:bg-white/5 text-zinc-400 hover:text-white rounded"
-                  title="Zoom Out"
-                >
-                  <ZoomOut className="w-3 h-3" />
-                </button>
-                <button 
-                  onClick={handleResetCanvas} 
-                  className="p-1 hover:bg-white/5 text-zinc-400 hover:text-white rounded font-mono text-[8px]"
-                  title="Reset Workspace"
-                >
-                  1:1
-                </button>
-                <button 
-                  onClick={() => setShowSnapGuides(!showSnapGuides)} 
-                  className={`p-1 rounded font-mono text-[8px] ${showSnapGuides ? 'text-emerald-400 bg-emerald-500/10' : 'text-zinc-500 hover:text-zinc-300'}`}
-                  title="Toggle Snap Guides"
-                >
-                  SNAP
-                </button>
-                {renderedImageUrl && (
+                <FoundationInteractionWrapper themeDNA={themeDNA}>
                   <button 
-                    onClick={() => setComparisonMode(!comparisonMode)} 
-                    className={`p-1 rounded font-mono text-[8px] ${comparisonMode ? 'text-violet-400 bg-violet-500/10 font-bold' : 'text-zinc-500 hover:text-zinc-300'}`}
-                    title="Toggle Slide Compare Mode"
+                    onClick={() => adjustZoom(0.15)} 
+                    className="p-1 hover:bg-white/5 text-zinc-400 hover:text-white rounded cursor-pointer"
+                    title="Zoom In"
                   >
-                    MIRROR
+                    <ZoomIn className="w-3 h-3" />
                   </button>
+                </FoundationInteractionWrapper>
+                <FoundationInteractionWrapper themeDNA={themeDNA}>
+                  <button 
+                    onClick={() => adjustZoom(-0.15)} 
+                    className="p-1 hover:bg-white/5 text-zinc-400 hover:text-white rounded cursor-pointer"
+                    title="Zoom Out"
+                  >
+                    <ZoomOut className="w-3 h-3" />
+                  </button>
+                </FoundationInteractionWrapper>
+                <FoundationInteractionWrapper themeDNA={themeDNA}>
+                  <button 
+                    onClick={handleResetCanvas} 
+                    className="p-1 hover:bg-white/5 text-zinc-400 hover:text-white rounded font-mono text-[8px] cursor-pointer"
+                    title="Reset Workspace"
+                  >
+                    1:1
+                  </button>
+                </FoundationInteractionWrapper>
+                <FoundationInteractionWrapper themeDNA={themeDNA}>
+                  <button 
+                    onClick={() => setShowSnapGuides(!showSnapGuides)} 
+                    className={`p-1 rounded font-mono text-[8px] cursor-pointer ${showSnapGuides ? 'text-emerald-400 bg-emerald-500/10' : 'text-zinc-500 hover:text-zinc-300'}`}
+                    title="Toggle Snap Guides"
+                  >
+                    SNAP
+                  </button>
+                </FoundationInteractionWrapper>
+                {renderedImageUrl && (
+                  <FoundationInteractionWrapper themeDNA={themeDNA}>
+                    <button 
+                      onClick={() => setComparisonMode(!comparisonMode)} 
+                      className={`p-1 rounded font-mono text-[8px] cursor-pointer ${comparisonMode ? 'text-violet-400 bg-violet-500/10 font-bold' : 'text-zinc-500 hover:text-zinc-300'}`}
+                      title="Toggle Slide Compare Mode"
+                    >
+                      MIRROR
+                    </button>
+                  </FoundationInteractionWrapper>
                 )}
               </div>
             </div>
@@ -1015,13 +1057,14 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
             {/* Backdrops selector bar at bottom */}
             <div className="z-10 mt-2 flex gap-1 bg-black/60 p-1.5 rounded-xl border border-white/5 pointer-events-auto">
               {BACKDROP_PRESETS.map(b => (
-                <button
-                  key={b.id}
-                  onClick={() => setSelectedBackdrop(b.id)}
-                  className={`flex-1 py-1 px-1 text-[8px] font-mono uppercase rounded transition-all cursor-pointer ${selectedBackdrop === b.id ? 'bg-indigo-600/35 border border-indigo-500/40 text-white font-bold' : 'text-zinc-400 hover:text-zinc-200'}`}
-                >
-                  {b.name.split(' ')[0]}
-                </button>
+                <FoundationInteractionWrapper key={b.id} themeDNA={themeDNA}>
+                  <button
+                    onClick={() => setSelectedBackdrop(b.id)}
+                    className={`w-full py-1 px-1 text-[8px] font-mono uppercase rounded transition-all cursor-pointer ${selectedBackdrop === b.id ? 'bg-indigo-600/35 border border-indigo-500/40 text-white font-bold' : 'text-zinc-400 hover:text-zinc-200'}`}
+                  >
+                    {b.name.split(' ')[0]}
+                  </button>
+                </FoundationInteractionWrapper>
               ))}
             </div>
 
@@ -1040,9 +1083,11 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
                 <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-white">3. Active Fit Stack</h3>
               </div>
               {(selectedTop || selectedOuterwear || selectedBottom || selectedShoes) && (
-                <button onClick={handleClearFitStack} className="text-[9px] font-mono uppercase text-rose-400 hover:text-rose-300">
-                  Clear All
-                </button>
+                <FoundationInteractionWrapper themeDNA={themeDNA}>
+                  <button onClick={handleClearFitStack} className="text-[9px] font-mono uppercase text-rose-400 hover:text-rose-300 cursor-pointer">
+                    Clear All
+                  </button>
+                </FoundationInteractionWrapper>
               )}
             </div>
 
@@ -1148,12 +1193,14 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
                 onChange={(e) => setNewGroupName(e.target.value)}
                 className="flex-1 bg-[#11111a] border border-white/5 text-[11px] px-3 py-1.5 rounded-xl text-white outline-none focus:border-indigo-500/40"
               />
-              <button 
-                onClick={handleSaveOutfitGroup}
-                className="px-3 bg-indigo-600 hover:bg-indigo-500 text-white font-mono text-[10px] uppercase font-bold rounded-xl cursor-pointer"
-              >
-                Bundle
-              </button>
+              <FoundationInteractionWrapper themeDNA={themeDNA}>
+                <button 
+                  onClick={handleSaveOutfitGroup}
+                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-mono text-[10px] uppercase font-bold rounded-xl cursor-pointer"
+                >
+                  Bundle
+                </button>
+              </FoundationInteractionWrapper>
             </div>
 
             {outfitGroups.length > 0 && (
@@ -1164,12 +1211,14 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
                       <span className="text-white block truncate">{g.name}</span>
                       <span className="text-[8px] text-zinc-500 font-mono truncate">{g.items.join(' + ')}</span>
                     </div>
-                    <button 
-                      onClick={(e) => handleDeleteOutfitGroup(g.id, e)}
-                      className="p-1 hover:bg-rose-500/10 text-rose-400 rounded"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
+                    <FoundationInteractionWrapper themeDNA={themeDNA}>
+                      <button 
+                        onClick={(e) => handleDeleteOutfitGroup(g.id, e)}
+                        className="p-1 hover:bg-rose-500/10 text-rose-400 rounded cursor-pointer"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </FoundationInteractionWrapper>
                   </div>
                 ))}
               </div>
@@ -1198,13 +1247,15 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
                 </div>
               </div>
             ) : (
-              <button
-                onClick={runAIFitRender}
-                className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white font-mono font-bold text-[10px] uppercase py-3 rounded-xl tracking-wider flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-indigo-500/10 active:scale-95 transition-all"
-              >
-                <Play className="w-3.5 h-3.5 text-white" />
-                <span>Simulate 3D Photo Render</span>
-              </button>
+              <FoundationInteractionWrapper themeDNA={themeDNA}>
+                <button
+                  onClick={runAIFitRender}
+                  className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white font-mono font-bold text-[10px] uppercase py-3 rounded-xl tracking-wider flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-indigo-500/10 active:scale-95 transition-all"
+                >
+                  <Play className="w-3.5 h-3.5 text-white" />
+                  <span>Simulate 3D Photo Render</span>
+                </button>
+              </FoundationInteractionWrapper>
             )}
 
             {/* PREVIEW CONTAINER */}
@@ -1220,12 +1271,14 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
                     <span className="text-[9px] font-mono uppercase text-emerald-400 flex items-center gap-1">
                       <CheckCircle className="w-3 h-3" /> Output Rendered
                     </span>
-                    <button 
-                      onClick={() => { setRenderedImageUrl(null); setComparisonMode(false); }} 
-                      className="text-[8px] font-mono uppercase text-zinc-500 hover:text-white"
-                    >
-                      Close Output
-                    </button>
+                    <FoundationInteractionWrapper themeDNA={themeDNA}>
+                      <button 
+                        onClick={() => { setRenderedImageUrl(null); setComparisonMode(false); }} 
+                        className="text-[8px] font-mono uppercase text-zinc-500 hover:text-white cursor-pointer"
+                      >
+                        Close Output
+                      </button>
+                    </FoundationInteractionWrapper>
                   </div>
 
                   <div className="aspect-[3/4] bg-zinc-950 rounded-lg overflow-hidden relative">
@@ -1275,46 +1328,47 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
                                selectedBottom?.id === item.id || 
                                selectedShoes?.id === item.id;
               return (
-                <div
-                  key={item.id}
-                  onClick={() => selectGarmentForSlot(item)}
-                  className={`group relative aspect-[3/4] rounded-xl overflow-hidden border transition-all duration-300 shadow-lg cursor-pointer flex flex-col justify-end p-2.5 ${isFitted ? 'border-indigo-500 shadow-indigo-500/10 scale-102 bg-indigo-950/20' : 'border-white/5 hover:border-white/15 bg-black/40'}`}
-                >
-                  {/* Photo representation */}
-                  {item.imageUrl ? (
-                    <img src={item.imageUrl || null} 
-                      alt={item.title} 
-                      className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 duration-500"
-                      onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?q=80&w=200&auto=format&fit=crop"; }}
-                    />
-                  ) : (
-                    <div className="absolute inset-0 bg-[#11111d] flex items-center justify-center">
-                      <Shirt className="w-8 h-8 text-white/10" />
+                <FoundationInteractionWrapper key={item.id} themeDNA={themeDNA}>
+                  <div
+                    onClick={() => selectGarmentForSlot(item)}
+                    className={`group relative aspect-[3/4] rounded-xl overflow-hidden border transition-all duration-300 shadow-lg cursor-pointer flex flex-col justify-end p-2.5 ${isFitted ? 'border-indigo-500 shadow-indigo-500/10 scale-102 bg-indigo-950/20' : 'border-white/5 hover:border-white/15 bg-black/40'}`}
+                  >
+                    {/* Photo representation */}
+                    {item.imageUrl ? (
+                      <img src={item.imageUrl || null} 
+                        alt={item.title} 
+                        className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 duration-500"
+                        onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?q=80&w=200&auto=format&fit=crop"; }}
+                      />
+                    ) : (
+                      <div className="absolute inset-0 bg-[#11111d] flex items-center justify-center">
+                        <Shirt className="w-8 h-8 text-white/10" />
+                      </div>
+                    )}
+
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent pointer-events-none" />
+
+                    {/* Layer category badge overlay */}
+                    <div className="absolute top-2 left-2 bg-black/60 border border-white/5 p-1 rounded">
+                      <span className="text-[7.5px] font-mono text-zinc-400 px-1.5 py-0.5 rounded uppercase">
+                        {item.category}
+                      </span>
                     </div>
-                  )}
 
-                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent pointer-events-none" />
+                    {/* Selected / Fitted mark */}
+                    {isFitted && (
+                      <div className="absolute top-2 right-2 bg-indigo-500 p-1 rounded-full text-white shadow">
+                        <Check className="w-3 h-3" />
+                      </div>
+                    )}
 
-                  {/* Layer category badge overlay */}
-                  <div className="absolute top-2 left-2 bg-black/60 border border-white/5 p-1 rounded">
-                    <span className="text-[7.5px] font-mono text-zinc-400 px-1.5 py-0.5 rounded uppercase">
-                      {item.category}
-                    </span>
-                  </div>
-
-                  {/* Selected / Fitted mark */}
-                  {isFitted && (
-                    <div className="absolute top-2 right-2 bg-indigo-500 p-1 rounded-full text-white shadow">
-                      <Check className="w-3 h-3" />
+                    {/* Title & Desc */}
+                    <div className="relative z-10">
+                      <span className="text-[7px] font-mono text-zinc-500 uppercase tracking-widest block font-bold mb-0.5">{item.size || 'M'} &bull; {item.primaryColor || 'Color'}</span>
+                      <h4 className="text-[10px] font-bold text-white truncate">{item.title}</h4>
                     </div>
-                  )}
-
-                  {/* Title & Desc */}
-                  <div className="relative z-10">
-                    <span className="text-[7px] font-mono text-zinc-500 uppercase tracking-widest block font-bold mb-0.5">{item.size || 'M'} &bull; {item.primaryColor || 'Color'}</span>
-                    <h4 className="text-[10px] font-bold text-white truncate">{item.title}</h4>
                   </div>
-                </div>
+                </FoundationInteractionWrapper>
               );
             })}
           </div>
@@ -1345,12 +1399,14 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
 
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent z-0 pointer-events-none" />
 
-                <button
-                  onClick={(e) => handleDeleteHistorySession(sess.id, e)}
-                  className="absolute top-3 right-3 p-1.5 bg-black/70 backdrop-blur-md hover:bg-rose-500/20 text-zinc-400 hover:text-rose-400 border border-white/10 rounded-full transition-all cursor-pointer z-10"
-                >
-                  <Trash2 className="w-3 h-3" />
-                </button>
+                <FoundationInteractionWrapper themeDNA={themeDNA}>
+                  <button
+                    onClick={(e) => handleDeleteHistorySession(sess.id, e)}
+                    className="absolute top-3 right-3 p-1.5 bg-black/70 backdrop-blur-md hover:bg-rose-500/20 text-zinc-400 hover:text-rose-400 border border-white/10 rounded-full transition-all cursor-pointer z-10"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </FoundationInteractionWrapper>
 
                 {/* Info Overlay */}
                 <div className="absolute bottom-0 left-0 right-0 p-3 z-10 space-y-1.5">
@@ -1372,4 +1428,16 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
 
     </div>
   );
+
+  if (coatDNA) {
+    return (
+      <ThemeCoatRenderer coatDNA={coatDNA} className="w-full h-full min-h-screen">
+        {renderContent()}
+      </ThemeCoatRenderer>
+    );
+  }
+
+  return renderContent();
 };
+
+export default VirtualStudioTryOn;

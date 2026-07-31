@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Shield, Sparkles, AlertTriangle, Cpu, TrendingUp, CheckCircle } from 'lucide-react';
+import { Shield, Sparkles, AlertTriangle, Cpu, TrendingUp, CheckCircle, Terminal } from 'lucide-react';
+import { useThemeIntelligence } from '../engine';
 
 interface SystemHealthPanelProps {
   systemHealthScore: number;
@@ -29,6 +30,7 @@ export const SystemHealthPanel: React.FC<SystemHealthPanelProps> = ({
   onClearMemory
 }) => {
   const [confirmClear, setConfirmClear] = useState(false);
+  const { sequenceId } = useThemeIntelligence();
 
   return (
     <div id={id || "system-health-panel"} className="space-y-6">
@@ -100,6 +102,13 @@ export const SystemHealthPanel: React.FC<SystemHealthPanelProps> = ({
           <p className="text-[11px] font-serif text-white/60 leading-relaxed font-light">
             The Fashion OS intelligence loop is running in state-synced, persistent production mode.
           </p>
+          {sequenceId && (
+            <div className="pt-1.5 flex items-center gap-2 text-[10px] font-mono text-indigo-400/80">
+              <Terminal className="w-3 h-3 text-indigo-400 shrink-0" />
+              <span className="uppercase tracking-widest text-white/40">Sequence Telemetry:</span>
+              <span className="truncate max-w-[240px] text-indigo-300 font-semibold">{sequenceId}</span>
+            </div>
+          )}
         </div>
 
         <div className="flex gap-2.5 w-full sm:w-auto">

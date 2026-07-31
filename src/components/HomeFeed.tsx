@@ -14,6 +14,11 @@ import {
   Sparkles
 } from 'lucide-react';
 import { WardrobeItem, ClothingCategory } from '../types';
+import { 
+  useThemeIntelligence, 
+  ThemeCoatRenderer, 
+  FoundationInteractionWrapper 
+} from '../engine';
 
 interface HomeFeedProps {
   wardrobe: WardrobeItem[];
@@ -34,6 +39,17 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
   onLoadSamples,
   setActiveSubTab
 }) => {
+  // Connect to Theme Intelligence Engine
+  let themeCtx: ReturnType<typeof useThemeIntelligence> | null = null;
+  try {
+    themeCtx = useThemeIntelligence();
+  } catch {
+    themeCtx = null;
+  }
+
+  const themeDNA = themeCtx?.themeDNA;
+  const coatDNA = themeCtx?.coatDNA;
+  const sequenceId = themeCtx?.sequenceId;
 
   // Dynamic Wardrobe Calculations
   const totalGarments = wardrobe.length;
@@ -65,7 +81,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
     }
   };
 
-  return (
+  const renderContent = () => (
     <div id="home-feed-main" className="w-full max-w-4xl mx-auto space-y-10 pb-24 px-4 sm:px-6 text-left">
       
       {/* 1. LUXURY GREETING HERO SECTION */}
@@ -74,6 +90,11 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
           <div className="flex items-center gap-2 text-violet-400">
             <Sparkle className="w-4 h-4 text-violet-400 fill-violet-400 filter drop-shadow-[0_0_6px_rgba(168,85,247,0.5)] animate-pulse-slow" />
             <span className="text-[10px] font-mono tracking-[0.25em] uppercase font-bold">Personal Closet Portal</span>
+            {sequenceId && (
+              <span className="text-[9px] font-mono text-zinc-600 bg-white/5 px-2 py-0.5 rounded-full border border-white/5 hidden lg:inline-block">
+                SEQ: {sequenceId.substring(0, 10)}...
+              </span>
+            )}
           </div>
           <h1 className="text-3xl md:text-4xl font-serif font-light text-white tracking-tight">
             Welcome, {user?.displayName || user?.email?.split('@')[0] || 'Sartorialist'}
@@ -83,29 +104,33 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
           </p>
         </div>
 
-        {/* Quick Quick Control Actions */}
+        {/* Quick Control Actions */}
         <div className="flex gap-2 shrink-0">
           {totalGarments === 0 && onLoadSamples && (
-            <button
-              onClick={onLoadSamples}
-              className="px-3.5 py-2 bg-violet-600/10 hover:bg-violet-600/20 border border-violet-500/20 text-violet-300 font-mono text-[10px] uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
-            >
-              <RefreshCw className="w-3.5 h-3.5 animate-spin-slow" />
-              <span>Load Samples</span>
-            </button>
+            <FoundationInteractionWrapper themeDNA={themeDNA}>
+              <button
+                onClick={onLoadSamples}
+                className="px-3.5 py-2 bg-violet-600/10 hover:bg-violet-600/20 border border-violet-500/20 text-violet-300 font-mono text-[10px] uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
+              >
+                <RefreshCw className="w-3.5 h-3.5 animate-spin-slow" />
+                <span>Load Samples</span>
+              </button>
+            </FoundationInteractionWrapper>
           )}
           {totalGarments > 0 && onReset && (
-            <button
-              onClick={() => {
-                if (confirm('Clear entire digital closet state?')) {
-                  onReset();
-                  window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: 'Digital Closet Reset Complete.' }));
-                }
-              }}
-              className="px-3.5 py-2 bg-red-950/10 hover:bg-red-950/20 border border-red-500/15 text-red-400 font-mono text-[10px] uppercase tracking-wider rounded-xl transition-all cursor-pointer"
-            >
-              Clear Closet
-            </button>
+            <FoundationInteractionWrapper themeDNA={themeDNA}>
+              <button
+                onClick={() => {
+                  if (confirm('Clear entire digital closet state?')) {
+                    onReset();
+                    window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: 'Digital Closet Reset Complete.' }));
+                  }
+                }}
+                className="px-3.5 py-2 bg-red-950/10 hover:bg-red-950/20 border border-red-500/15 text-red-400 font-mono text-[10px] uppercase tracking-wider rounded-xl transition-all cursor-pointer"
+              >
+                Clear Closet
+              </button>
+            </FoundationInteractionWrapper>
           )}
         </div>
       </div>
@@ -161,27 +186,28 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
         ].map((item, idx) => {
           const Icon = item.icon;
           return (
-            <div 
-              key={idx}
-              onClick={() => handleNavigate(item.tab)}
-              className={`p-5 bg-[#07070c] border border-white/5 rounded-2xl transition-all duration-300 hover:scale-[1.01] cursor-pointer group flex flex-col justify-between h-44 text-left shadow-lg ${item.accentBorder}`}
-            >
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="p-2 bg-white/5 rounded-xl border border-white/5">
-                    <Icon className="w-4 h-4 text-zinc-300" />
+            <FoundationInteractionWrapper key={idx} themeDNA={themeDNA}>
+              <div 
+                onClick={() => handleNavigate(item.tab)}
+                className={`p-5 bg-[#07070c] border border-white/5 rounded-2xl transition-all duration-300 hover:scale-[1.01] cursor-pointer group flex flex-col justify-between h-44 text-left shadow-lg ${item.accentBorder}`}
+              >
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="p-2 bg-white/5 rounded-xl border border-white/5">
+                      <Icon className="w-4 h-4 text-zinc-300" />
+                    </div>
+                    <ArrowUpRight className="w-4 h-4 text-zinc-600 group-hover:text-white transition-colors duration-300" />
                   </div>
-                  <ArrowUpRight className="w-4 h-4 text-zinc-600 group-hover:text-white transition-colors duration-300" />
+                  <h3 className="text-sm font-bold text-white uppercase tracking-wider font-mono">{item.title}</h3>
+                  <p className="text-[11px] text-zinc-400 leading-normal">{item.desc}</p>
                 </div>
-                <h3 className="text-sm font-bold text-white uppercase tracking-wider font-mono">{item.title}</h3>
-                <p className="text-[11px] text-zinc-400 leading-normal">{item.desc}</p>
-              </div>
 
-              <div className="flex items-center gap-1 text-[9px] font-mono uppercase tracking-widest font-bold pt-2 border-t border-white/[0.02]">
-                <span className={item.accentText}>{item.actionLabel}</span>
-                <span className="text-zinc-600 group-hover:translate-x-0.5 transition-transform duration-300">→</span>
+                <div className="flex items-center gap-1 text-[9px] font-mono uppercase tracking-widest font-bold pt-2 border-t border-white/[0.02]">
+                  <span className={item.accentText}>{item.actionLabel}</span>
+                  <span className="text-zinc-600 group-hover:translate-x-0.5 transition-transform duration-300">→</span>
+                </div>
               </div>
-            </div>
+            </FoundationInteractionWrapper>
           );
         })}
       </div>
@@ -207,51 +233,55 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {wardrobe.map((item) => (
-              <div 
-                key={item.id}
-                className="bg-[#07070c] border border-white/5 rounded-2xl p-3 flex flex-col space-y-3 justify-between hover:border-white/10 transition-all duration-300 relative group"
-              >
-                {/* 3:4 aspect ratio portrait frame */}
-                <div className="aspect-[3/4] overflow-hidden rounded-xl bg-zinc-950 relative border border-white/5 shadow-inner">
-                  {item.imageUrl ? (
-                    <img src={item.imageUrl || null} 
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.02]" 
-                      alt={item.title} 
-                      referrerPolicy="no-referrer"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-zinc-700">
-                      <Shirt className="w-8 h-8" />
-                    </div>
-                  )}
+              <FoundationInteractionWrapper key={item.id} themeDNA={themeDNA}>
+                <div 
+                  className="bg-[#07070c] border border-white/5 rounded-2xl p-3 flex flex-col space-y-3 justify-between hover:border-white/10 transition-all duration-300 relative group h-full"
+                >
+                  {/* 3:4 aspect ratio portrait frame */}
+                  <div className="aspect-[3/4] overflow-hidden rounded-xl bg-zinc-950 relative border border-white/5 shadow-inner">
+                    {item.imageUrl ? (
+                      <img src={item.imageUrl || null} 
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.02]" 
+                        alt={item.title} 
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-zinc-700">
+                        <Shirt className="w-8 h-8" />
+                      </div>
+                    )}
 
-                  <div className="absolute top-2 left-2 bg-black/75 px-2 py-0.5 rounded-lg border border-white/5 backdrop-blur-sm">
-                    <span className="text-[8px] font-mono text-violet-300 uppercase font-bold">{item.category}</span>
+                    <div className="absolute top-2 left-2 bg-black/75 px-2 py-0.5 rounded-lg border border-white/5 backdrop-blur-sm">
+                      <span className="text-[8px] font-mono text-violet-300 uppercase font-bold">{item.category}</span>
+                    </div>
+
+                    {/* Delete button showing on hover */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteItem(item.id, item.title);
+                      }}
+                      className="absolute top-2 right-2 p-1.5 bg-black/75 hover:bg-red-500/20 text-zinc-400 hover:text-red-400 border border-white/5 hover:border-red-500/20 rounded-lg backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-all duration-300 cursor-pointer"
+                      title="Remove item"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
 
-                  {/* Delete button showing on hover */}
-                  <button
-                    onClick={() => handleDeleteItem(item.id, item.title)}
-                    className="absolute top-2 right-2 p-1.5 bg-black/75 hover:bg-red-500/20 text-zinc-400 hover:text-red-400 border border-white/5 hover:border-red-500/20 rounded-lg backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-all duration-300 cursor-pointer"
-                    title="Remove item"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  <div className="text-left space-y-1">
+                    <span className="text-[11.5px] font-bold text-white block truncate leading-tight">{item.title}</span>
+                    <span className="text-[9.5px] text-zinc-400 block line-clamp-1 leading-normal font-light">{item.description}</span>
+                    
+                    {/* Subtle color descriptors */}
+                    {item.primaryColor && (
+                      <div className="flex gap-1.5 items-center pt-1 font-mono text-[8px] text-zinc-500 border-t border-white/[0.02] mt-1.5">
+                        <span className="w-2 h-2 rounded-full border border-white/10" style={{ backgroundColor: item.primaryColor === 'Studio Gray' ? '#555' : '#111' }} />
+                        <span>{item.primaryColor}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-
-                <div className="text-left space-y-1">
-                  <span className="text-[11.5px] font-bold text-white block truncate leading-tight">{item.title}</span>
-                  <span className="text-[9.5px] text-zinc-400 block line-clamp-1 leading-normal font-light">{item.description}</span>
-                  
-                  {/* Subtle color descriptors */}
-                  {item.primaryColor && (
-                    <div className="flex gap-1.5 items-center pt-1 font-mono text-[8px] text-zinc-500 border-t border-white/[0.02] mt-1.5">
-                      <span className="w-2 h-2 rounded-full border border-white/10" style={{ backgroundColor: item.primaryColor === 'Studio Gray' ? '#555' : '#111' }} />
-                      <span>{item.primaryColor}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
+              </FoundationInteractionWrapper>
             ))}
           </div>
         )}
@@ -259,4 +289,15 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
 
     </div>
   );
+
+  if (coatDNA) {
+    return (
+      <ThemeCoatRenderer coatDNA={coatDNA} className="w-full h-full">
+        {renderContent()}
+      </ThemeCoatRenderer>
+    );
+  }
+
+  return renderContent();
 };
+

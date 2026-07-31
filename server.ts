@@ -68,6 +68,10 @@ import {
 import { handler as recommendMvpHandler } from "./netlify/functions/recommend-mvp";
 import tryOnRouter from "./tryOnRouter";
 import stripePaymentGatewayRouter from "./stripePaymentGatewayRouter";
+import matureFashionStudioRouter from "./src/matureFashionStudioRouter";
+import socialNetworkRouter from "./src/socialNetworkRouter";
+import paymentRouter from "./src/paymentRouter";
+import creditsRouter from "./src/creditsRouter";
 
 // --- Production Request Validation Suite ---
 function validateType(value: any, expectedType: "string" | "number" | "boolean" | "array" | "object"): boolean {
@@ -790,6 +794,10 @@ async function startServer() {
   // API Routes (Registered FIRST)
   app.use("/api/tryon", tryOnRouter);
   app.use(stripePaymentGatewayRouter);
+  app.use(matureFashionStudioRouter);
+  app.use("/api/social", socialNetworkRouter);
+  app.use("/api", paymentRouter);
+  app.use("/api", creditsRouter);
 
   const serverStartTime = Date.now();
 
