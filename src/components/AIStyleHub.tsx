@@ -57,6 +57,8 @@ import { AIMemoryHub } from './AIMemoryHub';
 import { MatureFashionStudio } from './MatureFashionStudio';
 import { SocialHubView } from './social/SocialHubView';
 import { SubscriptionHubView } from './payment/SubscriptionHubView';
+import { ARIAStatusWidget, ARIAAssistantPanel } from './aria';
+import { ARIAProvider } from '../aria';
 
 export interface LookVisionTheme {
   id: string;
@@ -517,6 +519,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
   const sequenceId = themeCtx?.sequenceId;
 
   const [state, setState] = useState<UnifiedState>(() => UnifiedFashionOS.getState());
+  const [isARIAPanelOpen, setIsARIAPanelOpen] = useState(false);
   
   // Design Sandbox & Figma Mockup Overlay states
   const [isMockOverlayActive, setIsMockOverlayActive] = useState(() => {
@@ -933,11 +936,17 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
     const handleOpenFocusSearch = () => {
       setIsFocusSearchOpen(true);
     };
+    const handleOpenAria = () => {
+      setActiveSubTab('AI_ASSISTANT');
+      localStorage.setItem('last_active_place_subtab', 'AI_ASSISTANT');
+    };
     window.addEventListener('lookvision_navigate_tab' as any, handleNavigateEvent);
     window.addEventListener('lookvision_open_focus_search' as any, handleOpenFocusSearch);
+    window.addEventListener('lookvision_open_aria' as any, handleOpenAria);
     return () => {
       window.removeEventListener('lookvision_navigate_tab' as any, handleNavigateEvent);
       window.removeEventListener('lookvision_open_focus_search' as any, handleOpenFocusSearch);
+      window.removeEventListener('lookvision_open_aria' as any, handleOpenAria);
     };
   }, []);
 
@@ -2077,7 +2086,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
       { id: 'AI_MEMORY', label: 'AI Memory', icon: Cpu, route: 'DASHBOARD' },
       { id: 'NOTIFICATIONS', label: 'Notifications', icon: Bell, action: 'NOTIFICATIONS', badge: '8' },
       { id: 'SEARCH', label: 'Focus Search', icon: Search, action: 'SEARCH' },
-      { id: 'AI_ASSISTANT', label: 'AI Assistant', icon: Sparkles, route: 'AI_ASSISTANT' },
+      { id: 'AI_ASSISTANT', label: 'ARIA Intelligence', icon: Sparkles, route: 'AI_ASSISTANT', badge: 'ARIA' },
       { id: 'SETTINGS', label: 'Settings', icon: Settings, route: 'SYSTEM_ROOM' }
     ];
 
@@ -4625,6 +4634,12 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
         )}
       </div>
     )}
+
+    {/* ARIA v2.5 Floating Status Widget & Interactive Assistant Panel */}
+    <div className="fixed bottom-6 left-6 z-[9990] flex items-center gap-2">
+      <ARIAStatusWidget compact onOpenPanel={() => setIsARIAPanelOpen(true)} />
+    </div>
+    <ARIAAssistantPanel isOpen={isARIAPanelOpen} onClose={() => setIsARIAPanelOpen(false)} />
 
     {/* Custom Premium Toast Notifications Overlay */}
     <div className="fixed bottom-6 right-6 z-[9999] flex flex-col gap-2 max-w-sm pointer-events-none select-none">

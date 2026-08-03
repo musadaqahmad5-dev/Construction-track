@@ -72,6 +72,8 @@ import matureFashionStudioRouter from "./src/matureFashionStudioRouter";
 import socialNetworkRouter from "./src/socialNetworkRouter";
 import paymentRouter from "./src/paymentRouter";
 import creditsRouter from "./src/creditsRouter";
+import aiStylistRouter from "./server/routes/aiStylistRouter";
+import ariaRouter from "./server/aria/aria.routes";
 
 // --- Production Request Validation Suite ---
 function validateType(value: any, expectedType: "string" | "number" | "boolean" | "array" | "object"): boolean {
@@ -797,7 +799,9 @@ async function startServer() {
   app.use(matureFashionStudioRouter);
   app.use("/api/social", socialNetworkRouter);
   app.use("/api", paymentRouter);
-  app.use("/api", creditsRouter);
+  app.use("/api/credits", creditsRouter);
+  app.use("/api/stylist", aiStylistRouter);
+  app.use("/api/aria", ariaRouter);
 
   const serverStartTime = Date.now();
 
@@ -1401,19 +1405,47 @@ Return ONLY raw JSON with properties: totalDurationSec, aspectRatio, styleTheme,
         return;
       }
 
-      const result = await executeCachedAiRequest("image-generation:generate", body, async () => {
-        const prompt = FashionPromptBuilder.buildOutfitPrompt({
+      const result = await executeCachedAiRequest("image-generation:generate", (() => {
+        const prompt = body.prompt || FashionPromptBuilder.buildOutfitPrompt({
           theme, vibe, garments, gender, formality, season, setting, hasUploadedUserImage: Boolean(hasUploadedUserImage), isAICreationsModule: Boolean(isAICreationsModule)
         });
+        const style = body.style || vibe || "";
+        const aspectRatio = body.aspectRatio || "3:4";
+        const quality = body.quality || "standard";
+        const negativePrompt = body.negativePrompt;
 
-        const genResult = await ImageGenerationRegistry.generate(prompt, { aspectRatio: '3:4' }, provider);
+        const fingerprintPayload: Record<string, any> = {
+          userId: user.uid,
+          prompt,
+          style,
+          aspectRatio,
+          quality
+        };
+        if (negativePrompt !== undefined && negativePrompt !== null && negativePrompt !== "") {
+          fingerprintPayload.negativePrompt = negativePrompt;
+        }
+        return fingerprintPayload;
+      })(), async () => {
+        const prompt = body.prompt || FashionPromptBuilder.buildOutfitPrompt({
+          theme, vibe, garments, gender, formality, season, setting, hasUploadedUserImage: Boolean(hasUploadedUserImage), isAICreationsModule: Boolean(isAICreationsModule)
+        });
+        const style = body.style || vibe || "";
+        const aspectRatio = body.aspectRatio || "3:4";
+        const quality = body.quality || "standard";
+        const negativePrompt = body.negativePrompt;
+
+        const genResult = await ImageGenerationRegistry.generate(
+          prompt,
+          { aspectRatio: aspectRatio as any, quality: quality as any, negativePrompt },
+          provider
+        );
         
         if (genResult.success && genResult.imageUrl) {
           // Save look to database history
           await ImageStorage.persistLook(genResult.imageUrl, {
             prompt,
             provider: genResult.provider,
-            vibe,
+            vibe: style || vibe,
             season,
             userId: user.uid,
             qualityScores: genResult.qualityScores,

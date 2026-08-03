@@ -323,23 +323,39 @@ export const FloatingAIChat: React.FC<FloatingAIChatProps> = ({ wardrobe }) => {
             {/* Header */}
             <div className="p-4 border-b border-white/5 flex items-center justify-between bg-white/[0.01]">
               <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-white/5 flex items-center justify-center">
-                  <Sparkles className="w-4 h-4 text-white" />
+                <div className="p-1.5 rounded-lg bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 flex items-center justify-center">
+                  <Sparkles className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-white">Sartorial Companion</h3>
+                  <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-white flex items-center gap-1.5">
+                    ARIA Companion
+                    <span className="px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-300 text-[8px] border border-indigo-500/30">v2.4</span>
+                  </h3>
                   <div className="flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    <span className="text-[9px] font-mono text-white/30 uppercase tracking-widest font-light">Engine Online</span>
+                    <span className="text-[9px] font-mono text-white/40 uppercase tracking-widest font-light">ARIA Neural Core Active</span>
                   </div>
                 </div>
               </div>
-              <button
-                onClick={() => setIsOpen(false)}
-                className="p-1 rounded-lg hover:bg-white/5 text-white/40 hover:text-white transition-all cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    setIsOpen(false);
+                    window.dispatchEvent(new CustomEvent('lookvision_open_aria'));
+                  }}
+                  className="px-2 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 text-[10px] font-mono flex items-center gap-1 transition-all"
+                  title="Expand to Full ARIA Studio"
+                >
+                  <Sparkles className="w-3 h-3" />
+                  <span>ARIA Studio</span>
+                </button>
+                <button
+                  onClick={() => setIsOpen(false)}
+                  className="p-1 rounded-lg hover:bg-white/5 text-white/40 hover:text-white transition-all cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
             {/* Sub-Header Tabs */}

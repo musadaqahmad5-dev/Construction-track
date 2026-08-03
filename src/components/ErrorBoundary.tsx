@@ -1,6 +1,7 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, History, Trash2, HelpCircle } from 'lucide-react';
 import { SnapshotManager } from '../reliability/snapshotManager';
+import { ErrorRegistry } from '../features/reliability/errorRegistry';
 
 interface Props {
   children?: ReactNode;
@@ -28,6 +29,18 @@ export class ErrorBoundary extends Component<Props, State> {
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("[ErrorBoundary] Handled uncaught UI thread exception:", error, errorInfo);
     
+    try {
+      ErrorRegistry.registerError(
+        'UI_THREAD_EXCEPTION',
+        error?.message || 'Uncaught React UI thread exception',
+        'critical',
+        'UI_Render_Tree',
+        false
+      );
+    } catch (e) {
+      console.warn("[ErrorBoundary] Failed to log error to ErrorRegistry:", e);
+    }
+
     let snapshotCount = 0;
     try {
       snapshotCount = SnapshotManager.getSnapshots().length;

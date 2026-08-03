@@ -11,6 +11,10 @@ import {
   UniversalPublishableAsset,
   ProductModule
 } from '../features/global/AIStyleHubV17Architecture';
+import { StyleDNAProfileComponent } from './aria/StyleDNAProfile';
+import { AIStylistPanel } from './aria/AIStylistPanel';
+import { AgentControlRoom } from './aria/AgentControlRoom';
+import { CivilizationMemoryDashboard } from './aria/CivilizationMemoryDashboard';
 
 interface AIMemoryHubProps {
   user?: any;
@@ -18,8 +22,8 @@ interface AIMemoryHubProps {
 }
 
 export const AIMemoryHub: React.FC<AIMemoryHubProps> = ({ user, onNavigateTab }) => {
-  // Main memory view tab: Public Component Memory vs Private User Memory
-  const [memoryTab, setMemoryTab] = useState<'PUBLIC_COMPONENT_MEMORY' | 'PRIVATE_USER_MEMORY'>('PUBLIC_COMPONENT_MEMORY');
+  // Main memory view tab: Civilization Memory vs Public Memory vs Private Memory vs Style DNA Identity vs AI Stylist Decisions vs Agent Swarm Control Room
+  const [memoryTab, setMemoryTab] = useState<'CIVILIZATION_MEMORY' | 'PUBLIC_COMPONENT_MEMORY' | 'PRIVATE_USER_MEMORY' | 'STYLE_DNA_IDENTITY' | 'AI_STYLIST_DECISIONS' | 'MULTI_AGENT_CONTROL_ROOM'>('CIVILIZATION_MEMORY');
 
   // Component origin filter
   const [moduleFilter, setModuleFilter] = useState<'ALL' | 'COMMUNITY' | 'AI_CREATIONS' | 'OUTFITS'>('ALL');
@@ -171,8 +175,31 @@ export const AIMemoryHub: React.FC<AIMemoryHubProps> = ({ user, onNavigateTab })
         </div>
       </div>
 
-      {/* 2. MAIN MEMORY VAULT TOGGLE (Public Component Memory vs Private User Memory) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {/* 2. MAIN MEMORY VAULT TOGGLE (Civilization Memory vs Public Memory vs Private Memory vs Style DNA Identity vs AI Stylist Decisions) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <button
+          type="button"
+          onClick={() => setMemoryTab('CIVILIZATION_MEMORY')}
+          className={`p-5 rounded-3xl border transition-all cursor-pointer text-left space-y-2 ${
+            memoryTab === 'CIVILIZATION_MEMORY'
+              ? 'bg-gradient-to-r from-violet-950/60 via-indigo-950/50 to-purple-950/60 border-violet-500/50 shadow-2xl'
+              : 'bg-[#07070c] border-white/5 hover:border-white/10'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Database className="w-4 h-4 text-violet-400" />
+              <h3 className="font-serif text-sm font-medium text-white">Civilization Memory</h3>
+            </div>
+            <span className="px-2.5 py-0.5 bg-violet-500/20 border border-violet-500/30 text-violet-200 text-[10px] font-mono rounded-full font-bold">
+              ARIA v2.5 Platform
+            </span>
+          </div>
+          <p className="text-xs text-zinc-400 font-light leading-relaxed">
+            Unified long-term intelligence memory layer with cross-domain knowledge graph.
+          </p>
+        </button>
+
         <button
           type="button"
           onClick={() => setMemoryTab('PUBLIC_COMPONENT_MEMORY')}
@@ -185,14 +212,14 @@ export const AIMemoryHub: React.FC<AIMemoryHubProps> = ({ user, onNavigateTab })
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Globe className="w-4 h-4 text-violet-400" />
-              <h3 className="font-serif text-sm font-medium text-white">Component Public Memory</h3>
+              <h3 className="font-serif text-sm font-medium text-white">Public Memory</h3>
             </div>
             <span className="px-2.5 py-0.5 bg-violet-500/20 border border-violet-500/30 text-violet-200 text-[10px] font-mono rounded-full">
               {publicDrafts.length} Assets
             </span>
           </div>
           <p className="text-xs text-zinc-400 font-light leading-relaxed">
-            Anonymous AI creations across all components. Browse and click <strong className="text-white">"Upload For Give Your Name"</strong> to import directly into your HomeHub Personal World.
+            Anonymous AI creations across all components. Browse and claim ownership.
           </p>
         </button>
 
@@ -208,19 +235,98 @@ export const AIMemoryHub: React.FC<AIMemoryHubProps> = ({ user, onNavigateTab })
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Lock className="w-4 h-4 text-emerald-400" />
-              <h3 className="font-serif text-sm font-medium text-white">Private User Memory</h3>
+              <h3 className="font-serif text-sm font-medium text-white">Private Memory</h3>
             </div>
             <span className="px-2.5 py-0.5 bg-emerald-500/20 border border-emerald-500/30 text-emerald-200 text-[10px] font-mono rounded-full">
               {privateQueue.length} Assets
             </span>
           </div>
           <p className="text-xs text-zinc-400 font-light leading-relaxed">
-            Your private personal generated history. Saved safely in your vault with quality scores and publishing control.
+            Your private personal generated history saved safely with quality scores.
+          </p>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setMemoryTab('STYLE_DNA_IDENTITY')}
+          className={`p-5 rounded-3xl border transition-all cursor-pointer text-left space-y-2 ${
+            memoryTab === 'STYLE_DNA_IDENTITY'
+              ? 'bg-gradient-to-r from-indigo-950/50 via-purple-950/40 to-pink-950/40 border-indigo-500/40 shadow-xl'
+              : 'bg-[#07070c] border-white/5 hover:border-white/10'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-indigo-400" />
+              <h3 className="font-serif text-sm font-medium text-white">Style DNA Engine</h3>
+            </div>
+            <span className="px-2.5 py-0.5 bg-indigo-500/20 border border-indigo-500/30 text-indigo-200 text-[10px] font-mono rounded-full">
+              v2.5
+            </span>
+          </div>
+          <p className="text-xs text-zinc-400 font-light leading-relaxed">
+            Structured fashion vectors, color profiles & silhouettes.
+          </p>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setMemoryTab('AI_STYLIST_DECISIONS')}
+          className={`p-5 rounded-3xl border transition-all cursor-pointer text-left space-y-2 ${
+            memoryTab === 'AI_STYLIST_DECISIONS'
+              ? 'bg-gradient-to-r from-purple-950/50 via-indigo-950/50 to-pink-950/40 border-purple-500/40 shadow-xl'
+              : 'bg-[#07070c] border-white/5 hover:border-white/10'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Wand2 className="w-4 h-4 text-purple-400" />
+              <h3 className="font-serif text-sm font-medium text-white">AI Stylist Engine</h3>
+            </div>
+            <span className="px-2.5 py-0.5 bg-purple-500/20 border border-purple-500/30 text-purple-200 text-[10px] font-mono rounded-full">
+              Decision
+            </span>
+          </div>
+          <p className="text-xs text-zinc-400 font-light leading-relaxed">
+            Personalized fashion decision recommendations & reasoning.
+          </p>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setMemoryTab('MULTI_AGENT_CONTROL_ROOM')}
+          className={`p-5 rounded-3xl border transition-all cursor-pointer text-left space-y-2 col-span-1 md:col-span-2 lg:col-span-1 ${
+            memoryTab === 'MULTI_AGENT_CONTROL_ROOM'
+              ? 'bg-gradient-to-r from-indigo-950/60 via-purple-950/50 to-indigo-950/60 border-indigo-500/50 shadow-2xl'
+              : 'bg-[#07070c] border-white/5 hover:border-white/10'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Cpu className="w-4 h-4 text-amber-300" />
+              <h3 className="font-serif text-sm font-medium text-white">Multi-Agent Control Room</h3>
+            </div>
+            <span className="px-2.5 py-0.5 bg-amber-500/20 border border-amber-500/30 text-amber-200 text-[10px] font-mono rounded-full font-bold">
+              ARIA v2.5 Swarm
+            </span>
+          </div>
+          <p className="text-xs text-zinc-400 font-light leading-relaxed">
+            Orchestrate Fashion Analyst, Stylist, Creative Director, Vision, and Trend Agents.
           </p>
         </button>
       </div>
 
-      {/* 3. FILTERS & SEARCH TOOLBAR */}
+      {memoryTab === 'CIVILIZATION_MEMORY' ? (
+        <CivilizationMemoryDashboard />
+      ) : memoryTab === 'MULTI_AGENT_CONTROL_ROOM' ? (
+        <AgentControlRoom />
+      ) : memoryTab === 'STYLE_DNA_IDENTITY' ? (
+        <StyleDNAProfileComponent />
+      ) : memoryTab === 'AI_STYLIST_DECISIONS' ? (
+        <AIStylistPanel />
+      ) : (
+        <>
+          {/* 3. FILTERS & SEARCH TOOLBAR */}
       <div className="bg-[#07070c] border border-white/5 rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
         {/* Component Origin Filter */}
         <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto scrollbar-none">
@@ -557,6 +663,8 @@ export const AIMemoryHub: React.FC<AIMemoryHubProps> = ({ user, onNavigateTab })
           </div>
         )}
       </AnimatePresence>
+        </>
+      )}
 
     </div>
   );

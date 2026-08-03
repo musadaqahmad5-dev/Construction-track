@@ -48,6 +48,17 @@ export const PlatformEcosystemLauncher: React.FC<PlatformEcosystemLauncherProps>
 
   const ecosystems = [
     {
+      id: 'aria-intelligence',
+      name: 'ARIA Intelligence Layer',
+      description: 'Personal Fashion Intelligence, Style DNA, Wardrobe Synergy & Theme Adaptation.',
+      icon: Sparkles,
+      status: 'active',
+      badge: 'v2.4 Live',
+      actionLabel: 'Launch ARIA',
+      targetTab: 'AI_ASSISTANT',
+      color: 'from-indigo-500/20 to-violet-500/10 border-indigo-500/30 text-indigo-400'
+    },
+    {
       id: 'fashion-ai',
       name: 'Fashion AI Studio',
       description: 'Identity-based generative fashion, Virtual Try-on, and custom photoshoots.',

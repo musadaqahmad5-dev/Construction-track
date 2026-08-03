@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { Cpu, Play, Server, GitFork, HelpCircle, MessageSquare, Award, ShieldCheck, Eye, Brain, Database, Sliders, Shirt } from 'lucide-react';
 import { AgentCommunicationBus } from '../../../engine';
+import { AgentControlRoom } from '../../aria/AgentControlRoom';
 
 interface AgentTabProps {
   isRouting: boolean;
@@ -37,6 +38,11 @@ export const AgentTab: React.FC<AgentTabProps> = ({
       transition={{ duration: 0.2 }}
       className="space-y-6 text-left animate-fade-in"
     >
+      {/* ARIA v2.5 MULTI-AGENT CONTROL ROOM */}
+      <div className="bg-[#05050a] border border-white/10 rounded-3xl p-2 shadow-2xl">
+        <AgentControlRoom />
+      </div>
+
       {/* MULTI-AGENT STATE & TELEMETRY CONTROLLER PANEL */}
       <div className="bg-gradient-to-br from-indigo-950/30 via-slate-900/25 to-black/60 border border-white/5 p-6 rounded-2xl space-y-4">
         <div className="flex flex-wrap gap-4 justify-between items-center pb-3 border-b border-white/5">

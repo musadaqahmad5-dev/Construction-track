@@ -15,6 +15,7 @@ import { AIStyleHubV17Architecture } from './features/global/AIStyleHubV17Archit
 import { SEOStructuredData } from './components/SEOStructuredData';
 import { ImageLightboxModal } from './components/ImageLightboxModal';
 import { UIShellProvider, ThemeIntelligenceAppBridge } from './engine';
+import { ARIAProvider } from './aria';
 
 // Temporal light rules mapper
 export function getTemporalTheme() {
@@ -722,19 +723,21 @@ export default function App() {
                     <p className="font-mono text-[10px] uppercase tracking-widest text-white/40">Initializing Fashion AI...</p>
                   </div>
                 }>
-                  <AIStyleHub 
-                    wardrobe={allItems}
-                    onAddGarment={async (title, desc, category, extra) => {
-                      await handleAddGarment(title, desc, category, extra);
-                    }}
-                    onDeleteGarment={handleDeleteGarment}
-                    user={user}
-                    onLogout={handleLogout}
-                    onReset={handleReset}
-                    onLoadSamples={handleAddSampleWardrobe}
-                    isResetting={isResetting}
-                    onEnterSilence={() => setIsSilent(true)}
-                  />
+                  <ARIAProvider userId={user?.uid}>
+                    <AIStyleHub 
+                      wardrobe={allItems}
+                      onAddGarment={async (title, desc, category, extra) => {
+                        await handleAddGarment(title, desc, category, extra);
+                      }}
+                      onDeleteGarment={handleDeleteGarment}
+                      user={user}
+                      onLogout={handleLogout}
+                      onReset={handleReset}
+                      onLoadSamples={handleAddSampleWardrobe}
+                      isResetting={isResetting}
+                      onEnterSilence={() => setIsSilent(true)}
+                    />
+                  </ARIAProvider>
                 </React.Suspense>
               </div>
             )}

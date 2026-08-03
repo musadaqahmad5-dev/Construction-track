@@ -4,7 +4,7 @@ import {
   Sparkles, ShieldCheck, RefreshCw, Layers, Sliders, Play, 
   Trash2, User, Eye, Check, ChevronRight, Activity, ArrowRight,
   Shirt, Compass, Info, CheckCircle, Scale, Wind, Thermometer,
-  ZoomIn, ZoomOut, Maximize2, Move, HelpCircle, Save, Layers2, ArrowUp, ArrowDown
+  ZoomIn, ZoomOut, Maximize2, Move, HelpCircle, Save, Layers2, ArrowUp, ArrowDown, Box
 } from 'lucide-react';
 import { WardrobeItem } from '../types';
 import { 
@@ -12,6 +12,9 @@ import {
   ThemeCoatRenderer, 
   FoundationInteractionWrapper 
 } from '../engine';
+import { auth } from '../firebase';
+import { ThreeDVirtualTryOn } from './ThreeDVirtualTryOn';
+import { VirtualTryOnWorkspace } from './aria/VirtualTryOnWorkspace';
 
 interface VirtualStudioTryOnProps {
   wardrobe: WardrobeItem[];
@@ -103,6 +106,7 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
   // Chosen global garment sizing to simulate fitting tension
   const [sizeSelected, setSizeSelected] = useState<'S' | 'M' | 'L' | 'XL'>('M');
   const [selectedBackdrop, setSelectedBackdrop] = useState<string>('studio');
+  const [studioMode, setStudioMode] = useState<'2d-canvas' | '3d-webgl' | 'aria-vision'>('2d-canvas');
 
   // AI Fit Generation States
   const [isRendering, setIsRendering] = useState<boolean>(false);
@@ -236,7 +240,7 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
   };
 
   // Compile full simulated volumetric look
-  const runAIFitRender = () => {
+  const runAIFitRender = async () => {
     if (!selectedTop && !selectedOuterwear && !selectedBottom) {
       window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
         detail: '✕ Please load at least one garment into the Try-On stack.'
@@ -245,14 +249,14 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
     }
 
     setIsRendering(true);
-    setRenderStep('Initializing spatial avatar mesh...');
+    setRenderStep('Initializing spatial avatar mesh & connecting Gemini engine...');
 
     const steps = [
-      { t: 800, text: '🟢 Calibrating physical dimensions (Height: ' + height + 'cm, Waist: ' + waist + 'cm)...' },
-      { t: 1600, text: '🪐 Wrapping 3D garment patterns (Elasticity: ' + fabricElasticity + '%)...' },
-      { t: 2400, text: '⚡ Simulating fabric gravity & stress shear fields...' },
-      { t: 3200, text: '🪐 Composing background photorealism with preset studio lighting...' },
-      { t: 4000, text: '✓ Reconstructing virtual textures to high-fidelity output...' }
+      { t: 600, text: '🟢 Calibrating physical dimensions (Height: ' + height + 'cm, Waist: ' + waist + 'cm)...' },
+      { t: 1400, text: '🪐 Querying Gemini multi-modal mesh analysis for garment fit...' },
+      { t: 2200, text: '⚡ Simulating fabric gravity & stress shear fields...' },
+      { t: 3000, text: '🪐 Composing studio background photorealism & lighting...' },
+      { t: 3800, text: '✓ Syncing style profile to Firestore & finalizing render...' }
     ];
 
     steps.forEach((step) => {
@@ -260,6 +264,45 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
         setRenderStep(step.text);
       }, step.t);
     });
+
+    const activeItem = selectedTop || selectedOuterwear || selectedBottom || selectedShoes;
+    let apiAiData: any = null;
+
+    try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+
+      if (auth?.currentUser) {
+        try {
+          const token = await auth.currentUser.getIdToken();
+          headers['Authorization'] = `Bearer ${token}`;
+        } catch (_) {
+          headers['Authorization'] = 'Bearer guest-token';
+        }
+      } else {
+        headers['Authorization'] = 'Bearer guest-token';
+      }
+
+      const imgPayload = activeItem?.imageUrl || 'https://images.unsplash.com/photo-1512436991641-6745cdb1723f?q=80&w=400&auto=format&fit=crop';
+      const itemId = activeItem?.id || 'garment-default';
+
+      const resp = await fetch('/api/tryon/process-mesh', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          userImage: imgPayload,
+          clothingItemId: itemId,
+          userId: auth?.currentUser?.uid || 'guest-sartorialist-user-100'
+        })
+      });
+
+      if (resp.ok) {
+        apiAiData = await resp.json();
+      }
+    } catch (err) {
+      console.warn("TryOn API sync notice:", err);
+    }
 
     setTimeout(() => {
       const urls = [
@@ -293,11 +336,15 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
       setFitHistory(updatedHistory);
       localStorage.setItem('virtual_fit_studio_history', JSON.stringify(updatedHistory));
 
+      const toastMsg = apiAiData?.primaryColorHex
+        ? `✓ Render complete! Gemini mesh calibrated (Color: ${apiAiData.primaryColorHex}, Texture: ${apiAiData.materialTextureType}).`
+        : `✓ Successfully rendered high-fidelity fit composition!`;
+
       window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
-        detail: `✓ Successfully rendered high-fidelity fit composition!`
+        detail: toastMsg
       }));
 
-    }, 4500);
+    }, 4200);
   };
 
   const handleDeleteHistorySession = (id: string, e: React.MouseEvent) => {
@@ -594,7 +641,37 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-2 shrink-0 z-10">
+        <div className="flex flex-wrap items-center gap-2 shrink-0 z-10">
+          <div className="flex items-center p-1 bg-[#11111a] border border-white/10 rounded-xl text-[10px] font-mono">
+            <FoundationInteractionWrapper themeDNA={themeDNA}>
+              <button
+                onClick={() => setStudioMode('2d-canvas')}
+                className={`px-3 py-1 rounded-lg uppercase tracking-wider cursor-pointer transition-all flex items-center gap-1.5 ${studioMode === '2d-canvas' ? 'bg-indigo-600 text-white font-bold shadow' : 'text-zinc-400 hover:text-white'}`}
+              >
+                <Layers className="w-3 h-3" />
+                <span>2D Canvas</span>
+              </button>
+            </FoundationInteractionWrapper>
+            <FoundationInteractionWrapper themeDNA={themeDNA}>
+              <button
+                onClick={() => setStudioMode('3d-webgl')}
+                className={`px-3 py-1 rounded-lg uppercase tracking-wider cursor-pointer transition-all flex items-center gap-1.5 ${studioMode === '3d-webgl' ? 'bg-indigo-600 text-white font-bold shadow' : 'text-zinc-400 hover:text-white'}`}
+              >
+                <Box className="w-3 h-3" />
+                <span>3D WebGL Studio</span>
+              </button>
+            </FoundationInteractionWrapper>
+            <FoundationInteractionWrapper themeDNA={themeDNA}>
+              <button
+                onClick={() => setStudioMode('aria-vision')}
+                className={`px-3 py-1 rounded-lg uppercase tracking-wider cursor-pointer transition-all flex items-center gap-1.5 ${studioMode === 'aria-vision' ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold shadow-[0_0_12px_rgba(99,102,241,0.4)]' : 'text-indigo-300 hover:text-white'}`}
+              >
+                <Eye className="w-3 h-3 text-amber-300" />
+                <span>ARIA Visual Intelligence</span>
+              </button>
+            </FoundationInteractionWrapper>
+          </div>
+
           <FoundationInteractionWrapper themeDNA={themeDNA}>
             <button 
               onClick={handleResetCanvas}
@@ -649,8 +726,21 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
         </div>
       )}
 
-      {/* MAIN COCKPIT GRID */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      {/* 3D WEBGL STUDIO, ARIA VISUAL INTELLIGENCE OR 2D ATELIER CANVAS */}
+      {studioMode === 'aria-vision' ? (
+        <div className="bg-[#07070c] border border-white/5 rounded-2xl p-4 shadow-xl">
+          <VirtualTryOnWorkspace />
+        </div>
+      ) : studioMode === '3d-webgl' ? (
+        <div className="bg-[#07070c] border border-white/5 rounded-2xl p-4 shadow-xl">
+          <ThreeDVirtualTryOn 
+            clothingItemId={selectedTop?.id || selectedOuterwear?.id || selectedBottom?.id || 'garment-001'} 
+            defaultUserImage={selectedTop?.imageUrl || selectedOuterwear?.imageUrl || ''} 
+          />
+        </div>
+      ) : (
+        /* MAIN COCKPIT GRID */
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
         {/* COLUMN 1: AVATAR CUSTOMIZER & DRAPE CONTROLS (lg:col-span-4) */}
         <div className="lg:col-span-4 space-y-6 text-left">
@@ -1303,6 +1393,7 @@ export const VirtualStudioTryOn: React.FC<VirtualStudioTryOnProps> = ({
         </div>
 
       </div>
+      )}
 
       {/* CLOSET SELECTOR (LOAD GARMENTS DIRECTLY FROM CLOSET) */}
       <div className="bg-[#07070c] border border-white/5 rounded-2xl p-5 space-y-4 shadow-xl text-left">

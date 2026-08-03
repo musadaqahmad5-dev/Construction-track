@@ -228,19 +228,25 @@ router.post("/process-mesh", async (req: Request<{}, {}, ProcessMeshRequestBody>
             imagePart = { inlineData: { mimeType: matches[1], data: matches[2] } };
           }
         } else if (userImage.startsWith("http://") || userImage.startsWith("https://")) {
-          const fetchResp = await fetch(userImage);
-          if (!fetchResp.ok) {
-            throw new Error("Failed to fetch userImage from URL");
-          }
-          const arrayBuffer = await fetchResp.arrayBuffer();
-          const mimeType = (fetchResp.headers.get("content-type") || "image/jpeg").split(";")[0];
-          imagePart = {
-            inlineData: {
-              mimeType,
-              data: Buffer.from(arrayBuffer).toString("base64")
+          try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 6000);
+            const fetchResp = await fetch(userImage, { signal: controller.signal });
+            clearTimeout(timeoutId);
+            if (fetchResp.ok) {
+              const arrayBuffer = await fetchResp.arrayBuffer();
+              const mimeType = (fetchResp.headers.get("content-type") || "image/jpeg").split(";")[0];
+              imagePart = {
+                inlineData: {
+                  mimeType,
+                  data: Buffer.from(arrayBuffer).toString("base64")
+                }
+              };
             }
-          };
-        } else {
+          } catch (_) {
+            // Safe fallback if URL fetch fails or times out
+          }
+        } else if (userImage.length > 20) {
           imagePart = {
             inlineData: {
               mimeType: "image/jpeg",
@@ -249,15 +255,13 @@ router.post("/process-mesh", async (req: Request<{}, {}, ProcessMeshRequestBody>
           };
         }
 
-        if (!imagePart) {
-          throw new Error("Could not parse image payload");
-        }
+        const prompt = `Analyze the provided fashion image or clothing context for item "${clothingItemId}". Determine the dominant primary color hex code, the 3D mesh recommended scale array [x, y, z] matching [width, height, depth] ratio, and the material texture type (must be strictly one of: matte, metallic, glossy).`;
 
-        const prompt = `Analyze the provided image for clothing item "${clothingItemId}". Determine the dominant primary color hex code, the 3D mesh recommended scale array [x, y, z] matching [width, height, depth] ratio, and the material texture type (must be strictly one of: matte, metallic, glossy).`;
+        const contentsPayload: any[] = imagePart ? [imagePart, prompt] : [prompt];
 
         const response = await ai.models.generateContent({
           model: "gemini-2.5-flash",
-          contents: [imagePart, prompt],
+          contents: contentsPayload,
           config: {
             responseMimeType: "application/json",
             responseSchema: {

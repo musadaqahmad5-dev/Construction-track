@@ -6,7 +6,7 @@ import {
   Cpu, Layers, Maximize2, Share2, Terminal, Info, ChevronRight, Play, ArrowRight,
   Compass, User, Folder, Stars, ListFilter, Trash2, Archive, Plus,
   BookOpen, Award, Crown, Scissors, Box, MapPin, Activity, CheckSquare,
-  FileText, Sliders, Shield, ShieldCheck, Users, UserCheck, Loader2, Upload
+  FileText, Sliders, Shield, ShieldCheck, Users, UserCheck, Loader2, Upload, Wand2
 } from 'lucide-react';
 import { WardrobeItem } from '../types';
 import { db, auth } from '../firebase';
@@ -26,6 +26,7 @@ import { PromptIntelligenceEngine } from '../features/image-generation/PromptInt
 import { GenerationIntelligenceEngine } from '../features/image-generation/GenerationIntelligenceEngine';
 import { ImageGenerationRegistry } from '../features/image-generation/imageGenerationProvider';
 import { AIStyleHubV17Architecture } from '../features/global/AIStyleHubV17Architecture';
+import { AIStudioWorkspace } from '../features/creations';
 
 interface StudentGroup {
   id: string;
@@ -1215,6 +1216,7 @@ export const AIEngineStudio: React.FC<AIEngineStudioProps> = ({
         {/* Tab switch mechanism - drops down cleanly below title line on small/medium screens */}
         <div className="flex flex-wrap sm:flex-nowrap bg-[#07070c] border border-white/5 p-1 rounded-2xl shadow-inner w-full xl:w-auto overflow-x-auto gap-1">
           {[
+            { id: 'CREATION_STUDIO', label: '✨ AI Design Studio', icon: Wand2 },
             { id: 'UNIVERSE_STUDIO', label: '🎨 Studio & Generator', icon: Sparkles },
             { id: 'DISCOVERY', label: '🔥 Discovery Feed', icon: Compass },
             { id: 'GALLERY', label: '🖼️ Showroom', icon: Layers },
@@ -1244,6 +1246,20 @@ export const AIEngineStudio: React.FC<AIEngineStudioProps> = ({
 
       {/* CORE EXPERIENCE RENDER SWITCH */}
       <AnimatePresence mode="wait">
+
+        {/* TAB -1: CREATION STUDIO (NEW PRODUCTION ARIA DESIGN LAB) */}
+        {activeTab === 'CREATION_STUDIO' && (
+          <motion.div
+            key="creation_studio"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+          >
+            <AIStudioWorkspace
+              onNavigateToTab={onNavigateToTab}
+            />
+          </motion.div>
+        )}
 
         {/* TAB 0: UNIVERSE STUDIO */}
         {activeTab === 'UNIVERSE_STUDIO' && (
