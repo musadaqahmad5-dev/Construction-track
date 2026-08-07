@@ -7,7 +7,6 @@ import { getApps, initializeApp, cert } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import Stripe from "stripe";
-import { createServer as createViteServer } from "vite";
 
 // Structured Production Logging Interface & Function
 interface StructuredLogPayload {
@@ -2402,15 +2401,12 @@ You MUST respond strictly with a valid JSON object. No Markdown code fences (do 
 
   // Vite development integration or static serving
   if (process.env.NODE_ENV !== "production") {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: "spa",
-    });
-    app.use(vite.middlewares);
+    const { setupViteDev } = await import("./server/viteDev.js");
+    await setupViteDev(app);
   } else {
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
-    app.get("*", (req, res) => {
+    app.get("*", (req: express.Request, res: express.Response) => {
       res.sendFile(path.join(distPath, "index.html"));
     });
   }
