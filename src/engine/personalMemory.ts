@@ -213,7 +213,7 @@ export class PersonalFashionMemoryEngine {
   /**
    * Commits the updated memory back to storage
    */
-  private static saveMemory(memory: PersonalFashionMemory): void {
+  public static saveMemory(memory: PersonalFashionMemory): void {
     this.store.set(memory.userId, memory);
     try {
       localStorage.setItem(`fashion_memory_${memory.userId}`, JSON.stringify(memory));

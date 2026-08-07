@@ -79,3 +79,91 @@ export interface CivilizationMemoryEngineStatus {
   lastIndexedAt?: string;
   lastError?: string;
 }
+
+// ============================================================================
+// TASK 1 — ARIA CIVILIZATION KNOWLEDGE GRAPH CORE TYPES
+// ============================================================================
+
+export type KnowledgeNodeType =
+  | 'Style Archetype'
+  | 'Fashion Era'
+  | 'Designer'
+  | 'Brand'
+  | 'Material'
+  | 'Color Theory'
+  | 'Silhouette'
+  | 'Cultural Pattern'
+  | 'Trend'
+  | 'Occasion';
+
+export type KnowledgeRelationshipType =
+  | 'CONNECTED_TO'
+  | 'INFLUENCED_BY'
+  | 'SUITABLE_FOR'
+  | 'COMPATIBLE_WITH'
+  | 'DERIVED_FROM'
+  | 'ENHANCES'
+  | 'VALIDATES'
+  | 'CONTRADICTS';
+
+export interface KnowledgeRelationship {
+  relationshipId: string;
+  relationshipType: KnowledgeRelationshipType;
+  sourceNodeId: string;
+  targetNodeId: string;
+  strengthScore: number; // 0.0 to 1.0
+  confidenceScore: number; // 0.0 to 1.0
+  evidence?: string;
+  createdAt?: string;
+}
+
+export interface KnowledgeNode {
+  id: string;
+  type: KnowledgeNodeType;
+  name: string;
+  description: string;
+  metadata: Record<string, unknown>;
+  relationships: KnowledgeRelationship[];
+  confidence: number; // 0.0 to 1.0
+  vectorEmbedding?: number[]; // Future vector indexing compatibility
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PersonalKnowledgeConnection {
+  connectionId: string;
+  userId: string;
+  nodeId: string;
+  nodeType: KnowledgeNodeType;
+  nodeName: string;
+  affinityScore: number; // 0.0 to 1.0
+  source: string; // e.g. 'Style DNA', 'Personal Memory', 'Wardrobe Synergy'
+  lastConnectedAt: string;
+}
+
+export interface KnowledgeRetrievalQuery {
+  queryText: string;
+  userId?: string;
+  targetNodeTypes?: KnowledgeNodeType[];
+  minConfidence?: number;
+  minStrength?: number;
+  limit?: number;
+}
+
+export interface KnowledgeQueryResult {
+  queryText: string;
+  matchedNodes: KnowledgeNode[];
+  personalConnections: PersonalKnowledgeConnection[];
+  relevantRelationships: KnowledgeRelationship[];
+  confidenceScore: number; // 0.0 to 1.0
+  reasoningSignals: Array<{
+    signalId: string;
+    nodeName: string;
+    nodeType: KnowledgeNodeType;
+    explanation: string;
+    confidence: number;
+  }>;
+  retrievedAt: string;
+  latencyMs: number;
+}
+

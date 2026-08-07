@@ -14,11 +14,17 @@ export interface SubscriptionStats {
 
 export class SubscriptionEngine {
   private static activeStatus: SubscriptionLevel = 'free';
+  private static snapshotUnsubscribe: (() => void) | null = null;
 
   static {
     auth.onAuthStateChanged((user) => {
+      if (this.snapshotUnsubscribe) {
+        this.snapshotUnsubscribe();
+        this.snapshotUnsubscribe = null;
+      }
+
       if (user) {
-        onSnapshot(doc(db, "users", user.uid), (docSnap) => {
+        this.snapshotUnsubscribe = onSnapshot(doc(db, "users", user.uid), (docSnap) => {
           if (docSnap.exists()) {
             const data = docSnap.data();
             const tier = data?.subscription?.tier;
@@ -31,6 +37,8 @@ export class SubscriptionEngine {
           } else {
             this.activeStatus = 'free';
           }
+        }, (err) => {
+          console.warn("[SubscriptionEngine] Subscription status sync error:", err);
         });
       } else {
         this.activeStatus = 'free';

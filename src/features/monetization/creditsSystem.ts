@@ -12,11 +12,17 @@ export interface CreditBalance {
 export class CreditsSystem {
   private static imagesUsed = 0;
   private static recommendationsUsed = 0;
+  private static snapshotUnsubscribe: (() => void) | null = null;
 
   static {
     auth.onAuthStateChanged((user) => {
+      if (this.snapshotUnsubscribe) {
+        this.snapshotUnsubscribe();
+        this.snapshotUnsubscribe = null;
+      }
+
       if (user) {
-        onSnapshot(doc(db, "users", user.uid), (docSnap) => {
+        this.snapshotUnsubscribe = onSnapshot(doc(db, "users", user.uid), (docSnap) => {
           if (docSnap.exists()) {
             const data = docSnap.data();
             const quotaUsed = data?.quotaUsed || {};
@@ -26,6 +32,8 @@ export class CreditsSystem {
             this.imagesUsed = 0;
             this.recommendationsUsed = 0;
           }
+        }, (err) => {
+          console.warn("[CreditsSystem] User credits sync error:", err);
         });
       } else {
         this.imagesUsed = 0;

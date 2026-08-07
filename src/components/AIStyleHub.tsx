@@ -6,8 +6,9 @@ import {
   ChevronRight, Compass, Eye, Cpu, Database, Activity, CloudSun, User, Fingerprint,
   Bell, PenSquare, X, ChevronDown, Award, Check,
   Home, Users, Heart, Layers, MessageSquare, Mail, Crown, MoreVertical, Moon, Menu,
-  Camera, Upload, Calendar, Smartphone, Monitor, Tablet, Zap, Wifi, BatteryCharging, Globe, Maximize2, Minimize2, CreditCard
+  Camera, Upload, Calendar, Smartphone, Monitor, Tablet, Zap, Wifi, BatteryCharging, Globe, Maximize2, Minimize2, CreditCard, ShieldCheck
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import { WardrobeItem, ProfileService, type StyleProfile, type StylistHistoryEntry } from '../platform';
 import { getGarmentImage } from '../features/feed/AIEngine';
 import { EmptyStateLibrary } from './EmptyStateLibrary';
@@ -57,6 +58,7 @@ import { AIMemoryHub } from './AIMemoryHub';
 import { MatureFashionStudio } from './MatureFashionStudio';
 import { SocialHubView } from './social/SocialHubView';
 import { SubscriptionHubView } from './payment/SubscriptionHubView';
+import { AdminShell } from '../admin';
 import { ARIAStatusWidget, ARIAAssistantPanel } from './aria';
 import { ARIAProvider } from '../aria';
 
@@ -560,12 +562,24 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
         if (d.mockImageFit !== undefined) setMockImageFit(d.mockImageFit);
       }
     };
+    const handlePersonaChanged = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail && customEvent.detail.wardrobePreset) {
+        UnifiedFashionOS.syncWardrobeItems(customEvent.detail.wardrobePreset);
+        setState(UnifiedFashionOS.getState());
+      }
+    };
     window.addEventListener('lookvision_update_sandbox_settings', handleUpdateSandboxSettings);
+    window.addEventListener('lookvision_persona_changed', handlePersonaChanged);
     return () => {
       window.removeEventListener('lookvision_update_sandbox_settings', handleUpdateSandboxSettings);
+      window.removeEventListener('lookvision_persona_changed', handlePersonaChanged);
     };
   }, []);
-  const [activeSubTab, setActiveSubTab] = useState<'PRODUCT_HOME' | 'PRODUCT_AI_CREATIONS' | 'PRODUCT_COMMUNITY' | 'PRODUCT_MARKETPLACE' | 'ECOSYSTEM_GENERATE' | 'ECOSYSTEM_CREATE' | 'HOME' | 'AI_STUDIO' | 'WARDROBE' | 'DASHBOARD' | 'PROFILE' | 'SYSTEM_ROOM' | 'OUTFIT_GEN' | 'VIRTUAL_TRY' | 'COLLECTIONS' | 'HISTORY' | 'MESSAGES' | 'FAVORITES' | 'MARKETPLACE_ROOM' | 'COMMUNITY_ROOM' | 'DISCOVER' | 'CREATOR_WORKSPACE' | 'PRODUCT_DETAIL' | 'PLANNER' | 'FASHION_INSTRUCTOR' | 'AI_ASSISTANT' | 'MATURE_FASHION_STUDIO' | 'SOCIAL_HUB' | 'SUBSCRIPTION_HUB'>(() => {
+  const [activeSubTab, setActiveSubTab] = useState<'PRODUCT_HOME' | 'PRODUCT_AI_CREATIONS' | 'PRODUCT_COMMUNITY' | 'PRODUCT_MARKETPLACE' | 'ECOSYSTEM_GENERATE' | 'ECOSYSTEM_CREATE' | 'HOME' | 'AI_STUDIO' | 'WARDROBE' | 'DASHBOARD' | 'PROFILE' | 'SYSTEM_ROOM' | 'OUTFIT_GEN' | 'VIRTUAL_TRY' | 'COLLECTIONS' | 'HISTORY' | 'MESSAGES' | 'FAVORITES' | 'MARKETPLACE_ROOM' | 'COMMUNITY_ROOM' | 'DISCOVER' | 'CREATOR_WORKSPACE' | 'PRODUCT_DETAIL' | 'PLANNER' | 'FASHION_INSTRUCTOR' | 'AI_ASSISTANT' | 'MATURE_FASHION_STUDIO' | 'SOCIAL_HUB' | 'SUBSCRIPTION_HUB' | 'LOOK_VISION_DASHBOARD' | 'MAIN_DASHBOARD' | 'ADMIN_COMMAND'>(() => {
+    if (typeof window !== 'undefined' && (window.location.pathname === '/admin' || window.location.search.includes('view=admin'))) {
+      return 'ADMIN_COMMAND';
+    }
     let saved = localStorage.getItem('last_active_place_subtab');
     if (saved === 'HOME') saved = 'PRODUCT_HOME';
     else if (saved === 'COMMUNITY_ROOM') saved = 'PRODUCT_COMMUNITY';
@@ -573,13 +587,28 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
     else if (saved === 'AI_STUDIO') saved = 'PRODUCT_AI_CREATIONS';
     else if (saved === 'OUTFIT_GEN') saved = 'ECOSYSTEM_GENERATE';
     else if (saved === 'FASHION_INSTRUCTOR') saved = 'PRODUCT_COMMUNITY';
+    else if (saved === 'ADMIN' || saved === 'ADMIN_COMMAND') {
+      if (typeof window !== 'undefined' && window.location.pathname !== '/admin' && !window.location.search.includes('view=admin')) {
+        try {
+          localStorage.removeItem('last_active_place_subtab');
+        } catch (e) {}
+        saved = 'PRODUCT_HOME';
+      } else {
+        saved = 'ADMIN_COMMAND';
+      }
+    }
 
-    if (saved && ['PRODUCT_HOME', 'PRODUCT_AI_CREATIONS', 'PRODUCT_COMMUNITY', 'PRODUCT_MARKETPLACE', 'ECOSYSTEM_GENERATE', 'ECOSYSTEM_CREATE', 'HOME', 'AI_STUDIO', 'WARDROBE', 'DASHBOARD', 'PROFILE', 'SYSTEM_ROOM', 'OUTFIT_GEN', 'VIRTUAL_TRY', 'COLLECTIONS', 'HISTORY', 'MESSAGES', 'FAVORITES', 'MARKETPLACE_ROOM', 'COMMUNITY_ROOM', 'DISCOVER', 'CREATOR_WORKSPACE', 'PRODUCT_DETAIL', 'PLANNER', 'FASHION_INSTRUCTOR', 'AI_ASSISTANT', 'MATURE_FASHION_STUDIO', 'SOCIAL_HUB', 'SUBSCRIPTION_HUB'].includes(saved)) {
+    const validTabs = ['PRODUCT_HOME', 'PRODUCT_AI_CREATIONS', 'PRODUCT_COMMUNITY', 'PRODUCT_MARKETPLACE', 'ECOSYSTEM_GENERATE', 'ECOSYSTEM_CREATE', 'HOME', 'AI_STUDIO', 'WARDROBE', 'DASHBOARD', 'PROFILE', 'SYSTEM_ROOM', 'OUTFIT_GEN', 'VIRTUAL_TRY', 'COLLECTIONS', 'HISTORY', 'MESSAGES', 'FAVORITES', 'MARKETPLACE_ROOM', 'COMMUNITY_ROOM', 'DISCOVER', 'CREATOR_WORKSPACE', 'PRODUCT_DETAIL', 'PLANNER', 'FASHION_INSTRUCTOR', 'AI_ASSISTANT', 'MATURE_FASHION_STUDIO', 'SOCIAL_HUB', 'SUBSCRIPTION_HUB', 'LOOK_VISION_DASHBOARD', 'MAIN_DASHBOARD', 'ADMIN_COMMAND'];
+
+    if (saved && validTabs.includes(saved)) {
       return saved as any;
     }
+    try {
+      localStorage.removeItem('last_active_place_subtab');
+    } catch (e) {}
     return 'PRODUCT_COMMUNITY';
   });
-  const [activeCockpitSubTab, setActiveCockpitSubTab] = useState<'PRODUCT_HOME' | 'PRODUCT_AI_CREATIONS' | 'PRODUCT_COMMUNITY' | 'PRODUCT_MARKETPLACE' | 'ECOSYSTEM_GENERATE' | 'ECOSYSTEM_CREATE' | 'HOME' | 'AI_STUDIO' | 'WARDROBE' | 'DASHBOARD' | 'PROFILE' | 'SYSTEM_ROOM' | 'OUTFIT_GEN' | 'VIRTUAL_TRY' | 'COLLECTIONS' | 'HISTORY' | 'MESSAGES' | 'FAVORITES' | 'MARKETPLACE_ROOM' | 'COMMUNITY_ROOM' | 'DISCOVER' | 'CREATOR_WORKSPACE' | 'PRODUCT_DETAIL' | 'PLANNER' | 'FASHION_INSTRUCTOR' | 'MATURE_FASHION_STUDIO' | 'SOCIAL_HUB' | 'SUBSCRIPTION_HUB'>('PRODUCT_COMMUNITY');
+  const [activeCockpitSubTab, setActiveCockpitSubTab] = useState<'PRODUCT_HOME' | 'PRODUCT_AI_CREATIONS' | 'PRODUCT_COMMUNITY' | 'PRODUCT_MARKETPLACE' | 'ECOSYSTEM_GENERATE' | 'ECOSYSTEM_CREATE' | 'HOME' | 'AI_STUDIO' | 'WARDROBE' | 'DASHBOARD' | 'PROFILE' | 'SYSTEM_ROOM' | 'OUTFIT_GEN' | 'VIRTUAL_TRY' | 'COLLECTIONS' | 'HISTORY' | 'MESSAGES' | 'FAVORITES' | 'MARKETPLACE_ROOM' | 'COMMUNITY_ROOM' | 'DISCOVER' | 'CREATOR_WORKSPACE' | 'PRODUCT_DETAIL' | 'PLANNER' | 'FASHION_INSTRUCTOR' | 'MATURE_FASHION_STUDIO' | 'SOCIAL_HUB' | 'SUBSCRIPTION_HUB' | 'LOOK_VISION_DASHBOARD' | 'MAIN_DASHBOARD'>('PRODUCT_COMMUNITY');
   const [showFounderConsole, setShowFounderConsole] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showMobileProfileMenu, setShowMobileProfileMenu] = useState(false);
@@ -1110,7 +1139,8 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
     const handleLocationChange = () => {
       const path = window.location.pathname;
       let mappedTab: any = null;
-      if (path === '/home' || path === '/' || path === '') mappedTab = 'PRODUCT_HOME';
+      if (path === '/admin' || window.location.search.includes('view=admin')) mappedTab = 'ADMIN_COMMAND';
+      else if (path === '/home' || path === '/' || path === '') mappedTab = 'PRODUCT_HOME';
       else if (path === '/ai-studio' || path === '/ai-creations') mappedTab = 'PRODUCT_AI_CREATIONS';
       else if (path === '/wardrobe') mappedTab = 'WARDROBE';
       else if (path === '/dashboard') mappedTab = 'DASHBOARD';
@@ -1122,6 +1152,12 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
       else if (path === '/creator' || path === '/creator-workspace') mappedTab = 'CREATOR_WORKSPACE';
       else if (path === '/product-detail') mappedTab = 'PRODUCT_DETAIL';
       else if (path === '/generate' || path === '/fashion-ai') mappedTab = 'ECOSYSTEM_GENERATE';
+      else {
+        try {
+          localStorage.removeItem('last_active_place_subtab');
+        } catch (e) {}
+        mappedTab = 'PRODUCT_HOME';
+      }
       
       if (mappedTab) {
         setActiveSubTab(mappedTab);
@@ -1129,16 +1165,21 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
     };
 
     window.addEventListener('popstate', handleLocationChange);
+    window.addEventListener('lookvision_route_change', handleLocationChange);
+    window.addEventListener('hashchange', handleLocationChange);
     handleLocationChange();
 
     return () => {
       window.removeEventListener('popstate', handleLocationChange);
+      window.removeEventListener('lookvision_route_change', handleLocationChange);
+      window.removeEventListener('hashchange', handleLocationChange);
     };
   }, []);
 
   useEffect(() => {
     let targetPath = '';
-    if (activeSubTab === 'PRODUCT_HOME' || activeSubTab === 'HOME') targetPath = '/home';
+    if (activeSubTab === 'ADMIN_COMMAND') targetPath = '/admin';
+    else if (activeSubTab === 'PRODUCT_HOME' || activeSubTab === 'HOME') targetPath = '/home';
     else if (activeSubTab === 'PRODUCT_AI_CREATIONS' || activeSubTab === 'AI_STUDIO' || activeSubTab === 'ECOSYSTEM_CREATE') targetPath = '/ai-studio';
     else if (activeSubTab === 'WARDROBE') targetPath = '/wardrobe';
     else if (activeSubTab === 'DASHBOARD') targetPath = '/dashboard';
@@ -1154,6 +1195,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
 
     if (targetPath && window.location.pathname !== targetPath) {
       window.history.pushState(null, '', targetPath);
+      window.dispatchEvent(new CustomEvent('lookvision_route_change'));
     }
   }, [activeSubTab]);
 
@@ -2041,6 +2083,9 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
     if (targetTab === 'OUTFITS' || targetTab === 'OUTFITS_ROOM' || targetTab === 'TRY_ON_STUDIO') {
       resolvedTab = 'VIRTUAL_TRY';
     }
+    if (targetTab === 'ADMIN' || targetTab === 'ADMIN_COMMAND') {
+      resolvedTab = 'ADMIN_COMMAND';
+    }
     // Map legacy names to new architecture-aware names
     if (resolvedTab === 'HOME') {
       resolvedTab = 'PRODUCT_HOME';
@@ -2061,6 +2106,20 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
     }
     setActiveSubTab(resolvedTab);
     localStorage.setItem('last_active_place_subtab', resolvedTab);
+
+    if (resolvedTab === 'ADMIN_COMMAND') {
+      if (window.location.pathname !== '/admin') {
+        window.history.pushState({}, '', '/admin');
+        window.dispatchEvent(new CustomEvent('lookvision_route_change'));
+        window.dispatchEvent(new PopStateEvent('popstate'));
+      }
+    } else {
+      if (window.location.pathname === '/admin') {
+        window.history.pushState({}, '', '/');
+        window.dispatchEvent(new CustomEvent('lookvision_route_change'));
+        window.dispatchEvent(new PopStateEvent('popstate'));
+      }
+    }
   };
 
   const activeSubTabForRendering = activeSubTab;
@@ -2075,6 +2134,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
 
     const navigationItems = [
       { id: 'HOME', label: 'Home Hub', icon: Home, route: 'PRODUCT_HOME' },
+      { id: 'LOOK_VISION_DASHBOARD', label: 'LOOK VISION Dashboard', icon: Layers, route: 'LOOK_VISION_DASHBOARD', badge: 'v2.4' },
       { id: 'SUBSCRIPTION', label: 'Monetization & Plans', icon: CreditCard, route: 'SUBSCRIPTION_HUB', badge: 'PRO' },
       { id: 'SOCIAL_HUB', label: 'Social Graph', icon: Globe, route: 'SOCIAL_HUB', badge: 'NEW' },
       { id: 'COMMUNITY', label: 'Community', icon: Users, route: 'PRODUCT_COMMUNITY' },
@@ -2087,6 +2147,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
       { id: 'NOTIFICATIONS', label: 'Notifications', icon: Bell, action: 'NOTIFICATIONS', badge: '8' },
       { id: 'SEARCH', label: 'Focus Search', icon: Search, action: 'SEARCH' },
       { id: 'AI_ASSISTANT', label: 'ARIA Intelligence', icon: Sparkles, route: 'AI_ASSISTANT', badge: 'ARIA' },
+      { id: 'ADMIN_COMMAND', label: 'Admin Command', icon: ShieldCheck, action: 'ADMIN_COMMAND', badge: 'RBAC' },
       { id: 'SETTINGS', label: 'Settings', icon: Settings, route: 'SYSTEM_ROOM' }
     ];
 
@@ -2100,12 +2161,12 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
         <aside className={`w-14 sm:w-16 md:w-56 lg:w-64 shrink-0 p-2 sm:p-3 md:p-4 flex flex-col justify-between select-none h-full z-40 ${themeObj.sidebarBg} border-r border-white/5 transition-all duration-300`}>
           <div className="space-y-5 overflow-y-auto no-scrollbar flex-1 pb-4 pr-0 md:pr-1">
             
-            {/* AIStyleHub / LookVision Logo */}
+            {/* AI Fashion Market / LookVision Logo */}
             <div className="flex items-center justify-center md:justify-start gap-3 md:pl-3 py-2 mb-4">
               <Sparkle className="w-6 h-6 text-violet-400 fill-violet-400 shrink-0 filter drop-shadow-[0_0_8px_rgba(168,85,247,0.85)] animate-pulse-slow" />
               <div className="hidden md:flex flex-col">
-                <span className="text-sm font-mono tracking-[0.25em] uppercase text-white font-bold leading-none">AIStyleHub</span>
-                <span className="text-[9px] font-mono tracking-widest text-violet-400/60 uppercase mt-0.5">v2.4-telemetry</span>
+                <span className="text-sm font-mono tracking-[0.15em] uppercase text-white font-bold leading-none">AI Fashion Market</span>
+                <span className="text-[9px] font-mono tracking-widest text-violet-400/60 uppercase mt-0.5">LOOK VISION OS v2.4</span>
               </div>
             </div>
 
@@ -2142,6 +2203,8 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
                   isSelected = true;
                 } else if (tab.id === 'FASHION_INSTRUCTOR' && activeSubTabForRendering === 'FASHION_INSTRUCTOR') {
                   isSelected = true;
+                } else if (tab.id === 'ADMIN_COMMAND' && activeSubTabForRendering === 'ADMIN_COMMAND') {
+                  isSelected = true;
                 }
 
                 return (
@@ -2160,6 +2223,8 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
                           window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: '🔍 Quantum Focus Search opened (Cmd+K)' }));
                         } else if (tab.action === 'AI_ASSISTANT') {
                           window.dispatchEvent(new CustomEvent('lookvision_open_ai_chat'));
+                        } else if (tab.action === 'ADMIN_COMMAND') {
+                          handleNavigate('ADMIN_COMMAND');
                         } else if (tab.action === 'AUTHENTICATION') {
                           if (onLogout) onLogout();
                         } else if (tab.route) {
@@ -4103,6 +4168,20 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
                 />
               )}
 
+              {/* ROOM 3.5: LOOK VISION MAIN DASHBOARD */}
+              {(activeSubTab === 'LOOK_VISION_DASHBOARD' || activeSubTab === 'MAIN_DASHBOARD') && (
+                <LookVisionMainDashboard
+                  wardrobe={activeWardrobeList}
+                  onAddGarment={onAddGarment}
+                  onDeleteGarment={onDeleteGarment}
+                  user={user}
+                  onLogout={onLogout}
+                  onReset={onReset}
+                  onLoadSamples={onLoadSamples}
+                  setActiveSubTab={(tab) => handleNavigate(tab as any)}
+                />
+              )}
+
               {/* ROOM 4: AI MEMORY & PUBLIC COMPONENT MEMORY VAULT */}
               {activeSubTab === 'DASHBOARD' && (
                 <AIMemoryHub user={user} onNavigateTab={(tab) => handleNavigate(tab as any)} />
@@ -4286,6 +4365,13 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
             {activeSubTab === 'SUBSCRIPTION_HUB' && (
               <div className="max-w-7xl mx-auto py-2 px-2 sm:px-4 animate-fade-in">
                 <SubscriptionHubView />
+              </div>
+            )}
+
+            {/* ROOM: ENTERPRISE ADMIN COMMAND CENTER */}
+            {activeSubTab === 'ADMIN_COMMAND' && (
+              <div className="max-w-7xl mx-auto py-2 px-2 sm:px-4 animate-fade-in">
+                <AdminShell onExitAdmin={() => handleNavigate('PRODUCT_HOME')} />
               </div>
             )}
 

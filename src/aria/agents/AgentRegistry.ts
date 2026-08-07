@@ -1,13 +1,26 @@
 /**
- * ARIA v2.5 Agent Registry
+ * ARIA v2.7 Agent Registry
  * Product: LOOK VISION v2.4
+ * 
+ * Registers, manages, and tracks ARIA autonomous fashion agents.
  */
 
-import { AgentProfile, AgentRole } from './AgentTypes';
+import {
+  FashionAgent,
+  AgentProfile,
+  AgentRole
+} from './AgentTypes';
+import { personalStylistAgent } from './specialized/PersonalStylistAgent';
+import { fashionHistorianAgent } from './specialized/FashionHistorianAgent';
+import { trendIntelligenceAgent } from './specialized/TrendIntelligenceAgent';
+import { wardrobeOptimizationAgent } from './specialized/WardrobeOptimizationAgent';
+import { creativeDirectorAgent } from './specialized/CreativeDirectorAgent';
+import { visualAnalysisAgent } from './specialized/VisualAnalysisAgent';
 
 export class AgentRegistry {
   private static instance: AgentRegistry;
-  private agents: Map<AgentRole, AgentProfile> = new Map();
+  private fashionAgents: Map<string, FashionAgent> = new Map();
+  private agentProfiles: Map<AgentRole, AgentProfile> = new Map();
 
   private constructor() {
     this.registerDefaultAgents();
@@ -21,12 +34,37 @@ export class AgentRegistry {
   }
 
   private registerDefaultAgents(): void {
-    const defaultAgents: AgentProfile[] = [
+    // Specialized Agents
+    const initialSpecialized: FashionAgent[] = [
+      personalStylistAgent.definition,
+      fashionHistorianAgent.definition,
+      trendIntelligenceAgent.definition,
+      wardrobeOptimizationAgent.definition,
+      creativeDirectorAgent.definition,
+      visualAnalysisAgent.definition,
+      {
+        id: 'ag_fashion_analyst_01',
+        name: 'Fashion Analyst Agent',
+        role: 'FASHION_ANALYST',
+        capabilities: ['analyze', 'retrieve', 'explain'],
+        confidence: 0.95,
+        status: 'IDLE',
+        telemetryId: 'tel_fashion_analyst',
+        description: 'Analyzes fashion context, evaluates user preference signals, and queries Style DNA.'
+      }
+    ];
+
+    initialSpecialized.forEach((ag) => {
+      this.registerAgent(ag);
+    });
+
+    // Default Profile Wrappers for backward compatibility
+    const defaultProfiles: AgentProfile[] = [
       {
         agentId: 'ag_fashion_analyst_01',
         agentName: 'Fashion Analyst Agent',
         role: 'FASHION_ANALYST',
-        description: 'Analyzes fashion context, evaluates user preference signals, and queries Style DNA.',
+        description: 'Analyzes fashion context and evaluates user preference signals.',
         capabilities: {
           canAnalyzeDNA: true,
           canMakeDecisions: false,
@@ -58,13 +96,13 @@ export class AgentRegistry {
           canAnalyzeTrends: false
         },
         status: 'IDLE',
-        confidence: 0.94,
+        confidence: 0.95,
         metrics: {
           totalExecutions: 18,
           successfulExecutions: 18,
           failedExecutions: 0,
           averageLatencyMs: 190,
-          averageConfidence: 0.94,
+          averageConfidence: 0.95,
           userSatisfactionScore: 0.96
         }
       },
@@ -127,31 +165,119 @@ export class AgentRegistry {
           canAnalyzeTrends: true
         },
         status: 'IDLE',
-        confidence: 0.91,
+        confidence: 0.93,
         metrics: {
           totalExecutions: 8,
           successfulExecutions: 8,
           failedExecutions: 0,
           averageLatencyMs: 160,
-          averageConfidence: 0.91,
+          averageConfidence: 0.93,
           userSatisfactionScore: 0.94
+        }
+      },
+      {
+        agentId: 'ag_fashion_historian_06',
+        agentName: 'Fashion Historian Agent',
+        role: 'FASHION_HISTORIAN',
+        description: 'Queries Civilization Memory Graph for era references and designer influence.',
+        capabilities: {
+          canAnalyzeDNA: true,
+          canMakeDecisions: false,
+          canSynthesizeCreative: false,
+          canAnalyzeVision: false,
+          canAnalyzeTrends: true,
+          canRetrieveKnowledge: true
+        },
+        status: 'IDLE',
+        confidence: 0.94,
+        metrics: {
+          totalExecutions: 5,
+          successfulExecutions: 5,
+          failedExecutions: 0,
+          averageLatencyMs: 120,
+          averageConfidence: 0.94,
+          userSatisfactionScore: 0.96
+        }
+      },
+      {
+        agentId: 'ag_wardrobe_optimizer_07',
+        agentName: 'Wardrobe Optimization Agent',
+        role: 'WARDROBE_OPTIMIZER',
+        description: 'Optimizes owned wardrobe items and capsule rotation efficiency.',
+        capabilities: {
+          canAnalyzeDNA: true,
+          canMakeDecisions: true,
+          canSynthesizeCreative: false,
+          canAnalyzeVision: false,
+          canAnalyzeTrends: false,
+          canOptimizeWardrobe: true
+        },
+        status: 'IDLE',
+        confidence: 0.95,
+        metrics: {
+          totalExecutions: 10,
+          successfulExecutions: 10,
+          failedExecutions: 0,
+          averageLatencyMs: 110,
+          averageConfidence: 0.95,
+          userSatisfactionScore: 0.97
         }
       }
     ];
 
-    defaultAgents.forEach(a => this.agents.set(a.role, a));
+    defaultProfiles.forEach((p) => this.agentProfiles.set(p.role, p));
+  }
+
+  public registerAgent(agent: FashionAgent): void {
+    this.fashionAgents.set(agent.id, agent);
+  }
+
+  public removeAgent(agentId: string): boolean {
+    return this.fashionAgents.delete(agentId);
+  }
+
+  public getAgent(agentIdOrRole: string): FashionAgent | undefined {
+    // Check by ID
+    if (this.fashionAgents.has(agentIdOrRole)) {
+      return this.fashionAgents.get(agentIdOrRole);
+    }
+    // Check by Role
+    for (const ag of this.fashionAgents.values()) {
+      if (ag.role === agentIdOrRole) return ag;
+    }
+    return undefined;
+  }
+
+  public listAgents(): FashionAgent[] {
+    return Array.from(this.fashionAgents.values());
+  }
+
+  public activateAgent(agentId: string): boolean {
+    const agent = this.getAgent(agentId);
+    if (agent) {
+      agent.status = 'EXECUTING';
+      this.fashionAgents.set(agent.id, agent);
+      return true;
+    }
+    return false;
   }
 
   public getAllAgents(): AgentProfile[] {
-    return Array.from(this.agents.values());
+    return Array.from(this.agentProfiles.values());
   }
 
   public getAgentByRole(role: AgentRole): AgentProfile | undefined {
-    return this.agents.get(role);
+    return this.agentProfiles.get(role);
   }
 
   public updateAgent(profile: AgentProfile): void {
-    this.agents.set(profile.role, profile);
+    this.agentProfiles.set(profile.role, profile);
+    const fAgent = this.getAgent(profile.role);
+    if (fAgent) {
+      fAgent.status = profile.status;
+      fAgent.confidence = profile.confidence;
+      this.fashionAgents.set(fAgent.id, fAgent);
+    }
   }
 }
 

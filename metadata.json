@@ -1,6 +1,6 @@
 {
-  "name": "LOOK VISION",
-  "description": "Premium luxury AI Fashion Operating System. Coordinate, schedule, and compile digital wardrobes with advanced cognitive style profiles and real-time design telemetry.",
+  "name": "AI Fashion Market",
+  "description": "AI Fashion Market — Powered by LOOK VISION AI Fashion Operating System and ARIA Autonomous Fashion Intelligence.",
   "requestFramePermissions": ["camera"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

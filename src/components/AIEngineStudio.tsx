@@ -6,7 +6,7 @@ import {
   Cpu, Layers, Maximize2, Share2, Terminal, Info, ChevronRight, Play, ArrowRight,
   Compass, User, Folder, Stars, ListFilter, Trash2, Archive, Plus,
   BookOpen, Award, Crown, Scissors, Box, MapPin, Activity, CheckSquare,
-  FileText, Sliders, Shield, ShieldCheck, Users, UserCheck, Loader2, Upload, Wand2
+  FileText, Sliders, Shield, ShieldCheck, Users, UserCheck, Loader2, Upload, Wand2, BarChart3
 } from 'lucide-react';
 import { WardrobeItem } from '../types';
 import { db, auth } from '../firebase';
@@ -27,6 +27,10 @@ import { GenerationIntelligenceEngine } from '../features/image-generation/Gener
 import { ImageGenerationRegistry } from '../features/image-generation/imageGenerationProvider';
 import { AIStyleHubV17Architecture } from '../features/global/AIStyleHubV17Architecture';
 import { AIStudioWorkspace } from '../features/creations';
+import { ariaService } from '../services/ariaService';
+import { ARIAInvestorDashboard } from './dashboard/ARIAInvestorDashboard';
+import { ARIAUserProfileDashboard } from './dashboard/ARIAUserProfileDashboard';
+import { ARIAPreviewHealth } from './dashboard/ARIAPreviewHealth';
 
 interface StudentGroup {
   id: string;
@@ -1222,7 +1226,10 @@ export const AIEngineStudio: React.FC<AIEngineStudioProps> = ({
             { id: 'GALLERY', label: '🖼️ Showroom', icon: Layers },
             { id: 'PORTFOLIO', label: '👤 My Portfolio', icon: User },
             { id: '3D_LAB', label: '⚡ 3D Garment Lab', icon: Cpu },
-            { id: 'VIRTUAL_THEME', label: '👑 Virtual Theme Engine', icon: Crown }
+            { id: 'VIRTUAL_THEME', label: '👑 Virtual Theme Engine', icon: Crown },
+            { id: 'INVESTOR_VIEW', label: '📊 Investor View', icon: BarChart3 },
+            { id: 'USER_PROFILE', label: '👤 ARIA User Profile', icon: User },
+            { id: 'PREVIEW_HEALTH', label: '🛡️ Preview Health', icon: ShieldCheck }
           ].map(tab => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -1241,6 +1248,48 @@ export const AIEngineStudio: React.FC<AIEngineStudioProps> = ({
               </button>
             );
           })}
+        </div>
+      </div>
+
+      {/* ARIA RUNTIME & INTELLIGENCE TELEMETRY BANNER */}
+      <div className="bg-[#080812] border border-violet-500/20 rounded-2xl p-4 shadow-xl text-left">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/5 pb-3">
+          <div className="flex items-center gap-2">
+            <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
+            <span className="text-xs font-mono text-violet-300 font-bold uppercase tracking-wider">
+              ARIA v3.2 Autonomous Intelligence Mesh Telemetry
+            </span>
+          </div>
+          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono bg-emerald-950/60 border border-emerald-500/30 text-emerald-400 font-bold">
+            {ariaService.getRuntimeHealth().status}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
+          <div className="bg-black/40 border border-white/5 rounded-xl p-2.5">
+            <span className="text-[9px] font-mono text-zinc-500 uppercase block">Active Modules</span>
+            <span className="text-xs font-mono font-bold text-white mt-0.5 block">
+              {ariaService.getRuntimeHealth().activeModules.length} Connected
+            </span>
+          </div>
+          <div className="bg-black/40 border border-white/5 rounded-xl p-2.5">
+            <span className="text-[9px] font-mono text-zinc-500 uppercase block">Execution Latency</span>
+            <span className="text-xs font-mono font-bold text-emerald-400 mt-0.5 block">
+              {ariaService.getRuntimeStatus().orchestratorStatus.averageLatencyMs} ms
+            </span>
+          </div>
+          <div className="bg-black/40 border border-white/5 rounded-xl p-2.5">
+            <span className="text-[9px] font-mono text-zinc-500 uppercase block">Executions Logged</span>
+            <span className="text-xs font-mono font-bold text-violet-300 mt-0.5 block">
+              {ariaService.getRuntimeHealth().totalRequestsHandled}
+            </span>
+          </div>
+          <div className="bg-black/40 border border-white/5 rounded-xl p-2.5">
+            <span className="text-[9px] font-mono text-zinc-500 uppercase block">Reasoning Status</span>
+            <span className="text-xs font-mono font-bold text-amber-300 mt-0.5 block uppercase">
+              {ariaService.getRuntimeHealth().memoryStatus}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -1487,6 +1536,43 @@ export const AIEngineStudio: React.FC<AIEngineStudioProps> = ({
             exit={{ opacity: 0, y: -15 }}
           >
             <AdminVirtualThemePanel />
+          </motion.div>
+        )}
+
+        {/* TAB 6: INVESTOR PRESENTATION VIEW */}
+        {activeTab === 'INVESTOR_VIEW' && (
+          <motion.div
+            key="investor_view"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+          >
+            <ARIAInvestorDashboard />
+          </motion.div>
+        )}
+
+        {/* TAB 7: ARIA USER PROFILE DASHBOARD */}
+        {activeTab === 'USER_PROFILE' && (
+          <motion.div
+            key="user_profile_view"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+          >
+            <ARIAUserProfileDashboard />
+          </motion.div>
+        )}
+
+        {/* TAB 8: PREVIEW HEALTH PANEL */}
+        {activeTab === ('PREVIEW_HEALTH' as any) && (
+          <motion.div
+            key="preview_health_view"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            className="max-w-5xl mx-auto py-4"
+          >
+            <ARIAPreviewHealth />
           </motion.div>
         )}
 

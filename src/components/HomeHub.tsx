@@ -27,6 +27,7 @@ import {
   ThemeCoatRenderer, 
   FoundationInteractionWrapper 
 } from '../engine';
+import { ARIALivePrototypePanel } from './dashboard/ARIALivePrototypePanel';
 
 interface HomeHubProps {
   wardrobe: WardrobeItem[];

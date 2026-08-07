@@ -15,6 +15,7 @@ import {
 import { auth } from '../firebase';
 import { ThreeDVirtualTryOn } from './ThreeDVirtualTryOn';
 import { VirtualTryOnWorkspace } from './aria/VirtualTryOnWorkspace';
+import { ariaService } from '../services/ariaService';
 
 interface VirtualStudioTryOnProps {
   wardrobe: WardrobeItem[];

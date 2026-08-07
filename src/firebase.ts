@@ -141,17 +141,39 @@ const firebaseConfig = {
   measurementId: "G-PJV2V6G5VG"
 };
 
-const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
+let app: any = null;
+let authInstance: any = null;
+let dbInstance: any = null;
 
-// Initialize Firestore with memoryLocalCache for resilience in sandboxed iframe runtime
-export const db = initializeFirestore(app, {
-  localCache: memoryLocalCache()
-});
+try {
+  app = initializeApp(firebaseConfig);
+  try {
+    authInstance = getAuth(app);
+  } catch (authErr) {
+    console.warn('[Firebase Auth] Auth initialization fallback active:', authErr);
+  }
+
+  try {
+    dbInstance = initializeFirestore(app, {
+      localCache: memoryLocalCache()
+    });
+  } catch (dbErr) {
+    console.warn('[Firestore] Firestore initialization fallback active:', dbErr);
+  }
+} catch (appErr) {
+  console.warn('[Firebase App] Firebase initialization fallback active:', appErr);
+}
+
+export const auth = authInstance;
+export const db = dbInstance;
 
 export let isFirestoreOfflineFallbackActive = false;
 
 export async function runPreemptiveFirestoreBootTest() {
+  if (!db) {
+    isFirestoreOfflineFallbackActive = true;
+    return;
+  }
   try {
     const testDocRef = doc(db, 'system_boot', 'test_conn');
     await getDoc(testDocRef);
@@ -164,6 +186,7 @@ export async function runPreemptiveFirestoreBootTest() {
   }
 }
 
+
 // Run the boot-test immediately
 runPreemptiveFirestoreBootTest();
 
@@ -174,8 +197,19 @@ googleProvider.setCustomParameters({
   prompt: 'select_account'
 });
 
-export const signInWithGoogle = () => signInWithPopup(auth, googleProvider);
-export const logout = () => signOut(auth);
+export const signInWithGoogle = async () => {
+  if (!auth) {
+    console.warn('[Firebase Auth] Auth is not initialized. Operating in local preview mode.');
+    return null;
+  }
+  return signInWithPopup(auth, googleProvider);
+};
+
+export const logout = async () => {
+  if (!auth) return;
+  return signOut(auth);
+};
+
 
 import { OperationType } from './core/enums';
 export { OperationType };

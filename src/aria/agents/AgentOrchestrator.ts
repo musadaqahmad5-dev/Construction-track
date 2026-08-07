@@ -1,6 +1,9 @@
 /**
- * ARIA v2.5 Agent Orchestrator
+ * ARIA v2.7 Agent Orchestrator
  * Product: LOOK VISION v2.4
+ * 
+ * Orchestrates multi-agent execution pipeline:
+ * User Request -> ARIA Orchestrator -> Select Required Agents -> Execute Reasoning Tasks -> Combine Outputs -> Return Intelligence Result
  */
 
 import { 
@@ -58,7 +61,7 @@ export class AgentOrchestrator {
       this.status = {
         isInitialized: true,
         isExecuting: false,
-        activeAgentsCount: 5,
+        activeAgentsCount: 7,
         totalExecutionsRecorded: this.history.length,
         storageMode: 'offline_local',
         lastError: err.message || 'Fallback active'
@@ -73,6 +76,12 @@ export class AgentOrchestrator {
    */
   public inferTargetRole(prompt: string): AgentRole {
     const p = prompt.toLowerCase();
+    if (p.includes('history') || p.includes('era') || p.includes('historian') || p.includes('designer') || p.includes('archive') || p.includes('vintage') || p.includes('heritage') || p.includes('cultural')) {
+      return 'FASHION_HISTORIAN';
+    }
+    if (p.includes('wardrobe') || p.includes('closet') || p.includes('capsule') || p.includes('optimize') || p.includes('synergy') || p.includes('utilization')) {
+      return 'WARDROBE_OPTIMIZER';
+    }
     if (p.includes('image') || p.includes('photo') || p.includes('look') || p.includes('garment') || p.includes('try-on') || p.includes('vision')) {
       return 'VISUAL_ANALYSIS';
     }

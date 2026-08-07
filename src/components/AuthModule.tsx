@@ -206,13 +206,13 @@ export const AuthModule: React.FC<AuthModuleProps> = ({ onGuestMode }) => {
         {/* Editorial Header */}
         <div className="text-center space-y-2">
           <span className={`text-[10px] font-mono tracking-[0.25em] uppercase block font-light ${labelClass}`}>
-            SARTORIAL SYSTEM GATE / ACCESS PORTAL
+            AI FASHION MARKET / ACCESS PORTAL
           </span>
           <h2 className={`text-4xl font-serif font-light tracking-[-0.03em] ${textPrimary}`}>
-            LOOK VISION
+            AI Fashion Market
           </h2>
           <p className={`text-[11px] sm:text-xs font-serif italic leading-relaxed max-w-xs mx-auto ${textSecondary}`}>
-            "Sartorial system and cognitive fashion operating workspace."
+            "Powered by LOOK VISION AI Fashion Operating System & ARIA Intelligence."
           </p>
         </div>
 
@@ -395,7 +395,7 @@ export const AuthModule: React.FC<AuthModuleProps> = ({ onGuestMode }) => {
                 disabled={loading}
                 className={`w-full py-4 rounded-none font-mono text-xs font-semibold uppercase tracking-[0.2em] cursor-pointer transition-all disabled:opacity-50 ${buttonPrimary}`}
               >
-                {loading ? '[ INITIALIZING OS... ]' : '[ ACCESS LOOK VISION OS ]'}
+                {loading ? '[ INITIALIZING OS... ]' : '[ ACCESS AI FASHION MARKET ]'}
               </button>
             </div>
           </form>

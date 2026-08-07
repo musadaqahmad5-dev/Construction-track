@@ -12,6 +12,8 @@ import {
 import { styleDNAStorage } from './StyleDNAStorage';
 import { StyleDNAProfileBuilder } from './StyleDNAProfileBuilder';
 import { memoryEngine } from '../memory/MemoryEngine';
+import { styleEvolutionEngine } from '../evolution/StyleEvolutionEngine';
+import { styleEvolutionTracker } from '../evolution/StyleEvolutionTracker';
 
 export class StyleDNAEngine {
   private static instance: StyleDNAEngine;
@@ -65,6 +67,13 @@ export class StyleDNAEngine {
 
       this.snapshots = await styleDNAStorage.fetchSnapshots(this.userId);
 
+      // 3. Initialize Style Evolution Engine
+      try {
+        await styleEvolutionEngine.initialize(this.userId);
+      } catch (evoErr) {
+        console.warn('[StyleDNAEngine] Evolution engine init notice:', evoErr);
+      }
+
       this.status = {
         isInitialized: true,
         isAnalyzing: false,
@@ -108,6 +117,13 @@ export class StyleDNAEngine {
     if (snapshot) {
       await styleDNAStorage.saveSnapshot(activeUserId, snapshot);
       this.snapshots.unshift(snapshot);
+    }
+
+    // Capture evolution trajectory snapshot
+    try {
+      await styleEvolutionTracker.captureEvolutionSnapshot(activeUserId, profile, 'manual_update');
+    } catch (evoSnapErr) {
+      console.warn('[StyleDNAEngine] Evolution snapshot capture notice:', evoSnapErr);
     }
 
     this.status = {

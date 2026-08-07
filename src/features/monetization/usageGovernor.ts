@@ -13,9 +13,15 @@ export interface UsageReport {
 export class UsageGovernor {
   private static imagesUsed = 0;
   private static recommendationsUsed = 0;
+  private static snapshotUnsubscribe: (() => void) | null = null;
 
   static {
     auth.onAuthStateChanged((user) => {
+      if (this.snapshotUnsubscribe) {
+        this.snapshotUnsubscribe();
+        this.snapshotUnsubscribe = null;
+      }
+
       if (user) {
         try {
           const cachedImages = localStorage.getItem(`quota_images_${user.uid}`);
@@ -24,7 +30,7 @@ export class UsageGovernor {
           if (cachedRecs) this.recommendationsUsed = parseInt(cachedRecs, 10) || 0;
         } catch (_) {}
 
-        onSnapshot(doc(db, "users", user.uid), (docSnap) => {
+        this.snapshotUnsubscribe = onSnapshot(doc(db, "users", user.uid), (docSnap) => {
           if (docSnap.exists()) {
             const data = docSnap.data();
             const quotaUsed = data?.quotaUsed || {};

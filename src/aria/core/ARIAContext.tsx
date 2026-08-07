@@ -70,6 +70,7 @@ import {
   SearchQueryOptions,
   SearchResultItem
 } from '../civilization';
+import { PersonalFashionMemoryEngine } from '../../engine/personalMemory';
 
 interface ARIAContextValue {
   context: ARIAContextState;
@@ -369,14 +370,74 @@ export const ARIAProvider: React.FC<ARIAProviderProps> = ({
     return st;
   }, []);
 
+  const syncStyleDNABridge = useCallback(async (
+    targetUserId?: string,
+    profile?: StyleDNAProfile | null
+  ) => {
+    const activeUid = targetUserId || userId;
+    if (!activeUid || activeUid.startsWith('guest-')) return;
+
+    try {
+      // 1. Sync in-memory PersonalFashionMemoryEngine
+      if (profile) {
+        const memory = PersonalFashionMemoryEngine.getMemory(activeUid);
+        const favColors = (profile.colorProfile || []).map(c => c.value);
+        const favMaterials = (profile.materialProfile || []).map(m => m.value);
+        const favBrands = (profile.brandAffinity || []).map(b => b.value);
+        const favSilhouettes = (profile.silhouetteProfile || []).map(s => s.value);
+
+        if (favColors.length) memory.favColors = Array.from(new Set([...memory.favColors, ...favColors]));
+        if (favMaterials.length) memory.favMaterials = Array.from(new Set([...memory.favMaterials, ...favMaterials]));
+        if (favBrands.length) memory.favBrands = Array.from(new Set([...memory.favBrands, ...favBrands]));
+        if (favSilhouettes.length) memory.favSilhouettes = Array.from(new Set([...memory.favSilhouettes, ...favSilhouettes]));
+
+        memory.accuracyEstimate = Math.round((profile.overallConfidence || 0.85) * 100);
+        PersonalFashionMemoryEngine.saveMemory(memory);
+      }
+
+      // 2. Safely sync to Firestore user memory documents
+      const { doc, setDoc } = await import('firebase/firestore');
+      const { db } = await import('../../firebase');
+
+      if (db && profile) {
+        const now = new Date().toISOString();
+        const styleDocRef = doc(db, 'users', activeUid, 'styleDNA', 'profile');
+        await setDoc(styleDocRef, {
+          userId: activeUid,
+          updatedAt: now,
+          styleDNAProfile: profile,
+          version: profile.version || 1,
+          overallConfidence: profile.overallConfidence
+        }, { merge: true });
+
+        const ariaDocRef = doc(db, 'users', activeUid, 'ariaProfile', 'context');
+        await setDoc(ariaDocRef, {
+          userId: activeUid,
+          updatedAt: now,
+          lastStyleDNASync: now,
+          accuracyEstimate: Math.round((profile.overallConfidence || 0.85) * 100)
+        }, { merge: true });
+      }
+    } catch (err) {
+      console.warn('[ARIAContext] Style DNA Firestore sync skipped or offline:', err);
+    }
+  }, [userId]);
+
   const refreshStyleDNA = useCallback(async (manualUpdates?: StyleDNAUpdatePayload) => {
     const newProfile = await styleDNAEngine.reanalyzeProfile(manualUpdates);
     setStyleDNAProfile(newProfile);
     setStyleDNAStatus(styleDNAEngine.getStatus());
     const snaps = await styleDNAEngine.getSnapshots();
     setStyleDNASnapshots(snaps);
+    await syncStyleDNABridge(userId, newProfile);
     return newProfile;
-  }, []);
+  }, [userId, syncStyleDNABridge]);
+
+  useEffect(() => {
+    if (userId && styleDNAProfile && !userId.startsWith('guest-')) {
+      syncStyleDNABridge(userId, styleDNAProfile);
+    }
+  }, [userId, styleDNAProfile, syncStyleDNABridge]);
 
   const updateStyleDNA = useCallback(async (manualUpdates: StyleDNAUpdatePayload) => {
     return await refreshStyleDNA(manualUpdates);

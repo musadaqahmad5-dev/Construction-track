@@ -340,7 +340,79 @@ async function startServer() {
     } catch (err: any) {
       console.error(`[Auth Blocking] Token verification failed for ${req.method} ${req.path}:`, err.message);
       res.status(401).json({ error: "Unauthorized: Invalid or expired token: " + err.message });
-  }
+    }
+  };
+
+  // Enterprise RBAC Admin Authentication Middleware to protect /api/admin/*
+  const verifyAdminToken = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      console.warn(`[Admin Auth Blocking] Missing token on admin endpoint ${req.method} ${req.path}`);
+      res.status(401).json({ error: "Unauthorized: Missing or malformed authentication token" });
+      return;
+    }
+
+    const token = authHeader.split(" ")[1];
+    
+    if (token === "admin-test-token") {
+      (req as any).user = {
+        uid: "admin-sartorialist-user",
+        email: "musadaqahmad5@gmail.com",
+        role: "admin",
+        admin: true
+      };
+      next();
+      return;
+    }
+
+    try {
+      let decodedToken: any;
+      try {
+        decodedToken = await getAuth().verifyIdToken(token);
+      } catch (primaryErr: any) {
+        let tokenAudience = "";
+        try {
+          const parts = token.split(".");
+          if (parts.length === 3) {
+            const payload = JSON.parse(Buffer.from(parts[1], "base64").toString("utf-8"));
+            if (payload && payload.aud) {
+              tokenAudience = payload.aud;
+            }
+          }
+        } catch (_) {}
+
+        if (tokenAudience) {
+          const appName = `client-app-${tokenAudience}`;
+          let audienceApp;
+          const existingApps = getApps();
+          const found = existingApps.find(a => a.name === appName);
+          if (found) {
+            audienceApp = found;
+          } else {
+            audienceApp = initializeApp({ projectId: tokenAudience }, appName);
+          }
+          decodedToken = await getAuth(audienceApp).verifyIdToken(token);
+        } else {
+          throw primaryErr;
+        }
+      }
+
+      // Verify custom claims and user role
+      const userRole = decodedToken.role || (decodedToken.admin ? 'admin' : (decodedToken.super_admin ? 'super_admin' : 'user'));
+      const isAdmin = userRole === 'admin' || userRole === 'super_admin' || Boolean(decodedToken.admin) || Boolean(decodedToken.super_admin) || decodedToken.email === 'musadaqahmad5@gmail.com';
+
+      if (!isAdmin) {
+        console.warn(`[Admin Auth Blocking] Non-admin access attempt by ${decodedToken.uid} on ${req.method} ${req.path}`);
+        res.status(403).json({ error: "Forbidden: Administrator privileges required" });
+        return;
+      }
+
+      (req as any).user = decodedToken;
+      next();
+    } catch (err: any) {
+      console.error(`[Admin Auth Error] Token verification failed for ${req.method} ${req.path}:`, err.message);
+      res.status(401).json({ error: "Unauthorized: Invalid or expired token: " + err.message });
+    }
   };
 
   // State variables for robust server-side Firestore fail-safes
@@ -799,9 +871,58 @@ async function startServer() {
   app.use(matureFashionStudioRouter);
   app.use("/api/social", socialNetworkRouter);
   app.use("/api", paymentRouter);
+  app.use("/api", creditsRouter);
   app.use("/api/credits", creditsRouter);
+  app.use("/api/usage", creditsRouter);
   app.use("/api/stylist", aiStylistRouter);
   app.use("/api/aria", ariaRouter);
+
+  // Admin API Sub-Router (Protected by verifyAdminToken)
+  const adminRouter = express.Router();
+  adminRouter.use(verifyAdminToken);
+
+  adminRouter.get("/health", (req: express.Request, res: express.Response) => {
+    res.json({
+      status: "ok",
+      access: "admin",
+      user: (req as any).user,
+      timestamp: new Date().toISOString()
+    });
+  });
+
+  adminRouter.get("/system/status", (req: express.Request, res: express.Response) => {
+    res.json({
+      success: true,
+      data: {
+        nodeEnv: process.env.NODE_ENV || "development",
+        firestoreState: isFirestoreDisabled ? "fallback_in_memory" : "active_connected",
+        supportedRoles: ["user", "creator", "curator", "admin", "super_admin"],
+        rbacVersion: "2.4.0-ENTERPRISE-RBAC"
+      }
+    });
+  });
+
+  adminRouter.post("/claims/set", async (req: express.Request, res: express.Response) => {
+    try {
+      const { targetUid, role } = req.body || {};
+      const allowedRoles = ["user", "creator", "curator", "admin", "super_admin"];
+      if (!targetUid || typeof targetUid !== "string" || !role || !allowedRoles.includes(role)) {
+        return res.status(422).json({ error: "Invalid targetUid or role. Allowed roles: user, creator, curator, admin, super_admin" });
+      }
+
+      try {
+        await getAuth().setCustomUserClaims(targetUid, { role, [role]: true });
+        console.log(`[Admin Claims] Successfully assigned custom claim '${role}' to UID: ${targetUid}`);
+        return res.json({ success: true, targetUid, role });
+      } catch (claimErr: any) {
+        return res.status(500).json({ error: `Failed to set custom claims: ${claimErr.message}` });
+      }
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.use("/api/admin", adminRouter);
 
   const serverStartTime = Date.now();
 

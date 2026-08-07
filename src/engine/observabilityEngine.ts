@@ -60,6 +60,7 @@ export interface EngineRelationship {
 
 export class EnterpriseObservabilityEngine {
   private static STORAGE_KEY = 'lookvision_observability_engine_db';
+  private static MAX_TRACE_BUFFER_SIZE = 500;
 
   /**
    * Retrieves distributed trace events from historical operations or returns pristine seeds.
@@ -137,9 +138,58 @@ export class EnterpriseObservabilityEngine {
     return seeded;
   }
 
+  /**
+   * Safely appends a trace event while enforcing memory buffer size boundaries.
+   */
+  static logTrace(event: Omit<TraceEvent, 'id' | 'timestamp'> & { id?: string; timestamp?: string }): TraceEvent {
+    const fullEvent: TraceEvent = {
+      id: event.id || `trace-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      timestamp: event.timestamp || new Date().toLocaleTimeString('en-US', { hour12: false }),
+      engine: event.engine,
+      eventName: event.eventName,
+      category: event.category,
+      payload: event.payload,
+      latencyMs: event.latencyMs,
+      status: event.status
+    };
+
+    const currentTimeline = this.getTraceTimeline();
+    currentTimeline.push(fullEvent);
+    this.saveTraceTimeline(currentTimeline);
+    return fullEvent;
+  }
+
+  /**
+   * Persists trace timeline with sliding buffer truncation (max 500 items).
+   * Preserves critical error and warning events during memory pruning.
+   */
   static saveTraceTimeline(timeline: TraceEvent[]): void {
     try {
-      localStorage.setItem(`${this.STORAGE_KEY}_timeline`, JSON.stringify(timeline));
+      let trimmed = timeline;
+      if (timeline.length > this.MAX_TRACE_BUFFER_SIZE) {
+        const failuresAndWarnings = timeline.filter(t => t.status === 'Failure' || t.status === 'Warning');
+        const standardTraces = timeline.filter(t => t.status !== 'Failure' && t.status !== 'Warning');
+
+        // Retain up to 200 recent failures/warnings
+        const recentFailures = failuresAndWarnings.slice(-200);
+        const remainingCapacity = this.MAX_TRACE_BUFFER_SIZE - recentFailures.length;
+        const recentStandards = standardTraces.slice(-remainingCapacity);
+
+        trimmed = [...recentStandards, ...recentFailures].sort((a, b) => a.id.localeCompare(b.id));
+      }
+
+      localStorage.setItem(`${this.STORAGE_KEY}_timeline`, JSON.stringify(trimmed));
+    } catch (e) {
+      console.warn('[EnterpriseObservabilityEngine] Failed to persist trace timeline:', e);
+    }
+  }
+
+  /**
+   * Clears trace timeline from localStorage.
+   */
+  static clearTraceTimeline(): void {
+    try {
+      localStorage.removeItem(`${this.STORAGE_KEY}_timeline`);
     } catch (e) {}
   }
 

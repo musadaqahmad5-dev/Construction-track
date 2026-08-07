@@ -177,6 +177,10 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({ user, onClose,
         setSellerProfile(null);
       }
       setLoadingProfile(false);
+    }, (err) => {
+      console.warn("Seller profile fetch error:", err);
+      setSellerProfile(null);
+      setLoadingProfile(false);
     });
 
     return () => unsubSeller();
@@ -218,6 +222,8 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({ user, onClose,
       
       prods.sort((a, b) => b.createdAt?.seconds - a.createdAt?.seconds || 0);
       setMyProducts(prods);
+    }, (err) => {
+      console.warn("Seller products query listener error:", err);
     });
 
     return () => unsubProducts();

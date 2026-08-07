@@ -16,6 +16,13 @@ import { SEOStructuredData } from './components/SEOStructuredData';
 import { ImageLightboxModal } from './components/ImageLightboxModal';
 import { UIShellProvider, ThemeIntelligenceAppBridge } from './engine';
 import { ARIAProvider } from './aria';
+import { PersonaSimulationProvider } from './features/simulation/PersonaSimulationContext';
+import { PersonaSwitcherWidget } from './components/simulation/PersonaSwitcherWidget';
+import { UserIdentityBootstrapEngine } from './features/identity/UserIdentityBootstrapEngine';
+import { AdminShell } from './admin';
+
+import { PreviewBootstrap } from './aria/preview/PreviewBootstrap';
+import { PreviewEnvironment } from './aria/preview/PreviewEnvironment';
 
 // Temporal light rules mapper
 export function getTemporalTheme() {
@@ -82,6 +89,45 @@ export default function App() {
   const [showCover, setShowCover] = useState(false);
   const [stripeSuccessMessage, setStripeSuccessMessage] = useState<string | null>(null);
   const [stripeErrorMessage, setStripeErrorMessage] = useState<string | null>(null);
+  const [isAdminRoute, setIsAdminRoute] = useState<boolean>(
+    typeof window !== 'undefined' && (window.location.pathname === '/admin' || window.location.search.includes('view=admin'))
+  );
+
+  // Preview cache reset protection & history monkey patching for instant state sync
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !(window as any).__lookvision_history_patched__) {
+      (window as any).__lookvision_history_patched__ = true;
+      const originalPushState = window.history.pushState;
+      window.history.pushState = function (...args) {
+        const result = originalPushState.apply(this, args);
+        window.dispatchEvent(new Event('popstate'));
+        window.dispatchEvent(new CustomEvent('lookvision_route_change'));
+        return result;
+      };
+      const originalReplaceState = window.history.replaceState;
+      window.history.replaceState = function (...args) {
+        const result = originalReplaceState.apply(this, args);
+        window.dispatchEvent(new Event('popstate'));
+        window.dispatchEvent(new CustomEvent('lookvision_route_change'));
+        return result;
+      };
+    }
+  }, []);
+
+  useEffect(() => {
+    const checkRoute = () => {
+      setIsAdminRoute(window.location.pathname === '/admin' || window.location.search.includes('view=admin'));
+    };
+
+    window.addEventListener('popstate', checkRoute);
+    window.addEventListener('lookvision_route_change', checkRoute);
+    window.addEventListener('hashchange', checkRoute);
+    return () => {
+      window.removeEventListener('popstate', checkRoute);
+      window.removeEventListener('lookvision_route_change', checkRoute);
+      window.removeEventListener('hashchange', checkRoute);
+    };
+  }, []);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -150,6 +196,24 @@ export default function App() {
 
   // Sync authentication state either through Firebase or through local Guest persistence
   useEffect(() => {
+    // Preemptively initialize ARIA preview layer
+    PreviewBootstrap.initializePreviewRuntime().catch(err => {
+      console.warn('[App] ARIA Preview Bootstrap warning:', err);
+    });
+
+    if (!auth) {
+      // In preview or when Firebase auth is unavailable, activate guest/preview user session
+      const session = PreviewBootstrap.getActiveSession();
+      setUser({
+        uid: session.userId,
+        displayName: session.displayName,
+        email: session.email,
+        isAnonymous: true
+      } as User);
+      setLoading(false);
+      return;
+    }
+
     // 1. Listen to Firebase standard state
     const unsubscribe = onAuthStateChanged(auth, async (u) => {
       const minDelay = new Promise(resolve => setTimeout(resolve, 400));
@@ -165,13 +229,15 @@ export default function App() {
         UnifiedFashionOS.trackEvent('login', { type: 'firebase' });
       } else {
         localStorage.removeItem('firebase_user_session');
-        // 2. Check if Guest mode was previously activated
-        const wasGuestActive = localStorage.getItem('auth_guest_active') === 'true';
+        // 2. Check if Guest mode was previously activated or if in preview
+        const isPreview = PreviewEnvironment.isPreviewEnvironment();
+        const wasGuestActive = localStorage.getItem('auth_guest_active') === 'true' || isPreview;
         if (wasGuestActive) {
+          const session = PreviewBootstrap.getActiveSession();
           setUser({
-            uid: 'guest-sartorialist-user-100',
-            displayName: 'Guest Sartorialist',
-            email: 'guest@companion.com',
+            uid: session.userId,
+            displayName: session.displayName,
+            email: session.email,
             isAnonymous: true
           } as User);
         } else {
@@ -185,9 +251,21 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // Sync core user identity and role to Firestore upon successful authentication
+
+  // Sync core user identity, role, Style DNA, Theme Profile, and ARIA context to Firestore upon successful authentication
   useEffect(() => {
-    if (!user || user.isAnonymous || user.uid.startsWith('guest-')) {
+    if (!user) {
+      return;
+    }
+
+    // Bootstrap user identity across sub-documents: users/{uid}/[identity, styleDNA, themeProfile, ariaProfile]
+    UserIdentityBootstrapEngine.bootstrapUser(user).then((res) => {
+      console.log("[UserIdentityBootstrapEngine]", res.message);
+    }).catch((err) => {
+      console.warn("[UserIdentityBootstrapEngine] Notice:", err?.message || err);
+    });
+
+    if (user.isAnonymous || user.uid.startsWith('guest-')) {
       return;
     }
 
@@ -250,13 +328,44 @@ export default function App() {
         ...(doc.data() as Omit<WardrobeItem, 'id'>)
       })) as WardrobeItem[];
       
-      docs.sort((a, b) => (b.createdAt?.seconds || 0) * 1000 - (a.createdAt?.seconds || 0) * 1000);
-      setWardrobe(docs);
-      UnifiedFashionOS.syncWardrobeItems(docs);
+      // Perform smart cloud/local merge for items created while offline
+      let mergedDocs = [...docs];
+      try {
+        const storedLocal = localStorage.getItem('local_wardrobe_items');
+        if (storedLocal) {
+          const localItems = JSON.parse(storedLocal) as WardrobeItem[];
+          const pendingLocal = localItems.filter(item => 
+            item.id.startsWith('gar-') && 
+            !docs.some(d => d.id === item.id || (d.title.trim().toLowerCase() === item.title.trim().toLowerCase() && d.category === item.category))
+          );
+          if (pendingLocal.length > 0) {
+            mergedDocs = [...pendingLocal, ...mergedDocs];
+            // Background sync pending garments to Firestore
+            pendingLocal.forEach(async (pItem) => {
+              try {
+                await WardrobeService.addGarment(user.uid, pItem.title, pItem.description || '', pItem.category, {
+                  season: pItem.season,
+                  primaryColor: pItem.primaryColor,
+                  secondaryColor: pItem.secondaryColor,
+                  imageUrl: pItem.imageUrl,
+                  wearCount: pItem.wearCount || 0,
+                  lastUsed: pItem.lastUsed || ''
+                });
+              } catch (_) {}
+            });
+          }
+        }
+      } catch (mergeErr) {
+        console.warn("Wardrobe local/cloud merge notice:", mergeErr);
+      }
+
+      mergedDocs.sort((a, b) => (b.createdAt?.seconds || 0) * 1000 - (a.createdAt?.seconds || 0) * 1000);
+      setWardrobe(mergedDocs);
+      UnifiedFashionOS.syncWardrobeItems(mergedDocs);
 
       // Enable resilient offline cache backup
       try {
-        localStorage.setItem(`cached_wardrobe_${user.uid}`, JSON.stringify(docs));
+        localStorage.setItem(`cached_wardrobe_${user.uid}`, JSON.stringify(mergedDocs));
       } catch (e) {
         console.warn("Storage limit reached for local caching:", e);
       }
@@ -614,7 +723,7 @@ export default function App() {
                 transition={{ duration: 0.8 }}
                 className="text-[11px] font-mono uppercase tracking-[0.25em] block font-light"
               >
-                AI Fashion
+                AI Fashion Market
               </motion.span>
 
               {/* Settle: Step 2 */}
@@ -624,7 +733,7 @@ export default function App() {
                 transition={{ duration: 1.0, ease: "easeOut" }}
                 className="font-serif font-light text-5xl tracking-[-0.03em] text-white"
               >
-                Marketplace
+                LOOK VISION
               </motion.h1>
 
               <motion.div 
@@ -714,6 +823,21 @@ export default function App() {
             {/* Auth Screening */}
             {!user ? (
               <AuthModule onGuestMode={handleGuestActivation} />
+            ) : isAdminRoute ? (
+              /* Enterprise Admin Command Center (Isolated from AIStyleHub Consumer Shell) */
+              <ARIAProvider userId={user?.uid}>
+                <AdminShell
+                  onExitAdmin={() => {
+                    try {
+                      localStorage.removeItem('last_active_place_subtab');
+                    } catch (e) {}
+                    window.history.pushState({}, '', '/');
+                    setIsAdminRoute(false);
+                    window.dispatchEvent(new CustomEvent('lookvision_route_change'));
+                    window.dispatchEvent(new PopStateEvent('popstate'));
+                  }}
+                />
+              </ARIAProvider>
             ) : (
               /* LOOK VISION: Premium fashion OS persistent shell workspace */
               <div className={`h-screen w-screen overflow-hidden ${theme.bg} ${theme.text} selection:bg-white/20 selection:text-white antialiased font-sans`}>
@@ -724,19 +848,22 @@ export default function App() {
                   </div>
                 }>
                   <ARIAProvider userId={user?.uid}>
-                    <AIStyleHub 
-                      wardrobe={allItems}
-                      onAddGarment={async (title, desc, category, extra) => {
-                        await handleAddGarment(title, desc, category, extra);
-                      }}
-                      onDeleteGarment={handleDeleteGarment}
-                      user={user}
-                      onLogout={handleLogout}
-                      onReset={handleReset}
-                      onLoadSamples={handleAddSampleWardrobe}
-                      isResetting={isResetting}
-                      onEnterSilence={() => setIsSilent(true)}
-                    />
+                    <PersonaSimulationProvider initialPersonaId="CYBER_FUTURISTIC">
+                      <AIStyleHub 
+                        wardrobe={allItems}
+                        onAddGarment={async (title, desc, category, extra) => {
+                          await handleAddGarment(title, desc, category, extra);
+                        }}
+                        onDeleteGarment={handleDeleteGarment}
+                        user={user}
+                        onLogout={handleLogout}
+                        onReset={handleReset}
+                        onLoadSamples={handleAddSampleWardrobe}
+                        isResetting={isResetting}
+                        onEnterSilence={() => setIsSilent(true)}
+                      />
+                      <PersonaSwitcherWidget />
+                    </PersonaSimulationProvider>
                   </ARIAProvider>
                 </React.Suspense>
               </div>

@@ -74,6 +74,7 @@ export const ARIAIntelligenceInterface: React.FC<ARIAIntelligenceInterfaceProps>
       {/* First-time Onboarding Modal */}
       <ARIAOnboardingExperience
         isOpen={isOnboardingOpen}
+        userId={userId}
         onClose={() => setIsOnboardingOpen(false)}
         onCompleteOnboarding={handleCompleteOnboarding}
       />

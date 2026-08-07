@@ -1,10 +1,70 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.role == 'admin' ||
+        request.auth.token.role == 'super_admin' ||
+        request.auth.token.admin == true ||
+        request.auth.token.super_admin == true ||
+        request.auth.token.email == 'musadaqahmad5@gmail.com'
+      );
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // 1. system/* - Only admin writable
+    match /system/{document=**} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /system_boot/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 2. themes/* - Only admin writable
+    match /themes/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 3. civilizationMemory/* - Only admin writable
+    match /civilizationMemory/{document=**} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // 4. users/{uid} and subcollections
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isOwner(userId) || isAdmin();
+
+      match /{subcollection=**} {
+        allow read, write: if isOwner(userId) || isAdmin();
+      }
+    }
+
+    // 5. Commerce Orders
+    match /orders/{orderId} {
+      allow read: if isSignedIn() && (resource == null || resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    // Default Fallback: Authenticated reads, Admin writes
     match /{document=**} {
-      allow read, write: if true;
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
     }
   }
 }
-
-

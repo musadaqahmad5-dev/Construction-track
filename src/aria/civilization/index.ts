@@ -14,3 +14,8 @@ export * from './KnowledgeConsolidator';
 export * from './MemoryGovernance';
 export * from './CivilizationStorage';
 export * from './CivilizationHistory';
+export * from './RelationshipEngine';
+export * from './CivilizationKnowledgeStorage';
+export * from './KnowledgeRetrievalEngine';
+export * from './retrieval';
+

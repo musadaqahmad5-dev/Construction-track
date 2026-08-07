@@ -1,14 +1,16 @@
 /**
- * ARIA v2.5 Agent Performance Tracker
+ * ARIA v2.7 Agent Performance Tracker & Storage Bridge
  * Product: LOOK VISION v2.4
+ * 
+ * Handles execution persistence to Firestore (`users/{uid}/aria/agents/history/{executionId}`)
+ * and offline synchronization cache (`aria_agent_execution_cache_v2.7`).
  */
 
-import { AgentProfile, AgentExecutionRecord, AgentRole } from './AgentTypes';
+import { AgentProfile, AgentExecutionRecord } from './AgentTypes';
 import { db, isFirestoreOfflineFallbackActive } from '../../firebase';
 import { doc, setDoc, getDocs, collection, serverTimestamp } from 'firebase/firestore';
 
-const LOCAL_AGENT_PERF_KEY = 'lookvision_aria_agent_performance_v2.5';
-const LOCAL_AGENT_EXEC_KEY = 'lookvision_aria_agent_executions_v2.5';
+const LOCAL_AGENT_EXEC_KEY = 'aria_agent_execution_cache_v2.7';
 
 export class AgentPerformanceTracker {
   private static instance: AgentPerformanceTracker;
@@ -78,8 +80,16 @@ export class AgentPerformanceTracker {
     if (isFirestoreOfflineFallbackActive || !db || !userId) return;
 
     try {
-      const docRef = doc(db, 'users', userId, 'aria', 'agents', 'executions', record.executionId);
-      await setDoc(docRef, {
+      // Primary Task 8 path: users/{uid}/aria/agents/history/{executionId}
+      const historyRef = doc(db, 'users', userId, 'aria', 'agents', 'history', record.executionId);
+      await setDoc(historyRef, {
+        ...record,
+        savedAt: serverTimestamp()
+      }, { merge: true });
+
+      // Legacy fallback path: users/{uid}/aria/agents/executions/{executionId}
+      const execRef = doc(db, 'users', userId, 'aria', 'agents', 'executions', record.executionId);
+      await setDoc(execRef, {
         ...record,
         savedAt: serverTimestamp()
       }, { merge: true });
@@ -102,10 +112,10 @@ export class AgentPerformanceTracker {
     if (isFirestoreOfflineFallbackActive || !db || !userId) return local;
 
     try {
-      const colRef = collection(db, 'users', userId, 'aria', 'agents', 'executions');
+      const colRef = collection(db, 'users', userId, 'aria', 'agents', 'history');
       const snapDocs = await getDocs(colRef);
       const fetched: AgentExecutionRecord[] = [];
-      snapDocs.forEach(d => {
+      snapDocs.forEach((d) => {
         fetched.push(d.data() as AgentExecutionRecord);
       });
 

@@ -1,15 +1,30 @@
 /**
- * ARIA v2.5 Agent Executor
+ * ARIA v2.7 Agent Executor
  * Product: LOOK VISION v2.4
+ * 
+ * Executes agent tasks using specialized fashion intelligence agents
+ * and integrates telemetry and observability logging.
  */
 
-import { AgentRole, AgentExecutionRecord, AgentExecutionRequest } from './AgentTypes';
+import {
+  AgentRole,
+  AgentExecutionRecord,
+  AgentExecutionRequest,
+  AgentRequest,
+  AgentResponse
+} from './AgentTypes';
 import { agentRegistry } from './AgentRegistry';
+import { personalStylistAgent } from './specialized/PersonalStylistAgent';
+import { fashionHistorianAgent } from './specialized/FashionHistorianAgent';
+import { trendIntelligenceAgent } from './specialized/TrendIntelligenceAgent';
+import { wardrobeOptimizationAgent } from './specialized/WardrobeOptimizationAgent';
+import { creativeDirectorAgent } from './specialized/CreativeDirectorAgent';
+import { visualAnalysisAgent } from './specialized/VisualAnalysisAgent';
 import { memoryEngine } from '../memory/MemoryEngine';
 import { styleDNAEngine } from '../styleDNA/StyleDNAEngine';
-import { decisionEngine } from '../decision/DecisionEngine';
 import { creativeEngine } from '../creative/CreativeEngine';
 import { visualIntelligenceEngine } from '../vision/VisualIntelligenceEngine';
+import { EnterpriseObservabilityEngine } from '../../engine/observabilityEngine';
 
 export class AgentExecutor {
   public static async execute(
@@ -18,112 +33,105 @@ export class AgentExecutor {
   ): Promise<AgentExecutionRecord> {
     const startTime = Date.now();
     const userId = request.userId || 'guest_user';
-    const agent = agentRegistry.getAgentByRole(role);
+    const agentProfile = agentRegistry.getAgentByRole(role);
 
-    if (!agent) {
+    if (!agentProfile) {
       throw new Error(`Agent for role [${role}] not found in registry`);
     }
 
     const executionId = `exec_${role.toLowerCase()}_${Date.now()}`;
     let outputSummary = '';
     let dataPayload: Record<string, unknown> = {};
-    let confidence = agent.confidence;
+    let confidence = agentProfile.confidence;
     let supportingEvidence: string[] = [];
+    let reasoningDepth = 2;
 
     try {
-      switch (role) {
-        case 'FASHION_ANALYST': {
-          const profile = styleDNAEngine.getProfile();
-          const memories = memoryEngine.getMemories();
-          outputSummary = `Analyzed Style DNA profile (${profile?.identityName || 'Contemporary'}). Primary silhouette: ${profile?.silhouetteProfile[0]?.value || 'Tailored'}. Verified against ${memories.length} fashion memory records.`;
-          dataPayload = {
-            styleDNA: profile,
-            memoryCount: memories.length,
-            topColors: profile?.colorProfile.slice(0, 3)
-          };
-          supportingEvidence = [
-            `Style DNA overall confidence score: ${profile?.overallConfidence || 0.92}`,
-            `Verified ${memories.length} memory records in memory engine`
-          ];
-          confidence = profile?.overallConfidence || 0.94;
-          break;
-        }
+      const agentReq: AgentRequest = {
+        requestId: executionId,
+        source: 'ARIA_AGENT_ORCHESTRATOR',
+        context: request.contextParams || {},
+        requiredCapability: request.requiredCapabilities?.[0] || 'analyze',
+        prompt: request.prompt,
+        userId
+      };
 
-        case 'PERSONAL_STYLIST': {
-          const rec = await decisionEngine.generateRecommendation({
-            userId,
-            userPrompt: request.prompt || 'Synthesize tailored outfit recommendation'
-          });
-          outputSummary = `Personal Stylist generated recommendation: ${rec.title} (Score: ${Math.round(rec.overallScore * 100)}%). ${rec.description}`;
-          dataPayload = {
-            recommendationId: rec.recommendationId,
-            score: rec.overallScore,
-            title: rec.title,
-            suggestedItems: rec.suggestedItems,
-            stylingAdvice: rec.stylingAdvice
-          };
-          supportingEvidence = rec.reasonSignals.map(s => `${s.category}: ${s.signalText}`);
-          confidence = rec.confidence;
-          break;
-        }
-
-        case 'CREATIVE_DIRECTOR': {
-          const concept = await creativeEngine.generateCreativeConcept({
-            userId,
-            themePrompt: request.prompt || 'Editorial concept direction'
-          });
-          outputSummary = `Creative Director synthesized concept "${concept.title}". Description: ${concept.description}`;
-          dataPayload = {
-            creativeId: concept.creativeId,
-            title: concept.title,
-            category: concept.category,
-            colorStory: concept.colorStory,
-            stylingDirections: concept.stylingDirections
-          };
-          supportingEvidence = concept.supportingSignals.map(s => `${s.sourceType}: ${s.signalText}`);
-          confidence = concept.confidence;
-          break;
-        }
-
-        case 'VISUAL_ANALYSIS': {
-          const vision = await visualIntelligenceEngine.analyzeImage({
-            userId,
-            imageName: request.prompt || 'Agent Visual Analysis Query'
-          });
-          outputSummary = `Visual Analysis Agent detected ${vision.garments.length} garments with ${Math.round(vision.compatibility.overallCompatibilityScore * 100)}% visual match compatibility.`;
-          dataPayload = {
-            analysisId: vision.analysisId,
-            garmentsCount: vision.garments.length,
-            colorPalette: vision.colorPalette,
-            compatibility: vision.compatibility
-          };
-          supportingEvidence = vision.supportingEvidence;
-          confidence = vision.overallConfidence;
-          break;
-        }
-
-        case 'TREND_INTELLIGENCE': {
-          const profile = styleDNAEngine.getProfile();
-          outputSummary = `Trend Intelligence Agent identified active autumn/winter tailoring trends aligning with user's ${profile?.silhouetteProfile[0]?.value || 'structured'} aesthetic.`;
-          dataPayload = {
-            trendingSilhouettes: ['Oversized Double-Breasted Blazers', 'Wide-Leg Pleated Trousers', 'Monochromatic Wool Layers'],
-            trendingPalettes: ['Deep Slate Charcoal', 'Warm Oat Cream', 'Rich Espresso'],
-            alignmentScore: 0.93
-          };
-          supportingEvidence = [
-            'Scanned contemporary luxury runway data',
-            'Cross-referenced user Style DNA color affinities'
-          ];
-          confidence = 0.93;
-          break;
-        }
+      if (role === 'PERSONAL_STYLIST') {
+        const response: AgentResponse = await personalStylistAgent.execute(agentReq);
+        outputSummary = `Personal Stylist: ${(response.result.title as string) || 'Outfit Recommendation'} (Confidence: ${Math.round(response.confidence * 100)}%)`;
+        dataPayload = response.result;
+        confidence = response.confidence;
+        supportingEvidence = response.reasoning;
+        reasoningDepth = response.telemetry.reasoningDepth;
+      } else if (role === 'FASHION_HISTORIAN') {
+        const response: AgentResponse = await fashionHistorianAgent.execute(agentReq);
+        outputSummary = `Fashion Historian: Mapped ${(response.result.eras as any[])?.length || 0} eras and ${(response.result.designers as any[])?.length || 0} designer references`;
+        dataPayload = response.result;
+        confidence = response.confidence;
+        supportingEvidence = response.reasoning;
+        reasoningDepth = response.telemetry.reasoningDepth;
+      } else if (role === 'TREND_INTELLIGENCE') {
+        const response: AgentResponse = await trendIntelligenceAgent.execute(agentReq);
+        outputSummary = `Trend Intelligence: Identified ${(response.result.trendingSilhouettes as any[])?.length || 0} active runway trend silhouettes`;
+        dataPayload = response.result;
+        confidence = response.confidence;
+        supportingEvidence = response.reasoning;
+        reasoningDepth = response.telemetry.reasoningDepth;
+      } else if (role === 'WARDROBE_OPTIMIZER') {
+        const response: AgentResponse = await wardrobeOptimizationAgent.execute(agentReq);
+        outputSummary = `Wardrobe Optimizer: Wardrobe synergy score ${Math.round((response.confidence) * 100)}% across ${response.result.totalOwnedItems} items`;
+        dataPayload = response.result;
+        confidence = response.confidence;
+        supportingEvidence = response.reasoning;
+        reasoningDepth = response.telemetry.reasoningDepth;
+      } else if (role === 'FASHION_ANALYST') {
+        const profile = styleDNAEngine.getProfile();
+        const memories = memoryEngine.getMemories();
+        outputSummary = `Fashion Analyst: Analyzed Style DNA profile (${profile?.identityName || 'Contemporary'}). Primary silhouette: ${profile?.silhouetteProfile[0]?.value || 'Tailored'}. Verified against ${memories.length} memories.`;
+        dataPayload = {
+          styleDNA: profile,
+          memoryCount: memories.length,
+          topColors: profile?.colorProfile.slice(0, 3)
+        };
+        supportingEvidence = [
+          `Style DNA overall confidence score: ${profile?.overallConfidence || 0.92}`,
+          `Verified ${memories.length} memory records in memory engine`
+        ];
+        confidence = profile?.overallConfidence || 0.94;
+        reasoningDepth = supportingEvidence.length;
+      } else if (role === 'CREATIVE_DIRECTOR') {
+        const response: AgentResponse = await creativeDirectorAgent.execute(agentReq);
+        outputSummary = `Creative Director synthesized concept "${response.result.title as string}". Theme: ${response.result.aestheticTheme as string}`;
+        dataPayload = response.result;
+        confidence = response.confidence;
+        supportingEvidence = response.reasoning;
+        reasoningDepth = response.telemetry.reasoningDepth;
+      } else if (role === 'VISUAL_ANALYSIS') {
+        const response: AgentResponse = await visualAnalysisAgent.execute(agentReq);
+        outputSummary = `Visual Analysis Agent analyzed image "${response.result.imageName as string}" detecting ${response.result.garmentCount as number} garments with ${Math.round(response.confidence * 100)}% visual confidence.`;
+        dataPayload = response.result;
+        confidence = response.confidence;
+        supportingEvidence = response.reasoning;
+        reasoningDepth = response.telemetry.reasoningDepth;
       }
 
       const latencyMs = Date.now() - startTime;
 
+      // Log trace to EnterpriseObservabilityEngine
+      try {
+        EnterpriseObservabilityEngine.logTrace({
+          engine: `AgentExecutor:${role}`,
+          eventName: 'AGENT_EXECUTION_COMPLETED',
+          category: 'Agent',
+          payload: `Agent ${agentProfile.agentName} completed execution with confidence ${confidence}`,
+          latencyMs,
+          status: 'Success'
+        });
+      } catch (_) {}
+
       const record: AgentExecutionRecord = {
         executionId,
-        agentId: agent.agentId,
+        agentId: agentProfile.agentId,
         agentRole: role,
         userId,
         prompt: request.prompt || `Execute ${role} pipeline`,
@@ -133,15 +141,28 @@ export class AgentExecutor {
         dataPayload,
         latencyMs,
         executedAt: new Date().toISOString(),
-        supportingEvidence
+        supportingEvidence,
+        reasoningDepth
       };
 
       return record;
     } catch (err: any) {
       const latencyMs = Date.now() - startTime;
+
+      try {
+        EnterpriseObservabilityEngine.logTrace({
+          engine: `AgentExecutor:${role}`,
+          eventName: 'AGENT_EXECUTION_FAILED',
+          category: 'Agent',
+          payload: `Error executing ${role}: ${err.message || 'Unknown error'}`,
+          latencyMs,
+          status: 'Failure'
+        });
+      } catch (_) {}
+
       return {
         executionId,
-        agentId: agent.agentId,
+        agentId: agentProfile.agentId,
         agentRole: role,
         userId,
         prompt: request.prompt || `Execute ${role}`,
@@ -151,7 +172,8 @@ export class AgentExecutor {
         dataPayload: { error: err.message },
         latencyMs,
         executedAt: new Date().toISOString(),
-        supportingEvidence: ['Error encountered during execution']
+        supportingEvidence: ['Error encountered during agent execution'],
+        reasoningDepth: 1
       };
     }
   }

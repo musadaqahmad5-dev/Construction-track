@@ -5,6 +5,7 @@
 
 import { Request, Response } from 'express';
 import { ariaBackendService } from './aria.service';
+import { ariaRuntime } from '../../src/aria/runtime/ARIARuntime';
 
 export class ARIAController {
   public static async handleQuery(req: Request, res: Response): Promise<void> {
@@ -62,6 +63,39 @@ export class ARIAController {
         success: false,
         error: 'ARIA processing error',
         message: err.message || 'Internal server error processing ARIA request'
+      });
+    }
+  }
+
+  public static async handleRequest(req: Request, res: Response): Promise<void> {
+    const requestId = (req as any).requestId || `req_aria_${Date.now()}`;
+
+    try {
+      if (!req.body || typeof req.body !== 'object') {
+        res.status(400).json({
+          success: false,
+          error: 'Validation failed: Request body must be a JSON object'
+        });
+        return;
+      }
+
+      const requestPayload = {
+        ...req.body,
+        requestId: req.body.requestId || requestId
+      };
+
+      const result = await ariaRuntime.execute(requestPayload);
+
+      res.json({
+        success: true,
+        data: result
+      });
+    } catch (err: any) {
+      console.error(`[ARIAController Request Error] Request ${requestId} failed:`, err);
+      res.status(500).json({
+        success: false,
+        error: 'ARIA execution error',
+        message: err.message || 'Internal server error executing ARIA request'
       });
     }
   }

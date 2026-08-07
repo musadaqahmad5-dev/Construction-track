@@ -14,6 +14,7 @@ import agentsRouter from './agents/agents.routes';
 import digitalTwinRouter from './digitalTwin/digitalTwin.routes';
 import simulationRouter from './simulation/simulation.routes';
 import civilizationRouter from './civilization/civilization.routes';
+import prototypeRouter from './prototype.routes';
 
 const ariaRouter = Router();
 
@@ -22,6 +23,12 @@ const ariaRouter = Router();
  * Core endpoint for dispatching ARIA AI requests
  */
 ariaRouter.post('/query', ARIAController.handleQuery);
+
+/**
+ * POST /api/aria/request
+ * Direct endpoint for executing ARIA Orchestrator requests
+ */
+ariaRouter.post('/request', ARIAController.handleRequest);
 
 /**
  * /api/aria/memory routes
@@ -67,5 +74,10 @@ ariaRouter.use('/simulation', simulationRouter);
  * /api/aria/civilization routes
  */
 ariaRouter.use('/civilization', civilizationRouter);
+
+/**
+ * /api/aria/prototype route
+ */
+ariaRouter.use('/prototype', prototypeRouter);
 
 export default ariaRouter;

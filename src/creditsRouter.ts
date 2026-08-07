@@ -15,10 +15,10 @@ function getUserPlanFromRequest(req: Request): string {
 }
 
 /**
- * 1. GET /api/credits/status
+ * 1. GET /api/credits/status or /api/status or /api/credits/balance
  * Returns complete AI credit balance, limits, and plan details
  */
-router.get('/credits/status', async (req: Request, res: Response) => {
+router.get(['/credits/status', '/status', '/credits/balance', '/balance'], async (req: Request, res: Response) => {
   try {
     const userId = getUserIdFromRequest(req);
     const planTier = getUserPlanFromRequest(req);
@@ -50,10 +50,10 @@ router.get('/credits/status', async (req: Request, res: Response) => {
 });
 
 /**
- * 2. GET /api/usage/history
+ * 2. GET /api/usage/history or /api/credits/history or /api/history
  * Returns user AI generation history and metrics
  */
-router.get('/usage/history', async (req: Request, res: Response) => {
+router.get(['/usage/history', '/credits/history', '/history', '/usage'], async (req: Request, res: Response) => {
   try {
     const userId = getUserIdFromRequest(req);
     const limit = parseInt((req.query.limit as string) || '50', 10);
@@ -82,7 +82,7 @@ router.get('/usage/history', async (req: Request, res: Response) => {
  * 3. POST /api/credits/validate
  * Validates if user has available credits and generation capacity
  */
-router.post('/credits/validate', async (req: Request, res: Response) => {
+router.post(['/credits/validate', '/validate'], async (req: Request, res: Response) => {
   try {
     const userId = getUserIdFromRequest(req);
     const planTier = req.body.planTier || getUserPlanFromRequest(req);
@@ -115,7 +115,7 @@ router.post('/credits/validate', async (req: Request, res: Response) => {
  * 4. POST /api/credits/deduct
  * Deducts credits, acquires lock & logs usage before AI processing
  */
-router.post('/credits/deduct', async (req: Request, res: Response) => {
+router.post(['/credits/deduct', '/deduct'], async (req: Request, res: Response) => {
   try {
     const userId = getUserIdFromRequest(req);
     const planTier = req.body.planTier || getUserPlanFromRequest(req);
@@ -161,7 +161,7 @@ router.post('/credits/deduct', async (req: Request, res: Response) => {
  * 5. POST /api/credits/refund
  * Refunds credits if AI generation fails or is cancelled
  */
-router.post('/credits/refund', async (req: Request, res: Response) => {
+router.post(['/credits/refund', '/refund'], async (req: Request, res: Response) => {
   try {
     const userId = getUserIdFromRequest(req);
     const planTier = req.body.planTier || getUserPlanFromRequest(req);
@@ -199,10 +199,10 @@ router.post('/credits/refund', async (req: Request, res: Response) => {
 });
 
 /**
- * 6. POST /api/credits/replenish
+ * 6. POST /api/credits/replenish or /api/credits/topup
  * System endpoint to grant plan monthly credits or top-up bonuses
  */
-router.post('/credits/replenish', async (req: Request, res: Response) => {
+router.post(['/credits/replenish', '/replenish', '/credits/topup', '/topup'], async (req: Request, res: Response) => {
   try {
     const userId = getUserIdFromRequest(req);
     const { planTier = 'PREMIUM', action = 'grant_monthly' } = req.body || {};

@@ -6,16 +6,16 @@ export const SEOStructuredData: React.FC = () => {
     const softwareSchema = {
       "@context": "https://schema.org",
       "@type": "SoftwareApplication",
-      "name": "LookVision AI Style Hub",
-      "alternateName": "AI Style Hub - Unified AI Fashion Operating System",
+      "name": "AI Fashion Market",
+      "alternateName": "AI Fashion Market — Powered by LOOK VISION AI Fashion Operating System",
       "operatingSystem": "Web Browser, iOS, Android",
       "applicationCategory": "DesignApplication, FashionApplication, MultimediaApplication",
-      "description": "An all-in-one AI-powered fashion workspace featuring virtual studio try-ons, 3D CAD apparel rendering, smart wardrobe management, and custom lookbook creation.",
-      "url": window.location.origin,
+      "description": "AI Fashion Market (www.aifashionmarket.com) — Powered by LOOK VISION AI Fashion Operating System and ARIA Autonomous Fashion Intelligence.",
+      "url": "https://www.aifashionmarket.com",
       "author": {
         "@type": "Organization",
-        "name": "LookVision Technologies Inc.",
-        "url": window.location.origin,
+        "name": "AI Fashion Market Technologies",
+        "url": "https://www.aifashionmarket.com",
         "logo": `${window.location.origin}/logo.png`
       },
       "offers": {
@@ -37,19 +37,19 @@ export const SEOStructuredData: React.FC = () => {
     const organizationSchema = {
       "@context": "https://schema.org",
       "@type": "Organization",
-      "name": "LookVision Fashion AI",
-      "url": window.location.origin,
+      "name": "AI Fashion Market",
+      "url": "https://www.aifashionmarket.com",
       "logo": "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?q=80&w=300",
       "sameAs": [
-        "https://twitter.com/lookvisionai",
-        "https://instagram.com/lookvision.style",
-        "https://github.com/lookvision"
+        "https://twitter.com/aifashionmarket",
+        "https://instagram.com/aifashionmarket",
+        "https://github.com/aifashionmarket"
       ],
       "contactPoint": {
         "@type": "ContactPoint",
         "telephone": "+1-800-LOOK-VISION",
         "contactType": "customer service",
-        "email": "support@lookvision.com",
+        "email": "support@aifashionmarket.com",
         "availableLanguage": ["English", "Urdu", "French", "Japanese"]
       }
     };

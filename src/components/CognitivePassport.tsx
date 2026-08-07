@@ -12,6 +12,7 @@ import { LOOK_VISION_THEMES } from './AIStyleHub';
 import { PersonalFashionMemoryEngine } from '../engine/personalMemory';
 import { RecommendationEngine } from '../features/recommendations/recommendationEngine';
 import { AIStyleHubV17Architecture } from '../features/global/AIStyleHubV17Architecture';
+import { ariaService } from '../services/ariaService';
 
 interface CognitivePassportProps {
   user?: any;
@@ -1516,6 +1517,62 @@ export const CognitivePassport: React.FC<CognitivePassportProps> = ({ user, onLo
               <div>
                 <h3 className="text-sm font-mono text-violet-400 uppercase tracking-wider">AI Intelligence & Style Memory Hub</h3>
                 <p className="text-xs text-zinc-500 mt-1">Monitor real-time learning metrics, manage smart negative dislikes filters, and preview 5D omnidirectional recommendations.</p>
+              </div>
+
+              {/* ARIA RUNTIME & ORCHESTRATOR TELEMETRY CARD */}
+              <div className="bg-[#0b0b14] border border-violet-500/20 rounded-2xl p-5 space-y-4">
+                <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                  <div className="flex items-center gap-2">
+                    <Cpu className="w-4 h-4 text-violet-400 animate-pulse" />
+                    <span className="text-xs font-mono text-violet-300 font-bold uppercase tracking-wider">
+                      ARIA v3.2 Orchestrator & Runtime Status
+                    </span>
+                  </div>
+                  <span className="px-2.5 py-0.5 rounded-full text-[9px] font-mono bg-emerald-950/40 border border-emerald-500/30 text-emerald-400 font-bold uppercase">
+                    {ariaService.getRuntimeHealth().status}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-left">
+                  <div className="bg-black/40 border border-white/5 rounded-xl p-3">
+                    <span className="text-[9px] font-mono text-zinc-500 uppercase block">Active Engines</span>
+                    <span className="text-sm font-mono font-bold text-white mt-1 block">
+                      {ariaService.getRuntimeHealth().activeModules.length} Connected
+                    </span>
+                  </div>
+
+                  <div className="bg-black/40 border border-white/5 rounded-xl p-3">
+                    <span className="text-[9px] font-mono text-zinc-500 uppercase block">Executions Logged</span>
+                    <span className="text-sm font-mono font-bold text-violet-300 mt-1 block">
+                      {ariaService.getRuntimeHealth().totalRequestsHandled}
+                    </span>
+                  </div>
+
+                  <div className="bg-black/40 border border-white/5 rounded-xl p-3">
+                    <span className="text-[9px] font-mono text-zinc-500 uppercase block">Avg Latency</span>
+                    <span className="text-sm font-mono font-bold text-emerald-400 mt-1 block">
+                      {ariaService.getRuntimeStatus().orchestratorStatus.averageLatencyMs} ms
+                    </span>
+                  </div>
+
+                  <div className="bg-black/40 border border-white/5 rounded-xl p-3">
+                    <span className="text-[9px] font-mono text-zinc-500 uppercase block">Memory Mode</span>
+                    <span className="text-sm font-mono font-bold text-amber-300 mt-1 block uppercase">
+                      {ariaService.getRuntimeHealth().memoryStatus}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <span className="text-[9px] font-mono text-zinc-400 uppercase tracking-wider block">Connected Orchestrator Intelligence Engines</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {ariaService.getRuntimeHealth().activeModules.map(eng => (
+                      <span key={eng} className="px-2 py-1 rounded-md bg-white/5 border border-white/10 text-[9px] font-mono text-zinc-300">
+                        {eng}
+                      </span>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               {/* 4 KPI Banner Cards */}
