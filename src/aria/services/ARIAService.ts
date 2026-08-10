@@ -32,7 +32,7 @@ export class ARIAService {
     request: ARIAQueryRequest
   ): Promise<ARIAStructuredResponse<T>> {
     const endpoint = '/api/aria/query';
-    const currentUser = auth.currentUser;
+    const currentUser = auth?.currentUser;
     const token = currentUser ? await currentUser.getIdToken().catch(() => 'guest-token') : 'guest-token';
 
     const response = await fetch(endpoint, {

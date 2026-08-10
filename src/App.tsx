@@ -215,6 +215,11 @@ export default function App() {
     }
 
     // 1. Listen to Firebase standard state
+    if (!auth) {
+      setLoading(false);
+      return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (u) => {
       const minDelay = new Promise(resolve => setTimeout(resolve, 400));
       if (u) {
@@ -265,7 +270,7 @@ export default function App() {
       console.warn("[UserIdentityBootstrapEngine] Notice:", err?.message || err);
     });
 
-    if (user.isAnonymous || user.uid.startsWith('guest-')) {
+    if (!db || user.isAnonymous || user.uid.startsWith('guest-')) {
       return;
     }
 
@@ -299,8 +304,8 @@ export default function App() {
       return;
     }
 
-    // In guest mode, bypass reading from cloud database to respect offline sandbox performance
-    if (user.isAnonymous || user.uid.startsWith('guest-')) {
+    // In guest mode or if db is unavailable, bypass reading from cloud database to respect offline sandbox performance
+    if (!db || user.isAnonymous || user.uid.startsWith('guest-')) {
       const stored = localStorage.getItem('local_wardrobe_items');
       if (stored) {
         try {
@@ -394,8 +399,8 @@ export default function App() {
       return;
     }
 
-    // Skip constructions lookup in guest modes
-    if (user.isAnonymous || user.uid.startsWith('guest-')) {
+    // Skip constructions lookup in guest modes or if db unavailable
+    if (!db || user.isAnonymous || user.uid.startsWith('guest-')) {
       setConstructions([]);
       return;
     }

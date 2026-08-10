@@ -108,7 +108,7 @@ export const FashionConceptGenerator: React.FC<FashionConceptGeneratorProps> = (
     };
 
     // Save to Firestore if authenticated
-    if (auth?.currentUser?.uid) {
+    if (db && auth?.currentUser?.uid) {
       try {
         await addDoc(collection(db, `users/${auth.currentUser.uid}/creations`), {
           ...newCreation,

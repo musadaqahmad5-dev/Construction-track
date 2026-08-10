@@ -15,31 +15,33 @@ export class CreditsSystem {
   private static snapshotUnsubscribe: (() => void) | null = null;
 
   static {
-    auth.onAuthStateChanged((user) => {
-      if (this.snapshotUnsubscribe) {
-        this.snapshotUnsubscribe();
-        this.snapshotUnsubscribe = null;
-      }
+    if (auth && typeof auth.onAuthStateChanged === 'function') {
+      auth.onAuthStateChanged((user) => {
+        if (this.snapshotUnsubscribe) {
+          this.snapshotUnsubscribe();
+          this.snapshotUnsubscribe = null;
+        }
 
-      if (user) {
-        this.snapshotUnsubscribe = onSnapshot(doc(db, "users", user.uid), (docSnap) => {
-          if (docSnap.exists()) {
-            const data = docSnap.data();
-            const quotaUsed = data?.quotaUsed || {};
-            this.imagesUsed = typeof quotaUsed.images === 'number' ? quotaUsed.images : 0;
-            this.recommendationsUsed = typeof quotaUsed.recommendations === 'number' ? quotaUsed.recommendations : 0;
-          } else {
-            this.imagesUsed = 0;
-            this.recommendationsUsed = 0;
-          }
-        }, (err) => {
-          console.warn("[CreditsSystem] User credits sync error:", err);
-        });
-      } else {
-        this.imagesUsed = 0;
-        this.recommendationsUsed = 0;
-      }
-    });
+        if (user && db) {
+          this.snapshotUnsubscribe = onSnapshot(doc(db, "users", user.uid), (docSnap) => {
+            if (docSnap.exists()) {
+              const data = docSnap.data();
+              const quotaUsed = data?.quotaUsed || {};
+              this.imagesUsed = typeof quotaUsed.images === 'number' ? quotaUsed.images : 0;
+              this.recommendationsUsed = typeof quotaUsed.recommendations === 'number' ? quotaUsed.recommendations : 0;
+            } else {
+              this.imagesUsed = 0;
+              this.recommendationsUsed = 0;
+            }
+          }, (err) => {
+            console.warn("[CreditsSystem] User credits sync error:", err);
+          });
+        } else {
+          this.imagesUsed = 0;
+          this.recommendationsUsed = 0;
+        }
+      });
+    }
   }
 
   static getBalance(): CreditBalance {

@@ -42,7 +42,7 @@ export class ProductionStorage {
    * Loads user profile from Firestore or local fallback
    */
   public static async loadUserProfile(uid?: string): Promise<UserFashionProfile> {
-    const targetUid = uid || auth.currentUser?.uid || 'guest_user';
+    const targetUid = uid || auth?.currentUser?.uid || 'guest_user';
 
     // First check local cache for immediate rendering
     const cached = this.getOfflineCache();
@@ -50,7 +50,7 @@ export class ProductionStorage {
       console.debug('[ProductionStorage] Loaded profile from offline cache v6.0');
     }
 
-    if (isFirestoreOfflineFallbackActive || !auth.currentUser) {
+    if (isFirestoreOfflineFallbackActive || !auth?.currentUser) {
       if (cached) return cached;
       const defaultProf = UserOnboardingEngine.processOnboardingSubmission(
         targetUid,
@@ -96,8 +96,8 @@ export class ProductionStorage {
   public static async saveUserProfile(profile: UserFashionProfile): Promise<void> {
     this.syncOfflineCache(profile);
 
-    const targetUid = profile.userId || auth.currentUser?.uid || 'guest_user';
-    if (isFirestoreOfflineFallbackActive || !auth.currentUser || targetUid === 'guest_user') {
+    const targetUid = profile.userId || auth?.currentUser?.uid || 'guest_user';
+    if (isFirestoreOfflineFallbackActive || !auth?.currentUser || targetUid === 'guest_user') {
       return;
     }
 
@@ -114,7 +114,7 @@ export class ProductionStorage {
    * Subscribes to real-time updates for user profile doc
    */
   public static listenToUserProfile(uid: string, callback: (profile: UserFashionProfile) => void): () => void {
-    if (isFirestoreOfflineFallbackActive || !auth.currentUser || uid === 'guest_user') {
+    if (isFirestoreOfflineFallbackActive || !auth?.currentUser || uid === 'guest_user') {
       const cached = this.getOfflineCache();
       if (cached) callback(cached);
       return () => {};

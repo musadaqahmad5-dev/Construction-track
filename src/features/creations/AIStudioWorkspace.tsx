@@ -90,7 +90,7 @@ export const AIStudioWorkspace: React.FC<AIStudioWorkspaceProps> = ({
 
   // Subscribe to Firestore if user logged in
   useEffect(() => {
-    if (!auth?.currentUser?.uid) return;
+    if (!db || !auth?.currentUser?.uid) return;
 
     const q = query(collection(db, `users/${auth.currentUser.uid}/creations`));
     const unsubscribe = onSnapshot(q, (snapshot) => {

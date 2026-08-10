@@ -17,33 +17,35 @@ export class SubscriptionEngine {
   private static snapshotUnsubscribe: (() => void) | null = null;
 
   static {
-    auth.onAuthStateChanged((user) => {
-      if (this.snapshotUnsubscribe) {
-        this.snapshotUnsubscribe();
-        this.snapshotUnsubscribe = null;
-      }
+    if (auth && typeof auth.onAuthStateChanged === 'function') {
+      auth.onAuthStateChanged((user) => {
+        if (this.snapshotUnsubscribe) {
+          this.snapshotUnsubscribe();
+          this.snapshotUnsubscribe = null;
+        }
 
-      if (user) {
-        this.snapshotUnsubscribe = onSnapshot(doc(db, "users", user.uid), (docSnap) => {
-          if (docSnap.exists()) {
-            const data = docSnap.data();
-            const tier = data?.subscription?.tier;
-            if (tier) {
-              const normalized = tier.toLowerCase();
-              if (['free', 'pro', 'creator', 'enterprise'].includes(normalized)) {
-                this.activeStatus = normalized as SubscriptionLevel;
+        if (user && db) {
+          this.snapshotUnsubscribe = onSnapshot(doc(db, "users", user.uid), (docSnap) => {
+            if (docSnap.exists()) {
+              const data = docSnap.data();
+              const tier = data?.subscription?.tier;
+              if (tier) {
+                const normalized = tier.toLowerCase();
+                if (['free', 'pro', 'creator', 'enterprise'].includes(normalized)) {
+                  this.activeStatus = normalized as SubscriptionLevel;
+                }
               }
+            } else {
+              this.activeStatus = 'free';
             }
-          } else {
-            this.activeStatus = 'free';
-          }
-        }, (err) => {
-          console.warn("[SubscriptionEngine] Subscription status sync error:", err);
-        });
-      } else {
-        this.activeStatus = 'free';
-      }
-    });
+          }, (err) => {
+            console.warn("[SubscriptionEngine] Subscription status sync error:", err);
+          });
+        } else {
+          this.activeStatus = 'free';
+        }
+      });
+    }
   }
 
   static getSubscriptionTierData(level: SubscriptionLevel): SubscriptionStats {
