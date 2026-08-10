@@ -21,6 +21,17 @@ export class ConversationPersistenceService {
     return `${userId}_${sessionId}`;
   }
 
+  private getDb() {
+    if (!process.env.FIREBASE_SERVICE_ACCOUNT && !process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+      return null;
+    }
+    try {
+      return getFirestore();
+    } catch (_) {
+      return null;
+    }
+  }
+
   public async saveSession(userId: string, session: ConversationSession, contextSnapshot?: Record<string, any>): Promise<void> {
     const key = this.getKey(userId, session.id);
     this.memorySessions.set(key, JSON.parse(JSON.stringify(session)));
@@ -28,8 +39,10 @@ export class ConversationPersistenceService {
       this.memorySnapshots.set(key, JSON.parse(JSON.stringify(contextSnapshot)));
     }
 
+    const db = this.getDb();
+    if (!db) return;
+
     try {
-      const db = getFirestore();
       const convRef = db.collection('users').doc(userId).collection('stylistConversations').doc(session.id);
       
       const convData: FirestoreConversationDoc = {
@@ -60,29 +73,31 @@ export class ConversationPersistenceService {
   public async loadSession(userId: string, sessionId: string): Promise<ConversationSession | null> {
     const key = this.getKey(userId, sessionId);
 
-    try {
-      const db = getFirestore();
-      const convRef = db.collection('users').doc(userId).collection('stylistConversations').doc(sessionId);
-      const doc = await convRef.get();
+    const db = this.getDb();
+    if (db) {
+      try {
+        const convRef = db.collection('users').doc(userId).collection('stylistConversations').doc(sessionId);
+        const doc = await convRef.get();
 
-      if (doc.exists) {
-        const data = doc.data() as FirestoreConversationDoc;
-        const messages = await this.getHistory(userId, sessionId, 50);
+        if (doc.exists) {
+          const data = doc.data() as FirestoreConversationDoc;
+          const messages = await this.getHistory(userId, sessionId, 50);
 
-        const session: ConversationSession = {
-          id: data.id,
-          userId: data.userId,
-          messages,
-          createdAt: data.createdAt,
-          updatedAt: data.updatedAt,
-          activeIntent: data.lastIntent as any,
-          shortTermContext: data.contextSnapshot || {}
-        };
+          const session: ConversationSession = {
+            id: data.id,
+            userId: data.userId,
+            messages,
+            createdAt: data.createdAt,
+            updatedAt: data.updatedAt,
+            activeIntent: data.lastIntent as any,
+            shortTermContext: data.contextSnapshot || {}
+          };
 
-        this.memorySessions.set(key, JSON.parse(JSON.stringify(session)));
-        return session;
-      }
-    } catch (_) {}
+          this.memorySessions.set(key, JSON.parse(JSON.stringify(session)));
+          return session;
+        }
+      } catch (_) {}
+    }
 
     return this.memorySessions.get(key) || null;
   }
@@ -101,8 +116,10 @@ export class ConversationPersistenceService {
     }
     this.memoryMessages.set(key, history);
 
+    const db = this.getDb();
+    if (!db) return;
+
     try {
-      const db = getFirestore();
       const msgRef = db
         .collection('users')
         .doc(userId)
@@ -147,36 +164,38 @@ export class ConversationPersistenceService {
   ): Promise<ConversationMessage[]> {
     const key = this.getKey(userId, sessionId);
 
-    try {
-      const db = getFirestore();
-      let query = db
-        .collection('users')
-        .doc(userId)
-        .collection('stylistConversations')
-        .doc(sessionId)
-        .collection('messages')
-        .orderBy('timestamp', 'asc');
+    const db = this.getDb();
+    if (db) {
+      try {
+        let query = db
+          .collection('users')
+          .doc(userId)
+          .collection('stylistConversations')
+          .doc(sessionId)
+          .collection('messages')
+          .orderBy('timestamp', 'asc');
 
-      if (before) {
-        query = query.endBefore(before);
-      }
+        if (before) {
+          query = query.endBefore(before);
+        }
 
-      const snap = await query.limit(limit).get();
-      if (!snap.empty) {
-        const messages: ConversationMessage[] = snap.docs.map(doc => {
-          const d = doc.data() as FirestoreMessageDoc;
-          return {
-            id: d.id,
-            role: d.role,
-            content: d.content,
-            timestamp: d.timestamp,
-            intent: d.intent as any,
-            metadata: d.metadata
-          };
-        });
-        return messages;
-      }
-    } catch (_) {}
+        const snap = await query.limit(limit).get();
+        if (!snap.empty) {
+          const messages: ConversationMessage[] = snap.docs.map(doc => {
+            const d = doc.data() as FirestoreMessageDoc;
+            return {
+              id: d.id,
+              role: d.role,
+              content: d.content,
+              timestamp: d.timestamp,
+              intent: d.intent as any,
+              metadata: d.metadata
+            };
+          });
+          return messages;
+        }
+      } catch (_) {}
+    }
 
     const inMem = this.memoryMessages.get(key) || [];
     return inMem.slice(-limit);
@@ -188,8 +207,10 @@ export class ConversationPersistenceService {
     this.memoryMessages.delete(key);
     this.memorySnapshots.delete(key);
 
+    const db = this.getDb();
+    if (!db) return;
+
     try {
-      const db = getFirestore();
       const convRef = db.collection('users').doc(userId).collection('stylistConversations').doc(sessionId);
       await convRef.set(
         {

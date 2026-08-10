@@ -16,11 +16,24 @@ export class MemoryPersistenceService {
     return MemoryPersistenceService.instance;
   }
 
+  private getDb() {
+    if (!process.env.FIREBASE_SERVICE_ACCOUNT && !process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+      return null;
+    }
+    try {
+      return getFirestore();
+    } catch (_) {
+      return null;
+    }
+  }
+
   public async saveStyleProfile(userId: string, profile: StyleDNAData): Promise<void> {
     this.memoryProfiles.set(userId, JSON.parse(JSON.stringify(profile)));
 
+    const db = this.getDb();
+    if (!db) return;
+
     try {
-      const db = getFirestore();
       const ref = db.collection('users').doc(userId).collection('styleProfiles').doc('default');
       const docData: FirestoreStyleProfileDoc = {
         userId: profile.userId,
@@ -37,26 +50,28 @@ export class MemoryPersistenceService {
   }
 
   public async loadStyleProfile(userId: string): Promise<StyleDNAData | null> {
-    try {
-      const db = getFirestore();
-      const ref = db.collection('users').doc(userId).collection('styleProfiles').doc('default');
-      const doc = await ref.get();
-      if (doc.exists) {
-        const data = doc.data() as FirestoreStyleProfileDoc;
-        const profile: StyleDNAData = {
-          userId: data.userId,
-          archetype: data.archetype,
-          primaryVibe: data.primaryVibe,
-          colorPalette: data.colorPalette,
-          fitPreference: data.fitPreference,
-          brandAffinity: data.brandAffinity,
-          riskTolerance: data.riskTolerance,
-          updatedAt: data.updatedAt
-        };
-        this.memoryProfiles.set(userId, JSON.parse(JSON.stringify(profile)));
-        return profile;
-      }
-    } catch (_) {}
+    const db = this.getDb();
+    if (db) {
+      try {
+        const ref = db.collection('users').doc(userId).collection('styleProfiles').doc('default');
+        const doc = await ref.get();
+        if (doc.exists) {
+          const data = doc.data() as FirestoreStyleProfileDoc;
+          const profile: StyleDNAData = {
+            userId: data.userId,
+            archetype: data.archetype,
+            primaryVibe: data.primaryVibe,
+            colorPalette: data.colorPalette,
+            fitPreference: data.fitPreference,
+            brandAffinity: data.brandAffinity,
+            riskTolerance: data.riskTolerance,
+            updatedAt: data.updatedAt
+          };
+          this.memoryProfiles.set(userId, JSON.parse(JSON.stringify(profile)));
+          return profile;
+        }
+      } catch (_) {}
+    }
 
     return this.memoryProfiles.get(userId) || null;
   }
@@ -68,8 +83,10 @@ export class MemoryPersistenceService {
     const userMap = this.memoryEntries.get(userId)!;
     userMap.set(key, { value, category, updatedAt: new Date().toISOString() });
 
+    const db = this.getDb();
+    if (!db) return;
+
     try {
-      const db = getFirestore();
       const ref = db.collection('users').doc(userId).collection('memory').doc(key);
       await ref.set(
         {
@@ -86,19 +103,21 @@ export class MemoryPersistenceService {
   public async loadMemoryEntries(userId: string): Promise<Record<string, any>> {
     const result: Record<string, any> = {};
 
-    try {
-      const db = getFirestore();
-      const snap = await db.collection('users').doc(userId).collection('memory').get();
-      if (!snap.empty) {
-        snap.docs.forEach(doc => {
-          const d = doc.data();
-          if (d && d.key) {
-            result[d.key] = d.value;
-          }
-        });
-        return result;
-      }
-    } catch (_) {}
+    const db = this.getDb();
+    if (db) {
+      try {
+        const snap = await db.collection('users').doc(userId).collection('memory').get();
+        if (!snap.empty) {
+          snap.docs.forEach(doc => {
+            const d = doc.data();
+            if (d && d.key) {
+              result[d.key] = d.value;
+            }
+          });
+          return result;
+        }
+      } catch (_) {}
+    }
 
     const userMap = this.memoryEntries.get(userId);
     if (userMap) {

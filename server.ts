@@ -418,15 +418,25 @@ async function startServer() {
   let isFirestoreDisabled = false;
   const memoryQuotas = new Map<string, { images: number; recommendations: number }>();
 
-  // Preemptive Firestore boot-test to verify credentials access
-  try {
-    const db = getFirestore();
-    await db.collection("system_verification_status").limit(1).get();
-    console.log("[Quota System] Firestore connection verified successfully on boot.");
-  } catch (err: any) {
-    const errMsg = err?.message || String(err);
-    console.info(`[Quota System] Preemptive Firestore boot-test failed (${errMsg.substring(0, 120)}). Activating robust in-memory quota fallback tracking immediately.`);
+  // Check if service account credentials exist before attempting Firestore boot-test
+  const hasServiceAccount = Boolean(
+    serviceAccountVar || process.env.GOOGLE_APPLICATION_CREDENTIALS
+  );
+
+  if (!hasServiceAccount) {
     isFirestoreDisabled = true;
+    console.info("[Quota System] Service account credentials not provided. Activating in-memory quota tracking and offline fallback mode immediately.");
+  } else {
+    // Preemptive Firestore boot-test to verify credentials access
+    try {
+      const db = getFirestore();
+      await db.collection("system_verification_status").limit(1).get();
+      console.log("[Quota System] Firestore connection verified successfully on boot.");
+    } catch (err: any) {
+      const errMsg = err?.message || String(err);
+      console.info(`[Quota System] Preemptive Firestore boot-test failed (${errMsg.substring(0, 120)}). Activating robust in-memory quota fallback tracking immediately.`);
+      isFirestoreDisabled = true;
+    }
   }
 
   // Firestore-backed Quota Verification & Deduction
