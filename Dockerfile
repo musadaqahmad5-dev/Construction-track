@@ -13,4 +13,4 @@ RUN npm install --only=production && npm cache clean --force
 COPY --from=builder /app/dist ./dist
 EXPOSE 3000
 USER node
-CMD ["node", "--max-old-space-size=2048", "dist/server.cjs"]
+CMD ["node", "dist/server.cjs"]

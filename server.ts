@@ -146,7 +146,7 @@ function parseTopOutfits(primary: any, alternatives: any[]): any[] {
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = Number(process.env.PORT) || 3000;
 
   // Request ID & Structured Request Logging Middleware
   app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -2400,13 +2400,34 @@ You MUST respond strictly with a valid JSON object. No Markdown code fences (do 
   });
 
   // Vite development integration or static serving
-  if (process.env.NODE_ENV !== "production") {
-    const { setupViteDev } = await import("./server/viteDev.js");
-    await setupViteDev(app);
+  const distPath = path.join(process.cwd(), "dist");
+  const hasBuiltDist = fs.existsSync(path.join(distPath, "index.html"));
+  const isProductionMode = process.env.NODE_ENV === "production" || process.env.RENDER !== undefined || process.env.RENDER_SERVICE_ID !== undefined || hasBuiltDist;
+
+  if (!isProductionMode) {
+    try {
+      const { setupViteDev } = await import("./server/viteDev.js");
+      await setupViteDev(app);
+      console.log("[Server Hub] Vite dev middleware loaded successfully.");
+    } catch (viteErr: any) {
+      console.warn("[Server Hub] Failed to initialize Vite dev middleware, falling back to static file serving:", viteErr?.message || viteErr);
+      app.use(express.static(distPath));
+      app.get("*all", (req: express.Request, res: express.Response) => {
+        if (req.path.startsWith("/api/")) {
+          res.status(404).json({ error: `API endpoint not found: ${req.method} ${req.path}` });
+          return;
+        }
+        res.sendFile(path.join(distPath, "index.html"));
+      });
+    }
   } else {
-    const distPath = path.join(process.cwd(), "dist");
+    console.log(`[Server Hub] Serving production static assets from: ${distPath}`);
     app.use(express.static(distPath));
-    app.get("*", (req: express.Request, res: express.Response) => {
+    app.get("*all", (req: express.Request, res: express.Response) => {
+      if (req.path.startsWith("/api/")) {
+        res.status(404).json({ error: `API endpoint not found: ${req.method} ${req.path}` });
+        return;
+      }
       res.sendFile(path.join(distPath, "index.html"));
     });
   }
