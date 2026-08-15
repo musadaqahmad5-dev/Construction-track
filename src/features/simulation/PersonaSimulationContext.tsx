@@ -201,7 +201,18 @@ export const PersonaSimulationProvider: React.FC<PersonaSimulationProviderProps>
 export const usePersonaSimulation = (): PersonaSimulationContextValue => {
   const ctx = useContext(PersonaSimulationContext);
   if (!ctx) {
-    throw new Error('usePersonaSimulation must be used within a PersonaSimulationProvider');
+    const defaultPersona = DEMO_PERSONAS['CYBER_FUTURISTIC'];
+    return {
+      activePersonaId: defaultPersona.id,
+      activePersona: defaultPersona,
+      allPersonas: Object.values(DEMO_PERSONAS),
+      setPersona: async () => {},
+      isSyncing: false,
+      syncStatusMessage: null,
+      operatingMode: 'PRODUCTION_USER',
+      setOperatingMode: () => {},
+      productionUserState: null
+    };
   }
   return ctx;
 };

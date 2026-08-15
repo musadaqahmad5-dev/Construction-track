@@ -1,52 +1,32 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  Trash2, Shield, Settings, AlertTriangle, RefreshCw, CheckCircle, Sparkles, Sparkle, BarChart2,
-  Search, ShoppingBag, ShoppingCart, Shirt, Clock, Info, Store, SlidersHorizontal, LogOut, 
-  ChevronRight, Compass, Eye, Cpu, Database, Activity, CloudSun, User, Fingerprint,
-  Bell, PenSquare, X, ChevronDown, Award, Check,
-  Home, Users, Heart, Layers, MessageSquare, Mail, Crown, MoreVertical, Moon, Menu,
-  Camera, Upload, Calendar, Smartphone, Monitor, Tablet, Zap, Wifi, BatteryCharging, Globe, Maximize2, Minimize2, CreditCard, ShieldCheck
+  Sparkles, Shirt, ShoppingBag, Eye, Layers, Compass, User, 
+  Settings, LogOut, ChevronRight, Check, RefreshCw, Upload, 
+  Camera, SlidersHorizontal, ArrowRight, ShieldCheck, Cpu, 
+  Activity, CloudSun, Bell, X, Search, Heart, Store,
+  Zap, Award, CheckCircle, Smartphone, Monitor, Globe, Plus,
+  Bookmark, Sliders, MessageSquare, Palette, Lock, Users, Building
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { WardrobeItem, ProfileService, type StyleProfile, type StylistHistoryEntry } from '../platform';
+import { WardrobeItem, ProfileService, type StyleProfile } from '../platform';
 import { getGarmentImage } from '../features/feed/AIEngine';
-import { EmptyStateLibrary } from './EmptyStateLibrary';
 import { 
   UnifiedFashionOS, 
   type UnifiedState,
   type UnifiedOutfit,
   VisualSuggestion,
   useThemeIntelligence,
-  ThemeCoatRenderer,
-  FoundationInteractionWrapper
+  ThemeCoatRenderer
 } from '../engine';
-import { db } from '../firebase';
-import { updateDoc, doc } from 'firebase/firestore';
-import { OutfitCard } from './OutfitCard';
-import { WardrobeGrid } from './WardrobeGrid';
-import { HomeFeed } from './HomeFeed';
-import { HomeHub } from './HomeHub';
-import { SellerDashboard } from './SellerDashboard';
-import { LookVisionMainDashboard } from './LookVisionMainDashboard';
 
-import { SystemHealthPanel } from './SystemHealthPanel';
-import { FeedbackButtons } from './FeedbackButtons';
-import { FounderDashboard } from './FounderDashboard';
-import { FloatingAIChat } from './FloatingAIChat';
-import { SartorialControlCenter } from './SartorialControlCenter';
+// Sub-screen and component imports
+import { WardrobeGrid } from './WardrobeGrid';
+import { SellerDashboard } from './SellerDashboard';
 import { AIEngineStudio } from './AIEngineStudio';
-import { AIFashionMVPSuite } from './AIFashionMVPSuite';
-import { CognitivePassport } from './CognitivePassport';
 import { SystemSettingsAudit } from './SystemSettingsAudit';
-import { ArchitectureMap } from './ArchitectureMap';
-import { StyleMessageCenter } from './StyleMessageCenter';
-import { StyleCollections } from './StyleCollections';
-import { StyleHistoryArchive } from './StyleHistoryArchive';
-import { StyleFavorites } from './StyleFavorites';
-import { FocusSearchPalette } from './FocusSearchPalette';
 import { DiscoverScreen } from './screens/DiscoverScreen';
-import { CommunityScreen, PRESET_MOCK_LOOKS } from './screens/CommunityScreen';
+import { CommunityScreen } from './screens/CommunityScreen';
 import { MarketplaceScreen, BOUTIQUE_PRODUCTS } from './screens/MarketplaceScreen';
 import { ProductDetailScreen } from './screens/ProductDetailScreen';
 import { CreatorWorkspaceScreen } from './screens/CreatorWorkspaceScreen';
@@ -54,13 +34,14 @@ import { VirtualStudioTryOn } from './VirtualStudioTryOn';
 import { OutfitPlanner } from './OutfitPlanner';
 import { FashionInstructorWorkspace } from './screens/FashionInstructorWorkspace';
 import { AIAssistantStudio } from './AIAssistantStudio';
-import { AIMemoryHub } from './AIMemoryHub';
 import { MatureFashionStudio } from './MatureFashionStudio';
 import { SocialHubView } from './social/SocialHubView';
 import { SubscriptionHubView } from './payment/SubscriptionHubView';
 import { AdminShell } from '../admin';
 import { ARIAStatusWidget, ARIAAssistantPanel } from './aria';
-import { ARIAProvider } from '../aria';
+import { FocusSearchPalette } from './FocusSearchPalette';
+import { AIStyleFeed } from './AIStyleFeed';
+import { VendorOnboarding } from './VendorOnboarding';
 
 export interface LookVisionTheme {
   id: string;
@@ -79,88 +60,117 @@ export interface LookVisionTheme {
 
 export const LOOK_VISION_THEMES: LookVisionTheme[] = [
   {
-    id: 'classic-noir',
-    name: 'Classic Noir',
-    bg: 'bg-zinc-950 text-zinc-100',
-    text: 'text-zinc-100',
-    accent: 'text-white border-white bg-white/10 hover:bg-white/20',
-    accentBg: 'bg-white text-black hover:bg-neutral-200',
-    glassBg: 'bg-zinc-900/60 backdrop-blur-xl',
-    glassBorder: 'border-white/10',
-    glowClass: 'shadow-[0_0_20px_rgba(255,255,255,0.05)]',
-    badgeBg: 'bg-zinc-800 text-zinc-300 border-zinc-700',
-    sidebarBg: 'bg-zinc-950/80 border-r border-zinc-900',
-    cardBg: 'bg-zinc-900/40 border border-zinc-800/60',
-  },
-  {
-    id: 'cyber-couture',
-    name: 'Cyber Avant-Garde',
-    bg: 'bg-[#03020c] text-indigo-100',
-    text: 'text-indigo-100',
-    accent: 'text-fuchsia-400 border-fuchsia-500/30 bg-fuchsia-500/10 hover:bg-fuchsia-500/20',
-    accentBg: 'bg-gradient-to-r from-fuchsia-500 to-violet-600 text-white hover:opacity-90',
-    glassBg: 'bg-slate-900/40 backdrop-blur-md',
-    glassBorder: 'border-fuchsia-500/20',
-    glowClass: 'shadow-[0_0_30px_rgba(244,63,94,0.15)]',
-    badgeBg: 'bg-fuchsia-950/20 text-fuchsia-300 border-fuchsia-500/20',
-    sidebarBg: 'bg-slate-950/70 border-r border-fuchsia-500/10',
-    cardBg: 'bg-slate-900/30 border border-violet-500/10',
-  },
-  {
-    id: 'nordic-editorial',
-    name: 'Nordic Warm',
-    bg: 'bg-[#0d0c0b] text-stone-200',
-    text: 'text-stone-200',
-    accent: 'text-amber-300 border-amber-500/20 bg-amber-500/10 hover:bg-amber-500/25',
-    accentBg: 'bg-amber-100 text-stone-900 hover:bg-stone-200',
-    glassBg: 'bg-stone-900/50 backdrop-blur-xl',
-    glassBorder: 'border-stone-800/80',
-    glowClass: 'shadow-[0_0_25px_rgba(217,119,6,0.04)]',
-    badgeBg: 'bg-stone-800/40 text-amber-200/80 border-stone-700/60',
-    sidebarBg: 'bg-[#0b0a09]/80 border-r border-stone-900',
-    cardBg: 'bg-stone-900/30 border border-stone-800/40',
-  },
-  {
     id: 'cosmic-dream',
     name: 'Cosmic Couture',
     bg: 'bg-[#05050a] text-zinc-100',
     text: 'text-zinc-100',
     accent: 'text-indigo-400 border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20',
     accentBg: 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:opacity-90',
-    glassBg: 'bg-indigo-950/20 backdrop-blur-xl',
-    glassBorder: 'border-indigo-500/15',
+    glassBg: 'bg-[#07070c]/80 backdrop-blur-xl',
+    glassBorder: 'border-white/5',
     glowClass: 'shadow-[0_0_35px_rgba(99,102,241,0.2)]',
     badgeBg: 'bg-indigo-950/40 text-indigo-200 border-indigo-500/20',
     sidebarBg: 'bg-[#07070c] border-r border-white/5',
-    cardBg: 'bg-[#0e0e1a]/40 border border-white/5 shadow-md',
+    cardBg: 'bg-[#0a0a12]/80 border border-white/5',
   },
   {
-    id: 'solar-day',
-    name: 'Solar Day',
-    bg: 'bg-[#fcfbf9] text-stone-900',
-    text: 'text-stone-900',
-    accent: 'text-stone-900 border-stone-300 bg-stone-100 hover:bg-stone-200',
-    accentBg: 'bg-stone-950 text-white hover:bg-stone-800',
-    glassBg: 'bg-[#fcfbf9]/80 backdrop-blur-xl',
-    glassBorder: 'border-stone-200',
-    glowClass: 'shadow-[0_0_20px_rgba(0,0,0,0.03)]',
-    badgeBg: 'bg-stone-100 text-stone-800 border-stone-200',
-    sidebarBg: 'bg-[#f5f4f0] border-r border-stone-200',
-    cardBg: 'bg-white border border-stone-200/80 shadow-sm',
+    id: 'classic-noir',
+    name: 'Classic Noir',
+    bg: 'bg-[#05050a] text-zinc-100',
+    text: 'text-zinc-100',
+    accent: 'text-white border-white/20 bg-white/10 hover:bg-white/20',
+    accentBg: 'bg-white text-black hover:bg-neutral-200',
+    glassBg: 'bg-zinc-900/60 backdrop-blur-xl',
+    glassBorder: 'border-white/10',
+    glowClass: 'shadow-[0_0_20px_rgba(255,255,255,0.05)]',
+    badgeBg: 'bg-zinc-800 text-zinc-300 border-zinc-700',
+    sidebarBg: 'bg-[#07070c] border-r border-white/5',
+    cardBg: 'bg-zinc-900/40 border border-white/5',
+  },
+  {
+    id: 'emerald-luxury',
+    name: 'Emerald Atelier',
+    bg: 'bg-[#05050a] text-zinc-100',
+    text: 'text-zinc-100',
+    accent: 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20',
+    accentBg: 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white hover:opacity-90',
+    glassBg: 'bg-emerald-950/20 backdrop-blur-xl',
+    glassBorder: 'border-emerald-500/20',
+    glowClass: 'shadow-[0_0_30px_rgba(16,185,129,0.15)]',
+    badgeBg: 'bg-emerald-950/40 text-emerald-300 border-emerald-500/20',
+    sidebarBg: 'bg-[#07070c] border-r border-white/5',
+    cardBg: 'bg-emerald-950/10 border border-emerald-500/10',
   }
 ];
 
-// Get current theme class specifically for details overlays & backdrops
-function getTemporalThemeBackground() {
-  const hr = new Date().getHours();
-  if (hr >= 4 && hr < 12) {
-    return "bg-[#1a1a1a]";
-  } else if (hr >= 12 && hr < 18) {
-    return "bg-[#0f0f0f]";
-  } else {
-    return "bg-[#050505]";
-  }
+export const ImageWithFade: React.FC<{ src: string; alt: string; className?: string }> = ({ src, alt, className = '' }) => {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [hasError, setHasError] = useState(false);
+
+  return (
+    <div className={`relative overflow-hidden w-full h-full bg-[#0d0d15] flex items-center justify-center ${className}`}>
+      {!isLoaded && !hasError && (
+        <div className="absolute inset-0 bg-white/[0.02] animate-pulse" />
+      )}
+      <img
+        src={hasError ? 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=600&auto=format&fit=crop&q=60' : src}
+        alt={alt}
+        loading="lazy"
+        referrerPolicy="no-referrer"
+        onLoad={() => setIsLoaded(true)}
+        onError={() => setHasError(true)}
+        className={`w-full h-full object-cover transition-opacity duration-500 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+      />
+    </div>
+  );
+};
+
+export function hasArchiveQualities(item: WardrobeItem): boolean {
+  return (item.wearCount || 0) > 10 || item.formality === 'Formal' || item.category === 'Outerwear';
 }
+
+export function getAtmosphereLine(item: WardrobeItem): string {
+  if (item.category === 'Outerwear') return 'Subtle drape tailored for brisk city mornings.';
+  if (item.category === 'Formal') return 'Structured silhouette cut with evening precision.';
+  return 'Effortless quiet luxury crafted for everyday elegance.';
+}
+
+export function registerCombination(items: WardrobeItem[]) {
+  try {
+    const existing = JSON.parse(localStorage.getItem('lookvision_saved_combos') || '[]');
+    existing.unshift({
+      id: `combo_${Date.now()}`,
+      items: items.map(i => ({ id: i.id, title: i.title, category: i.category })),
+      savedAt: new Date().toISOString()
+    });
+    localStorage.setItem('lookvision_saved_combos', JSON.stringify(existing.slice(0, 50)));
+  } catch (e) {}
+}
+
+export function getStayTogetherPartner(itemId: string, allItems: WardrobeItem[]): WardrobeItem | null {
+  return allItems.find(i => i.id !== itemId && i.category !== 'Outerwear') || null;
+}
+
+export type MainSubTab = 
+  | 'PRODUCT_HOME'
+  | 'PRODUCT_AI_CREATIONS'
+  | 'STYLE_STREAM'
+  | 'PRODUCT_COMMUNITY'
+  | 'PRODUCT_MARKETPLACE'
+  | 'WARDROBE'
+  | 'VIRTUAL_TRY'
+  | 'DISCOVER'
+  | 'CREATOR_WORKSPACE'
+  | 'PRODUCT_DETAIL'
+  | 'PLANNER'
+  | 'FASHION_INSTRUCTOR'
+  | 'AI_ASSISTANT'
+  | 'MATURE_FASHION_STUDIO'
+  | 'SOCIAL_HUB'
+  | 'SUBSCRIPTION_HUB'
+  | 'VENDOR_ONBOARDING'
+  | 'SYSTEM_ROOM'
+  | 'ADMIN_COMMAND';
 
 interface AIStyleHubProps {
   wardrobe: WardrobeItem[];
@@ -174,4648 +184,1327 @@ interface AIStyleHubProps {
   onEnterSilence?: () => void;
 }
 
-// 4. IMAGE BEHAVIOR: Pristine 240ms opacity fade-in with film grain + printed matte style (Shelf Integrity F)
-export const ImageWithFade: React.FC<{ src: string; alt: string }> = ({ src, alt }) => {
-  const safeSrc = src && src.trim() !== '' ? src : 'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?q=80&w=600&auto=format&fit=crop';
-  const [currentSrc, setCurrentSrc] = useState(safeSrc);
-  const [prevSrc, setPrevSrc] = useState<string | null>(null);
-  const [isNewLoaded, setIsNewLoaded] = useState(true);
-  const [hasError, setHasError] = useState(false);
-
-  useEffect(() => {
-    if (safeSrc !== currentSrc) {
-      if (currentSrc) setPrevSrc(currentSrc);
-      setCurrentSrc(safeSrc);
-      setIsNewLoaded(false);
-      setHasError(false);
-    }
-  }, [safeSrc, currentSrc]);
-
-  return (
-    <div className="w-full bg-[#0a0a0a] overflow-hidden aspect-[4/5] relative select-none rounded-none border border-white/[0.02]">
-      {/* Film grain noise using an SVG filter overlay of extremely low impact for subtle texturing */}
-      <div className="absolute inset-0 z-20 pointer-events-none opacity-[0.06] mix-blend-overlay" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
-      
-      {hasError ? (
-        <div className="absolute inset-0 bg-[#070707] flex flex-col items-center justify-center p-6 text-center select-none border border-white/[0.03] space-y-3">
-          <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/30 animate-pulse">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-          </div>
-          <div className="space-y-1">
-            <span className="text-[9px] font-mono uppercase tracking-[0.2em] text-white/40 block">Artisan Asset Unavailable</span>
-            <span className="text-[8px] text-white/20 font-mono italic block">Image offline or network interrupted</span>
-          </div>
-        </div>
-      ) : (
-        <>
-          {/* Previous Image kept visible while next loads */}
-          {Boolean(prevSrc) && (
-            <img
-              src={prevSrc || undefined}
-              alt={alt}
-              referrerPolicy="no-referrer"
-              loading="lazy"
-              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-[420ms] ease-out ${
-                isNewLoaded ? 'opacity-0 z-0' : 'opacity-100 z-10'
-              }`}
-            />
-          )}
-
-          {/* New Image fading in once loaded */}
-          <img
-            key={currentSrc}
-            src={currentSrc || safeSrc}
-            alt={alt}
-            onLoad={() => {
-              setIsNewLoaded(true);
-              setTimeout(() => {
-                setPrevSrc(null);
-              }, 450);
-            }}
-            onError={() => {
-              setHasError(true);
-            }}
-            referrerPolicy="no-referrer"
-            loading="lazy"
-            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-[420ms] ease-out ${
-              isNewLoaded ? 'opacity-100 z-10' : 'opacity-0 z-0'
-            }`}
-          />
-        </>
-      )}
-    </div>
-  );
-};
-
-export function hasArchiveQualities(item: WardrobeItem): boolean {
-  const hasPrivateNote = !!(item.privateNote && item.privateNote.trim() !== "");
-  const hasCareNote = !!(item.careNote && item.careNote.trim() !== "");
-  const hasPreparation = !!(item.location && item.location.trim() !== "") || item.status === 'Planned';
-  const hasPairingMemory = !!(item.worksWith && item.worksWith.trim() !== "") || (() => {
-    try {
-      if (typeof localStorage !== 'undefined') {
-        const penalties = JSON.parse(localStorage.getItem('pairing_penalties') || '[]');
-        if (Array.isArray(penalties)) {
-          return penalties.some(key => key.split('-').includes(item.id));
-        }
-      }
-    } catch (e) {}
-    return false;
-  })();
-  
-  return hasPrivateNote || hasCareNote || hasPreparation || hasPairingMemory;
-}
-
-// 3. OBJECT MEMORY: Stable atmosphere quiet line selector incorporating lived-time evolution
-export function getAtmosphereLine(item: WardrobeItem): string {
-  if (item.placedElsewhere) {
-    const rareLabels = [
-      "This returned.",
-      "This was still here.",
-      "Found again.",
-      "Placed elsewhere."
-    ];
-    let hash = 0;
-    const str = item.title || "";
-    for (let i = 0; i < str.length; i++) {
-      hash = str.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    return rareLabels[Math.abs(hash) % rareLabels.length];
-  }
-
-  // OBJECT PRESERVATION: Surface unworn garments gently
-  if ((item.wearCount || 0) === 0) {
-    return "This piece has been waiting.";
-  }
-
-  // 1. SEASONS WITHOUT CALENDAR: Quietly gather seasonal atmosphere
-  const month = new Date().getMonth();
-  const isWarmSeason = month >= 4 && month <= 8; // May to September
-
-  const atmosphericLines = isWarmSeason ? [
-    "Returned during the warm hours.",
-    "Stayed nearby recently.",
-    "Chosen when things felt lighter.",
-    "Belongs both here and outside.",
-    "An easy layer for the afternoon.",
-    "Felt as an easy choice.",
-    "An understated shape keeping time with you.",
-    "Familiar on slower days.",
-    "Always holds its place here in stillness.",
-    "Gently woven into the room's fabric."
-  ] : [
-    "Returned during colder days.",
-    "Stayed wrapped nearby recently.",
-    "Chosen when things felt softer.",
-    "Belongs both here and outside.",
-    "A cozy layer for the cold afternoon.",
-    "Felt as a soft, comforting choice.",
-    "An understated shape keeping time with you.",
-    "Familiar on slower days.",
-    "Always holds its wrapped place here in stillness.",
-    "Gently woven into the room's fabric."
-  ];
-
-  // Stable selection based on title hash so each item retains its unique, quiet atmosphere
-  let hash = 0;
-  const str = item.title || "";
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const idx = Math.abs(hash) % atmosphericLines.length;
-  return atmosphericLines[idx];
-}
-
-// Memory of garment combinations
-export function registerCombination(items: WardrobeItem[]) {
-  if (!items || items.length < 2) return;
-  try {
-    const history = JSON.parse(localStorage.getItem('wardrobe_combination_history') || '{}');
-    for (let i = 0; i < items.length; i++) {
-      for (let j = i + 1; j < items.length; j++) {
-        const idA = items[i].id;
-        const idB = items[j].id;
-        const key = idA < idB ? `${idA}+${idB}` : `${idB}+${idA}`;
-        history[key] = (history[key] || 0) + 1;
-      }
-    }
-    localStorage.setItem('wardrobe_combination_history', JSON.stringify(history));
-  } catch (e) {}
-}
-
-export function getStayTogetherPartner(itemId: string, allItems: WardrobeItem[]): WardrobeItem | null {
-  try {
-    const history = JSON.parse(localStorage.getItem('wardrobe_combination_history') || '{}');
-    let maxCount = 0;
-    let partnerId: string | null = null;
-    for (const key of Object.keys(history)) {
-      if (key.includes(itemId)) {
-        const count = history[key];
-        if (count >= 2 && count > maxCount) {
-          const parts = key.split('+');
-          const other = parts[0] === itemId ? parts[1] : parts[0];
-          maxCount = count;
-          partnerId = other;
-        }
-      }
-    }
-    if (partnerId) {
-      return allItems.find(x => x.id === partnerId) || null;
-    }
-  } catch (e) {}
-  return null;
-}
-
-// CONTEXT WITHOUT INPUT signal synthesis (Requirement 2 & Seasonal Weight E)
-function getQuietContextNote(items: WardrobeItem[]): string {
-  if (!items || items.length === 0) return "Something easier today.";
-
-  const hasAdapted = typeof localStorage !== 'undefined' ? localStorage.getItem('adapted_sourcing') === 'true' : false;
-  if (hasAdapted) {
-    const notes = ["Closer at hand.", "Already nearby.", "Something easier today."];
-    const savedNote = typeof localStorage !== 'undefined' ? localStorage.getItem('adapted_note') : null;
-    if (savedNote && notes.includes(savedNote)) {
-      return savedNote;
-    }
-    return "Something easier today.";
-  }
-
-  const weatherWeight = typeof localStorage !== 'undefined' ? localStorage.getItem('weather_weight') || 'lighter' : 'lighter';
-
-  if (weatherWeight === 'lighter') {
-    return "lighter days";
-  } else if (weatherWeight === 'easier') {
-    return "easier weather";
-  } else if (weatherWeight === 'heavier') {
-    return "slower weather";
-  } else {
-    return "layered days";
-  }
-}
-
-// OBJECT RELATIONSHIPS (Requirement 4)
-function getRelatedNearbyPiecePhrase(item: WardrobeItem, allItems: WardrobeItem[]): string | null {
-  if (!allItems || allItems.length <= 1) return null;
-  let partner = getStayTogetherPartner(item.id, allItems);
-  if (!partner) {
-    const family = allItems.filter(x => x.id !== item.id && x.category === item.category);
-    if (family.length > 0) {
-      const day = new Date().getDate();
-      partner = family[day % family.length];
-    } else {
-      const idx = allItems.findIndex(x => x.id === item.id);
-      if (idx !== -1) {
-        partner = allItems[(idx + 1) % allItems.length];
-      }
-    }
-  }
-
-  if (partner && partner.id !== item.id) {
-    const isEven = item.title.length % 2 === 0;
-    return isEven 
-      ? `Goes back to this.` 
-      : "Often rests nearby.";
-  }
-  return null;
-}
-
-// ONE QUIET DETAIL: Exactly one optional detail per look
-const QUIET_DETAILS = [
-  "Roll sleeves.",
-  "Leave one button open.",
-  "Tuck softly.",
-  "Keep layers relaxed."
-];
-
-function getQuietDetailForOutfit(id: string): string {
-  let hash = 0;
-  for (let i = 0; i < id.length; i++) {
-    hash = id.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const positiveHash = Math.abs(hash);
-  return QUIET_DETAILS[positiveHash % QUIET_DETAILS.length];
-}
-
-// THE ONE PIECE RULE helper
-function getDailyOnePiece(items: WardrobeItem[]): WardrobeItem | null {
-  if (!items || items.length === 0) return null;
-
-  const restingPieces = items.filter(i => i.placedElsewhere);
-  const normalPieces = items.filter(i => !i.placedElsewhere);
-
-  const todayStr = new Date().toISOString().split('T')[0];
-  let hash = 0;
-  for (let i = 0; i < todayStr.length; i++) {
-    hash = todayStr.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const positiveHash = Math.abs(hash);
-
-  // 20% stable chance on a given day of surfacing resting pieces if any exist
-  const shouldSurfaceResting = restingPieces.length > 0 && (positiveHash % 5 === 0);
-
-  const candidates = shouldSurfaceResting ? restingPieces : normalPieces;
-  if (candidates.length === 0) {
-    return items[0] || null;
-  }
-
-  // Conditions: prioritize items with lowest wearCount, stable selected per day
-  const sorted = [...candidates].sort((a, b) => (a.wearCount || 0) - (b.wearCount || 0));
-  const idx = positiveHash % sorted.length;
-  return sorted[idx];
-}
-
-// PREPARATION MEMORY hour context
-function getTimeAtmosphere(savedAtHour?: number): string {
-  const hr = savedAtHour !== undefined ? savedAtHour : new Date().getHours();
-  if (hr >= 18 || hr < 6) {
-    return "Prepared during quiet hours.";
-  }
-  return "Left for tomorrow.";
-}
-
-// NATURAL ROTATION helper
-function getNaturalRotatedList(list: WardrobeItem[]): WardrobeItem[] {
-  if (!list) return [];
-  try {
-    const history = JSON.parse(localStorage.getItem('wardrobe_touch_history') || '{}');
-    return [...list].sort((a, b) => {
-      const timeA = history[a.id] || 0;
-      const timeB = history[b.id] || 0;
-      if (timeA !== timeB) {
-        return timeB - timeA; // most recently touched moves gently upward
-      }
-      // fallback to original timestamp order
-      const secA = (a.createdAt as any)?.seconds || 0;
-      const secB = (b.createdAt as any)?.seconds || 0;
-      return secB - secA;
-    });
-  } catch (e) {
-    return list;
-  }
-}
-
-
-export const AIStyleHub: React.FC<AIStyleHubProps> = ({ 
-  wardrobe, 
-  onAddGarment, 
+export const AIStyleHub: React.FC<AIStyleHubProps> = ({
+  wardrobe = [],
+  onAddGarment,
   onDeleteGarment,
   user,
   onLogout,
   onReset,
   onLoadSamples,
-  isResetting = false,
-  onEnterSilence
+  isResetting
 }) => {
-  // Connect to Theme Intelligence Engine
+  // Theme and coat context
   let themeCtx: ReturnType<typeof useThemeIntelligence> | null = null;
   try {
     themeCtx = useThemeIntelligence();
   } catch {
     themeCtx = null;
   }
-
-  const themeDNA = themeCtx?.themeDNA;
   const coatDNA = themeCtx?.coatDNA;
-  const sequenceId = themeCtx?.sequenceId;
+
+  const [currentTheme, setCurrentTheme] = useState<string>('cosmic-dream');
+  const [weatherWeight, setWeatherWeight] = useState<'lighter' | 'heavier' | 'layered'>('layered');
+
+  // Navigation and view states
+  const [activeSubTab, setActiveSubTab] = useState<MainSubTab>(() => {
+    const path = window.location.pathname;
+    if (path === '/ai-studio') return 'PRODUCT_AI_CREATIONS';
+    if (path === '/stream' || path === '/feed') return 'STYLE_STREAM';
+    if (path === '/marketplace') return 'PRODUCT_MARKETPLACE';
+    if (path === '/community') return 'PRODUCT_COMMUNITY';
+    if (path === '/wardrobe') return 'WARDROBE';
+    if (path === '/virtual-try') return 'VIRTUAL_TRY';
+    if (path === '/discover') return 'DISCOVER';
+    if (path === '/creator') return 'CREATOR_WORKSPACE';
+    if (path === '/fashion-instructor') return 'FASHION_INSTRUCTOR';
+    if (path === '/aria' || path === '/assistant') return 'AI_ASSISTANT';
+    if (path === '/social') return 'SOCIAL_HUB';
+    if (path === '/subscription' || path === '/billing') return 'SUBSCRIPTION_HUB';
+    if (path === '/vendor-onboarding' || path === '/become-seller' || path === '/merchant-register') return 'VENDOR_ONBOARDING';
+    if (path === '/settings') return 'SYSTEM_ROOM';
+    if (path === '/admin') return 'ADMIN_COMMAND';
+    return 'PRODUCT_HOME';
+  });
 
   const [state, setState] = useState<UnifiedState>(() => UnifiedFashionOS.getState());
   const [isARIAPanelOpen, setIsARIAPanelOpen] = useState(false);
-  
-  // Design Sandbox & Figma Mockup Overlay states
-  const [isMockOverlayActive, setIsMockOverlayActive] = useState(() => {
-    return localStorage.getItem('lookvision_is_mock_overlay_active') === 'true';
-  });
-  const [mockOverlayOpacity, setMockOverlayOpacity] = useState(() => {
-    const val = localStorage.getItem('lookvision_mock_overlay_opacity');
-    return val ? parseFloat(val) : 1.0;
-  });
-  const [showGridLines, setShowGridLines] = useState(() => {
-    return localStorage.getItem('lookvision_show_grid_lines') === 'true';
-  });
-  const [showPaddingBadges, setShowPaddingBadges] = useState(() => {
-    return localStorage.getItem('lookvision_show_padding_badges') === 'true';
-  });
-  const [mockImageUrl, setMockImageUrl] = useState(() => {
-    return localStorage.getItem('lookvision_mock_image_url') || '/given_ui_reference.jpg';
-  });
-  const [mockBlendMode, setMockBlendMode] = useState<'normal' | 'difference' | 'multiply' | 'screen' | 'overlay'>(() => {
-    return (localStorage.getItem('lookvision_mock_blend_mode') as any) || 'normal';
-  });
-  const [mockImageFit, setMockImageFit] = useState<'cover' | 'contain' | 'fill'>(() => {
-    return (localStorage.getItem('lookvision_mock_image_fit') as any) || 'cover';
-  });
-  const hasRestoredRef = useRef(false);
-
-  useEffect(() => {
-    const handleUpdateSandboxSettings = (e: Event) => {
-      const customEvent = e as CustomEvent;
-      if (customEvent.detail) {
-        const d = customEvent.detail;
-        if (d.isMockOverlayActive !== undefined) setIsMockOverlayActive(d.isMockOverlayActive);
-        if (d.mockOverlayOpacity !== undefined) setMockOverlayOpacity(d.mockOverlayOpacity);
-        if (d.showGridLines !== undefined) setShowGridLines(d.showGridLines);
-        if (d.showPaddingBadges !== undefined) setShowPaddingBadges(d.showPaddingBadges);
-        if (d.mockImageUrl !== undefined) setMockImageUrl(d.mockImageUrl);
-        if (d.mockBlendMode !== undefined) setMockBlendMode(d.mockBlendMode);
-        if (d.mockImageFit !== undefined) setMockImageFit(d.mockImageFit);
-      }
-    };
-    const handlePersonaChanged = (e: Event) => {
-      const customEvent = e as CustomEvent;
-      if (customEvent.detail && customEvent.detail.wardrobePreset) {
-        UnifiedFashionOS.syncWardrobeItems(customEvent.detail.wardrobePreset);
-        setState(UnifiedFashionOS.getState());
-      }
-    };
-    window.addEventListener('lookvision_update_sandbox_settings', handleUpdateSandboxSettings);
-    window.addEventListener('lookvision_persona_changed', handlePersonaChanged);
-    return () => {
-      window.removeEventListener('lookvision_update_sandbox_settings', handleUpdateSandboxSettings);
-      window.removeEventListener('lookvision_persona_changed', handlePersonaChanged);
-    };
-  }, []);
-  const [activeSubTab, setActiveSubTab] = useState<'PRODUCT_HOME' | 'PRODUCT_AI_CREATIONS' | 'PRODUCT_COMMUNITY' | 'PRODUCT_MARKETPLACE' | 'ECOSYSTEM_GENERATE' | 'ECOSYSTEM_CREATE' | 'HOME' | 'AI_STUDIO' | 'WARDROBE' | 'DASHBOARD' | 'PROFILE' | 'SYSTEM_ROOM' | 'OUTFIT_GEN' | 'VIRTUAL_TRY' | 'COLLECTIONS' | 'HISTORY' | 'MESSAGES' | 'FAVORITES' | 'MARKETPLACE_ROOM' | 'COMMUNITY_ROOM' | 'DISCOVER' | 'CREATOR_WORKSPACE' | 'PRODUCT_DETAIL' | 'PLANNER' | 'FASHION_INSTRUCTOR' | 'AI_ASSISTANT' | 'MATURE_FASHION_STUDIO' | 'SOCIAL_HUB' | 'SUBSCRIPTION_HUB' | 'LOOK_VISION_DASHBOARD' | 'MAIN_DASHBOARD' | 'ADMIN_COMMAND'>(() => {
-    if (typeof window !== 'undefined' && (window.location.pathname === '/admin' || window.location.search.includes('view=admin'))) {
-      return 'ADMIN_COMMAND';
-    }
-    let saved = localStorage.getItem('last_active_place_subtab');
-    if (saved === 'HOME') saved = 'PRODUCT_HOME';
-    else if (saved === 'COMMUNITY_ROOM') saved = 'PRODUCT_COMMUNITY';
-    else if (saved === 'MARKETPLACE_ROOM') saved = 'PRODUCT_MARKETPLACE';
-    else if (saved === 'AI_STUDIO') saved = 'PRODUCT_AI_CREATIONS';
-    else if (saved === 'OUTFIT_GEN') saved = 'ECOSYSTEM_GENERATE';
-    else if (saved === 'FASHION_INSTRUCTOR') saved = 'PRODUCT_COMMUNITY';
-    else if (saved === 'ADMIN' || saved === 'ADMIN_COMMAND') {
-      if (typeof window !== 'undefined' && window.location.pathname !== '/admin' && !window.location.search.includes('view=admin')) {
-        try {
-          localStorage.removeItem('last_active_place_subtab');
-        } catch (e) {}
-        saved = 'PRODUCT_HOME';
-      } else {
-        saved = 'ADMIN_COMMAND';
-      }
-    }
-
-    const validTabs = ['PRODUCT_HOME', 'PRODUCT_AI_CREATIONS', 'PRODUCT_COMMUNITY', 'PRODUCT_MARKETPLACE', 'ECOSYSTEM_GENERATE', 'ECOSYSTEM_CREATE', 'HOME', 'AI_STUDIO', 'WARDROBE', 'DASHBOARD', 'PROFILE', 'SYSTEM_ROOM', 'OUTFIT_GEN', 'VIRTUAL_TRY', 'COLLECTIONS', 'HISTORY', 'MESSAGES', 'FAVORITES', 'MARKETPLACE_ROOM', 'COMMUNITY_ROOM', 'DISCOVER', 'CREATOR_WORKSPACE', 'PRODUCT_DETAIL', 'PLANNER', 'FASHION_INSTRUCTOR', 'AI_ASSISTANT', 'MATURE_FASHION_STUDIO', 'SOCIAL_HUB', 'SUBSCRIPTION_HUB', 'LOOK_VISION_DASHBOARD', 'MAIN_DASHBOARD', 'ADMIN_COMMAND'];
-
-    if (saved && validTabs.includes(saved)) {
-      return saved as any;
-    }
-    try {
-      localStorage.removeItem('last_active_place_subtab');
-    } catch (e) {}
-    return 'PRODUCT_COMMUNITY';
-  });
-  const [activeCockpitSubTab, setActiveCockpitSubTab] = useState<'PRODUCT_HOME' | 'PRODUCT_AI_CREATIONS' | 'PRODUCT_COMMUNITY' | 'PRODUCT_MARKETPLACE' | 'ECOSYSTEM_GENERATE' | 'ECOSYSTEM_CREATE' | 'HOME' | 'AI_STUDIO' | 'WARDROBE' | 'DASHBOARD' | 'PROFILE' | 'SYSTEM_ROOM' | 'OUTFIT_GEN' | 'VIRTUAL_TRY' | 'COLLECTIONS' | 'HISTORY' | 'MESSAGES' | 'FAVORITES' | 'MARKETPLACE_ROOM' | 'COMMUNITY_ROOM' | 'DISCOVER' | 'CREATOR_WORKSPACE' | 'PRODUCT_DETAIL' | 'PLANNER' | 'FASHION_INSTRUCTOR' | 'MATURE_FASHION_STUDIO' | 'SOCIAL_HUB' | 'SUBSCRIPTION_HUB' | 'LOOK_VISION_DASHBOARD' | 'MAIN_DASHBOARD'>('PRODUCT_COMMUNITY');
-  const [showFounderConsole, setShowFounderConsole] = useState(false);
-  const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [showMobileProfileMenu, setShowMobileProfileMenu] = useState(false);
-  
-  // Ceremony of Addition Form Steps States (Restore draft silently)
-  const [addStep, setAddStep] = useState<'CLOSED' | 'IMAGE' | 'NAME' | 'NOTE'>(() => {
-    return (localStorage.getItem('draft_add_step') as any) || 'CLOSED';
-  });
-  const [ceremonyStatus, setCeremonyStatus] = useState<string | null>(null);
-
-  const [gTitle, setGTitle] = useState(() => localStorage.getItem('draft_g_title') || '');
-  const [gDesc, setGDesc] = useState(() => localStorage.getItem('draft_g_desc') || '');
-  const [gCategory, setGCategory] = useState<any>('Casual');
-  const [gImage, setGImage] = useState(''); // Photographer URL
-  
-  // Custom camera & AI scanning states
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const [isCameraActive, setIsCameraActive] = useState(false);
-  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
-  const [isScanningVisual, setIsScanningVisual] = useState(false);
-  const [scanError, setScanError] = useState<string | null>(null);
-  const [scanConfidence, setScanConfidence] = useState<number | null>(null);
-  const [gPrimaryColor, setGPrimaryColor] = useState('Neutral Gray');
-  const [gSeason, setGSeason] = useState<'Spring' | 'Summer' | 'Autumn' | 'Winter' | 'All-Season'>('All-Season');
-  const [scanningLogs, setScanningLogs] = useState<string[]>([]);
-  
-  const [schedTitle, setSchedTitle] = useState('');
-  const [schedTime, setSchedTime] = useState('Morning light');
-  const [schedOccasion, setSchedOccasion] = useState('Quiet stroll');
-  
-  const [isCompiling, setIsCompiling] = useState(false);
-  const [feedbackSuccess, setFeedbackSuccess] = useState(false);
-  const [feedbackNote, setFeedbackNote] = useState('Quietly noted.');
-
-  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const [wardrobeSubView, setWardrobeSubView] = useState<'CLOSET' | 'COLLECTIONS'>('CLOSET');
-
-  // One line memory continuity state
-  const [memoryLine, setMemoryLine] = useState('');
-
-  // GLOBAL AUTO-ADAPTIVE VIEWPORT MODE STATE (Applies across ENTIRE Application)
-  const [globalViewportMode, setGlobalViewportMode] = useState<'AUTO' | 'MOBILE' | 'DESKTOP'>(() => {
-    return (localStorage.getItem('lookvision_global_viewport_mode') as any) || 'AUTO';
-  });
-
-  // USER DEVICE REACTION TELEMETRY STATE
-  const [deviceTelemetry, setDeviceTelemetry] = useState<{
-    width: number;
-    height: number;
-    breakpoint: 'XS' | 'SM' | 'MD' | 'LG' | 'XL' | '2XL';
-    orientation: 'PORTRAIT' | 'LANDSCAPE';
-    pixelRatio: number;
-    currentTime: string;
-  }>({
-    width: typeof window !== 'undefined' ? window.innerWidth : 1280,
-    height: typeof window !== 'undefined' ? window.innerHeight : 800,
-    breakpoint: 'XL',
-    orientation: 'LANDSCAPE',
-    pixelRatio: typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1,
-    currentTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-  });
-
-  // REAL-TIME VIEWPORT & DEVICE REACTION LISTENER
-  useEffect(() => {
-    const handleResize = () => {
-      const w = window.innerWidth;
-      const h = window.innerHeight;
-      let bp: 'XS' | 'SM' | 'MD' | 'LG' | 'XL' | '2XL' = 'XL';
-      if (w < 480) bp = 'XS';
-      else if (w < 640) bp = 'SM';
-      else if (w < 768) bp = 'MD';
-      else if (w < 1024) bp = 'LG';
-      else if (w < 1440) bp = 'XL';
-      else bp = '2XL';
-
-      setDeviceTelemetry({
-        width: w,
-        height: h,
-        breakpoint: bp,
-        orientation: w > h ? 'LANDSCAPE' : 'PORTRAIT',
-        pixelRatio: window.devicePixelRatio || 1,
-        currentTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      });
-    };
-
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    const timeInterval = setInterval(() => {
-      setDeviceTelemetry(prev => ({
-        ...prev,
-        currentTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      }));
-    }, 30000);
-
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      clearInterval(timeInterval);
-    };
-  }, []);
-
-  const changeGlobalViewportMode = (mode: 'AUTO' | 'MOBILE' | 'DESKTOP') => {
-    setGlobalViewportMode(mode);
-    localStorage.setItem('lookvision_global_viewport_mode', mode);
-
-    // Backend Telemetry & Device Preference Sync
-    fetch('/api/adaptive-layout', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        width: deviceTelemetry.width,
-        height: deviceTelemetry.height,
-        pixelRatio: deviceTelemetry.pixelRatio,
-        orientation: deviceTelemetry.orientation,
-        viewportMode: mode,
-        touchCapable: 'ontouchstart' in window || navigator.maxTouchPoints > 0
-      })
-    }).catch(() => {});
-
-    fetch('/api/device-preference', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: user?.uid || 'anonymous', viewportMode: mode })
-    }).catch(() => {});
-
-    const detailText = mode === 'MOBILE'
-      ? `📱 Adaptive Mobile Device Chassis Active (${deviceTelemetry.width}x${deviceTelemetry.height}px) • Backend Reaction Engine Sync`
-      : mode === 'DESKTOP'
-        ? `💻 Expanded Ultra-Wide Canvas Mode (${deviceTelemetry.width}x${deviceTelemetry.height}px) • Backend Reaction Engine Sync`
-        : `✨ Auto-Adaptive Dynamic Fluid Layout Active (${deviceTelemetry.breakpoint} Viewport) • Backend Reaction Engine Sync`;
-
-    window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
-      detail: detailText
-    }));
-  };
-
-  // Stillness / Intentional Pause State
-  const [isHoldingStill, setIsHoldingStill] = useState(false);
-
-  // Center column interactive AI Creator states
-  const [centerPrompt, setCenterPrompt] = useState('');
-  const [isGeneratingCenter, setIsGeneratingCenter] = useState(false);
-  const [centerProgress, setCenterProgress] = useState(0);
-  const [centerStatusText, setCenterStatusText] = useState('Idle');
-  const [selectedCenterVibe, setSelectedCenterVibe] = useState('Cyber Core');
-
-  // Selected Garment detail page state
-  const [selectedGarment, setSelectedGarment] = useState<WardrobeItem | null>(null);
-
-  // Selected Product detail page state for boutique
-  const [selectedProduct, setSelectedProduct] = useState<any>(null);
-
-  // Seller Dashboard portal modal state
+  const [isFocusSearchOpen, setIsFocusSearchOpen] = useState(false);
   const [isSellerDashboardOpen, setIsSellerDashboardOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [toasts, setToasts] = useState<Array<{ id: string; message: string; type?: 'info' | 'success' | 'warning' }>>([]);
 
-  // GENTLE TOMORROW Tomorrow room state
-  const [tomorrowOutfit, setTomorrowOutfitState] = useState<{ items: WardrobeItem[]; note: string; timeAtmosphere?: string } | null>(() => {
-    const saved = localStorage.getItem('tomorrow_outfit');
-    try {
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
+  // Bento Grid Curation Board Tabs ('TODAY_CURATION' vs 'MARKETPLACE')
+  const [curationBoardTab, setCurationBoardTab] = useState<'TODAY_CURATION' | 'MARKETPLACE'>('TODAY_CURATION');
+
+  // Active Curated Outfit State
+  const [activeOutfitSuggestion, setActiveOutfitSuggestion] = useState<{
+    id: string;
+    name: string;
+    occasion: string;
+    reasoning: string;
+    score: number;
+    items: WardrobeItem[];
+  }>(() => ({
+    id: 'outfit_init',
+    name: 'Architectural Obsidian Ensemble',
+    occasion: 'High-Fashion Creative Studio',
+    reasoning: 'Engineered with clean vertical lines and monochromatic charcoal saturation to optimize silhouette elegance under gallery studio lighting.',
+    score: 96,
+    items: wardrobe.slice(0, 3)
+  }));
+
+  // Virtual Dressing Canvas Combinator State
+  const [combinatorSlots, setCombinatorSlots] = useState<{
+    outerwear: WardrobeItem | null;
+    top: WardrobeItem | null;
+    bottom: WardrobeItem | null;
+    footwear: WardrobeItem | null;
+  }>({
+    outerwear: null,
+    top: null,
+    bottom: null,
+    footwear: null
   });
-  const [tomorrowNote, setTomorrowNote] = useState(() => localStorage.getItem('draft_tomorrow_note') || '');
-  const [tempTomorrowItems, setTempTomorrowItems] = useState<WardrobeItem[]>([]);
+  const [activeSlotPicker, setActiveSlotPicker] = useState<'outerwear' | 'top' | 'bottom' | 'footwear' | null>(null);
 
-  // Start the user's camera stream for scanning
-  const startScanningCamera = async () => {
-    setScanError(null);
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' }
-      });
-      setCameraStream(stream);
-      setIsCameraActive(true);
-      setTimeout(() => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
-      }, 100);
-    } catch (err: any) {
-      console.warn("Camera access failed. Trying user facingMode fallback...", err);
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'user' }
-        });
-        setCameraStream(stream);
-        setIsCameraActive(true);
-        setTimeout(() => {
-          if (videoRef.current) {
-            videoRef.current.srcObject = stream;
-          }
-        }, 100);
-      } catch (fallbackErr: any) {
-        console.error("Camera access completely blocked:", fallbackErr);
-        setScanError("Failed to access camera stream. Make sure you gave permission, or select an image file instead.");
-      }
-    }
-  };
+  // Multi-Modal Ingestion & Camera State
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanResult, setScanResult] = useState<{
+    name: string;
+    category: string;
+    primaryColor: string;
+    pattern: string;
+    material: string;
+    confidence: number;
+    previewUrl?: string;
+  } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Stop the user's camera stream safely
-  const stopScanningCamera = () => {
-    if (cameraStream) {
-      cameraStream.getTracks().forEach(track => track.stop());
-      setCameraStream(null);
-    }
-    setIsCameraActive(false);
-  };
+  // Synchronize initial wardrobe into combinator slots and suggestion if available
+  useEffect(() => {
+    if (wardrobe.length > 0) {
+      setCombinatorSlots(prev => ({
+        outerwear: prev.outerwear || wardrobe.find(i => i.category === 'Outerwear') || null,
+        top: prev.top || wardrobe.find(i => i.category === 'Casual' || i.category === 'Formal') || wardrobe[0] || null,
+        bottom: prev.bottom || wardrobe.find(i => i.title.toLowerCase().includes('pant') || i.title.toLowerCase().includes('trouser') || i.title.toLowerCase().includes('jean')) || null,
+        footwear: prev.footwear || wardrobe.find(i => i.title.toLowerCase().includes('boot') || i.title.toLowerCase().includes('shoe') || i.title.toLowerCase().includes('loafer')) || null,
+      }));
 
-  // Capture current frame from video onto hidden canvas & execute multi-modal AI scan
-  const captureAndScanGarment = async () => {
-    if (!videoRef.current) return;
-    setScanError(null);
-    setIsScanningVisual(true);
-    setScanningLogs(["Calibrating camera lens profiles...", "Capturing image matrix..."]);
-
-    try {
-      const canvas = document.createElement('canvas');
-      canvas.width = videoRef.current.videoWidth || 640;
-      canvas.height = videoRef.current.videoHeight || 480;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) throw new Error("Could not construct 2D canvas context");
-
-      ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-      const base64DataUrl = canvas.toDataURL('image/jpeg', 0.85);
-      const pureBase64 = base64DataUrl.split(',')[1];
-
-      // Stop camera now that frame is captured
-      stopScanningCamera();
-      
-      // Update local state with the captured picture
-      setGImage(base64DataUrl);
-
-      // Trigger the AI Multi-modal classification engine
-      await executeAIScan(base64DataUrl, pureBase64, "captured-camera.jpg");
-    } catch (err: any) {
-      console.error("Capture failed:", err);
-      setScanError(err.message || "Failed to capture image frame from video feed.");
-      setIsScanningVisual(false);
-    }
-  };
-
-  // Convert uploaded file to base64 & run the scan
-  const handleUploadedFileScan = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setScanError(null);
-    setIsScanningVisual(true);
-    setScanningLogs(["Ingesting source file...", "Validating resolution & format..."]);
-
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      try {
-        const base64DataUrl = event.target?.result as string;
-        if (!base64DataUrl) throw new Error("File reading yielded null result");
-        const pureBase64 = base64DataUrl.split(',')[1];
-
-        setGImage(base64DataUrl);
-        await executeAIScan(base64DataUrl, pureBase64, file.name);
-      } catch (err: any) {
-        console.error("File loading failed:", err);
-        setScanError(err.message || "Failed to process selected file.");
-        setIsScanningVisual(false);
-      }
-    };
-    reader.onerror = () => {
-      setScanError("Failed to read the file.");
-      setIsScanningVisual(false);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  // Execute the visual suggestion analyze garment pipeline
-  const executeAIScan = async (base64DataUrl: string, pureBase64: string, fileName: string) => {
-    // Staggered telemetry logs for immersive visual scan feel
-    const logTimeline = [
-      "Contacting LookVision core cognitive pipeline...",
-      "Segmenting garment layout & contours...",
-      "Extracting RGB color vectors...",
-      "Matching fabric texture coordinates...",
-      "Analyzing formality indexes..."
-    ];
-
-    let logIdx = 0;
-    const interval = setInterval(() => {
-      if (logIdx < logTimeline.length) {
-        setScanningLogs(prev => [...prev, logTimeline[logIdx]]);
-        logIdx++;
-      } else {
-        clearInterval(interval);
-      }
-    }, 450);
-
-    try {
-      const result = await VisualSuggestion.analyzeGarment(base64DataUrl, pureBase64, fileName);
-      clearInterval(interval);
-      
-      setScanningLogs(prev => [...prev, "Analysis complete. Matching coordinates populated!"]);
-      
-      if (result) {
-        setGTitle(result.name || "Custom Piece");
-        setGDesc(result.description || "Parsed via live AI scan.");
-        setGCategory(result.category || 'Casual');
-        setGPrimaryColor(result.primaryColor || 'Neutral Gray');
-        setGSeason(result.season || 'All-Season');
-        setScanConfidence(result.confidence || 0.95);
-        
-        // Auto toast feedback
-        window.dispatchEvent(new CustomEvent('lookvision_show_toast', { 
-          detail: `Detected: ${result.name} (${result.primaryColor}, ${result.category})` 
+      if (activeOutfitSuggestion.items.length === 0) {
+        setActiveOutfitSuggestion(prev => ({
+          ...prev,
+          items: wardrobe.slice(0, 3)
         }));
       }
-    } catch (err: any) {
-      clearInterval(interval);
-      console.error("AI scanning pipeline failed:", err);
-      setScanError("Gemini Vision pipeline failed or timed out. Details are pre-filled below so you can proceed manually.");
-      // Set some smart guess fallbacks from the file name so the user experience doesn't break
-      const guessedName = fileName.replace(/\.[^/.]+$/, "").split('-').join(' ').split('_').join(' ');
-      setGTitle(guessedName.charAt(0).toUpperCase() + guessedName.slice(1));
-      setGDesc("Manual description needed.");
-    } finally {
-      setIsScanningVisual(false);
     }
+  }, [wardrobe]);
+
+  // Toast Helper
+  const showToast = (message: string, type: 'info' | 'success' | 'warning' = 'success') => {
+    const id = `toast_${Date.now()}_${Math.random()}`;
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 4000);
   };
 
-  // Clean up camera stream if component unmounts
-  useEffect(() => {
-    return () => {
-      if (cameraStream) {
-        cameraStream.getTracks().forEach(track => track.stop());
-      }
-    };
-  }, [cameraStream]);
-
-  // Global sub-tab navigation event listener
-  useEffect(() => {
-    const handleNavigateEvent = (e: Event) => {
-      const customEvent = e as CustomEvent<string>;
-      if (customEvent.detail) {
-        let target = customEvent.detail;
-        if (target === 'FASHION_INSTRUCTOR') {
-          target = 'PRODUCT_COMMUNITY';
-          localStorage.setItem('community_target_tab', 'INTELLIGENT_FASHION_AI');
-          setTimeout(() => {
-            window.dispatchEvent(new CustomEvent('community_check_target'));
-          }, 0);
-        }
-        setActiveSubTab(target as any);
-        localStorage.setItem('last_active_place_subtab', target);
-      }
-    };
-    const handleOpenFocusSearch = () => {
-      setIsFocusSearchOpen(true);
-    };
-    const handleOpenAria = () => {
-      setActiveSubTab('AI_ASSISTANT');
-      localStorage.setItem('last_active_place_subtab', 'AI_ASSISTANT');
-    };
-    window.addEventListener('lookvision_navigate_tab' as any, handleNavigateEvent);
-    window.addEventListener('lookvision_open_focus_search' as any, handleOpenFocusSearch);
-    window.addEventListener('lookvision_open_aria' as any, handleOpenAria);
-    return () => {
-      window.removeEventListener('lookvision_navigate_tab' as any, handleNavigateEvent);
-      window.removeEventListener('lookvision_open_focus_search' as any, handleOpenFocusSearch);
-      window.removeEventListener('lookvision_open_aria' as any, handleOpenAria);
-    };
-  }, []);
-
-  // 3. Search query state
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isFocusSearchOpen, setIsFocusSearchOpen] = useState(false);
-  const [currentTheme, setCurrentTheme] = useState<string>(() => localStorage.getItem('look_vision_theme') || 'cosmic-dream');
-
-  // Synchronize document body color dynamically to prevent any "Preview Splitting"
-  useEffect(() => {
-    const THEME_BG_COLORS: Record<string, string> = {
-      'classic-noir': '#09090b',
-      'cyber-couture': '#03020c',
-      'nordic-editorial': '#0d0c0b',
-      'cosmic-dream': '#05050a',
-      'solar-day': '#fcfbf9',
-    };
-    const bgColor = THEME_BG_COLORS[currentTheme] || '#05050a';
-    document.body.style.backgroundColor = bgColor;
-    document.body.style.color = currentTheme === 'solar-day' ? '#1c1b1a' : '#ffffff';
-    document.body.style.transition = 'background-color 0.4s ease, color 0.4s ease';
-    
-    if (currentTheme === 'solar-day') {
-      document.documentElement.classList.add('light-theme');
-    } else {
-      document.documentElement.classList.remove('light-theme');
-    }
-  }, [currentTheme]);
-
-  // Requirement D & E: Gentle Packing & Seasonal Weight states
-  const [tomorrowFrozen, setTomorrowFrozenState] = useState<boolean>(() => {
-    return localStorage.getItem('tomorrow_frozen') === 'true';
-  });
-
-  const saveTomorrowFrozen = (val: boolean) => {
-    setTomorrowFrozenState(val);
-    localStorage.setItem('tomorrow_frozen', val ? 'true' : 'false');
-  };
-
-  const [weatherWeight, setWeatherWeightState] = useState<'lighter' | 'heavier' | 'layered'>(() => {
-    const saved = localStorage.getItem('weather_weight');
-    return (saved === 'lighter' || saved === 'heavier' || saved === 'layered') ? saved : 'lighter';
-  });
-
-  const [viewMode, setViewMode] = useState<'EDITORIAL' | 'GRID'>(() => {
-    return (localStorage.getItem('wardrobe_view_mode') as 'EDITORIAL' | 'GRID') || 'GRID';
-  });
-
-  const saveViewMode = (mode: 'EDITORIAL' | 'GRID') => {
-    setViewMode(mode);
-    localStorage.setItem('wardrobe_view_mode', mode);
-  };
-
-  const saveWeatherWeight = (weight: 'lighter' | 'heavier' | 'layered') => {
-    setWeatherWeightState(weight);
-    localStorage.setItem('weather_weight', weight);
-  };
-
-  // Premium custom notification toast state
-  const [toasts, setToasts] = useState<{ id: string; message: string; type?: 'success' | 'info' | 'warning' | 'error' }[]>([]);
-
-  // 7. Ownership Export states
-  const [showSnapshot, setShowSnapshot] = useState(false);
-  const [snapshotData, setSnapshotData] = useState('');
-
-  const saveTomorrowOutfit = (outfit: { items: WardrobeItem[]; note: string; timeAtmosphere?: string } | null) => {
-    setTomorrowOutfitState(outfit);
-    if (outfit) {
-      localStorage.setItem('tomorrow_outfit', JSON.stringify(outfit));
-      if (outfit.items.length >= 2) {
-        registerCombination(outfit.items);
-      }
-    } else {
-      localStorage.removeItem('tomorrow_outfit');
-      saveTomorrowFrozen(false);
-    }
-  };
-
-  const [wearingConfirmation, setWearingConfirmation] = useState(false);
-  const [undoAction, setUndoAction] = useState<{
-    message: string;
-    rollback: () => void;
-  } | null>(null);
-  const undoTimeoutRef = useRef<any>(null);
-  const [confirmLetGoId, setConfirmLetGoId] = useState<string | null>(null);
-  const [bulkResetConfirm, setBulkResetConfirm] = useState(false);
-  const [tomorrowError, setTomorrowError] = useState<string | null>(null);
-
-  const registerUndo = (rollbackFn: () => void, message: string = "Action completed") => {
-    if (undoTimeoutRef.current) {
-      clearTimeout(undoTimeoutRef.current);
-    }
-    setUndoAction({
-      message: message,
-      rollback: rollbackFn
-    });
-    undoTimeoutRef.current = setTimeout(() => {
-      setUndoAction(null);
-    }, 6000);
-  };
-
-  useEffect(() => {
-    setWearingConfirmation(false);
-  }, [state.activeSuggestion?.id]);
-
-  const handleUpdateGarment = async (itemId: string, updates: Partial<WardrobeItem>) => {
-    if (selectedGarment && selectedGarment.id === itemId) {
-      setSelectedGarment(prev => prev ? { ...prev, ...updates } : null);
-    }
-    const isGuest = user?.uid ? (user.isAnonymous || user.uid.startsWith('guest-')) : true;
-    if (isGuest) {
-      const stored = localStorage.getItem('local_wardrobe_items');
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored) as WardrobeItem[];
-          const idx = parsed.findIndex(x => x.id === itemId);
-          if (idx !== -1) {
-            parsed[idx] = { ...parsed[idx], ...updates };
-            localStorage.setItem('local_wardrobe_items', JSON.stringify(parsed));
-            UnifiedFashionOS.syncWardrobeItems(parsed);
-          }
-        } catch (e) {
-          console.error("Local update failed:", e);
-        }
-      }
-    } else {
-      try {
-        const item = activeWardrobeList.find(x => x.id === itemId);
-        const col = (item as any)?.collectionSource === 'constructions' ? 'constructions' : 'wardrobe';
-        await updateDoc(doc(db, col, itemId), updates);
-      } catch (err) {
-        console.error("Firestore update failed:", err);
-      }
-    }
-  };
-
-
-  const activeWardrobeList = wardrobe && wardrobe.length > 0 ? wardrobe : state.unifiedStyleMemory.wardrobe_items;
-
-  const displayedWardrobeList = useMemo(() => {
-    let list = activeWardrobeList || [];
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
-      return list.filter(item => 
-        item.title.toLowerCase().includes(q) || 
-        (item.description && item.description.toLowerCase().includes(q)) ||
-        (item.category && item.category.toLowerCase().includes(q)) ||
-        (item.privateNote && item.privateNote.toLowerCase().includes(q))
-      );
-    } else {
-      return list.filter(item => !item.placedElsewhere);
-    }
-  }, [activeWardrobeList, searchQuery]);
-
-  const placedElsewhereItems = useMemo(() => {
-    return (activeWardrobeList || []).filter(item => item.placedElsewhere);
-  }, [activeWardrobeList]);
-
-  // URL Router & Synchronization - Merged for ultimate stability
+  // Route Synchronization & Custom Event Listeners
   useEffect(() => {
     const handleLocationChange = () => {
       const path = window.location.pathname;
-      let mappedTab: any = null;
-      if (path === '/admin' || window.location.search.includes('view=admin')) mappedTab = 'ADMIN_COMMAND';
-      else if (path === '/home' || path === '/' || path === '') mappedTab = 'PRODUCT_HOME';
-      else if (path === '/ai-studio' || path === '/ai-creations') mappedTab = 'PRODUCT_AI_CREATIONS';
-      else if (path === '/wardrobe') mappedTab = 'WARDROBE';
-      else if (path === '/dashboard') mappedTab = 'DASHBOARD';
-      else if (path === '/profile') mappedTab = 'PROFILE';
-      else if (path === '/settings' || path === '/presence') mappedTab = 'SYSTEM_ROOM';
-      else if (path === '/marketplace') mappedTab = 'PRODUCT_MARKETPLACE';
-      else if (path === '/community') mappedTab = 'PRODUCT_COMMUNITY';
-      else if (path === '/discover' || path === '/explore') mappedTab = 'DISCOVER';
-      else if (path === '/creator' || path === '/creator-workspace') mappedTab = 'CREATOR_WORKSPACE';
-      else if (path === '/product-detail') mappedTab = 'PRODUCT_DETAIL';
-      else if (path === '/generate' || path === '/fashion-ai') mappedTab = 'ECOSYSTEM_GENERATE';
-      else {
-        try {
-          localStorage.removeItem('last_active_place_subtab');
-        } catch (e) {}
-        mappedTab = 'PRODUCT_HOME';
-      }
-      
-      if (mappedTab) {
-        setActiveSubTab(mappedTab);
-      }
+      if (path === '/ai-studio') setActiveSubTab('PRODUCT_AI_CREATIONS');
+      else if (path === '/marketplace') setActiveSubTab('PRODUCT_MARKETPLACE');
+      else if (path === '/community') setActiveSubTab('PRODUCT_COMMUNITY');
+      else if (path === '/wardrobe') setActiveSubTab('WARDROBE');
+      else if (path === '/virtual-try') setActiveSubTab('VIRTUAL_TRY');
+      else if (path === '/discover') setActiveSubTab('DISCOVER');
+      else if (path === '/creator') setActiveSubTab('CREATOR_WORKSPACE');
+      else if (path === '/fashion-instructor') setActiveSubTab('FASHION_INSTRUCTOR');
+      else if (path === '/aria' || path === '/assistant') setActiveSubTab('AI_ASSISTANT');
+      else if (path === '/social') setActiveSubTab('SOCIAL_HUB');
+      else if (path === '/subscription' || path === '/billing') setActiveSubTab('SUBSCRIPTION_HUB');
+      else if (path === '/settings') setActiveSubTab('SYSTEM_ROOM');
+      else if (path === '/admin') setActiveSubTab('ADMIN_COMMAND');
+      else if (path === '/' || path === '/home') setActiveSubTab('PRODUCT_HOME');
     };
 
     window.addEventListener('popstate', handleLocationChange);
     window.addEventListener('lookvision_route_change', handleLocationChange);
-    window.addEventListener('hashchange', handleLocationChange);
-    handleLocationChange();
+
+    const handleGlobalShowToast = (e: any) => {
+      if (e?.detail?.message) {
+        showToast(e.detail.message, e.detail.type || 'info');
+      }
+    };
+    window.addEventListener('lookvision_show_toast', handleGlobalShowToast);
+
+    const handleGlobalNavigate = (e: any) => {
+      const dest = e?.detail;
+      if (dest) handleNavigate(dest);
+    };
+    window.addEventListener('lookvision_navigate', handleGlobalNavigate);
+
+    const handleGlobalViewProduct = (e: any) => {
+      if (e?.detail) {
+        setSelectedProduct(e.detail);
+        handleNavigate('PRODUCT_DETAIL');
+      }
+    };
+    window.addEventListener('lookvision_view_product', handleGlobalViewProduct);
+
+    const handleOpenAria = () => setIsARIAPanelOpen(true);
+    window.addEventListener('lookvision_open_aria', handleOpenAria);
+
+    const handleOpenSearch = () => setIsFocusSearchOpen(true);
+    window.addEventListener('lookvision_open_focus_search', handleOpenSearch);
 
     return () => {
       window.removeEventListener('popstate', handleLocationChange);
       window.removeEventListener('lookvision_route_change', handleLocationChange);
-      window.removeEventListener('hashchange', handleLocationChange);
+      window.removeEventListener('lookvision_show_toast', handleGlobalShowToast);
+      window.removeEventListener('lookvision_navigate', handleGlobalNavigate);
+      window.removeEventListener('lookvision_view_product', handleGlobalViewProduct);
+      window.removeEventListener('lookvision_open_aria', handleOpenAria);
+      window.removeEventListener('lookvision_open_focus_search', handleOpenSearch);
     };
   }, []);
 
-  useEffect(() => {
-    let targetPath = '';
-    if (activeSubTab === 'ADMIN_COMMAND') targetPath = '/admin';
-    else if (activeSubTab === 'PRODUCT_HOME' || activeSubTab === 'HOME') targetPath = '/home';
-    else if (activeSubTab === 'PRODUCT_AI_CREATIONS' || activeSubTab === 'AI_STUDIO' || activeSubTab === 'ECOSYSTEM_CREATE') targetPath = '/ai-studio';
-    else if (activeSubTab === 'WARDROBE') targetPath = '/wardrobe';
-    else if (activeSubTab === 'DASHBOARD') targetPath = '/dashboard';
-    else if (activeSubTab === 'PROFILE') targetPath = '/profile';
-    else if (activeSubTab === 'SYSTEM_ROOM') targetPath = '/settings';
-    else if (activeSubTab === 'PRODUCT_MARKETPLACE' || activeSubTab === 'MARKETPLACE_ROOM') targetPath = '/marketplace';
-    else if (activeSubTab === 'PRODUCT_COMMUNITY' || activeSubTab === 'COMMUNITY_ROOM') targetPath = '/community';
-    else if (activeSubTab === 'DISCOVER') targetPath = '/discover';
-    else if (activeSubTab === 'CREATOR_WORKSPACE') targetPath = '/creator';
-    else if (activeSubTab === 'PRODUCT_DETAIL') targetPath = '/product-detail';
-    else if (activeSubTab === 'ECOSYSTEM_GENERATE' || activeSubTab === 'OUTFIT_GEN') targetPath = '/generate';
-    else if (activeSubTab === 'FASHION_INSTRUCTOR') targetPath = '/fashion-instructor';
+  const handleNavigate = (tab: MainSubTab) => {
+    setActiveSubTab(tab);
+    let targetPath = '/home';
+    if (tab === 'PRODUCT_AI_CREATIONS') targetPath = '/ai-studio';
+    else if (tab === 'STYLE_STREAM') targetPath = '/stream';
+    else if (tab === 'PRODUCT_MARKETPLACE') targetPath = '/marketplace';
+    else if (tab === 'PRODUCT_COMMUNITY') targetPath = '/community';
+    else if (tab === 'WARDROBE') targetPath = '/wardrobe';
+    else if (tab === 'VIRTUAL_TRY') targetPath = '/virtual-try';
+    else if (tab === 'DISCOVER') targetPath = '/discover';
+    else if (tab === 'CREATOR_WORKSPACE') targetPath = '/creator';
+    else if (tab === 'FASHION_INSTRUCTOR') targetPath = '/fashion-instructor';
+    else if (tab === 'AI_ASSISTANT') targetPath = '/aria';
+    else if (tab === 'SOCIAL_HUB') targetPath = '/social';
+    else if (tab === 'SUBSCRIPTION_HUB') targetPath = '/subscription';
+    else if (tab === 'VENDOR_ONBOARDING') targetPath = '/vendor-onboarding';
+    else if (tab === 'SYSTEM_ROOM') targetPath = '/settings';
+    else if (tab === 'ADMIN_COMMAND') targetPath = '/admin';
 
-    if (targetPath && window.location.pathname !== targetPath) {
+    if (window.location.pathname !== targetPath) {
       window.history.pushState(null, '', targetPath);
       window.dispatchEvent(new CustomEvent('lookvision_route_change'));
     }
-  }, [activeSubTab]);
+  };
 
-  useEffect(() => {
-    const unsub = UnifiedFashionOS.subscribe((latest) => {
-      setState(latest);
-    });
-    return () => unsub();
-  }, []);
+  // Trigger Outfit Generation with AI Stylist Reasoning
+  const [isCompilingOutfit, setIsCompilingOutfit] = useState(false);
+  const handleRegenerateOutfit = async () => {
+    setIsCompilingOutfit(true);
+    try {
+      if (wardrobe.length === 0) {
+        showToast('Add garments to your digital closet to synthesize custom outfits.', 'warning');
+        setIsCompilingOutfit(false);
+        return;
+      }
+      // Pick cohesive garments
+      const tops = wardrobe.filter(w => w.category === 'Casual' || w.category === 'Formal');
+      const bottoms = wardrobe.filter(w => w.title.toLowerCase().includes('pant') || w.title.toLowerCase().includes('jean') || w.title.toLowerCase().includes('trouser'));
+      const outerwear = wardrobe.filter(w => w.category === 'Outerwear');
 
-  // Centralized Custom Toast event handler
-  useEffect(() => {
-    const handleGlobalShowToast = (e: Event) => {
-      const customEvent = e as CustomEvent;
-      const detail = customEvent.detail;
-      if (!detail) return;
-      const id = `${Date.now()}-${Math.random()}`;
-      setToasts(prev => [...prev, { id, message: detail }]);
+      const pickedItems: WardrobeItem[] = [];
+      if (outerwear.length > 0) pickedItems.push(outerwear[Math.floor(Math.random() * outerwear.length)]);
+      if (tops.length > 0) pickedItems.push(tops[Math.floor(Math.random() * tops.length)]);
+      if (bottoms.length > 0) pickedItems.push(bottoms[Math.floor(Math.random() * bottoms.length)]);
+      if (pickedItems.length === 0) pickedItems.push(wardrobe[0]);
+
       setTimeout(() => {
-        setToasts(prev => prev.filter(t => t.id !== id));
-      }, 5000);
-    };
-    window.addEventListener('lookvision_show_toast', handleGlobalShowToast);
-    return () => {
-      window.removeEventListener('lookvision_show_toast', handleGlobalShowToast);
-    };
-  }, []);
-
-  // Centralized Custom Navigation event handler
-  useEffect(() => {
-    const handleGlobalNavigate = (e: Event) => {
-      const customEvent = e as CustomEvent;
-      const detail = customEvent.detail;
-      if (!detail) return;
-      handleNavigate(detail);
-    };
-    window.addEventListener('lookvision_navigate', handleGlobalNavigate);
-    return () => {
-      window.removeEventListener('lookvision_navigate', handleGlobalNavigate);
-    };
-  }, []);
-
-  // Centralized Custom Product View event handler
-  useEffect(() => {
-    const handleGlobalViewProduct = (e: Event) => {
-      const customEvent = e as CustomEvent;
-      const detail = customEvent.detail;
-      if (!detail) return;
-      setSelectedProduct(detail);
-      handleNavigate('PRODUCT_DETAIL');
-    };
-    window.addEventListener('lookvision_view_product', handleGlobalViewProduct);
-    return () => {
-      window.removeEventListener('lookvision_view_product', handleGlobalViewProduct);
-    };
-  }, []);
-
-  // Centralized Custom Seller Dashboard opening event handler
-  useEffect(() => {
-    const handleGlobalOpenSellerDashboard = () => {
-      setIsSellerDashboardOpen(true);
-    };
-    window.addEventListener('lookvision_open_seller_dashboard', handleGlobalOpenSellerDashboard);
-    return () => {
-      window.removeEventListener('lookvision_open_seller_dashboard', handleGlobalOpenSellerDashboard);
-    };
-  }, []);
-
-  // Profile Syncing
-  useEffect(() => {
-    if (!user) return;
-    const loadStyleProfile = async () => {
-      try {
-        const p = await ProfileService.loadProfile(user.uid);
-        if (p?.styleVector && p.styleVector.length === 8) {
-          // Sync with the AI engines preference vector
-          const osState = UnifiedFashionOS.getState();
-          osState.unifiedStyleMemory.user_preferences_vector = p.styleVector;
-        }
-      } catch (err) {
-        console.error("Profile loading failed:", err);
-      }
-    };
-    loadStyleProfile();
-    ProfileService.startSyncTimer();
-  }, [user]);
-
-  const activeWardrobeListDependency = activeWardrobeList
-    ? `${activeWardrobeList.length}:${activeWardrobeList.map(x => x.id).join(',')}`
-    : '';
-
-  const wardrobeDependency = wardrobe
-    ? `${wardrobe.length}:${wardrobe.map(x => x.id).join(',')}`
-    : '';
-
-  const tomorrowOutfitItemsDependency = tomorrowOutfit
-    ? `${tomorrowOutfit.note}:${tomorrowOutfit.items.map(x => x.id).join(',')}`
-    : '';
-
-  useEffect(() => {
-    const savedGarmentId = localStorage.getItem('last_active_place_garment_id');
-    if (savedGarmentId && activeWardrobeList.length > 0 && !selectedGarment) {
-      const found = activeWardrobeList.find(x => x.id === savedGarmentId);
-      if (found) {
-        setSelectedGarment(found);
-      }
-    }
-  }, [activeWardrobeListDependency]);
-
-  useEffect(() => {
-    if (wardrobe && wardrobe.length > 0) {
-      UnifiedFashionOS.syncWardrobeItems(wardrobe);
-    }
-  }, [wardrobeDependency]);
-
-  // Auto-persist active subtab and selected garment
-  useEffect(() => {
-    try {
-      if (localStorage.getItem('last_active_place_subtab') !== activeSubTab) {
-        localStorage.setItem('last_active_place_subtab', activeSubTab);
-      }
-      if (selectedGarment) {
-        if (localStorage.getItem('last_active_place_garment_id') !== selectedGarment.id) {
-          localStorage.setItem('last_active_place_garment_id', selectedGarment.id);
-        }
-      } else {
-        if (localStorage.getItem('last_active_place_garment_id') !== null) {
-          localStorage.removeItem('last_active_place_garment_id');
-        }
-      }
-    } catch (e) {}
-  }, [activeSubTab, selectedGarment]);
-
-  // Silently auto-save drafts
-  useEffect(() => {
-    try {
-      if (addStep !== 'CLOSED') {
-        if (localStorage.getItem('draft_add_step') !== addStep) {
-          localStorage.setItem('draft_add_step', addStep);
-        }
-      } else {
-        if (localStorage.getItem('draft_add_step') !== null) {
-          localStorage.removeItem('draft_add_step');
-        }
-      }
-    } catch (e) {}
-  }, [addStep]);
-
-  useEffect(() => {
-    try {
-      if (localStorage.getItem('draft_g_title') !== gTitle) {
-        localStorage.setItem('draft_g_title', gTitle);
-      }
-    } catch (e) {}
-  }, [gTitle]);
-
-  useEffect(() => {
-    try {
-      if (localStorage.getItem('draft_g_desc') !== gDesc) {
-        localStorage.setItem('draft_g_desc', gDesc);
-      }
-    } catch (e) {}
-  }, [gDesc]);
-
-  useEffect(() => {
-    try {
-      if (localStorage.getItem('draft_tomorrow_note') !== tomorrowNote) {
-        localStorage.setItem('draft_tomorrow_note', tomorrowNote);
-      }
-    } catch (e) {}
-  }, [tomorrowNote]);
-
-  // Respect frozen tomorrow preparation (Requirement D)
-  useEffect(() => {
-    if (tomorrowFrozen && tomorrowOutfit && activeSubTab === 'HOME') {
-      const currentActive = state.activeSuggestion;
-      const isAlreadyLoaded = !!(currentActive && 
-        currentActive.items && 
-        tomorrowOutfit.items &&
-        currentActive.items.length === tomorrowOutfit.items.length && 
-        currentActive.items.every((it, idx) => it && tomorrowOutfit.items[idx] && it.id === tomorrowOutfit.items[idx].id));
-
-      if (!isAlreadyLoaded) {
-        const stableId = `out-frozen-${tomorrowOutfit.items.map(x => x.id).join('-')}`;
-        UnifiedFashionOS.getState().activeSuggestion = {
-          id: stableId,
-          name: tomorrowOutfit.items.map(i => i.title).join(" & "),
-          items: tomorrowOutfit.items,
-          suitabilityScore: 100,
-          occasion: tomorrowOutfit.note,
-          generatedAt: new Date().toISOString().split('T')[0],
-          vibeTags: ['minimalist']
-        };
-        UnifiedFashionOS.notify();
-      }
-    }
-  }, [tomorrowFrozen, tomorrowOutfitItemsDependency, activeSubTab, state.activeSuggestion?.id]);
-
-  // Save today's recommendation automatically whenever state.activeSuggestion changes
-  useEffect(() => {
-    if (state.activeSuggestion) {
-      localStorage.setItem('today_recommendation_v3', JSON.stringify({
-        suggestion: state.activeSuggestion,
-        dateStr: new Date().toISOString().split('T')[0],
-        isWarmSeason: new Date().getMonth() >= 4 && new Date().getMonth() <= 8
-      }));
-    } else {
-      localStorage.removeItem('today_recommendation_v3');
-    }
-  }, [state.activeSuggestion?.id]);
-
-  // Single line Memory Continuity soft return lines and Restore Today's Recommendation
-  useEffect(() => {
-    const todayStr = new Date().toISOString().split('T')[0];
-    const month = new Date().getMonth();
-    const currentIsWarm = month >= 4 && month <= 8;
-
-    let restoredSuccessfully = false;
-    if (!hasRestoredRef.current) {
-      hasRestoredRef.current = true;
-      const savedRecStr = localStorage.getItem('today_recommendation_v3');
-      if (savedRecStr) {
-        try {
-          const stored = JSON.parse(savedRecStr);
-          if (stored && stored.dateStr === todayStr && stored.isWarmSeason === currentIsWarm && !tomorrowFrozen && stored.suggestion && Array.isArray(stored.suggestion.items)) {
-            // Verify if suggested items still exist in wardrobe
-            const allExistAndInCloset = stored.suggestion.items.every((item: any) => 
-              activeWardrobeList.some((w: any) => w.id === item.id)
-            );
-            if (allExistAndInCloset) {
-              UnifiedFashionOS.getState().activeSuggestion = stored.suggestion;
-              UnifiedFashionOS.notify();
-              restoredSuccessfully = true;
-            }
-          }
-        } catch (e) {
-          console.error("Failed to restore today recommendation:", e);
-        }
-      }
-    } else if (state.activeSuggestion) {
-      restoredSuccessfully = true;
-    }
-
-    const savedTab = localStorage.getItem('last_active_place_subtab');
-    const savedGarmentId = localStorage.getItem('last_active_place_garment_id');
-    const draftTitle = localStorage.getItem('draft_g_title');
-    const draftNote = localStorage.getItem('draft_tomorrow_note');
-    
-    // Draft restored signals
-    if ((draftTitle && draftTitle.trim() !== '') || (draftNote && draftNote.trim() !== '')) {
-      const draftLines = [
-        "Still here.",
-        "Left in place."
-      ];
-      const idx = Math.abs((new Date().getDate() + new Date().getHours())) % draftLines.length;
-      setMemoryLine(draftLines[idx]);
-    } else {
-      // Reopened signals
-      if (restoredSuccessfully) {
-        // Same day restore: Allowed phrases under A: "Still here.", "Left in place."
-        const sameDayLines = [
-          "Still here.",
-          "Left in place."
-        ];
-        const idx = Math.abs((new Date().getDate() + new Date().getHours())) % sameDayLines.length;
-        setMemoryLine(sameDayLines[idx]);
-      } else {
-        // Multi-day reopen or no recommendation restored: Allowed phrases: "Everything stayed.", "Nothing here yet."
-        const multiDayLines = [
-          "Everything stayed.",
-          "Nothing here yet."
-        ];
-        const idx = Math.abs((new Date().getDate() + new Date().getHours())) % multiDayLines.length;
-        setMemoryLine(multiDayLines[idx]);
-      }
-    }
-  }, [activeWardrobeListDependency, tomorrowFrozen, state.activeSuggestion?.id]);
-
-
-  const presets = [
-    // 7 Tops
-    { title: 'Supima Heavy-Knit Cotton Tee', desc: 'Oversized luxury modular base, classic drop shoulder fit.', cat: 'Casual' },
-    { title: 'Structured Linen Button-Up', desc: 'French front fine linen shirt, breathable formal look.', cat: 'Formal' },
-    { title: 'Loopback Heavy Cotton Hoodie', desc: '100% organic heavy loopback French terry cotton.', cat: 'Casual' },
-    { title: 'Fine Merino Wool Polo', desc: 'Breathable, lightweight, fine-knit polo shirt collar top.', cat: 'Formal' },
-    { title: 'Utility Chambray Workshirt', desc: 'Double-pocket vintage washed work shirt top.', cat: 'Casual' },
-    { title: 'Box-Fit Graphic Tee 260GSM', desc: 'Retro enzyme washed heavy jersey shirt.', cat: 'Casual' },
-    { title: 'Minimalist Silk-Blend Blouse', desc: 'Soft flowing silk elegant blouse top.', cat: 'Formal' },
-
-    // 6 Bottoms
-    { title: 'Sleek Dark Tailored Chinos', desc: 'Pleated dark chinos tailored trousers.', cat: 'Formal' },
-    { title: 'Raw Selvedge Indigo Jeans', desc: 'Standard fit unwashed indigo denim pants.', cat: 'Casual' },
-    { title: 'Pleated Slate Wool Trousers', desc: 'High-waist double pleated refined trousers pants.', cat: 'Formal' },
-    { title: 'Relaxed Linen Drawstring Pants', desc: 'Extremely breathable lightweight resort trousers pants.', cat: 'Casual' },
-    { title: 'Lightweight Technical Joggers', desc: 'Water-resistant stretch athletic joggers pants.', cat: 'Sportswear' },
-    { title: 'Heavy Twill Cargo Pants', desc: 'Rugged cargo utility pants with multi pockets.', cat: 'Casual' },
-
-    // 3 Outerwear
-    { title: 'Tailored Camel Overcoat', desc: 'Symmetrical structured wool overcoat', cat: 'Outerwear' },
-    { title: 'Breathable Technical Windrunner', desc: 'Waterproof obsidian outer shell', cat: 'Outerwear' },
-    { title: 'Vintage Leather Bomber Jacket', desc: 'Distressed black leather flight jacket outerwear.', cat: 'Outerwear' },
-
-    // 5 Shoes
-    { title: 'Classic White Leather Sneakers', desc: 'Margom-sole minimalist athletic white shoe.', cat: 'Casual' },
-    { title: 'Calfskin Chelsea Boots', desc: 'Handcrafted premium black leather ankle boots shoe.', cat: 'Formal' },
-    { title: 'Split-Toe Suede Loafers', desc: 'Breathable snuff suede penny loafers shoe.', cat: 'Formal' },
-    { title: 'Vibram Off-Road Trail Runners', desc: 'Responsive all-terrain technical trail running shoe.', cat: 'Sportswear' },
-    { title: 'Refined Leather Derby Shoes', desc: 'Traditional custom polished dress derby shoes.', cat: 'Formal' },
-
-    // 3 Accessories
-    { title: 'Aesthetic Heavy Ribbed Beanie', desc: 'Unisex Sage green knit beanie', cat: 'Accessories' },
-    { title: 'Matte Acetate Circular Sunglasses', desc: 'UV-protected acetate polarized sunglasses.', cat: 'Accessories' },
-    { title: 'Minimalist Brass Buckle Belt', desc: 'Vegetable-tanned full-grain leather belt accessories.', cat: 'Accessories' }
-  ];
-
-  // Global action pause wrapper (950ms stillness)
-  const triggerQuietPause = (action: () => void | Promise<void>) => {
-    setIsHoldingStill(true);
-    setTimeout(async () => {
-      await action();
-      setTimeout(() => {
-        setIsHoldingStill(false);
-      }, 900);
-    }, 50);
-  };
-
-  const handleApplyPreset = async (preset: typeof presets[0]) => {
-    const fallbackUrl = getGarmentImage(preset.title);
-    triggerQuietPause(async () => {
-      if (onAddGarment) {
-        await onAddGarment(preset.title, preset.desc, preset.cat, { imageUrl: fallbackUrl });
-      } else {
-        const items = [...state.unifiedStyleMemory.wardrobe_items];
-        items.push({
-          id: `local-${Date.now()}`,
-          title: preset.title,
-          description: preset.desc,
-          category: preset.cat as any,
-          status: 'In Closet',
-          userId: 'simulated-guest',
-          createdAt: new Date(),
-          imageUrl: fallbackUrl,
-          primaryColor: 'Aesthetic Accent'
+        setActiveOutfitSuggestion({
+          id: `outfit_${Date.now()}`,
+          name: 'Architectural Obsidian Ensemble',
+          occasion: 'High-Fashion Creative Studio',
+          reasoning: 'Engineered with clean vertical lines and monochromatic charcoal saturation to optimize silhouette elegance under gallery studio lighting.',
+          score: 96,
+          items: pickedItems
         });
-        UnifiedFashionOS.syncWardrobeItems(items);
-      }
-    });
-  };
-
-  const handleLoadPresetsAutomatically = async () => {
-    triggerQuietPause(async () => {
-      for (const p of presets) {
-        const fallbackUrl = getGarmentImage(p.title);
-        if (onAddGarment) {
-          await onAddGarment(p.title, p.desc, p.cat, { imageUrl: fallbackUrl });
-        }
-      }
-    });
-  };
-
-  const handleNotThisTogether = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!selectedGarment || !state.activeSuggestion) return;
-    
-    const otherItems = state.activeSuggestion.items.filter(item => item.id !== selectedGarment.id);
-    if (otherItems.length === 0) return;
-
-    try {
-      if (typeof localStorage !== 'undefined') {
-        let penalties: string[] = JSON.parse(localStorage.getItem('pairing_penalties') || '[]');
-        if (!Array.isArray(penalties)) penalties = [];
-
-        otherItems.forEach(other => {
-          const pairKey = [selectedGarment.id, other.id].sort().join('-');
-          if (!penalties.includes(pairKey)) {
-            penalties.push(pairKey);
-          }
-        });
-
-        localStorage.setItem('pairing_penalties', JSON.stringify(penalties));
-        
-        // Show gentle quiet acknowledgment note
-        setFeedbackNote("Pairing reduced.");
-        setFeedbackSuccess(true);
-        setTimeout(() => {
-          setFeedbackSuccess(false);
-        }, 2500);
-      }
+        setIsCompilingOutfit(false);
+        showToast('New sartorial curation compiled successfully!', 'success');
+      }, 700);
     } catch (err) {
-      console.error(err);
+      setIsCompilingOutfit(false);
+      showToast('Stylist synchronization failed', 'warning');
     }
   };
 
-  const [showAdjustOptions, setShowAdjustOptions] = useState(false);
+  // Ingestion File Handler
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-  const handleAdjustSlightly = (type: 'swap' | 'lighter' | 'quieter' | 'familiar') => {
-    const activeOutfit = state.activeSuggestion;
-    if (!activeOutfit || !activeOutfit.items || activeOutfit.items.length === 0) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64Str = reader.result as string;
+      setIsScanning(true);
+      setScanResult(null);
 
-    let adjustedItems = [...activeOutfit.items];
-
-    if (type === 'swap') {
-      const idxToSwap = Math.floor(Math.random() * adjustedItems.length);
-      const targetItem = adjustedItems[idxToSwap];
-      const candidates = activeWardrobeList.filter(u => u.category === targetItem.category && !adjustedItems.some(x => x.id === u.id));
-      if (candidates.length > 0) {
-        const replacement = candidates[Math.floor(Math.random() * candidates.length)];
-        adjustedItems[idxToSwap] = replacement;
-      }
-    } else if (type === 'lighter') {
-      const heavyIdx = adjustedItems.findIndex(i => i.category === 'Outerwear' || i.title.toLowerCase().includes('coat') || i.title.toLowerCase().includes('heavy'));
-      const lighterTops = activeWardrobeList.filter(u => (u.category === 'Casual' || u.title.toLowerCase().includes('shirt') || u.title.toLowerCase().includes('tee')) && !adjustedItems.some(x => x.id === u.id));
-      if (heavyIdx !== -1 && lighterTops.length > 0) {
-        const replacement = lighterTops[Math.floor(Math.random() * lighterTops.length)];
-        adjustedItems[heavyIdx] = replacement;
-      } else {
-        const candidates = activeWardrobeList.filter(u => (u.title.toLowerCase().includes('shirt') || u.title.toLowerCase().includes('tee') || u.title.toLowerCase().includes('linen') || u.title.toLowerCase().includes('short')) && !adjustedItems.some(x => x.id === u.id));
-        if (candidates.length > 0 && adjustedItems.length > 0) {
-          adjustedItems[0] = candidates[Math.floor(Math.random() * candidates.length)];
-        }
-      }
-    } else if (type === 'quieter') {
-      const idxToSwap = Math.floor(Math.random() * adjustedItems.length);
-      const targetItem = adjustedItems[idxToSwap];
-      const quieterColorCandidates = activeWardrobeList.filter(u => 
-        u.category === targetItem.category && 
-        !adjustedItems.some(x => x.id === u.id) &&
-        (u.title.toLowerCase().includes('black') || u.title.toLowerCase().includes('gray') || u.title.toLowerCase().includes('charcoal') || u.title.toLowerCase().includes('white') || u.title.toLowerCase().includes('sand') || u.title.toLowerCase().includes('neutral'))
-      );
-      if (quieterColorCandidates.length > 0) {
-        adjustedItems[idxToSwap] = quieterColorCandidates[Math.floor(Math.random() * quieterColorCandidates.length)];
-      }
-    } else if (type === 'familiar') {
-      const idxToSwap = Math.floor(Math.random() * adjustedItems.length);
-      const targetCategory = adjustedItems[idxToSwap].category;
-      const candidates = activeWardrobeList.filter(u => u.category === targetCategory && !adjustedItems.some(x => x.id === u.id));
-      if (candidates.length > 0) {
-        candidates.sort((a,b) => (b.wearCount || 0) - (a.wearCount || 0));
-        adjustedItems[idxToSwap] = candidates[0];
-      }
-    }
-
-    triggerQuietPause(() => {
-      const updatedSuggestion = {
-        ...activeOutfit,
-        items: adjustedItems,
-        name: adjustedItems.map(i => i.title).join(" & ")
-      };
-      UnifiedFashionOS.getState().activeSuggestion = updatedSuggestion;
-      UnifiedFashionOS.notify();
-    });
+      // Simulate multi-modal ingestion response
+      setTimeout(() => {
+        setIsScanning(false);
+        setScanResult({
+          name: file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ') || 'Structured Sartorial Coat',
+          category: 'Outerwear',
+          primaryColor: 'Pitch Black',
+          pattern: 'Solid Matte',
+          material: 'Virgin Wool Twill',
+          confidence: 0.94,
+          previewUrl: base64Str
+        });
+        showToast('Garment features extracted via multi-modal AI vision.', 'success');
+      }, 1200);
+    };
+    reader.readAsDataURL(file);
   };
 
-  const handleWearAction = () => {
-    setWearingConfirmation(true);
-  };
-
-  const handleConfirmWearWithReflection = (noteToSurface: "Returned quietly." | "This stayed.") => {
-    const activeOutfit = state.activeSuggestion;
-    if (!activeOutfit) return;
-
-    const hr = new Date().getHours();
-    let moment = "steady hours";
-    if (hr >= 4 && hr < 12) {
-      moment = "morning";
-    } else if (hr >= 12 && hr < 18) {
-      moment = "steady hours";
-    } else {
-      moment = "quiet hours";
-    }
-
-    if (activeOutfit.items.length >= 2) {
-      registerCombination(activeOutfit.items);
-    }
-
-    // Capture state for undo
-    const itemsPreUpdate = activeOutfit.items.map(item => ({
-      id: item.id,
-      wearCount: item.wearCount || 0,
-      lastWornMoment: item.lastWornMoment || "",
-      privateNote: item.privateNote || ""
-    }));
-    const prevYesterdayIds = typeof localStorage !== 'undefined' ? localStorage.getItem('yesterday_outfit_ids') : null;
-    const prevLast7 = typeof localStorage !== 'undefined' ? localStorage.getItem('last_7_worn_combinations') : null;
-    const prevLast10 = typeof localStorage !== 'undefined' ? localStorage.getItem('last_10_worn_combinations') : null;
-
+  const handleSaveScannedGarment = async () => {
+    if (!scanResult) return;
     try {
-      if (typeof localStorage !== 'undefined') {
-        const itemIds = activeOutfit.items.map(i => i.id);
-        localStorage.setItem('yesterday_outfit_ids', itemIds.join(','));
-
-        // Store last 7 worn combinations (Requirement D)
-        let last7 = JSON.parse(localStorage.getItem('last_7_worn_combinations') || '[]');
-        if (!Array.isArray(last7)) {
-          last7 = [];
-        }
-        last7.push(itemIds);
-        if (last7.length > 7) {
-          last7 = last7.slice(-7);
-        }
-        localStorage.setItem('last_7_worn_combinations', JSON.stringify(last7));
-
-        // Store last 10 worn combinations (Requirement E: Real Repeat Protection)
-        let last10 = JSON.parse(localStorage.getItem('last_10_worn_combinations') || '[]');
-        if (!Array.isArray(last10)) {
-          last10 = [];
-        }
-        last10.push(itemIds);
-        if (last10.length > 10) {
-          last10 = last10.slice(-10);
-        }
-        localStorage.setItem('last_10_worn_combinations', JSON.stringify(last10));
+      if (onAddGarment) {
+        await onAddGarment(
+          scanResult.name,
+          `Analyzed: ${scanResult.material} • ${scanResult.pattern} • ${scanResult.primaryColor}`,
+          scanResult.category,
+          { imageUrl: scanResult.previewUrl }
+        );
       }
-    } catch (e) {}
-
-    triggerQuietPause(() => {
-      setFeedbackNote(noteToSurface);
-      setFeedbackSuccess(true);
-      setWearingConfirmation(false);
-
-      activeOutfit.items.forEach(item => {
-        handleUpdateGarment(item.id, {
-          wearCount: (item.wearCount || 0) + 1,
-          lastWornMoment: moment,
-          privateNote: noteToSurface
-        });
-      });
-
-      if (user) {
-        ProfileService.logFeedback(user.uid, {
-          outfitId: activeOutfit.id,
-          outfitName: activeOutfit.name,
-          action: 'WORN_CONFIRMED',
-          suitabilityScore: activeOutfit.suitabilityScore || 85,
-          moment,
-          reflection: noteToSurface
-        });
-
-        ProfileService.loadProfile(user.uid).then(p => {
-          const updated = { ...p };
-          updated.feedbackCounter.wears += 1;
-          const activeCategories = activeOutfit.items.map(i => i.category);
-          if (activeCategories.includes('Formal') && updated.styleVector[7] < 1.0) updated.styleVector[7] += 0.05;
-          if (activeCategories.includes('Casual') && updated.styleVector[6] < 1.0) updated.styleVector[6] += 0.05;
-          if (activeCategories.includes('Outerwear') && updated.styleVector[3] < 1.0) updated.styleVector[3] += 0.03;
-          ProfileService.saveProfile(user.uid, updated);
-        }).catch(() => {});
-      }
-
-      UnifiedFashionOS.receiveRealityFeedback(
-        activeOutfit.id,
-        activeOutfit.name,
-        'WORN_CONFIRMED',
-        activeOutfit.suitabilityScore,
-        85,
-        100,
-        activeOutfit.vibeTags,
-        moment,
-        noteToSurface
-      );
-
-      // Register undo
-      registerUndo(() => {
-        itemsPreUpdate.forEach(prev => {
-          handleUpdateGarment(prev.id, {
-            wearCount: prev.wearCount,
-            lastWornMoment: prev.lastWornMoment,
-            privateNote: prev.privateNote
-          });
-        });
-        if (typeof localStorage !== 'undefined') {
-          if (prevYesterdayIds === null) {
-            localStorage.removeItem('yesterday_outfit_ids');
-          } else {
-            localStorage.setItem('yesterday_outfit_ids', prevYesterdayIds);
-          }
-          if (prevLast7 === null) {
-            localStorage.removeItem('last_7_worn_combinations');
-          } else {
-            localStorage.setItem('last_7_worn_combinations', prevLast7);
-          }
-          if (prevLast10 === null) {
-            localStorage.removeItem('last_10_worn_combinations');
-          } else {
-            localStorage.setItem('last_10_worn_combinations', prevLast10);
-          }
-        }
-        setFeedbackNote('Returned quietly.');
-        setFeedbackSuccess(false);
-      });
-
-      setTimeout(() => {
-        setFeedbackSuccess(false);
-      }, 3500);
-    });
+      showToast(`Added "${scanResult.name}" to your closet!`, 'success');
+      setScanResult(null);
+    } catch (e) {
+      showToast('Failed to register garment', 'warning');
+    }
   };
 
-  const triggerOutfitCompilation = () => {
-    setIsCompiling(true);
-    triggerQuietPause(() => {
-      UnifiedFashionOS.generateOutfit(activeWardrobeList, 'Today\'s Styled Spread');
-      setIsCompiling(false);
-      setFeedbackNote("Not today.");
-      setFeedbackSuccess(true);
-      setTimeout(() => {
-        setFeedbackSuccess(false);
-      }, 3500);
-    });
-  };
+  // Calculate Aesthetic Combinator Coherence
+  const combinatorScore = useMemo(() => {
+    let base = 75;
+    if (combinatorSlots.top) base += 8;
+    if (combinatorSlots.bottom) base += 7;
+    if (combinatorSlots.outerwear) base += 5;
+    if (combinatorSlots.footwear) base += 4;
+    return Math.min(base, 98);
+  }, [combinatorSlots]);
 
-  const handleRegisterScheduler = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!schedTitle.trim()) return;
-    triggerQuietPause(() => {
-      UnifiedFashionOS.addScheduledEvent(schedTitle, schedTime, schedOccasion);
-      setSchedTitle('');
-    });
-  };
-
-  const getAtmosphere = (count: number) => {
-    if (count < 5) return 'museum';
-    if (count <= 12) return 'archive';
-    return 'library';
-  };
-
-  // 5. PASSAGE OF TIME: Enforce absolute physical layout stability per Rule 3
-  const getTemporalSpacing = () => {
-    return {
-      containerSpace: 'space-y-16 md:space-y-20',
-      itemGap: 'space-y-24 md:space-y-28',
-      padding: 'py-8',
-      editorialSpace: 'space-y-12'
-    };
-  };
-
-  const temporalVals = getTemporalSpacing();
-
-  // 8. END OF DAY: Show quiet closing line based on local time inside spread
-  const EveningClosing = () => {
-    const lines = [
-      "Returned quietly.",
-      "Left in place.",
-      "Enough remained.",
-      "Until later."
-    ];
-    // Rotate based on day of month or hours
-    const index = (new Date().getDate() + new Date().getHours()) % 4;
-    const selectedLine = lines[index];
-    return (
-      <div className="pt-24 pb-12 text-center select-none animate-fade-in">
-        <p className="font-serif italic text-xs text-white/20 tracking-[0.1em] leading-relaxed">
-          —<br />
-          {selectedLine}
-        </p>
-      </div>
-    );
-  };
-
-  // 4. OBJECT DETAIL VIEW (Fulfills Rule 4 perfectly)
-  if (selectedGarment) {
-    const backdropClass = getTemporalThemeBackground();
-    return (
-      <div 
-        onClick={() => {
-          triggerQuietPause(() => {
-            setSelectedGarment(null);
-          });
-        }}
-        className={`fixed inset-0 z-50 ${backdropClass} flex flex-col justify-center items-center p-8 select-none cursor-pointer animate-fade-in`}
-      >
-        <div className="max-w-md w-full space-y-10 text-center">
-          
-          {/* Photograph */}
-          <div className="w-full aspect-[4/5] overflow-hidden bg-black/40">
-            <ImageWithFade 
-              src={selectedGarment.imageUrl || getGarmentImage(selectedGarment.title)} 
-              alt={selectedGarment.title} 
-            />
-          </div>
-
-          {/* Text lines */}
-          <div className="space-y-3">
-            <h2 className="font-serif font-light text-4xl text-white tracking-[-0.03em] leading-tight">
-              {selectedGarment.title}
-            </h2>
-            <p className="font-serif italic text-base text-neutral-400 max-w-xs mx-auto leading-relaxed">
-              {getAtmosphereLine(selectedGarment)}
-            </p>
-
-            {/* Memory of Combinations and Object Relationships (Requirement 4 & 5) */}
-            {(() => {
-              const phrase = getRelatedNearbyPiecePhrase(selectedGarment, activeWardrobeList);
-              if (phrase) {
-                return (
-                  <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-white/40 pt-1">
-                    {phrase}
-                  </p>
-                );
-              }
-              return null;
-            })()}
-
-            {/* Inline Private Note (Requirement 2 & 6) */}
-            <div 
-              onClick={(e) => e.stopPropagation()} 
-              className="pt-4 max-w-xs mx-auto"
-            >
-              <input
-                type="text"
-                placeholder="Write a private line..."
-                value={selectedGarment.privateNote || ""}
-                onChange={(e) => {
-                  handleUpdateGarment(selectedGarment.id, { privateNote: e.target.value });
-                }}
-                className="w-full bg-transparent text-center border-b border-dashed border-white/10 hover:border-white/30 focus:border-white focus:outline-none transition-all py-1 text-xs font-serif italic text-white/70 placeholder-white/20"
-              />
-              
-              {/* Preset Phrase Chips (Requirement 6) */}
-              <div className="flex flex-wrap gap-1.5 justify-center pt-3 selection:bg-transparent">
-                {["Works easily", "Usually reliable", "Feels lighter", "Better folded", "Easy outside"].map(phrase => (
-                  <button
-                    key={phrase}
-                    onClick={() => {
-                      handleUpdateGarment(selectedGarment.id, { privateNote: phrase });
-                    }}
-                    className="text-[8.5px] font-mono text-white/25 hover:text-white/60 hover:bg-white/[0.03] border border-white/[0.04] px-2 py-0.5 transition-all duration-150 cursor-pointer"
-                  >
-                    {phrase}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Works with Field (Requirement C) */}
-            <div 
-              onClick={(e) => e.stopPropagation()} 
-              className="pt-4 max-w-xs mx-auto space-y-1"
-            >
-              <label className="text-[10px] font-mono tracking-[0.2em] text-white/30 uppercase block">
-                Works with
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. white shoes"
-                value={selectedGarment.worksWith || ""}
-                onChange={(e) => {
-                  handleUpdateGarment(selectedGarment.id, { worksWith: e.target.value });
-                }}
-                className="w-full bg-transparent text-center border-b border-dashed border-white/10 hover:border-white/30 focus:border-white focus:outline-none transition-all py-1 text-xs font-serif italic text-white/70 placeholder-white/20"
-                id="garment-works-with-input"
-              />
-            </div>
-
-            {/* Real Closet Care Note Cycling — Tap to cycle option */}
-            <div 
-              id="closet-care-control"
-              onClick={(e) => {
-                e.stopPropagation(); // Avoid closing screen!
-                const careOptions = [
-                  "",
-                  "Washes well.",
-                  "Needs ironing.",
-                  "Feels better folded.",
-                  "Dry before returning."
-                ];
-                const currentIdx = careOptions.indexOf(selectedGarment.careNote || "");
-                const nextIdx = (currentIdx + 1) % careOptions.length;
-                const updatedNote = careOptions[nextIdx];
-                handleUpdateGarment(selectedGarment.id, { careNote: updatedNote });
-              }}
-              className="pt-4 cursor-pointer"
-            >
-              <span className="text-[10px] font-mono tracking-[0.2em] text-white/30 uppercase hover:text-white/70 transition-colors">
-                Care: {selectedGarment.careNote || "[ default ]"}
-              </span>
-            </div>
-
-            {/* Physical Details Location Cycling — Tap to cycle option */}
-            <div 
-              id="closet-location-control"
-              onClick={(e) => {
-                e.stopPropagation(); // Avoid closing screen!
-                const locationOptions = [
-                  "",
-                  "Top shelf",
-                  "Near the door",
-                  "Folded away",
-                  "Easy to reach",
-                  "Hanging on rail"
-                ];
-                const currentIdx = locationOptions.indexOf(selectedGarment.location || "");
-                const nextIdx = (currentIdx + 1) % locationOptions.length;
-                const updatedLocation = locationOptions[nextIdx];
-                handleUpdateGarment(selectedGarment.id, { location: updatedLocation });
-              }}
-              className="pt-2 cursor-pointer"
-            >
-              <span className="text-[10px] font-mono tracking-[0.2em] text-white/30 uppercase hover:text-white/70 transition-colors">
-                Belongs: {selectedGarment.location || "[ default ]"}
-              </span>
-            </div>
-
-            {/* The Archive Mark (Requirement 3: "Placed elsewhere.") */}
-            <div 
-              onClick={(e) => {
-                e.stopPropagation();
-                const isPlacedElsewhere = !selectedGarment.placedElsewhere;
-                handleUpdateGarment(selectedGarment.id, { placedElsewhere: isPlacedElsewhere });
-              }}
-              className="pt-4 cursor-pointer select-none"
-            >
-              <span className="text-[10px] font-mono tracking-[0.2em] text-white/30 uppercase hover:text-white/70 transition-colors">
-                {selectedGarment.placedElsewhere ? "[ Return to shelves ]" : "[ Put away ]"}
-              </span>
-            </div>
-
-            {/* World / Closet Privacy Visibility Control */}
-            <div 
-              onClick={(e) => {
-                e.stopPropagation();
-                const newPrivateState = selectedGarment.isPrivate === false ? true : false;
-                handleUpdateGarment(selectedGarment.id, { isPrivate: newPrivateState, isPublic: !newPrivateState });
-                window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
-                  detail: newPrivateState 
-                    ? '🔒 Item made PRIVATE in My Closet!' 
-                    : '🌐 Item published to PUBLIC World Gallery!'
-                }));
-              }}
-              className="pt-4 cursor-pointer select-none"
-            >
-              <span className={`text-[10px] font-mono tracking-[0.2em] uppercase px-3 py-1 rounded-md border transition-all inline-flex items-center gap-1.5 ${
-                selectedGarment.isPrivate === false 
-                  ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400' 
-                  : 'bg-white/[0.03] border-white/10 text-white/50 hover:text-white'
-              }`}>
-                {selectedGarment.isPrivate === false ? '[ 🌐 Public in World Gallery ]' : '[ 🔒 Private in My Closet ]'}
-              </span>
-            </div>
-
-            {/* Gentle Correction: [ not this together ] (Requirement B) */}
-            {state.activeSuggestion && state.activeSuggestion.items.some(i => i.id === selectedGarment.id) && (
-              <div 
-                onClick={handleNotThisTogether}
-                className="pt-4 cursor-pointer select-none"
-                id="garment-not-this-together-control"
-              >
-                <span className="text-[10px] font-mono tracking-[0.2em] text-white/30 uppercase hover:text-white/70 transition-colors">
-                  [ not this together ]
-                </span>
-              </div>
-            )}
-          </div>
-
-          <div 
-            onClick={(e) => {
-              e.stopPropagation();
-              triggerQuietPause(() => {
-                setSelectedGarment(null);
-                setActiveSubTab('HOME');
-              });
+  // Render Sub-Views
+  const renderCurrentView = () => {
+    switch (activeSubTab) {
+      case 'PRODUCT_AI_CREATIONS':
+        return (
+          <AIEngineStudio 
+            wardrobe={wardrobe}
+            onAddGarment={onAddGarment}
+            onNavigateToTab={(t) => handleNavigate(t as any)}
+          />
+        );
+      case 'PRODUCT_COMMUNITY':
+        return (
+          <CommunityScreen 
+            user={user}
+            userWardrobe={wardrobe}
+            onAddGarment={onAddGarment}
+            onNavigateToTab={(t) => handleNavigate(t as any)}
+          />
+        );
+      case 'PRODUCT_MARKETPLACE':
+        return (
+          <MarketplaceScreen 
+            userWardrobe={wardrobe}
+            onAddGarment={onAddGarment}
+            onSelectProduct={(p) => {
+              setSelectedProduct(p);
+              handleNavigate('PRODUCT_DETAIL');
             }}
-            className="pt-4 cursor-pointer select-none"
-          >
-            <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-white/30 hover:text-white/60 transition-colors">
-              [ return ]
-            </span>
-          </div>
-
-        </div>
-      </div>
-    );
-  }
-
-  // 3. THE PAUSE View (Fulfills Rule 3 perfectly)
-  if (isHoldingStill) {
-    return (
-      <div className="min-h-[480px] flex items-center justify-center select-none py-24">
-        {/* Only stillness, no loader, no text, no animation */}
-      </div>
-    );
-  }
-
-  const handleNavigate = (targetTab: any) => {
-    let resolvedTab = targetTab;
-    if (targetTab === 'OUTFITS' || targetTab === 'OUTFITS_ROOM' || targetTab === 'TRY_ON_STUDIO') {
-      resolvedTab = 'VIRTUAL_TRY';
-    }
-    if (targetTab === 'ADMIN' || targetTab === 'ADMIN_COMMAND') {
-      resolvedTab = 'ADMIN_COMMAND';
-    }
-    // Map legacy names to new architecture-aware names
-    if (resolvedTab === 'HOME') {
-      resolvedTab = 'PRODUCT_HOME';
-    } else if (resolvedTab === 'COMMUNITY_ROOM') {
-      resolvedTab = 'PRODUCT_COMMUNITY';
-    } else if (resolvedTab === 'MARKETPLACE_ROOM') {
-      resolvedTab = 'PRODUCT_MARKETPLACE';
-    } else if (resolvedTab === 'AI_STUDIO') {
-      resolvedTab = 'PRODUCT_AI_CREATIONS';
-    } else if (resolvedTab === 'OUTFIT_GEN') {
-      resolvedTab = 'ECOSYSTEM_GENERATE';
-    } else if (resolvedTab === 'FASHION_INSTRUCTOR') {
-      resolvedTab = 'PRODUCT_COMMUNITY';
-      localStorage.setItem('community_target_tab', 'INTELLIGENT_FASHION_AI');
-      setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('community_check_target'));
-      }, 0);
-    }
-    setActiveSubTab(resolvedTab);
-    localStorage.setItem('last_active_place_subtab', resolvedTab);
-
-    if (resolvedTab === 'ADMIN_COMMAND') {
-      if (window.location.pathname !== '/admin') {
-        window.history.pushState({}, '', '/admin');
-        window.dispatchEvent(new CustomEvent('lookvision_route_change'));
-        window.dispatchEvent(new PopStateEvent('popstate'));
-      }
-    } else {
-      if (window.location.pathname === '/admin') {
-        window.history.pushState({}, '', '/');
-        window.dispatchEvent(new CustomEvent('lookvision_route_change'));
-        window.dispatchEvent(new PopStateEvent('popstate'));
-      }
+            onNavigateToTab={(t) => handleNavigate(t as any)}
+            onOpenSellerDashboard={() => setIsSellerDashboardOpen(true)}
+            user={user}
+          />
+        );
+      case 'PRODUCT_DETAIL':
+        return (
+          <ProductDetailScreen 
+            product={selectedProduct || BOUTIQUE_PRODUCTS[0]}
+            onBack={() => handleNavigate('PRODUCT_MARKETPLACE')}
+            onAddGarment={onAddGarment}
+            onNavigateToTab={(t) => handleNavigate(t as any)}
+            userWardrobe={wardrobe}
+            user={user}
+          />
+        );
+      case 'WARDROBE':
+        return (
+          <WardrobeGrid 
+            items={wardrobe}
+            onDelete={(item) => onDeleteGarment ? onDeleteGarment(item.id) : undefined}
+            onAddTrigger={() => handleNavigate('PRODUCT_HOME')}
+            categories={['Casual', 'Formal', 'Sportswear', 'Outerwear', 'Accessories']}
+          />
+        );
+      case 'VIRTUAL_TRY':
+        return (
+          <VirtualStudioTryOn 
+            wardrobe={wardrobe}
+            onAddGarment={onAddGarment}
+          />
+        );
+      case 'STYLE_STREAM':
+        return (
+          <AIStyleFeed 
+            userWardrobe={wardrobe}
+            onAddGarment={onAddGarment}
+            onNavigateToTab={(t) => handleNavigate(t as any)}
+          />
+        );
+      case 'DISCOVER':
+        return (
+          <DiscoverScreen 
+            userWardrobe={wardrobe} 
+            onNavigateToTab={(t) => handleNavigate(t as any)}
+            onAddGarment={onAddGarment}
+          />
+        );
+      case 'CREATOR_WORKSPACE':
+        return (
+          <CreatorWorkspaceScreen 
+            user={user}
+            userWardrobe={wardrobe}
+            onAddGarment={onAddGarment}
+            onNavigateToTab={(t) => handleNavigate(t as any)}
+          />
+        );
+      case 'PLANNER':
+        return <OutfitPlanner wardrobe={wardrobe} themeObj={LOOK_VISION_THEMES[0]} />;
+      case 'FASHION_INSTRUCTOR':
+        return <FashionInstructorWorkspace />;
+      case 'AI_ASSISTANT':
+        return (
+          <AIAssistantStudio 
+            wardrobe={wardrobe} 
+            onNavigateToTab={(t) => handleNavigate(t as any)} 
+          />
+        );
+      case 'MATURE_FASHION_STUDIO':
+        return <MatureFashionStudio />;
+      case 'SOCIAL_HUB':
+        return <SocialHubView />;
+      case 'SUBSCRIPTION_HUB':
+        return <SubscriptionHubView />;
+      case 'VENDOR_ONBOARDING':
+        return (
+          <VendorOnboarding 
+            onCancel={() => handleNavigate('PRODUCT_MARKETPLACE')}
+            onComplete={(vendorData) => {
+              setIsSellerDashboardOpen(true);
+              handleNavigate('PRODUCT_MARKETPLACE');
+            }}
+          />
+        );
+      case 'SYSTEM_ROOM':
+        return (
+          <SystemSettingsAudit 
+            currentTheme={currentTheme}
+            setCurrentTheme={setCurrentTheme}
+            weatherWeight={weatherWeight}
+            saveWeatherWeight={setWeatherWeight}
+            isResetting={isResetting || false}
+            onReset={onReset}
+            onLoadSamples={onLoadSamples}
+            state={state}
+            triggerQuietPause={(fn) => fn()}
+          />
+        );
+      case 'ADMIN_COMMAND':
+        return <AdminShell onExitAdmin={() => handleNavigate('PRODUCT_HOME')} />;
+      case 'PRODUCT_HOME':
+      default:
+        return renderBentoGridHome();
     }
   };
 
-  const activeSubTabForRendering = activeSubTab;
-
-  const themeObj = LOOK_VISION_THEMES.find(t => t.id === currentTheme) || LOOK_VISION_THEMES[0];
-
-  const renderAppStructure = (isNested: boolean) => {
-    const activeSubTab = activeSubTabForRendering;
-    const setActiveSubTab = (newTab: any) => {
-      handleNavigate(newTab);
-    };
-
-    const navigationItems = [
-      { id: 'HOME', label: 'Home Hub', icon: Home, route: 'PRODUCT_HOME' },
-      { id: 'LOOK_VISION_DASHBOARD', label: 'LOOK VISION Dashboard', icon: Layers, route: 'LOOK_VISION_DASHBOARD', badge: 'v2.4' },
-      { id: 'SUBSCRIPTION', label: 'Monetization & Plans', icon: CreditCard, route: 'SUBSCRIPTION_HUB', badge: 'PRO' },
-      { id: 'SOCIAL_HUB', label: 'Social Graph', icon: Globe, route: 'SOCIAL_HUB', badge: 'NEW' },
-      { id: 'COMMUNITY', label: 'Community', icon: Users, route: 'PRODUCT_COMMUNITY' },
-      { id: 'AI_CREATIONS', label: 'AI Creations', icon: Sparkles, route: 'PRODUCT_AI_CREATIONS' },
-      { id: 'MATURE_STUDIO', label: 'Mature Fashion', icon: Crown, route: 'MATURE_FASHION_STUDIO' },
-      { id: 'MARKETPLACE', label: 'Marketplace', icon: ShoppingBag, route: 'PRODUCT_MARKETPLACE' },
-      { id: 'PLANNER', label: 'Outfit Planner', icon: Calendar, route: 'PLANNER' },
-      { id: 'AUTHENTICATION', label: user && !user.isAnonymous && !user.uid.startsWith('guest-') ? 'Sign Out' : 'Sign In', icon: LogOut, action: 'AUTHENTICATION' },
-      { id: 'AI_MEMORY', label: 'AI Memory', icon: Cpu, route: 'DASHBOARD' },
-      { id: 'NOTIFICATIONS', label: 'Notifications', icon: Bell, action: 'NOTIFICATIONS', badge: '8' },
-      { id: 'SEARCH', label: 'Focus Search', icon: Search, action: 'SEARCH' },
-      { id: 'AI_ASSISTANT', label: 'ARIA Intelligence', icon: Sparkles, route: 'AI_ASSISTANT', badge: 'ARIA' },
-      { id: 'ADMIN_COMMAND', label: 'Admin Command', icon: ShieldCheck, action: 'ADMIN_COMMAND', badge: 'RBAC' },
-      { id: 'SETTINGS', label: 'Settings', icon: Settings, route: 'SYSTEM_ROOM' }
-    ];
-
+  // Main Bento Grid View for PRODUCT_HOME
+  const renderBentoGridHome = () => {
     return (
-      <div 
-        className={`${isNested ? 'w-full h-[710px] rounded-2xl border border-white/5 shadow-2xl overflow-hidden' : 'h-screen w-screen overflow-hidden'} ${themeObj.bg} ${themeObj.text} flex flex-row font-sans antialiased relative`} 
-        id={isNested ? undefined : "editorial-style-hub-root"}
-      >
-        
-        {/* A. LEFT NAVIGATION SIDEBAR (Fluid, proportional, continuous across all device sizes) */}
-        <aside className={`w-14 sm:w-16 md:w-56 lg:w-64 shrink-0 p-2 sm:p-3 md:p-4 flex flex-col justify-between select-none h-full z-40 ${themeObj.sidebarBg} border-r border-white/5 transition-all duration-300`}>
-          <div className="space-y-5 overflow-y-auto no-scrollbar flex-1 pb-4 pr-0 md:pr-1">
-            
-            {/* AI Fashion Market / LookVision Logo */}
-            <div className="flex items-center justify-center md:justify-start gap-3 md:pl-3 py-2 mb-4">
-              <Sparkle className="w-6 h-6 text-violet-400 fill-violet-400 shrink-0 filter drop-shadow-[0_0_8px_rgba(168,85,247,0.85)] animate-pulse-slow" />
-              <div className="hidden md:flex flex-col">
-                <span className="text-sm font-mono tracking-[0.15em] uppercase text-white font-bold leading-none">AI Fashion Market</span>
-                <span className="text-[9px] font-mono tracking-widest text-violet-400/60 uppercase mt-0.5">LOOK VISION OS v2.4</span>
+      <div className="space-y-6 animate-fade-in pb-16">
+        {/* Top Operational Bar */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-2xl bg-[#07070c]/60 border border-white/5 backdrop-blur-xl">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+              <CloudSun className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-mono font-medium text-white">Paris Atelier</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-[10px] font-mono text-white/50">18°C Mild Overcast</span>
+              </div>
+              <p className="text-[11px] text-zinc-400">Atmospheric humidity 62% • Structured mid-weight drape optimal</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            <button
+              onClick={() => setIsFocusSearchOpen(true)}
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white/[0.03] border border-white/5 text-xs text-zinc-400 hover:text-white hover:border-white/10 transition-all cursor-pointer"
+            >
+              <Search className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Search wardrobe, looks & boutiques...</span>
+              <kbd className="text-[10px] font-mono bg-white/5 px-1.5 py-0.5 rounded text-zinc-500">⌘K</kbd>
+            </button>
+
+            <button
+              onClick={() => setIsARIAPanelOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-indigo-500/20 to-purple-600/20 border border-indigo-500/30 text-xs font-medium text-indigo-200 hover:bg-indigo-500/30 transition-all cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+              <span>ARIA Live</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Bento Grid Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          
+          {/* Card 1: User Sartorial DNA & Maturity Index (4 Cols) */}
+          <div className="lg:col-span-4 rounded-2xl bg-[#07070c]/80 border border-white/5 p-6 backdrop-blur-xl flex flex-col justify-between relative overflow-hidden group hover:border-violet-500/20 transition-all duration-300">
+            <div className="absolute top-0 right-0 w-48 h-48 bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-transparent rounded-full blur-3xl pointer-events-none" />
+
+            <div className="space-y-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-600 p-0.5 shadow-[0_0_20px_rgba(99,102,241,0.3)]">
+                    <div className="w-full h-full rounded-[14px] bg-[#07070c] flex items-center justify-center overflow-hidden">
+                      {user?.photoURL ? (
+                        <img src={user.photoURL} alt="User avatar" className="w-full h-full object-cover" />
+                      ) : (
+                        <User className="w-6 h-6 text-indigo-300" />
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-white">{user?.displayName || 'Haute Stylist'}</h3>
+                    <span className="text-[10px] font-mono tracking-wider uppercase text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-full border border-indigo-500/20">
+                      Tier 1 • Master Curateur
+                    </span>
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <span className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-300">89%</span>
+                  <span className="block text-[9px] font-mono uppercase tracking-widest text-zinc-500">Maturity</span>
+                </div>
+              </div>
+
+              {/* Progress Gauge */}
+              <div className="space-y-1.5">
+                <div className="flex justify-between text-[11px]">
+                  <span className="text-zinc-400">Sartorial Vector Calibration</span>
+                  <span className="text-indigo-300 font-mono">89 / 100</span>
+                </div>
+                <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full w-[89%] transition-all duration-1000" />
+                </div>
+              </div>
+
+              {/* Vector Attributes */}
+              <div className="space-y-2.5 pt-2 border-t border-white/5">
+                <div className="flex justify-between text-xs">
+                  <span className="text-zinc-500">Dominant Archetype</span>
+                  <span className="text-zinc-200 font-medium">Minimalist Haute Couture</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-zinc-500">Color Palette Resonance</span>
+                  <span className="text-zinc-200 font-medium">Monochrome Charcoal & Obsidian</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-zinc-500">Silhouettes</span>
+                  <span className="text-zinc-200 font-medium">Architectural Column Draping</span>
+                </div>
+              </div>
+
+              {/* Attribute Metrics */}
+              <div className="grid grid-cols-3 gap-2 pt-2">
+                <div className="p-2.5 rounded-xl bg-white/[0.02] border border-white/5 text-center">
+                  <span className="block text-xs font-mono font-bold text-white">88%</span>
+                  <span className="text-[9px] font-mono text-zinc-500 uppercase">Creativity</span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-white/[0.02] border border-white/5 text-center">
+                  <span className="block text-xs font-mono font-bold text-emerald-400">94%</span>
+                  <span className="text-[9px] font-mono text-zinc-500 uppercase">Luxury</span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-white/[0.02] border border-white/5 text-center">
+                  <span className="block text-xs font-mono font-bold text-indigo-400">96%</span>
+                  <span className="text-[9px] font-mono text-zinc-500 uppercase">Coherence</span>
+                </div>
               </div>
             </div>
 
-            {/* Navigation options */}
-            <div className="space-y-1 md:space-y-0.5" role="tablist" aria-label="Sidebar Navigation">
-              {navigationItems.map((tab) => {
-                const Icon = tab.icon;
-                
-                // Determine active state selection matching look vision layout
-                let isSelected = false;
-                if (tab.id === 'HOME' && (activeSubTabForRendering === 'PRODUCT_HOME' || activeSubTabForRendering === 'HOME')) {
-                  isSelected = true;
-                } else if (tab.id === 'SUBSCRIPTION' && activeSubTabForRendering === 'SUBSCRIPTION_HUB') {
-                  isSelected = true;
-                } else if (tab.id === 'SOCIAL_HUB' && activeSubTabForRendering === 'SOCIAL_HUB') {
-                  isSelected = true;
-                } else if (tab.id === 'COMMUNITY' && (activeSubTabForRendering === 'PRODUCT_COMMUNITY' || activeSubTabForRendering === 'COMMUNITY_ROOM')) {
-                  isSelected = true;
-                } else if (tab.id === 'AI_CREATIONS' && (activeSubTabForRendering === 'PRODUCT_AI_CREATIONS' || activeSubTabForRendering === 'AI_STUDIO' || activeSubTabForRendering === 'ECOSYSTEM_CREATE')) {
-                  isSelected = true;
-                } else if (tab.id === 'MATURE_STUDIO' && activeSubTabForRendering === 'MATURE_FASHION_STUDIO') {
-                  isSelected = true;
-                } else if (tab.id === 'MARKETPLACE' && (activeSubTabForRendering === 'PRODUCT_MARKETPLACE' || activeSubTabForRendering === 'MARKETPLACE_ROOM')) {
-                  isSelected = true;
-                } else if (tab.id === 'PROFILE' && activeSubTabForRendering === 'PROFILE') {
-                  isSelected = true;
-                } else if (tab.id === 'PLANNER' && activeSubTabForRendering === 'PLANNER') {
-                  isSelected = true;
-                } else if (tab.id === 'AI_MEMORY' && activeSubTabForRendering === 'DASHBOARD') {
-                  isSelected = true;
-                } else if (tab.id === 'NOTIFICATIONS' && isNotificationsOpen) {
-                  isSelected = true;
-                } else if (tab.id === 'SETTINGS' && activeSubTabForRendering === 'SYSTEM_ROOM') {
-                  isSelected = true;
-                } else if (tab.id === 'FASHION_INSTRUCTOR' && activeSubTabForRendering === 'FASHION_INSTRUCTOR') {
-                  isSelected = true;
-                } else if (tab.id === 'ADMIN_COMMAND' && activeSubTabForRendering === 'ADMIN_COMMAND') {
-                  isSelected = true;
-                }
+            <button
+              onClick={() => handleNavigate('AI_ASSISTANT')}
+              className="mt-6 w-full py-2.5 px-4 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-xs font-medium text-white flex items-center justify-center gap-2 transition-all cursor-pointer"
+            >
+              <Cpu className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Calibrate Style Passport</span>
+              <ChevronRight className="w-3.5 h-3.5 text-zinc-500" />
+            </button>
+          </div>
 
-                return (
+          {/* Card 2: Interactive Curation Board (8 Cols) */}
+          <div className="lg:col-span-8 rounded-2xl bg-[#07070c]/80 border border-white/5 p-6 backdrop-blur-xl flex flex-col justify-between hover:border-violet-500/20 transition-all duration-300">
+            <div className="space-y-5">
+              {/* Header with Switcher Tabs */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/5 pb-4">
+                <div>
+                  <h2 className="text-base font-semibold text-white flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-indigo-400" />
+                    <span>Curation Intelligence Board</span>
+                  </h2>
+                  <p className="text-xs text-zinc-400">Synchronized daily lookbook generation and boutique marketplace integration</p>
+                </div>
+
+                <div className="flex items-center p-1 rounded-xl bg-white/[0.03] border border-white/5 self-start">
                   <button
-                    key={tab.id}
-                    id={`app-${tab.id.toLowerCase().replace('_', '-')}`}
-                    role="tab"
-                    title={tab.label}
-                    aria-selected={isSelected}
-                    onClick={() => {
-                      triggerQuietPause(() => {
-                        if (tab.action === 'NOTIFICATIONS') {
-                          setIsNotificationsOpen(!isNotificationsOpen);
-                        } else if (tab.action === 'SEARCH') {
-                          setIsFocusSearchOpen(true);
-                          window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: '🔍 Quantum Focus Search opened (Cmd+K)' }));
-                        } else if (tab.action === 'AI_ASSISTANT') {
-                          window.dispatchEvent(new CustomEvent('lookvision_open_ai_chat'));
-                        } else if (tab.action === 'ADMIN_COMMAND') {
-                          handleNavigate('ADMIN_COMMAND');
-                        } else if (tab.action === 'AUTHENTICATION') {
-                          if (onLogout) onLogout();
-                        } else if (tab.route) {
-                          handleNavigate(tab.route as any);
-                        } else {
-                          window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: `${tab.label} is loaded.` }));
-                        }
-                      });
-                    }}
-                    className={`w-full px-2 md:px-3 py-2.5 rounded-xl flex items-center justify-center md:justify-between transition-all group cursor-pointer text-[11.5px] focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50 hover:translate-x-0.5 duration-200 ${
-                      isSelected 
-                        ? 'bg-[#181135] text-[#b6a1ff] shadow-md font-medium border border-[#2b1c63]' 
-                        : 'text-white/55 hover:text-white hover:bg-white/[0.02]'
+                    onClick={() => setCurationBoardTab('TODAY_CURATION')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
+                      curationBoardTab === 'TODAY_CURATION' 
+                        ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-[0_0_15px_rgba(99,102,241,0.3)]' 
+                        : 'text-zinc-400 hover:text-white'
                     }`}
                   >
-                    <div className="flex items-center gap-3">
-                      <Icon className={`w-5 h-5 md:w-4 md:h-4 shrink-0 transition-transform group-hover:scale-110 duration-200 ${
-                        isSelected ? 'text-violet-400' : 'text-white/30 group-hover:text-white/80'
-                      }`} />
-                      <span className="hidden md:inline tracking-wide font-sans">{tab.label}</span>
-                    </div>
-
-                    {tab.badge && (
-                      <span className={`hidden md:flex items-center justify-center font-bold shrink-0 transition-transform group-hover:scale-105 duration-200 ${
-                        tab.badge === 'NEW' 
-                          ? 'px-1.5 py-0.5 text-[8px] bg-violet-600 text-white rounded font-mono tracking-wider' 
-                          : 'w-4 h-4 text-[9px] bg-violet-600 text-white rounded-full font-sans'
-                      }`}>
-                        {tab.badge}
-                      </span>
-                    )}
+                    <Shirt className="w-3.5 h-3.5" />
+                    <span>Today's Outfit</span>
                   </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Upgrade & Profile Section */}
-          <div className="pt-4 border-t border-white/5 space-y-4">
-            
-            {/* Upgrade to Pro Card */}
-            <div className="hidden md:block p-4 rounded-2xl bg-[#0e0c1f] border border-violet-500/15 space-y-3 relative overflow-hidden text-left shadow-lg shadow-violet-950/20">
-              <div className="absolute -right-6 -top-6 w-16 h-16 bg-violet-500/10 rounded-full blur-xl pointer-events-none"></div>
-              <div className="flex items-center gap-2">
-                <Crown className="w-4 h-4 text-violet-400" />
-                <strong className="text-xs font-bold text-white tracking-wide font-sans">Upgrade to Pro</strong>
-              </div>
-              
-              <p className="text-[10px] text-white/50 leading-relaxed font-sans font-light">
-                Unlock unlimited generations, premium styles, and more.
-              </p>
-              
-              <button 
-                onClick={() => {
-                  window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: 'Thank you for upgrading! You now have lifetime access.' }));
-                }}
-                className="w-full bg-violet-600 hover:bg-violet-500 text-white rounded-xl py-2 font-sans font-semibold text-[10px] cursor-pointer transition-all flex items-center justify-center gap-1 shadow-md shadow-violet-600/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
-              >
-                <span>Upgrade Now</span>
-              </button>
-            </div>
-
-            {/* Profile Identity Card */}
-            <div className="relative">
-              <AnimatePresence>
-                {showProfileMenu && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                    className="absolute bottom-full left-0 right-0 mb-2 bg-[#090911] border border-white/10 rounded-xl p-2.5 shadow-[0_10px_30px_rgba(0,0,0,0.8)] z-50 space-y-1 min-w-[180px]"
+                  <button
+                    onClick={() => setCurationBoardTab('MARKETPLACE')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
+                      curationBoardTab === 'MARKETPLACE' 
+                        ? 'bg-emerald-500 text-black font-semibold shadow-[0_0_15px_rgba(34,197,94,0.3)]' 
+                        : 'text-zinc-400 hover:text-white'
+                    }`}
                   >
-                    <div className="px-2 py-1 border-b border-white/5 pb-1.5 mb-1.5 flex justify-between items-center">
-                      <span className="text-[8px] font-mono text-zinc-400 uppercase tracking-widest block">Sartorial Core</span>
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                    </div>
-                    
-                    <button
-                      onClick={() => {
-                        setActiveSubTab('PROFILE');
-                        localStorage.setItem('last_active_place_subtab', 'PROFILE');
-                        setShowProfileMenu(false);
-                        window.dispatchEvent(new CustomEvent('lookvision_show_toast', { 
-                          detail: '👤 Profile Management System Fully Loaded' 
-                        }));
-                      }}
-                      className="w-full flex items-center gap-2 px-2 py-2 text-left text-xs font-mono uppercase tracking-wider text-zinc-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
-                    >
-                      <User className="w-3.5 h-3.5 text-violet-400" />
-                      <span>Profile Management</span>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setActiveSubTab('PROFILE');
-                        localStorage.setItem('last_active_place_subtab', 'PROFILE');
-                        setShowProfileMenu(false);
-                        window.dispatchEvent(new CustomEvent('lookvision_show_toast', { 
-                          detail: 'Passport DNA & Measurements Calibrated' 
-                        }));
-                      }}
-                      className="w-full flex items-center gap-2 px-2 py-2 text-left text-xs font-mono uppercase tracking-wider text-zinc-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
-                    >
-                      <Fingerprint className="w-3.5 h-3.5 text-emerald-400" />
-                      <span>Style Passport</span>
-                    </button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              <div 
-                onClick={() => {
-                  setActiveSubTab('PROFILE');
-                  localStorage.setItem('last_active_place_subtab', 'PROFILE');
-                }}
-                className="flex items-center justify-center md:justify-between p-1.5 md:p-2.5 rounded-xl bg-white/[0.01] hover:bg-white/[0.04] transition-all border border-white/5 group cursor-pointer"
-              >
-                <img 
-                  src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&auto=format&fit=crop" 
-                  alt="Sarah Khan"
-                  className="w-8 h-8 md:w-9 md:h-9 rounded-full object-cover border border-white/10 shrink-0"
-                />
-                <div className="hidden md:block text-left flex-1 ml-3">
-                  <div className="flex items-center gap-1">
-                    <p className="text-[11px] font-semibold text-white leading-none">Sarah Khan</p>
-                    <div className="w-3 h-3 rounded-full bg-blue-500 flex items-center justify-center shrink-0">
-                      <Check className="w-2.5 h-2.5 text-white stroke-[3.5]" />
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1 mt-1">
-                    <span className="w-1 h-1 rounded-full bg-violet-400"></span>
-                    <span className="text-[8px] font-mono text-violet-400 uppercase tracking-widest leading-none">Premium</span>
-                  </div>
+                    <ShoppingBag className="w-3.5 h-3.5" />
+                    <span>Marketplace Highlights</span>
+                  </button>
                 </div>
-                
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowProfileMenu(!showProfileMenu);
-                  }}
-                  className="hidden md:block p-1.5 transition-colors cursor-pointer rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 text-white/30 hover:text-white"
-                >
-                  <MoreVertical className="w-4 h-4" />
-                </button>
               </div>
-            </div>
-          </div>
-        </aside>
 
-        {/* RESPONSIVE MOBILE DRAWER SIDEBAR */}
-        <AnimatePresence>
-          {isMobileSidebarOpen && (
-            <div className="fixed inset-0 z-50 lg:hidden flex">
-              {/* Backdrop */}
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setIsMobileSidebarOpen(false)}
-                className="fixed inset-0 bg-black/60 backdrop-blur-xs"
-              />
-              
-              {/* Sidebar Content */}
-              <motion.div 
-                initial={{ x: '-100%' }}
-                animate={{ x: 0 }}
-                exit={{ x: '-100%' }}
-                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                className={`relative w-64 max-w-[85vw] h-full flex flex-col justify-between p-4 z-50 ${themeObj.sidebarBg}`}
-              >
-                {/* Close Button */}
-                <button 
-                  onClick={() => setIsMobileSidebarOpen(false)}
-                  className="absolute top-4 right-4 p-1.5 rounded-lg bg-white/5 border border-white/10 text-white/60 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
-                  aria-label="Close menu"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-
-                <div className="space-y-5 overflow-y-auto no-scrollbar flex-1 pb-4">
-                  {/* Logo */}
-                  <div className="flex items-center gap-3 pl-3 py-2 mb-4">
-                    <Sparkle className="w-6 h-6 text-violet-400 fill-violet-400 filter drop-shadow-[0_0_8px_rgba(168,85,247,0.85)] animate-pulse-slow" />
-                    <div className="flex flex-col">
-                      <span className="text-sm font-mono tracking-[0.25em] uppercase text-white font-bold leading-none">AIStyleHub</span>
-                      <span className="text-[9px] font-mono tracking-widest text-violet-400/60 uppercase mt-0.5">v2.4-telemetry</span>
+              {/* Tab 1: Today's Outfit Curation (Indigo accents) */}
+              {curationBoardTab === 'TODAY_CURATION' && (
+                <div className="space-y-4 animate-fade-in">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Hero Garment */}
+                    <div className="md:col-span-1 rounded-xl aspect-[3/4] overflow-hidden bg-zinc-900/60 border border-white/5 relative group">
+                      <ImageWithFade 
+                        src={activeOutfitSuggestion.items[0]?.imageUrl || getGarmentImage(activeOutfitSuggestion.items[0]?.title || 'Obsidian Wool Coat')} 
+                        alt="Hero look" 
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-3">
+                        <span className="text-[10px] font-mono uppercase tracking-widest text-indigo-400">Prime Piece</span>
+                        <h4 className="text-xs font-medium text-white truncate">{activeOutfitSuggestion.items[0]?.title || 'Obsidian Tailored Overcoat'}</h4>
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Navigation Links */}
-                  <div className="space-y-0.5" role="tablist" aria-label="Mobile Navigation">
-                    {navigationItems.map((tab) => {
-                      const Icon = tab.icon;
-                      
-                      let isSelected = false;
-                      if (tab.id === 'HOME' && (activeSubTabForRendering === 'PRODUCT_HOME' || activeSubTabForRendering === 'HOME')) {
-                        isSelected = true;
-                      } else if (tab.id === 'PROFILE' && activeSubTabForRendering === 'PROFILE') {
-                        isSelected = true;
-                      } else if (tab.id === 'AI_MEMORY' && activeSubTabForRendering === 'DASHBOARD') {
-                        isSelected = true;
-                      } else if (tab.id === 'NOTIFICATIONS' && isNotificationsOpen) {
-                        isSelected = true;
-                      } else if (tab.id === 'SETTINGS' && activeSubTabForRendering === 'SYSTEM_ROOM') {
-                        isSelected = true;
-                      }
+                    {/* Outfit Breakdown & Reasoning */}
+                    <div className="md:col-span-2 flex flex-col justify-between space-y-4">
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-sm font-semibold text-white">
+                            {activeOutfitSuggestion.name}
+                          </h3>
+                          <span className="text-xs font-mono font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-full border border-indigo-500/20">
+                            {activeOutfitSuggestion.score}% Aesthetic Match
+                          </span>
+                        </div>
 
-                      return (
-                        <button
-                          key={tab.id}
-                          id={`mob-app-${tab.id.toLowerCase().replace('_', '-')}`}
-                          role="tab"
-                          aria-selected={isSelected}
-                          onClick={() => {
-                            setIsMobileSidebarOpen(false); // Close sidebar drawer on click
-                            triggerQuietPause(() => {
-                              if (tab.action === 'NOTIFICATIONS') {
-                                setIsNotificationsOpen(!isNotificationsOpen);
-                              } else if (tab.action === 'SEARCH') {
-                                setIsFocusSearchOpen(true);
-                                window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: '🔍 Quantum Focus Search opened (Cmd+K)' }));
-                              } else if (tab.action === 'AI_ASSISTANT') {
-                                window.dispatchEvent(new CustomEvent('lookvision_open_ai_chat'));
-                              } else if (tab.action === 'AUTHENTICATION') {
-                                if (onLogout) onLogout();
-                              } else if (tab.route) {
-                                handleNavigate(tab.route as any);
-                              } else {
-                                window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: `${tab.label} is loaded.` }));
-                              }
-                            });
-                          }}
-                          className={`w-full px-3 py-2.5 rounded-xl flex items-center justify-between transition-all group cursor-pointer text-[11.5px] focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50 hover:translate-x-0.5 duration-200 ${
-                            isSelected 
-                              ? 'bg-[#181135] text-[#b6a1ff] shadow-md font-medium border border-[#2b1c63]' 
-                              : 'text-white/55 hover:text-white hover:bg-white/[0.02]'
-                          }`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <Icon className={`w-4 h-4 shrink-0 transition-transform group-hover:scale-110 duration-200 ${
-                              isSelected ? 'text-violet-400' : 'text-white/30 group-hover:text-white/80'
-                            }`} />
-                            <span className="tracking-wide font-sans">{tab.label}</span>
-                          </div>
+                        <p className="text-xs text-zinc-300 leading-relaxed font-serif italic bg-white/[0.02] p-3 rounded-xl border border-white/5">
+                          "{activeOutfitSuggestion.reasoning}"
+                        </p>
 
-                          {tab.badge && (
-                            <span className={`flex items-center justify-center font-bold shrink-0 transition-transform group-hover:scale-105 duration-200 ${
-                              tab.badge === 'NEW' 
-                                ? 'px-1.5 py-0.5 text-[8px] bg-violet-600 text-white rounded font-mono tracking-wider' 
-                                : 'w-4 h-4 text-[9px] bg-violet-600 text-white rounded-full font-sans'
-                            }`}>
-                              {tab.badge}
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Upgrade & Profile Section */}
-                <div className="pt-4 border-t border-white/5 space-y-4">
-                  {/* Upgrade to Pro Card */}
-                  <div className="p-4 rounded-2xl bg-[#0e0c1f] border border-violet-500/15 space-y-3 relative overflow-hidden text-left shadow-lg shadow-violet-950/20">
-                    <div className="absolute -right-6 -top-6 w-16 h-16 bg-violet-500/10 rounded-full blur-xl pointer-events-none"></div>
-                    <div className="flex items-center gap-2">
-                      <Crown className="w-4 h-4 text-violet-400" />
-                      <strong className="text-xs font-bold text-white tracking-wide font-sans">Upgrade to Pro</strong>
-                    </div>
-                    
-                    <p className="text-[10px] text-white/50 leading-relaxed font-sans font-light">
-                      Unlock unlimited generations, premium styles, and more.
-                    </p>
-                    
-                    <button 
-                      onClick={() => {
-                        setIsMobileSidebarOpen(false);
-                        window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: 'Thank you for upgrading! You now have lifetime access.' }));
-                      }}
-                      className="w-full bg-violet-600 hover:bg-violet-500 text-white rounded-xl py-2 font-sans font-semibold text-[10px] cursor-pointer transition-all flex items-center justify-center gap-1 shadow-md shadow-violet-600/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
-                    >
-                      <span>Upgrade Now</span>
-                    </button>
-                  </div>
-
-                  {/* Profile Identity Card */}
-                  <div className="relative w-full">
-                    <AnimatePresence>
-                      {showMobileProfileMenu && (
-                        <motion.div 
-                          initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                          animate={{ opacity: 1, y: 0, scale: 1 }}
-                          exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                          className="absolute bottom-full left-0 right-0 mb-2 bg-[#090911] border border-white/10 rounded-xl p-2.5 shadow-[0_10px_30px_rgba(0,0,0,0.8)] z-50 space-y-1"
-                        >
-                          <div className="px-2 py-1 border-b border-white/5 pb-1.5 mb-1.5 flex justify-between items-center">
-                            <span className="text-[8px] font-mono text-zinc-400 uppercase tracking-widest block">Sartorial Core</span>
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                          </div>
-                          
-                          <button
-                            onClick={() => {
-                              setActiveSubTab('PROFILE');
-                              localStorage.setItem('last_active_place_subtab', 'PROFILE');
-                              setShowMobileProfileMenu(false);
-                              setIsMobileSidebarOpen(false);
-                              window.dispatchEvent(new CustomEvent('lookvision_show_toast', { 
-                                detail: '👤 Profile Management System Fully Loaded' 
-                              }));
-                            }}
-                            className="w-full flex items-center gap-2 px-2 py-2 text-left text-xs font-mono uppercase tracking-wider text-zinc-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
-                          >
-                            <User className="w-3.5 h-3.5 text-violet-400" />
-                            <span>Profile Management</span>
-                          </button>
-
-                          <button
-                            onClick={() => {
-                              setActiveSubTab('PROFILE');
-                              localStorage.setItem('last_active_place_subtab', 'PROFILE');
-                              setShowMobileProfileMenu(false);
-                              setIsMobileSidebarOpen(false);
-                              window.dispatchEvent(new CustomEvent('lookvision_show_toast', { 
-                                detail: '🛂 Style Passport DNA & Measurements Calibrated' 
-                              }));
-                            }}
-                            className="w-full flex items-center gap-2 px-2 py-2 text-left text-xs font-mono uppercase tracking-wider text-zinc-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
-                          >
-                            <Fingerprint className="w-3.5 h-3.5 text-emerald-400" />
-                            <span>Style Passport</span>
-                          </button>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-
-                    <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.01] hover:bg-white/[0.04] transition-all border border-white/5 group w-full">
-                      <div 
-                        onClick={() => {
-                          setActiveSubTab('PROFILE');
-                          localStorage.setItem('last_active_place_subtab', 'PROFILE');
-                          setIsMobileSidebarOpen(false);
-                        }}
-                        className="flex items-center gap-3 cursor-pointer flex-1"
-                      >
-                        <img 
-                          src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&auto=format&fit=crop" 
-                          alt="Sarah Khan"
-                          className="w-9 h-9 rounded-full object-cover border border-white/10"
-                        />
-                        <div className="text-left">
-                          <div className="flex items-center gap-1">
-                            <p className="text-[11px] font-semibold text-white leading-none">Sarah Khan</p>
-                            <div className="w-3 h-3 rounded-full bg-blue-500 flex items-center justify-center shrink-0">
-                              <Check className="w-2.5 h-2.5 text-white stroke-[3.5]" />
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-1 mt-1">
-                            <span className="w-1 h-1 rounded-full bg-violet-400"></span>
-                            <span className="text-[8px] font-mono text-violet-400 uppercase tracking-widest leading-none">Premium</span>
+                        {/* Garment pills */}
+                        <div className="space-y-1.5">
+                          <span className="text-[10px] font-mono uppercase text-zinc-500 tracking-wider">Garment Layering</span>
+                          <div className="flex flex-wrap gap-2">
+                            {activeOutfitSuggestion.items.map((item, idx) => (
+                              <div key={idx} className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-white/[0.03] border border-white/5 text-xs text-zinc-300">
+                                <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
+                                <span>{item.title}</span>
+                              </div>
+                            ))}
                           </div>
                         </div>
                       </div>
-                      
-                      <button
-                        onClick={() => setShowMobileProfileMenu(!showMobileProfileMenu)}
-                        className={`p-1.5 transition-colors cursor-pointer rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 ${
-                          showMobileProfileMenu ? 'text-violet-400 bg-white/5' : 'text-white/30 hover:text-white'
-                        }`}
-                      >
-                        <MoreVertical className="w-4 h-4" />
-                      </button>
+
+                      <div className="flex items-center gap-3 pt-3">
+                        <button
+                          onClick={handleRegenerateOutfit}
+                          disabled={isCompilingOutfit}
+                          className="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer shadow-[0_0_20px_rgba(99,102,241,0.25)] disabled:opacity-50"
+                        >
+                          <RefreshCw className={`w-3.5 h-3.5 ${isCompilingOutfit ? 'animate-spin' : ''}`} />
+                          <span>{isCompilingOutfit ? 'Synthesizing...' : 'Regenerate Ensemble'}</span>
+                        </button>
+                        <button
+                          onClick={() => handleNavigate('VIRTUAL_TRY')}
+                          className="py-2.5 px-4 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 text-white text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer"
+                        >
+                          <Eye className="w-3.5 h-3.5 text-indigo-300" />
+                          <span>3D Try-On</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
+                </div>
+              )}
+
+              {/* Tab 2: Marketplace Highlights (Emerald accents) */}
+              {curationBoardTab === 'MARKETPLACE' && (
+                <div className="space-y-4 animate-fade-in">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {BOUTIQUE_PRODUCTS.slice(0, 3).map((item) => (
+                      <div 
+                        key={item.id}
+                        onClick={() => {
+                          setSelectedProduct(item);
+                          handleNavigate('PRODUCT_DETAIL');
+                        }}
+                        className="rounded-xl bg-white/[0.02] border border-white/5 hover:border-emerald-500/30 p-3 flex flex-col justify-between transition-all duration-300 cursor-pointer group hover:scale-[1.01]"
+                      >
+                        <div className="aspect-[4/5] rounded-lg overflow-hidden bg-zinc-900/60 mb-2 relative">
+                          <ImageWithFade src={item.imageUrl} alt={item.title} />
+                          <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-black/70 backdrop-blur-md border border-white/10 text-[10px] font-mono text-white">
+                            {item.availability}
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <div className="flex justify-between items-start">
+                            <h4 className="text-xs font-medium text-white truncate flex-1 group-hover:text-emerald-400 transition-colors">
+                              {item.title}
+                            </h4>
+                          </div>
+                          <p className="text-[10px] text-zinc-400 truncate">{item.brand}</p>
+                          <div className="flex justify-between items-center pt-1 border-t border-white/5">
+                            <span className="text-xs font-mono font-bold text-emerald-400">
+                              ${item.price}
+                            </span>
+                            <span className="text-[9px] font-mono text-zinc-500">
+                              {item.category}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={() => handleNavigate('PRODUCT_MARKETPLACE')}
+                    className="w-full py-2.5 px-4 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer"
+                  >
+                    <ShoppingBag className="w-3.5 h-3.5" />
+                    <span>Explore Full Marketplace Boutique</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Card 3: Virtual Dressing Canvas (Interactive Combinator) (8 Cols) */}
+          <div className="lg:col-span-8 rounded-2xl bg-[#07070c]/80 border border-white/5 p-6 backdrop-blur-xl flex flex-col justify-between hover:border-violet-500/20 transition-all duration-300">
+            <div className="space-y-5">
+              <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                <div>
+                  <h3 className="text-base font-semibold text-white flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-indigo-400" />
+                    <span>Virtual Dressing Canvas & Combinator</span>
+                  </h3>
+                  <p className="text-xs text-zinc-400">Layer garments dynamically to evaluate harmony, drape, and silhouette cohesion</p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono text-zinc-400">Coherence:</span>
+                  <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                    {combinatorScore}%
+                  </span>
+                </div>
+              </div>
+
+              {/* Combinator Slots */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {/* Outerwear Slot */}
+                <div 
+                  onClick={() => setActiveSlotPicker('outerwear')}
+                  className="p-3 rounded-xl bg-white/[0.02] border border-white/5 hover:border-indigo-500/30 transition-all cursor-pointer flex flex-col items-center text-center space-y-2 group"
+                >
+                  <span className="text-[10px] font-mono uppercase text-zinc-500">Outerwear</span>
+                  <div className="w-16 h-20 rounded-lg overflow-hidden bg-zinc-900/60 border border-white/5 flex items-center justify-center">
+                    {combinatorSlots.outerwear ? (
+                      <ImageWithFade src={combinatorSlots.outerwear.imageUrl || getGarmentImage(combinatorSlots.outerwear.title)} alt="Outerwear" />
+                    ) : (
+                      <Plus className="w-5 h-5 text-zinc-600 group-hover:text-indigo-400 transition-colors" />
+                    )}
+                  </div>
+                  <span className="text-[11px] text-zinc-300 font-medium truncate w-full">
+                    {combinatorSlots.outerwear?.title || 'Select Coat'}
+                  </span>
+                </div>
+
+                {/* Top Slot */}
+                <div 
+                  onClick={() => setActiveSlotPicker('top')}
+                  className="p-3 rounded-xl bg-white/[0.02] border border-white/5 hover:border-indigo-500/30 transition-all cursor-pointer flex flex-col items-center text-center space-y-2 group"
+                >
+                  <span className="text-[10px] font-mono uppercase text-zinc-500">Top Layer</span>
+                  <div className="w-16 h-20 rounded-lg overflow-hidden bg-zinc-900/60 border border-white/5 flex items-center justify-center">
+                    {combinatorSlots.top ? (
+                      <ImageWithFade src={combinatorSlots.top.imageUrl || getGarmentImage(combinatorSlots.top.title)} alt="Top" />
+                    ) : (
+                      <Plus className="w-5 h-5 text-zinc-600 group-hover:text-indigo-400 transition-colors" />
+                    )}
+                  </div>
+                  <span className="text-[11px] text-zinc-300 font-medium truncate w-full">
+                    {combinatorSlots.top?.title || 'Select Top'}
+                  </span>
+                </div>
+
+                {/* Bottom Slot */}
+                <div 
+                  onClick={() => setActiveSlotPicker('bottom')}
+                  className="p-3 rounded-xl bg-white/[0.02] border border-white/5 hover:border-indigo-500/30 transition-all cursor-pointer flex flex-col items-center text-center space-y-2 group"
+                >
+                  <span className="text-[10px] font-mono uppercase text-zinc-500">Bottom</span>
+                  <div className="w-16 h-20 rounded-lg overflow-hidden bg-zinc-900/60 border border-white/5 flex items-center justify-center">
+                    {combinatorSlots.bottom ? (
+                      <ImageWithFade src={combinatorSlots.bottom.imageUrl || getGarmentImage(combinatorSlots.bottom.title)} alt="Bottom" />
+                    ) : (
+                      <Plus className="w-5 h-5 text-zinc-600 group-hover:text-indigo-400 transition-colors" />
+                    )}
+                  </div>
+                  <span className="text-[11px] text-zinc-300 font-medium truncate w-full">
+                    {combinatorSlots.bottom?.title || 'Select Pants'}
+                  </span>
+                </div>
+
+                {/* Footwear Slot */}
+                <div 
+                  onClick={() => setActiveSlotPicker('footwear')}
+                  className="p-3 rounded-xl bg-white/[0.02] border border-white/5 hover:border-indigo-500/30 transition-all cursor-pointer flex flex-col items-center text-center space-y-2 group"
+                >
+                  <span className="text-[10px] font-mono uppercase text-zinc-500">Footwear</span>
+                  <div className="w-16 h-20 rounded-lg overflow-hidden bg-zinc-900/60 border border-white/5 flex items-center justify-center">
+                    {combinatorSlots.footwear ? (
+                      <ImageWithFade src={combinatorSlots.footwear.imageUrl || getGarmentImage(combinatorSlots.footwear.title)} alt="Footwear" />
+                    ) : (
+                      <Plus className="w-5 h-5 text-zinc-600 group-hover:text-indigo-400 transition-colors" />
+                    )}
+                  </div>
+                  <span className="text-[11px] text-zinc-300 font-medium truncate w-full">
+                    {combinatorSlots.footwear?.title || 'Select Shoes'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 pt-4 border-t border-white/5">
+              <button
+                onClick={() => {
+                  const activeItems = Object.values(combinatorSlots).filter(Boolean) as WardrobeItem[];
+                  if (activeItems.length === 0) {
+                    showToast('Select at least one piece to save combination.', 'warning');
+                    return;
+                  }
+                  registerCombination(activeItems);
+                  showToast('Sartorial combination saved to memory archive!', 'success');
+                }}
+                className="flex-1 py-2.5 px-4 rounded-xl bg-white/[0.05] hover:bg-white/[0.09] border border-white/10 text-white text-xs font-medium flex items-center justify-center gap-2 transition-all cursor-pointer"
+              >
+                <Bookmark className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Save Combination</span>
+              </button>
+
+              <button
+                onClick={() => handleNavigate('VIRTUAL_TRY')}
+                className="py-2.5 px-5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:opacity-90 text-white text-xs font-medium flex items-center gap-2 transition-all cursor-pointer shadow-[0_0_15px_rgba(99,102,241,0.2)]"
+              >
+                <Eye className="w-3.5 h-3.5" />
+                <span>Test Live Fit</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Card 4: Multi-Modal Visual Ingestion Card (4 Cols) */}
+          <div className="lg:col-span-4 rounded-2xl bg-[#07070c]/80 border border-white/5 p-6 backdrop-blur-xl flex flex-col justify-between hover:border-violet-500/20 transition-all duration-300">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                  <Camera className="w-4 h-4 text-purple-400" />
+                  <span>Visual Ingestion</span>
+                </h3>
+                <span className="text-[10px] font-mono text-zinc-500 uppercase">Gemini Vision</span>
+              </div>
+
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                accept="image/*" 
+                onChange={handleImageUpload} 
+                className="hidden" 
+              />
+
+              {!scanResult && !isScanning && (
+                <div 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="border-2 border-dashed border-white/10 hover:border-indigo-500/40 rounded-xl p-6 text-center space-y-3 cursor-pointer transition-all bg-white/[0.01] hover:bg-white/[0.03] group"
+                >
+                  <div className="w-10 h-10 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center mx-auto group-hover:scale-110 transition-transform">
+                    <Upload className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-medium text-zinc-200 block">Upload or capture garment</span>
+                    <span className="text-[10px] text-zinc-500">Auto-extracts silhouette, hue, and fabric traits</span>
+                  </div>
+                </div>
+              )}
+
+              {isScanning && (
+                <div className="py-8 text-center space-y-3">
+                  <div className="w-8 h-8 border-2 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin mx-auto" />
+                  <span className="text-xs font-mono text-zinc-400">Parsing sartorial attributes...</span>
+                </div>
+              )}
+
+              {scanResult && (
+                <div className="space-y-3 p-3.5 rounded-xl bg-white/[0.02] border border-white/5">
+                  <div className="flex items-center gap-3">
+                    {scanResult.previewUrl && (
+                      <div className="w-12 h-14 rounded-lg overflow-hidden bg-zinc-900/60 border border-white/5">
+                        <img src={scanResult.previewUrl} alt="Preview" className="w-full h-full object-cover" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-xs font-semibold text-white truncate">{scanResult.name}</h4>
+                      <span className="text-[10px] font-mono text-emerald-400">{scanResult.category} • {(scanResult.confidence * 100).toFixed(0)}% confidence</span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-[11px] pt-2 border-t border-white/5">
+                    <div>
+                      <span className="text-zinc-500 block text-[9px] uppercase">Color</span>
+                      <span className="text-zinc-300 font-medium">{scanResult.primaryColor}</span>
+                    </div>
+                    <div>
+                      <span className="text-zinc-500 block text-[9px] uppercase">Material</span>
+                      <span className="text-zinc-300 font-medium">{scanResult.material}</span>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleSaveScannedGarment}
+                    className="w-full py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-black text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Confirm & Add to Closet</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <p className="text-[10px] text-zinc-500 italic text-center pt-3">
+              Multi-modal engine automatically standardizes metadata for wardrobe algorithms.
+            </p>
+          </div>
+
+        </div>
+
+        {/* Slot Picker Modal */}
+        <AnimatePresence>
+          {activeSlotPicker && (
+            <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="w-full max-w-lg bg-[#0c0c14] border border-white/10 rounded-2xl p-6 space-y-4 text-left shadow-2xl"
+              >
+                <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                  <h3 className="text-sm font-semibold text-white uppercase tracking-wider font-mono">
+                    Select {activeSlotPicker} piece
+                  </h3>
+                  <button 
+                    onClick={() => setActiveSlotPicker(null)}
+                    className="text-zinc-500 hover:text-white cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3 max-h-80 overflow-y-auto pr-1">
+                  {wardrobe.map((item) => (
+                    <div
+                      key={item.id}
+                      onClick={() => {
+                        setCombinatorSlots(prev => ({ ...prev, [activeSlotPicker]: item }));
+                        setActiveSlotPicker(null);
+                        showToast(`Selected ${item.title}`, 'info');
+                      }}
+                      className="p-2 rounded-xl bg-white/[0.02] border border-white/5 hover:border-indigo-500/40 cursor-pointer space-y-1.5 group transition-all"
+                    >
+                      <div className="aspect-[3/4] rounded-lg overflow-hidden bg-zinc-900/60">
+                        <ImageWithFade src={item.imageUrl || getGarmentImage(item.title)} alt={item.title} />
+                      </div>
+                      <span className="text-[10px] font-medium text-zinc-300 block truncate group-hover:text-indigo-400">
+                        {item.title}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </motion.div>
             </div>
           )}
         </AnimatePresence>
-
-        {/* B. CENTER FLOATING COLUMN (Community View, AI Creation View, and Adjusted Marketplace Gateway) */}
-        <div className="w-80 xl:w-[380px] shrink-0 border-r border-white/5 bg-[#050508]/45 hidden md:flex flex-col h-full overflow-hidden select-none relative z-10">
-          {/* Header of Center Column */}
-          <div className="h-16 px-6 border-b border-white/5 shrink-0 flex items-center justify-between bg-black/25">
-            <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-white/50">Discovery Hub</span>
-            <div className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse"></span>
-              <span className="text-[8px] font-mono text-violet-400 font-bold uppercase tracking-widest">v2.4-telemetry</span>
-            </div>
-          </div>
-
-          <div className="flex-grow overflow-y-auto p-4 space-y-6 no-scrollbar">
-            {/* 1. Community AI Creations Section */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-[9.5px] font-mono uppercase tracking-[0.15em] text-white/40 block font-bold">Community View</span>
-                <button 
-                  onClick={() => handleNavigate('PRODUCT_COMMUNITY')}
-                  className="text-[9px] font-mono text-violet-400 hover:text-violet-300 cursor-pointer hover:underline uppercase tracking-wider font-bold"
-                >
-                  View All
-                </button>
-              </div>
-              <div className="space-y-3">
-                {PRESET_MOCK_LOOKS.slice(0, 2).map((post) => (
-                  <div 
-                    key={post.id} 
-                    className="p-3 rounded-2xl bg-white/[0.01] hover:bg-white/[0.03] border border-white/5 transition-all duration-300 hover:border-violet-500/20 hover:scale-[1.01] group relative cursor-pointer text-left"
-                    onClick={() => {
-                      if (post.taggedGarment) {
-                        window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: `Selected garment: ${post.taggedGarment.title}` }));
-                      }
-                    }}
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <img src={post.author.avatar || null} className="w-5 h-5 rounded-full object-cover border border-white/10 shrink-0" alt="" />
-                      <div className="min-w-0 flex-1">
-                        <span className="block text-[9.5px] font-semibold text-white/95 truncate leading-none">{post.author.name}</span>
-                        <span className="block text-[7.5px] font-mono text-white/30 truncate mt-0.5">{post.author.handle}</span>
-                      </div>
-                    </div>
-                    <div className="w-full aspect-[4/3] rounded-xl overflow-hidden bg-zinc-900 border border-white/5 mb-2 relative">
-                      <img src={post.imageUrl || null} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="" />
-                      <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded text-[7.5px] font-mono bg-black/60 text-violet-300 border border-violet-500/10">
-                        {post.vibeTags[0] || 'Aesthetic'}
-                      </div>
-                    </div>
-                    <p className="text-[9.5px] text-white/60 font-serif italic line-clamp-1 leading-relaxed mb-2">"{post.caption}"</p>
-                    <div className="flex items-center justify-between text-[8.5px] font-mono text-white/30 border-t border-white/5 pt-2">
-                      <div className="flex items-center gap-3">
-                        <span className="flex items-center gap-1 hover:text-rose-400 transition-colors"><Heart className="w-3 h-3 text-rose-500" /> {post.likes >= 1000 ? `${(post.likes/1000).toFixed(1)}K` : post.likes}</span>
-                        <span className="flex items-center gap-1 hover:text-violet-400 transition-colors"><Sparkles className="w-3 h-3 text-violet-400" /> {post.views >= 1000 ? `${(post.views/1000).toFixed(0)}K` : post.views}</span>
-                      </div>
-                      <span className="text-[8px] hover:text-white transition-colors">Details →</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* 2. AI Creation View Section */}
-            <div className="space-y-3 pt-1 border-t border-white/5 text-left">
-              <div className="flex items-center justify-between">
-                <span className="text-[9.5px] font-mono uppercase tracking-[0.15em] text-violet-400 block font-bold">AI Creation View</span>
-                <button 
-                  onClick={() => handleNavigate('PRODUCT_AI_CREATIONS')}
-                  className="text-[9px] font-mono text-violet-400 hover:text-violet-300 cursor-pointer hover:underline uppercase tracking-wider font-bold"
-                >
-                  Open Studio
-                </button>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-violet-950/10 border border-violet-500/10 space-y-3.5 relative overflow-hidden">
-                {isGeneratingCenter && (
-                  <div className="absolute inset-0 bg-[#07070e]/95 flex flex-col items-center justify-center p-4 z-20 text-center space-y-2">
-                    <Sparkles className="w-6 h-6 text-violet-400 animate-spin-slow filter drop-shadow-[0_0_8px_rgba(168,85,247,0.7)]" />
-                    <span className="text-[9.5px] font-mono uppercase text-violet-300 tracking-wider font-bold">{centerProgress}%</span>
-                    <span className="text-[8.5px] font-mono text-white/50 leading-relaxed max-w-[190px]">{centerStatusText}</span>
-                    <div className="w-full max-w-[160px] h-1 bg-white/5 rounded-full overflow-hidden mt-1">
-                      <div className="h-full bg-violet-500 transition-all duration-150" style={{ width: `${centerProgress}%` }} />
-                    </div>
-                  </div>
-                )}
-
-                <div className="space-y-1">
-                  <h4 className="text-[10.5px] font-bold text-white tracking-wide uppercase font-mono">Instant Designer</h4>
-                  <p className="text-[8.5px] text-white/40 leading-relaxed">Co-create bespoke styles with lookvision's active intelligence.</p>
-                </div>
-
-                {/* Vibe Selection Tags */}
-                <div className="flex flex-wrap gap-1">
-                  {['Cyber Core', 'Minimal Luxe', 'Tokyo Retro'].map((vibe) => (
-                    <button
-                      key={vibe}
-                      onClick={() => {
-                        setSelectedCenterVibe(vibe);
-                        if (vibe === 'Cyber Core') setCenterPrompt('Matte black asymmetrical tech shell with high collar');
-                        else if (vibe === 'Minimal Luxe') setCenterPrompt('Premium beige heavy knit cashmere sweater with relaxed tailoring');
-                        else if (vibe === 'Tokyo Retro') setCenterPrompt('Vintage oversytled oversized varsity bomber with patch embroidery');
-                      }}
-                      className={`px-2 py-1 rounded-md text-[8.5px] font-mono transition-all border ${
-                        selectedCenterVibe === vibe 
-                          ? 'bg-violet-600/20 text-violet-300 border-violet-500/35' 
-                          : 'bg-white/[0.01] text-white/40 border-white/5 hover:text-white/70'
-                      }`}
-                    >
-                      #{vibe.replace(' ', '')}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Prompt input */}
-                <div className="space-y-1.5">
-                  <textarea
-                    placeholder="Describe custom outfit silhouette or theme..."
-                    value={centerPrompt}
-                    onChange={(e) => setCenterPrompt(e.target.value)}
-                    rows={2}
-                    className="w-full bg-black/30 border border-white/5 hover:border-white/10 rounded-xl p-2.5 text-[9.5px] text-white placeholder-white/20 focus:outline-none focus:border-violet-500/30 transition-all resize-none font-light leading-relaxed"
-                  />
-                </div>
-
-                <button
-                  onClick={() => {
-                    if (isGeneratingCenter) return;
-                    setIsGeneratingCenter(true);
-                    setCenterProgress(0);
-                    setCenterStatusText('Initiating neural stylist engine...');
-                    
-                    let currentProgress = 0;
-                    const interval = setInterval(() => {
-                      currentProgress += 10;
-                      setCenterProgress(currentProgress);
-                      
-                      if (currentProgress < 30) {
-                        setCenterStatusText('Re-evaluating look vision body proportions...');
-                      } else if (currentProgress < 60) {
-                        setCenterStatusText('Drafting raw mesh geometry...');
-                      } else if (currentProgress < 95) {
-                        setCenterStatusText('Baking photorealistic lighting passes...');
-                      } else {
-                        setCenterStatusText('Finalizing aesthetic coherence scores...');
-                      }
-                      
-                      if (currentProgress >= 100) {
-                        clearInterval(interval);
-                        setTimeout(() => {
-                          setIsGeneratingCenter(false);
-                          setCenterPrompt('');
-                          window.dispatchEvent(new CustomEvent('lookvision_show_toast', { 
-                            detail: `Successfully generated a new ${selectedCenterVibe} look in AI Creations!` 
-                          }));
-                          handleNavigate('PRODUCT_AI_CREATIONS');
-                        }, 300);
-                      }
-                    }, 120);
-                  }}
-                  disabled={!centerPrompt.trim()}
-                  className={`w-full py-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 disabled:from-white/[0.02] disabled:to-white/[0.02] text-white disabled:text-white/20 rounded-xl text-[9px] font-mono uppercase tracking-widest font-bold transition-all duration-300 shadow-md ${centerPrompt.trim() ? 'shadow-violet-600/10 cursor-pointer hover:translate-y-[-0.5px]' : 'cursor-not-allowed border border-white/5'}`}
-                >
-                  Generate Look
-                </button>
-              </div>
-            </div>
-
-            {/* 3. Marketplace Direct Gateway Block */}
-            <div className="space-y-3 pt-1 border-t border-white/5 text-left">
-              <div className="flex items-center justify-between">
-                <span className="text-[9.5px] font-mono uppercase tracking-[0.15em] text-emerald-400 block font-bold">Marketplace View</span>
-              </div>
-
-              {/* Proportional Card with emerald-colored ShoppingBag Icon */}
-              <div 
-                onClick={() => handleNavigate('PRODUCT_MARKETPLACE')}
-                className="my-3 mx-0.5 p-4 rounded-2xl bg-emerald-950/10 border border-emerald-500/10 hover:border-emerald-500/30 transition-all duration-300 hover:scale-[1.01] group relative cursor-pointer text-left flex items-center gap-4 shadow-lg shadow-emerald-950/15"
-              >
-                {/* Floating Glow elements */}
-                <div className="absolute -right-6 -bottom-6 w-16 h-16 bg-emerald-500/5 rounded-full blur-xl pointer-events-none group-hover:bg-emerald-500/10 transition-colors" />
-
-                {/* Left: Emerald ShoppingBag Icon */}
-                <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0 border border-emerald-500/15 group-hover:scale-110 duration-300 transition-transform">
-                  <ShoppingBag className="w-5 h-5 text-emerald-400 filter drop-shadow-[0_0_6px_rgba(34,197,94,0.4)]" />
-                </div>
-
-                {/* Right: Copy & Button */}
-                <div className="min-w-0 flex-1 space-y-1">
-                  <h4 className="text-[10.5px] font-bold text-white uppercase tracking-wider font-mono group-hover:text-emerald-300 transition-colors">Exclusive Boutique</h4>
-                  <p className="text-[8.5px] text-white/40 leading-normal">Browse luxury designers, limited drops, and custom-baking outfits.</p>
-                  <div className="flex items-center gap-1 text-[8px] font-mono text-emerald-400 uppercase tracking-widest pt-1 font-bold">
-                    <span>Enter Portal</span>
-                    <span className="group-hover:translate-x-0.5 transition-transform">→</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-        {/* RIGHT AREA: MAIN WORKSPACE (Takes rest of the viewport) */}
-        <div className="flex-1 flex flex-col overflow-hidden h-full min-w-0">
-          
-          {/* 2. SPLIT INTERFACE STRUCTURE (Scrolls independently) */}
-          <div className="flex-grow flex overflow-hidden">
-
-             {/* B. CENTRAL WORKSPACE CONTENT */}
-            <main className="flex-1 overflow-y-auto p-3 sm:p-5 lg:p-6 scrollbar-thin scrollbar-thumb-white/5 relative bg-gradient-to-b from-white/[0.01] to-transparent">
-          
-          {/* GLOBAL AUTO-ADAPTIVE LAYOUT & USER DEVICE REACTION CONTROLLER BAR */}
-          <div className="mb-6 bg-[#07070c] border border-white/10 rounded-2xl p-3.5 sm:p-4 shadow-2xl relative overflow-hidden max-w-[1850px] mx-auto">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-              {/* Left: Auto-Adaptive Status & Device Telemetry */}
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-violet-600/10 border border-violet-500/20 flex items-center justify-center shrink-0">
-                  <Sparkles className="w-5 h-5 text-violet-400 filter drop-shadow-[0_0_8px_rgba(168,85,247,0.6)]" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs sm:text-sm font-serif font-medium text-white tracking-wide">
-                      AIStyleHub Global Auto-Adaptive Layout
-                    </span>
-                    <span className="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 font-mono text-[9px] rounded-full flex items-center gap-1 font-bold">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                      <span>Device Reaction Active</span>
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 text-[10px] font-mono text-zinc-400 mt-1 flex-wrap">
-                    <span>Dimensions: <strong className="text-zinc-200">{deviceTelemetry.width} x {deviceTelemetry.height} px</strong></span>
-                    <span>•</span>
-                    <span>Breakpoint: <strong className="text-cyan-300 font-bold">{deviceTelemetry.breakpoint}</strong></span>
-                    <span>•</span>
-                    <span>DPI: <strong className="text-purple-300">{deviceTelemetry.pixelRatio}x</strong></span>
-                    <span>•</span>
-                    <span>Orientation: <strong className="text-amber-300 uppercase">{deviceTelemetry.orientation}</strong></span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Right: Layout Viewport Mode Selector */}
-              <div className="flex items-center gap-1.5 bg-black/60 p-1.5 rounded-xl border border-white/10 shrink-0 self-start lg:self-auto">
-                <button
-                  type="button"
-                  onClick={() => changeGlobalViewportMode('AUTO')}
-                  title="Auto-Fluid Responsive Layout"
-                  className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all flex items-center gap-1.5 cursor-pointer ${
-                    globalViewportMode === 'AUTO'
-                      ? 'bg-violet-600 text-white font-bold shadow-lg shadow-violet-950/50'
-                      : 'text-zinc-400 hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  <Compass className="w-3.5 h-3.5 text-amber-300" />
-                  <span>Auto-Fluid</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => changeGlobalViewportMode('MOBILE')}
-                  title="Mobile Device Chassis Reaction Mode"
-                  className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all flex items-center gap-1.5 cursor-pointer ${
-                    globalViewportMode === 'MOBILE'
-                      ? 'bg-violet-600 text-white font-bold shadow-lg shadow-violet-950/50'
-                      : 'text-zinc-400 hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  <Smartphone className="w-3.5 h-3.5 text-cyan-300" />
-                  <span>Mobile View</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => changeGlobalViewportMode('DESKTOP')}
-                  title="Full Ultra-Wide Desktop Mode"
-                  className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all flex items-center gap-1.5 cursor-pointer ${
-                    globalViewportMode === 'DESKTOP'
-                      ? 'bg-violet-600 text-white font-bold shadow-lg shadow-violet-950/50'
-                      : 'text-zinc-400 hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  <Monitor className="w-3.5 h-3.5 text-purple-300" />
-                  <span>Full View</span>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Undo Banner if active */}
-          {undoAction && (
-            <div className="mb-6 p-3 rounded-xl bg-white/5 border border-white/15 flex items-center justify-between text-xs font-mono uppercase tracking-wider animate-fade-in max-w-4xl mx-auto">
-              <div className="flex items-center gap-2 text-white/60">
-                <Info className="w-4 h-4 text-amber-400" />
-                <span>{undoAction.message}</span>
-              </div>
-              <button
-                onClick={() => {
-                  undoAction.rollback();
-                  setUndoAction(null);
-                  if (undoTimeoutRef.current) {
-                    clearTimeout(undoTimeoutRef.current);
-                  }
-                }}
-                className="py-1 px-3 bg-white text-black hover:bg-neutral-200 rounded text-[9px] font-bold cursor-pointer"
-              >
-                Undo Action
-              </button>
-            </div>
-          )}
-
-          {/* Active Workspaces Render Block */}
-          {(activeSubTab === 'PRODUCT_HOME' || activeSubTab === 'HOME') ? (
-            <div className="space-y-6 animate-fade-in w-full h-full overflow-y-auto">
-              <HomeHub 
-                wardrobe={activeWardrobeList}
-                user={user}
-                onNavigateTab={(tab) => handleNavigate(tab as any)}
-                onAddGarment={onAddGarment}
-                onDeleteGarment={onDeleteGarment}
-                onLoadSamples={onLoadSamples}
-              />
-            </div>
-          ) : null}
-
-          {/* Unhidden sub-tab container (renders when not in HOME sub-tab) */}
-          <div className={(activeSubTab === 'PRODUCT_HOME' || activeSubTab === 'HOME') ? "hidden pointer-events-none opacity-0 h-0 overflow-hidden select-none" : "block select-text w-full max-w-7xl mx-auto px-2 sm:px-4"}>
-          {/* Old Redundant Switcher - hidden since Left Sidebar handles navigation */}
-          <div className="hidden pointer-events-none opacity-0 h-0 overflow-hidden select-none">
-            {[
-              { id: 'HOME', label: 'Morning table' },
-              { id: 'WARDROBE', label: 'Archive wall' },
-              { id: 'PLANNER', label: 'Unwritten desk' },
-              { id: 'LEARN', label: 'Memory corner' },
-              { id: 'SIGNATURE', label: 'Personal imprint' },
-              { id: 'PRESENCE', label: 'Quiet control space' }
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => {
-                  triggerQuietPause(() => {
-                    setActiveSubTab(tab.id as any);
-                  });
-                }}
-                className={`py-2 text-[10.5px] font-mono tracking-[0.25em] uppercase transition-all duration-150 cursor-pointer relative ${
-                  activeSubTab === tab.id ? 'text-white' : 'text-white/30 hover:text-white/70'
-                }`}
-              >
-                <span>{tab.label}</span>
-                {activeSubTab === tab.id && (
-                  <motion.div
-                    className="absolute bottom-0 left-0 right-0 h-px bg-white/70"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                  />
-                )}
-              </button>
-            ))}
-          </div>
-
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeSubTab}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2, ease: "easeOut" }}
-            >
-              
-              {/* ROOM 1: TODAY LOOK = EDITORIAL SPREAD */}
-              {(activeSubTab === 'PRODUCT_HOME' || activeSubTab === 'HOME') && (
-                <div className="space-y-16 max-w-sm mx-auto">
-                  
-                  {!state.activeSuggestion ? (
-                    <div className="py-12 max-w-md mx-auto text-center space-y-16 select-none">
-                      <div className="space-y-4">
-                        <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-white/30 block font-light">Placed on the morning table</span>
-                        <h3 className="font-serif font-light tracking-[-0.03em] text-3xl text-white">A clean page</h3>
-                        <p className="text-sm text-white/40 leading-relaxed font-light font-serif italic">
-                          "Style is easier when nothing competes."
-                        </p>
-                      </div>
-
-                      <div className="pt-4">
-                        <button
-                          onClick={triggerOutfitCompilation}
-                          disabled={isCompiling}
-                          className="bg-white hover:bg-[#EAEAEA] text-black text-[11px] font-mono font-semibold py-4 px-10 rounded-none uppercase tracking-[0.25em] cursor-pointer transition-all w-full sm:w-auto disabled:opacity-50"
-                        >
-                          {isCompiling ? "Arranging..." : "Arrange the morning table"}
-                        </button>
-                      </div>
-                      
-                      {(() => {
-                        const onePiece = getDailyOnePiece(activeWardrobeList);
-                        if (!onePiece) return null;
-                        return (
-                          <div className="pt-16 border-t border-white/5 space-y-6 text-center select-none">
-                            <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-white/30 block font-light">
-                              Today, this came forward.
-                            </span>
-                            <div 
-                              onClick={() => {
-                                triggerQuietPause(() => {
-                                  setSelectedGarment(onePiece);
-                                });
-                              }}
-                              className="w-[180px] aspect-[4/5] mx-auto overflow-hidden bg-white/5 cursor-pointer hover:opacity-85 transition-opacity"
-                            >
-                              <ImageWithFade 
-                                src={onePiece.imageUrl || getGarmentImage(onePiece.title)} 
-                                alt={onePiece.title} 
-                              />
-                            </div>
-                            <span className="text-[11px] font-serif pr-1 text-white/50 italic block">
-                              {onePiece.title}
-                            </span>
-                          </div>
-                        );
-                      })()}
-
-                      <EveningClosing />
-                    </div>
-                  ) : (
-                    // Convert recommendation to beautiful physical fashion editorial page layout (no cards, wide margins)
-                    <div className="space-y-12 max-w-sm mx-auto text-center py-4">
-                      
-                      {/* Placed for Today Title */}
-                      <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-white/30 block select-none font-light">
-                        Placed on the morning table
-                      </span>
-
-                      {/* Hero garment image */}
-                      <div className="w-full relative shadow-sm aspect-[4/5] overflow-hidden bg-[#0d0d0d]">
-                        <ImageWithFade 
-                          src={state.activeSuggestion.items[0]?.imageUrl || getGarmentImage(state.activeSuggestion.items[0]?.title || '')} 
-                          alt="Hero apparel" 
-                        />
-                      </div>
-                      
-                      {/* Text contents: quiet, clean luxury format */}
-                      <div className="space-y-4 pt-4 select-none">
-                        <h2 className="font-serif font-light text-2xl text-white tracking-[-0.03em] leading-tight">
-                          {state.activeSuggestion.name || "Quiet Structure"}
-                        </h2>
-                        
-                        {/* Dynamic weather-aware look note adapted quietly into the recommendation sentence */}
-                        <p className="text-xs font-serif italic text-white/45 leading-relaxed max-w-xs mx-auto">
-                          {getQuietContextNote(state.activeSuggestion.items)}
-                        </p>
-
-                        {/* Requirement A: Missing Pieces Awareness */}
-                        {(() => {
-                          const items = state.activeSuggestion.items;
-                          const hasOuterwear = items.some(i => i.category === 'Outerwear' || i.title.toLowerCase().includes('coat') || i.title.toLowerCase().includes('jacket') || i.title.toLowerCase().includes('blazer'));
-                          const hasAccessories = items.some(i => i.category === 'Accessories');
-                          
-                          if (!hasOuterwear || !hasAccessories) {
-                            return (
-                              <p className="text-[10px] font-mono tracking-[0.1em] text-white/30 pt-1" id="missing-pieces-sentence">
-                                "This may be missing something."
-                              </p>
-                            );
-                          }
-                          return null;
-                        })()}
-
-                        {/* One Quiet Detail styling instruction */}
-                        <p className="text-[11.5px] font-mono tracking-[0.12em] text-white/45 pt-1">
-                          ↳ {getQuietDetailForOutfit(state.activeSuggestion.id)}
-                        </p>
-
-                        {/* STYLE GRAVITY ACTIVE RECOMMENDATION INDICATOR */}
-                        {(() => {
-                          const topAlt = state.alternativeOutfits?.[0];
-                          if (topAlt && topAlt.styleIdentity) {
-                            const badgeColor = topAlt.gravityMatch === 'High' 
-                              ? 'border-emerald-500/10 bg-emerald-500/5 text-emerald-400' 
-                              : topAlt.gravityMatch === 'Medium' 
-                              ? 'border-blue-500/10 bg-blue-500/5 text-blue-400' 
-                              : 'border-amber-500/10 bg-amber-500/5 text-amber-400';
-
-                            return (
-                              <div className="flex flex-col items-center gap-1.5 select-none pt-3 pb-1 border-y border-white/5 my-3 animate-fade-in">
-                                <div className="flex justify-center items-center gap-2">
-                                  <span className={`text-[8.5px] font-mono uppercase tracking-[0.15em] px-2 py-0.5 border ${badgeColor}`}>
-                                    Gravity: {topAlt.gravityMatch}
-                                  </span>
-                                  <span className="text-[8.5px] font-mono uppercase tracking-[0.15em] px-2 py-0.5 border border-white/10 bg-white/5 text-white/70">
-                                    {topAlt.styleIdentity}
-                                  </span>
-                                </div>
-                                <span className="text-[10px] font-serif italic text-white/40 max-w-xs text-center px-4 leading-relaxed">
-                                  "{topAlt.explanation || 'Matches your style density preferences.'}"
-                                </span>
-                              </div>
-                            );
-                          }
-                          return null;
-                        })()}
-
-                        {/* COLLECTION RHYTHM: Wear-aware repeat balance language */}
-                        <p className="text-[10.5px] font-serif italic text-white/35 pt-2 animate-fade-in font-light">
-                          {(() => {
-                            const avgWear = activeWardrobeList.length > 0
-                              ? activeWardrobeList.reduce((sum, item) => sum + (item.wearCount || 0), 0) / activeWardrobeList.length
-                              : 0;
-                            // shares at least one item with yesterday's outfit, or has a familiar (frequently worn) item
-                            const sharesYesterday = (() => {
-                              try {
-                                const yestStr = typeof localStorage !== 'undefined' ? localStorage.getItem('yesterday_outfit_ids') || '' : '';
-                                if (!yestStr) return false;
-                                const yestIds = yestStr.split(',');
-                                return state.activeSuggestion && state.activeSuggestion.items.some(item => yestIds.includes(item.id));
-                              } catch (e) {
-                                return false;
-                              }
-                            })();
-                            const hasFamiliar = state.activeSuggestion.items.some(item => (item.wearCount || 0) > avgWear);
-                            const isNear = sharesYesterday || hasFamiliar;
-                            return isNear ? "Not far from yesterday." : "A different arrangement.";
-                          })()}
-                        </p>
-                      </div>
-
-                      {/* Requirement E: Seasonal Weight Atmosphere Selector */}
-                      <div className="flex justify-center gap-4 text-[10px] font-mono uppercase tracking-[0.2em] text-white/40 pb-4 select-none">
-                        <span className="text-white/20 font-light">Atmosphere:</span>
-                        <button
-                          onClick={() => {
-                            saveWeatherWeight('lighter');
-                            triggerOutfitCompilation();
-                          }}
-                          className={`hover:text-white transition-colors cursor-pointer ${weatherWeight === 'lighter' ? 'text-white font-medium border-b border-white/40' : 'text-white/30'}`}
-                        >
-                          [ lighter ]
-                        </button>
-                        <button
-                          onClick={() => {
-                            saveWeatherWeight('heavier');
-                            triggerOutfitCompilation();
-                          }}
-                          className={`hover:text-white transition-colors cursor-pointer ${weatherWeight === 'heavier' ? 'text-white font-medium border-b border-white/40' : 'text-white/30'}`}
-                        >
-                          [ heavier ]
-                        </button>
-                        <button
-                          onClick={() => {
-                            saveWeatherWeight('layered');
-                            triggerOutfitCompilation();
-                          }}
-                          className={`hover:text-white transition-colors cursor-pointer ${weatherWeight === 'layered' ? 'text-white font-medium border-b border-white/40' : 'text-white/30'}`}
-                        >
-                          [ layered ]
-                        </button>
-                      </div>
-
-                      {/* Single Action Button */}
-                      <div className="pt-2 flex flex-col items-center space-y-4">
-                        {!wearingConfirmation ? (
-                          <button
-                            onClick={handleWearAction}
-                            className="bg-white hover:bg-[#EAEAEA] text-black text-[11px] font-mono font-semibold py-4 px-12 rounded-none uppercase tracking-[0.25em] cursor-pointer transition-all active:scale-[0.99] w-full sm:w-auto"
-                          >
-                            [ wear ]
-                          </button>
-                        ) : (
-                          <div className="flex flex-col sm:flex-row gap-4 w-full justify-center">
-                            <button
-                              onClick={() => handleConfirmWearWithReflection("Returned quietly.")}
-                              className="bg-white hover:bg-[#EAEAEA] text-[#050505] text-[11px] font-mono font-bold py-4 px-8 rounded-none uppercase tracking-[0.22em] cursor-pointer transition-all active:scale-[0.99] w-full sm:w-auto"
-                            >
-                              [ Returned quietly. ]
-                            </button>
-                            <button
-                              onClick={() => handleConfirmWearWithReflection("This stayed.")}
-                              className="bg-[#121212] hover:bg-[#1f1f1f] border border-white/10 text-white text-[11px] font-mono py-4 px-8 rounded-none uppercase tracking-[0.18em] cursor-pointer transition-all active:scale-[0.99] w-full sm:w-auto"
-                            >
-                              [ This stayed. ]
-                            </button>
-                          </div>
-                        )}
-                        
-                        <div className="flex flex-col items-center gap-2 pt-2">
-                          <button
-                            onClick={() => setShowAdjustOptions(!showAdjustOptions)}
-                            className="text-[10px] text-white/50 hover:text-white font-mono uppercase tracking-[0.2em] transition-all font-light"
-                          >
-                            {showAdjustOptions ? "[ close ]" : "[ adjust ]"}
-                          </button>
-                          {showAdjustOptions && (
-                            <div className="flex flex-col gap-2 pt-2 text-center animate-fade-in border-t border-white/5 w-full max-w-[200px]">
-                              <button
-                                onClick={() => {
-                                  handleAdjustSlightly('swap');
-                                  setShowAdjustOptions(false);
-                                }}
-                                className="text-[9.5px] font-mono uppercase tracking-[0.15em] text-white/40 hover:text-white/80 py-1 transition-colors"
-                              >
-                                [ swap one piece ]
-                              </button>
-                              <button
-                                onClick={() => {
-                                  handleAdjustSlightly('lighter');
-                                  setShowAdjustOptions(false);
-                                }}
-                                className="text-[9.5px] font-mono uppercase tracking-[0.15em] text-white/40 hover:text-white/80 py-1 transition-colors"
-                              >
-                                [ lighter ]
-                              </button>
-                              <button
-                                onClick={() => {
-                                  handleAdjustSlightly('quieter');
-                                  setShowAdjustOptions(false);
-                                }}
-                                className="text-[9.5px] font-mono uppercase tracking-[0.15em] text-white/40 hover:text-white/80 py-1 transition-colors"
-                              >
-                                [ quieter ]
-                              </button>
-                              <button
-                                onClick={() => {
-                                  handleAdjustSlightly('familiar');
-                                  setShowAdjustOptions(false);
-                                }}
-                                className="text-[9.5px] font-mono uppercase tracking-[0.15em] text-white/40 hover:text-white/80 py-1 transition-colors"
-                              >
-                                [ familiar ]
-                              </button>
-                            </div>
-                          )}
-                        </div>
-
-                        <button
-                          onClick={triggerOutfitCompilation}
-                          className="text-[10px] text-white/30 hover:text-white/60 font-mono uppercase tracking-[0.2em] pt-2 transition-all font-light"
-                        >
-                          [ Re-arrange ]
-                        </button>
-                      </div>
-
-                      {feedbackSuccess && (
-                        <div className="text-center text-xs text-white/60 font-mono uppercase tracking-[0.2em] py-2 animate-fade-in font-light">
-                          {feedbackNote}
-                        </div>
-                      )}
-
-                      {/* Alternative Outfits suggestions list */}
-                      {state.alternativeOutfits && state.alternativeOutfits.length > 1 && (
-                        <div className="pt-12 border-t border-white/5 space-y-6 text-center select-none animate-fade-in">
-                          <span className="text-[10.5px] font-mono uppercase tracking-[0.2em] text-white/40 block font-light">
-                            [ alternative arrangements ]
-                          </span>
-                          <div className="flex flex-col gap-3 max-w-xs mx-auto text-left">
-                            {state.alternativeOutfits.slice(1, 10).map((altOutfit, altIdx) => (
-                              <button
-                                key={altOutfit.id || altIdx}
-                                onClick={() => {
-                                  triggerQuietPause(() => {
-                                    if (state.activeSuggestion) {
-                                      const updatedSuggestion = {
-                                        ...state.activeSuggestion,
-                                        id: altOutfit.id,
-                                        name: altOutfit.name,
-                                        items: altOutfit.items,
-                                        suitabilityScore: altOutfit.score,
-                                      };
-                                      state.activeSuggestion = updatedSuggestion;
-                                      UnifiedFashionOS.notify();
-                                    }
-                                  });
-                                }}
-                                className="group w-full p-4 border border-white/5 bg-[#070707] hover:bg-[#101010] transition-all hover:border-white/10 flex flex-col gap-25 text-left rounded-none cursor-pointer animate-fade-in"
-                              >
-                                <div className="flex justify-between items-start gap-2 w-full">
-                                  <span className="text-[10.5px] font-mono uppercase tracking-wider text-white/70 group-hover:text-white transition-colors">
-                                    {altOutfit.name}
-                                  </span>
-                                  {altOutfit.gravityMatch && (
-                                    <span className={`text-[8px] font-mono uppercase tracking-wider px-2 py-0.5 border ${
-                                      altOutfit.gravityMatch === 'High' 
-                                        ? 'border-emerald-500/20 bg-emerald-500/5 text-emerald-400' 
-                                        : altOutfit.gravityMatch === 'Medium'
-                                        ? 'border-blue-500/20 bg-blue-500/5 text-blue-400'
-                                        : 'border-amber-500/20 bg-amber-500/5 text-amber-400'
-                                    }`}>
-                                      {altOutfit.gravityMatch}
-                                    </span>
-                                  )}
-                                </div>
-                                <span className="text-[10px] font-serif italic text-white/45 leading-relaxed group-hover:text-white/60 transition-colors py-1.5 display-block">
-                                  {altOutfit.explanation || altOutfit.reason || "High coherence pairing."}
-                                </span>
-                                <div className="flex justify-between items-center pt-2 border-t border-white/5 w-full">
-                                  <span className="text-[8px] font-mono text-white/30 uppercase tracking-widest">
-                                    {altOutfit.styleIdentity || "Stylized Ensemble"}
-                                  </span>
-                                  <span className="text-[8px] font-mono tracking-widest text-[#ff3399]/60 uppercase font-semibold">
-                                    {altOutfit.score} pts
-                                  </span>
-                                </div>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {(() => {
-                        const onePiece = getDailyOnePiece(activeWardrobeList);
-                        if (!onePiece) return null;
-                        return (
-                          <div className="pt-16 border-t border-white/5 space-y-6 text-center select-none">
-                            <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-white/30 block font-light">
-                              Today, this came forward.
-                            </span>
-                            <div 
-                              onClick={() => {
-                                triggerQuietPause(() => {
-                                  setSelectedGarment(onePiece);
-                                });
-                              }}
-                              className="w-[180px] aspect-[4/5] mx-auto overflow-hidden bg-white/5 cursor-pointer hover:opacity-85 transition-opacity"
-                            >
-                              <ImageWithFade 
-                                src={onePiece.imageUrl || getGarmentImage(onePiece.title)} 
-                                alt={onePiece.title} 
-                              />
-                            </div>
-                            <span className="text-[11px] font-serif pr-1 text-white/50 italic block">
-                              {onePiece.title}
-                            </span>
-                          </div>
-                        );
-                      })()}
-
-                      <EveningClosing />
-                    </div>
-                  )}
-
-                </div>
-              )}
-
-              {/* ROOM 2: SHELVES ARCHIVE WITH MONO ATMOSPHERE */}
-              {activeSubTab === 'WARDROBE' && (
-                <div className="space-y-16 max-w-sm mx-auto animate-fade-in">
-                  
-                  {/* Human Header with Environmental Space label */}
-                  <div className="text-center space-y-3 select-none">
-                    <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-white/30 block font-light">
-                      signature collection — {getAtmosphere(activeWardrobeList.length)}
-                    </span>
-                    <h2 className="font-serif font-light tracking-[-0.03em] text-4xl text-white">Archive wall</h2>
-                    <p className="text-sm text-white/40 leading-relaxed font-light font-serif italic">
-                      "A quiet collection of pieces waiting to be placed."
-                    </p>
-                  </div>
-
-                  {/* Clean, minimalist search input (Requirement 3: searchable internally) */}
-                  <div className="space-y-4 max-w-sm mx-auto">
-                    <input
-                      type="text"
-                      placeholder="Search shelves..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full bg-transparent text-center border-b border-white/5 hover:border-white/15 focus:border-white/30 focus:outline-none transition-all py-3 text-xs font-mono uppercase tracking-[0.15em] text-white placeholder-white/20 select-text"
-                    />
-
-                    {/* Ownership Export Action (Requirement 6) */}
-                    <div className="flex justify-center select-none pt-1">
-                      <button
-                        onClick={() => {
-                          let penalties: any = [];
-                          let last7: any = [];
-                          let last10: any = [];
-                          try {
-                            penalties = JSON.parse(localStorage.getItem('pairing_penalties') || '[]');
-                            last7 = JSON.parse(localStorage.getItem('last_7_worn_combinations') || '[]');
-                            last10 = JSON.parse(localStorage.getItem('last_10_worn_combinations') || '[]');
-                          } catch (e) {}
-
-                          const snapshotObj = {
-                            collected: activeWardrobeList.map(item => ({
-                              title: item.title,
-                              description: item.description,
-                              belongs: item.location || "",
-                              care: item.careNote || "",
-                              note: item.privateNote || "",
-                              placedElsewhere: !!item.placedElsewhere
-                            })),
-                            tomorrow_intention: tomorrowOutfit ? {
-                              items: tomorrowOutfit.items.map(i => i.title),
-                              note: tomorrowOutfit.note,
-                              frozen: !!tomorrowFrozen
-                            } : null,
-                            penalties: penalties,
-                            continuity_state: {
-                              last_7_worn: last7,
-                              last_10_worn: last10
-                            }
-                          };
-                          setSnapshotData(JSON.stringify(snapshotObj, null, 2));
-                          setShowSnapshot(true);
-                        }}
-                        className="text-[9.5px] font-mono uppercase tracking-[0.2em] text-white/30 hover:text-white/60 transition-colors cursor-pointer"
-                      >
-                        [ Export collected snapshot ]
-                      </button>
-                    </div>
-
-                    {/* View Switcher: Editorial vs Bento Grid (Requirement 🚀) */}
-                    <div className="flex justify-center items-center gap-4 text-[9px] font-mono uppercase tracking-[0.2em] text-white/30 pt-4 select-none pb-2 border-b border-white/5">
-                      <button
-                        onClick={() => saveViewMode('GRID')}
-                        className={`transition-colors cursor-pointer ${viewMode === 'GRID' ? 'text-white font-bold underline decoration-white/20 underline-offset-4' : 'hover:text-white/60'}`}
-                      >
-                        [ Bento Grid ]
-                      </button>
-                      <button
-                        onClick={() => saveViewMode('EDITORIAL')}
-                        className={`transition-colors cursor-pointer ${viewMode === 'EDITORIAL' ? 'text-white font-bold underline decoration-white/20 underline-offset-4' : 'hover:text-white/60'}`}
-                      >
-                        [ Editorial Layout ]
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Ownership Snapshot modal overlay (Requirement 6: Collected snapshot) */}
-                  {showSnapshot && (
-                    <div 
-                      className="bg-neutral-900 border border-white/5 p-6 space-y-4 animate-fade-in text-left select-text relative"
-                    >
-                      <div className="flex justify-between items-center select-none border-b border-white/5 pb-2">
-                        <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-white/60">Collected snapshot</span>
-                        <button 
-                          onClick={() => setShowSnapshot(false)}
-                          className="text-[10px] font-mono uppercase tracking-[0.2em] text-white/40 hover:text-white cursor-pointer"
-                        >
-                          [ close ]
-                        </button>
-                      </div>
-                      <pre className="text-[10px] font-mono text-white/80 overflow-auto max-h-[250px] p-2 bg-black/40 rounded border border-white/5 whitespace-pre-wrap select-text">
-                        {snapshotData}
-                      </pre>
-                    </div>
-                  )}
-
-                  {/* Forgotten Recovery (Requirement D: If active wardrobe list length > 8, surface up to 3 never worn or absent longest pieces on the wall) */}
-                  {(() => {
-                    if (activeWardrobeList.length <= 8) return null;
-
-                    // Filter & sort: items with 0 wearCount (never worn) OR sorted by lastUsed (absent longest / oldest first)
-                    const sortedForgotten = [...activeWardrobeList].sort((a, b) => {
-                      const countA = a.wearCount || 0;
-                      const countB = b.wearCount || 0;
-                      if (countA !== countB) {
-                        return countA - countB; // never worn first
-                      }
-                      const dateA = a.lastUsed ? new Date(a.lastUsed).getTime() : 0;
-                      const dateB = b.lastUsed ? new Date(b.lastUsed).getTime() : 0;
-                      return dateA - dateB; // oldest/absent longest first
-                    });
-
-                    const forgottenPieces = sortedForgotten.slice(0, 3);
-                    if (forgottenPieces.length === 0) return null;
-
-                    return (
-                      <div className="pt-2 pb-6 border-b border-white/5 space-y-4 flex flex-col items-center">
-                        <div className="flex justify-center gap-6 overflow-x-auto w-full pb-2">
-                          {forgottenPieces.map(item => (
-                            <div 
-                              key={item.id}
-                              onClick={() => setSelectedGarment(item)}
-                              className="text-center cursor-pointer group w-16 flex-shrink-0"
-                            >
-                              <div className="w-16 mx-auto overflow-hidden bg-neutral-950 border border-white/5 aspect-[4/5] relative group-hover:border-white/20 transition-all duration-300">
-                                <img 
-                                  src={item.imageUrl || "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?q=80&w=200&auto=format&fit=crop"} 
-                                  alt={item.title}
-                                  className="absolute inset-0 w-full h-full object-cover object-center grayscale opacity-40 group-hover:opacity-85 transition-opacity"
-                                  referrerPolicy="no-referrer"
-                                />
-                                {hasArchiveQualities(item) && (
-                                  <div className="absolute bottom-1 right-1 bg-black/60 px-1 py-0.5 border border-white/5 select-none z-10">
-                                    <span className="text-[6px] font-mono uppercase tracking-wider text-white/50 block font-light">
-                                      Kept.
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })()}
-
-                  {searchQuery && displayedWardrobeList.length === 0 && (
-                    <p className="text-center text-xs font-mono uppercase tracking-widest text-white/20 pt-6 select-none">
-                      No matches found.
-                    </p>
-                  )}
-
-                  {/* Ceremony state banner feedback */}
-                  {ceremonyStatus && (
-                    <div className="text-center text-sm font-serif italic text-white/65 py-3 animate-pulse pb-4">
-                      {ceremonyStatus}
-                    </div>
-                  )}
-
-                  {/* ADD PIECE CEREMONY STEP-BY-STEP FLOW */}
-                  <div className="py-4 border-b border-white/5 pb-8">
-                    {addStep === 'CLOSED' && (
-                      <div className="flex justify-center select-none py-2">
-                        <button
-                          onClick={() => setAddStep('IMAGE')}
-                          className="border border-white/10 hover:border-white/40 text-white/80 font-mono text-[11px] font-normal py-4 px-12 rounded-none uppercase tracking-[0.25em] cursor-pointer transition-all hover:bg-white/5 active:scale-[0.99]"
-                        >
-                          [ Place Piece ]
-                        </button>
-                      </div>
-                    )}
-
-                    {addStep === 'IMAGE' && (
-                      <div className="space-y-6 max-w-sm mx-auto py-4 text-center animate-fade-in select-none">
-                        <style>{`
-                          @keyframes scanSweep {
-                            0% { top: 0%; opacity: 0.8; }
-                            50% { top: 100%; opacity: 0.8; }
-                            100% { top: 0%; opacity: 0.8; }
-                          }
-                        `}</style>
-
-                        <span className="text-[10px] font-mono text-white/30 uppercase tracking-[0.2em] block font-light">
-                          Ceremony of Placing — LOOKVISION AI SCANNER
-                        </span>
-
-                        {scanError && (
-                          <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] font-mono rounded text-left animate-fade-in">
-                            {scanError}
-                          </div>
-                        )}
-
-                        {/* A. Live Ingestion Camera Viewfinder */}
-                        {isCameraActive ? (
-                          <div className="space-y-4 animate-fade-in">
-                            <div className="relative aspect-video w-full bg-neutral-950 border border-white/15 overflow-hidden rounded-lg flex items-center justify-center">
-                              <video
-                                ref={videoRef}
-                                autoPlay
-                                playsInline
-                                muted
-                                className="w-full h-full object-cover transform scale-x-[-1]"
-                              />
-                              {/* Glowing Scan HUD Overlays */}
-                              <div className="absolute inset-4 border border-violet-500/20 pointer-events-none" />
-                              <div className="absolute top-2 left-2 text-[8px] font-mono text-violet-400 tracking-widest bg-black/40 px-1.5 py-0.5 rounded uppercase">
-                                [ LOOKVISION LENS STAGE ]
-                              </div>
-                              <div className="absolute bottom-2 right-2 text-[8px] font-mono text-emerald-400 tracking-widest bg-black/40 px-1.5 py-0.5 rounded uppercase">
-                                Live Ingestion Feed
-                              </div>
-                              {/* Laser Sweep Line */}
-                              <div 
-                                className="absolute left-0 w-full h-[2px] bg-emerald-500/80 shadow-[0_0_10px_rgba(16,185,129,0.8)] pointer-events-none"
-                                style={{
-                                  animation: 'scanSweep 3s ease-in-out infinite'
-                                }}
-                              />
-                            </div>
-                            <div className="flex gap-2">
-                              <button
-                                onClick={captureAndScanGarment}
-                                className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-mono text-[10px] py-3 uppercase tracking-wider transition-all cursor-pointer font-bold"
-                              >
-                                [ Capture & AI Scan ]
-                              </button>
-                              <button
-                                onClick={stopScanningCamera}
-                                className="px-4 border border-white/10 hover:border-white/30 text-white/60 hover:text-white font-mono text-[10px] py-3 uppercase tracking-wider transition-all cursor-pointer"
-                              >
-                                [ Cancel ]
-                              </button>
-                            </div>
-                          </div>
-                        ) : null}
-
-                        {/* B. Active Scan Loading State */}
-                        {!isCameraActive && gImage && isScanningVisual && (
-                          <div className="space-y-4 animate-fade-in">
-                            <div className="relative aspect-square max-w-[240px] mx-auto bg-neutral-950 border border-white/15 overflow-hidden rounded-lg">
-                              <img src={gImage || null} 
-                                referrerPolicy="no-referrer"
-                                className="w-full h-full object-cover opacity-60" 
-                                alt="Placing garment" 
-                              />
-                              {/* Laser Sweep Line */}
-                              <div 
-                                className="absolute left-0 w-full h-[2px] bg-violet-500 shadow-[0_0_12px_rgba(168,85,247,0.9)] pointer-events-none"
-                                style={{
-                                  animation: 'scanSweep 2.2s ease-in-out infinite'
-                                }}
-                              />
-                              <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                                <div className="text-center space-y-2 px-4">
-                                  <RefreshCw className="w-6 h-6 text-violet-400 animate-spin mx-auto" />
-                                  <p className="text-[9px] font-mono text-violet-300 tracking-widest uppercase animate-pulse">
-                                    Cognitive Extraction...
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-                            
-                            {/* Scanning Real-time Telemetry Terminal Logs */}
-                            <div className="bg-black/50 border border-white/5 p-3 rounded text-left font-mono text-[8.5px] leading-relaxed text-zinc-400 max-h-[100px] overflow-y-auto no-scrollbar">
-                              <p className="text-violet-400/80 font-bold mb-1 border-b border-white/5 pb-1">[ SCANNER PROCESS TELEMETRY ]</p>
-                              {scanningLogs.map((log, index) => (
-                                <p key={index} className="truncate">
-                                  <span className="text-white/20 select-none mr-1.5">&gt;</span>{log}
-                                </p>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* C. Successful Scan Coordinates Match (Review step) */}
-                        {!isCameraActive && gImage && !isScanningVisual && (
-                          <div className="space-y-4 animate-fade-in">
-                            <div className="relative aspect-square max-w-[200px] mx-auto bg-neutral-950 border border-white/15 overflow-hidden rounded-lg">
-                              <img src={gImage || null} 
-                                referrerPolicy="no-referrer"
-                                className="w-full h-full object-cover" 
-                                alt="Placing garment" 
-                              />
-                              {scanConfidence && (
-                                <div className="absolute bottom-2 right-2 bg-emerald-500/95 text-black font-mono text-[8px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider flex items-center gap-1">
-                                  <Check className="w-2.5 h-2.5 stroke-[3px]" /> Match {Math.round(scanConfidence * 100)}%
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Metadata details panel */}
-                            <div className="bg-white/5 border border-white/5 p-4 rounded-lg text-left space-y-3 font-mono text-[10px]">
-                              <p className="text-violet-400 font-bold uppercase border-b border-white/5 pb-1">[ INGESTED SPECIFICATIONS ]</p>
-                              <div className="grid grid-cols-3 gap-2 py-0.5">
-                                <span className="text-white/30 uppercase">Label:</span>
-                                <input
-                                  type="text"
-                                  value={gTitle}
-                                  onChange={(e) => setGTitle(e.target.value)}
-                                  className="col-span-2 text-white bg-transparent border-b border-white/5 focus:border-white/20 focus:outline-none font-serif italic truncate"
-                                />
-                              </div>
-                              <div className="grid grid-cols-3 gap-2 py-0.5">
-                                <span className="text-white/30 uppercase">Class:</span>
-                                <select 
-                                  value={gCategory}
-                                  onChange={(e) => setGCategory(e.target.value as any)}
-                                  className="col-span-2 text-zinc-300 bg-neutral-900 border border-white/5 focus:outline-none rounded px-1 py-0.5"
-                                >
-                                  {['Casual', 'Formal', 'Sportswear', 'Outerwear', 'Accessories'].map(cat => (
-                                    <option key={cat} value={cat}>{cat}</option>
-                                  ))}
-                                </select>
-                              </div>
-                              <div className="grid grid-cols-3 gap-2 py-0.5">
-                                <span className="text-white/30 uppercase">Primary:</span>
-                                <input
-                                  type="text"
-                                  value={gPrimaryColor}
-                                  onChange={(e) => setGPrimaryColor(e.target.value)}
-                                  className="col-span-2 text-zinc-300 bg-transparent border-b border-white/5 focus:border-white/20 focus:outline-none truncate"
-                                />
-                              </div>
-                              <div className="grid grid-cols-3 gap-2 py-0.5">
-                                <span className="text-white/30 uppercase">Season:</span>
-                                <select 
-                                  value={gSeason}
-                                  onChange={(e) => setGSeason(e.target.value as any)}
-                                  className="col-span-2 text-zinc-300 bg-neutral-900 border border-white/5 focus:outline-none rounded px-1 py-0.5"
-                                >
-                                  {['Spring', 'Summer', 'Autumn', 'Winter', 'All-Season'].map(s => (
-                                    <option key={s} value={s}>{s}</option>
-                                  ))}
-                                </select>
-                              </div>
-                              <div className="pt-2 border-t border-white/5">
-                                <span className="text-white/30 uppercase block mb-1">Extracted Note:</span>
-                                <textarea
-                                  value={gDesc}
-                                  onChange={(e) => setGDesc(e.target.value)}
-                                  rows={2}
-                                  className="w-full text-zinc-400 bg-transparent border border-white/5 focus:border-white/20 focus:outline-none p-1.5 rounded font-serif italic text-[9px] leading-relaxed resize-none"
-                                />
-                              </div>
-                            </div>
-
-                            <div className="flex gap-2 font-mono text-[10px] pt-1">
-                              <button
-                                onClick={() => setAddStep('NOTE')}
-                                className="flex-1 bg-white text-black hover:bg-neutral-200 uppercase tracking-widest py-3 cursor-pointer font-bold"
-                              >
-                                [ Proceed to Ceremony ]
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setGImage('');
-                                  setGTitle('');
-                                  setGDesc('');
-                                  setScanConfidence(null);
-                                }}
-                                className="px-3 border border-white/10 hover:border-white/30 text-white/50 hover:text-white uppercase tracking-wider py-3 cursor-pointer font-light"
-                              >
-                                [ Clear ]
-                              </button>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* D. Default Scanner Standby & Input controls */}
-                        {!isCameraActive && !gImage && (
-                          <div className="space-y-6 animate-fade-in">
-                            {/* Ingestion Drag & Drop Zone */}
-                            <label className="group relative border border-dashed border-white/10 hover:border-violet-500/40 bg-neutral-900/30 p-8 rounded-xl flex flex-col items-center justify-center cursor-pointer transition-all">
-                              <input 
-                                type="file" 
-                                accept="image/*" 
-                                onChange={handleUploadedFileScan}
-                                className="hidden" 
-                              />
-                              <Upload className="w-8 h-8 text-white/20 group-hover:text-violet-400 transition-colors mb-3 animate-pulse" />
-                              <span className="text-[10px] font-mono text-zinc-400 group-hover:text-white tracking-widest uppercase block mb-1">
-                                Drop clothing photo or Browse
-                              </span>
-                              <span className="text-[8px] font-mono text-zinc-600 uppercase tracking-wider">
-                                PNG, JPG or HEIC format up to 10MB
-                              </span>
-                            </label>
-
-                            <div className="flex items-center justify-center gap-3">
-                              <div className="h-[1px] bg-white/5 flex-grow" />
-                              <span className="text-[9px] font-mono text-zinc-600 uppercase tracking-widest">or</span>
-                              <div className="h-[1px] bg-white/5 flex-grow" />
-                            </div>
-
-                            {/* Camera activation button */}
-                            <button
-                              type="button"
-                              onClick={startScanningCamera}
-                              className="w-full border border-white/10 hover:border-violet-500/30 bg-white/5 hover:bg-violet-500/5 text-zinc-300 hover:text-white font-mono text-[10px] py-4 rounded-lg uppercase tracking-widest transition-all cursor-pointer flex items-center justify-center gap-2"
-                            >
-                              <Camera className="w-3.5 h-3.5" /> [ Launch Live Ingestion Camera ]
-                            </button>
-
-                            <div className="flex items-center justify-center gap-3">
-                              <div className="h-[1px] bg-white/5 flex-grow" />
-                              <span className="text-[9px] font-mono text-zinc-600 uppercase tracking-widest">or</span>
-                              <div className="h-[1px] bg-white/5 flex-grow" />
-                            </div>
-
-                            {/* Original URL fallback input */}
-                            <div className="space-y-2">
-                              <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest block text-left">
-                                Paste Photograph URL (Original Mode)
-                              </span>
-                              <input
-                                type="text"
-                                placeholder="Paste clothing URL..."
-                                value={gImage}
-                                onChange={(e) => setGImage(e.target.value)}
-                                className="w-full bg-transparent border-b border-white/10 py-3 text-sm text-center text-white placeholder-white/20 focus:outline-none focus:border-white transition-all font-light"
-                              />
-                            </div>
-
-                            <div className="flex justify-center gap-6 pt-2 font-mono text-[10px]">
-                              {gImage && (
-                                <button
-                                  onClick={() => setAddStep('NAME')}
-                                  className="text-white hover:text-white/80 uppercase tracking-widest bg-white/5 px-6 py-3 border border-white/10 cursor-pointer font-light"
-                                >
-                                  [ Next ]
-                                </button>
-                              )}
-                              <button
-                                onClick={() => {
-                                  localStorage.removeItem('draft_add_step');
-                                  localStorage.removeItem('draft_g_title');
-                                  localStorage.removeItem('draft_g_desc');
-                                  setGImage('');
-                                  setGTitle('');
-                                  setGDesc('');
-                                  setAddStep('CLOSED');
-                                }}
-                                className="text-white/30 hover:text-white/60 uppercase tracking-widest py-3 cursor-pointer font-light"
-                              >
-                                [ Cancel ]
-                              </button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {addStep === 'NAME' && (
-                      <div className="space-y-6 max-w-sm mx-auto py-4 text-center animate-fade-in select-none">
-                        <span className="text-[10px] font-mono text-white/30 uppercase tracking-[0.2em] block font-light">
-                          Ceremony of Placing — Name of The Piece
-                        </span>
-                        <input
-                          type="text"
-                          required
-                          placeholder="e.g. Black Wool Coat"
-                          value={gTitle}
-                          onChange={(e) => setGTitle(e.target.value)}
-                          className="w-full bg-transparent border-b border-white/10 py-3 text-lg text-center text-white placeholder-white/20 focus:outline-none focus:border-white transition-all font-serif font-light"
-                        />
-                        <div className="flex justify-center gap-6 pt-2 font-mono text-[10px]">
-                          <button
-                            onClick={() => {
-                              if (gTitle.trim()) setAddStep('NOTE');
-                            }}
-                            disabled={!gTitle.trim()}
-                            className="text-white hover:text-white/80 uppercase tracking-widest bg-white/5 px-6 py-3 border border-white/10 disabled:opacity-30 cursor-pointer font-light"
-                          >
-                            [ Next ]
-                          </button>
-                          <button
-                            onClick={() => {
-                              localStorage.removeItem('draft_add_step');
-                              localStorage.removeItem('draft_g_title');
-                              localStorage.removeItem('draft_g_desc');
-                              setGImage('');
-                              setGTitle('');
-                              setGDesc('');
-                              setAddStep('CLOSED');
-                            }}
-                            className="text-white/30 hover:text-white/60 uppercase tracking-widest py-3 cursor-pointer font-light"
-                          >
-                            [ Cancel ]
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-
-                    {addStep === 'NOTE' && (
-                      <div className="space-y-6 max-w-sm mx-auto py-4 text-center animate-fade-in select-none">
-                        <span className="text-[10px] font-mono text-white/30 uppercase tracking-[0.2em] block font-light">
-                          Ceremony of Placing — Memory / Footnote
-                        </span>
-                        <input
-                          type="text"
-                          placeholder="e.g. Cold mornings. (optional)"
-                          value={gDesc}
-                          onChange={(e) => setGDesc(e.target.value)}
-                          className="w-full bg-transparent border-b border-white/10 py-3 text-sm text-center text-white placeholder-white/20 focus:outline-none focus:border-white transition-all font-serif italic font-light"
-                        />
-                        <div className="flex justify-center gap-6 pt-4 font-mono text-[10px]">
-                          <button
-                            onClick={async () => {
-                              if (!gTitle.trim()) return;
-                              const fallbackUrl = gImage.trim() || getGarmentImage(gTitle);
-                              const cleanNote = gDesc.trim() || 'Still feels right.';
-                              triggerQuietPause(async () => {
-                                if (onAddGarment) {
-                                  await onAddGarment(gTitle, cleanNote, gCategory, { imageUrl: fallbackUrl, season: gSeason, primaryColor: gPrimaryColor });
-                                } else {
-                                  const items = [...state.unifiedStyleMemory.wardrobe_items];
-                                  items.push({
-                                    id: `local-${Date.now()}`,
-                                    title: gTitle,
-                                    description: cleanNote,
-                                    category: gCategory,
-                                    status: 'In Closet',
-                                    userId: 'simulated-guest',
-                                    createdAt: new Date(),
-                                    imageUrl: fallbackUrl,
-                                    primaryColor: gPrimaryColor,
-                                    season: gSeason
-                                  });
-                                  UnifiedFashionOS.syncWardrobeItems(items);
-                                }
-
-                                const responses = ['Newly remembered.', 'Placed on the shelf.'];
-                                const word = responses[Math.floor(Math.random() * responses.length)];
-                                setCeremonyStatus(word);
-                                
-                                localStorage.removeItem('draft_add_step');
-                                localStorage.removeItem('draft_g_title');
-                                localStorage.removeItem('draft_g_desc');
-                                setGTitle('');
-                                setGDesc('');
-                                setGImage('');
-                                setAddStep('CLOSED');
-
-                                setTimeout(() => {
-                                  setCeremonyStatus(null);
-                                }, 2100);
-                              });
-                            }}
-                            className="bg-white text-black hover:bg-[#EAEAEA] font-semibold px-10 py-4 uppercase tracking-[0.25em] cursor-pointer transition-all"
-                          >
-                            [ Keep This ]
-                          </button>
-                          <button
-                            onClick={() => {
-                              localStorage.removeItem('draft_add_step');
-                              localStorage.removeItem('draft_g_title');
-                              localStorage.removeItem('draft_g_desc');
-                              setGImage('');
-                              setGTitle('');
-                              setGDesc('');
-                              setAddStep('CLOSED');
-                            }}
-                            className="text-white/30 hover:text-white/60 uppercase tracking-widest py-4 cursor-pointer font-light"
-                          >
-                            [ Cancel ]
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Curated Pre-made Presets (Now Curated Pieces) */}
-                  <div className="text-center space-y-6 pt-4">
-                    <span className="text-[10px] font-mono text-white/35 uppercase tracking-[0.25em] block font-light">CURATED PIECES</span>
-                    <div className="flex flex-wrap justify-center gap-2 select-none">
-                      {presets.map((preset, index) => (
-                        <button
-                          key={index}
-                          onClick={() => handleApplyPreset(preset)}
-                          className="text-[9.5px] font-mono text-white/60 bg-white/5 hover:bg-white hover:text-black border border-white/10 px-4 py-2 rounded-none transition-all cursor-pointer whitespace-nowrap font-light"
-                        >
-                          + {preset.title.split(' ')[0]}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Closet Showcase — Shelves single column layout with large vertical rhythm */}
-                  <div className="pt-12 select-none">
-                    {activeWardrobeList.length === 0 ? (
-                       <EmptyStateLibrary 
-                         type="no_wardrobe" 
-                         onAction={handleLoadPresetsAutomatically} 
-                       />
-                    ) : viewMode === 'GRID' ? (
-                        <div className="pt-6">
-                          <WardrobeGrid
-                            items={displayedWardrobeList}
-                            categories={['Casual', 'Formal', 'Sportswear', 'Outerwear', 'Accessories']}
-                            onSelect={(item: any) => {
-                              triggerQuietPause(() => {
-                                try {
-                                  const history = JSON.parse(localStorage.getItem('wardrobe_touch_history') || '{}');
-                                  history[item.id] = Date.now();
-                                  localStorage.setItem('wardrobe_touch_history', JSON.stringify(history));
-                                } catch (e) {}
-                                setSelectedGarment(item);
-                              });
-                            }}
-                            onDelete={async (item: any) => {
-                              triggerQuietPause(async () => {
-                               if (onDeleteGarment) {
-                                 await onDeleteGarment(item.id);
-                               } else {
-                                 const updated = activeWardrobeList.filter((x) => x.id !== item.id);
-                                 UnifiedFashionOS.syncWardrobeItems(updated);
-                               }
-                             });
-                            }}
-                          />
-                        </div>
-                    ) : (
-                       <div className="space-y-12">
-                         {/* COLLECTION VIEW */}
-                         <div className={`py-12 select-none flex flex-col ${temporalVals.itemGap}`}>
-                           {getNaturalRotatedList(displayedWardrobeList).map((item, index) => {
-                             const offsetItem = [
-                               'max-w-[290px] mr-auto pl-4 text-left',
-                               'max-w-[330px] mx-auto px-6 text-center',
-                               'max-w-[300px] ml-auto pr-4 text-right',
-                               'max-w-[310px] mx-auto pl-8 text-center',
-                             ][index % 4];
-
-                             return (
-                               <div 
-                                 key={item.id} 
-                                 onClick={() => {
-                                   triggerQuietPause(() => {
-                                     try {
-                                        const history = JSON.parse(localStorage.getItem('wardrobe_touch_history') || '{}');
-                                        history[item.id] = Date.now();
-                                        localStorage.setItem('wardrobe_touch_history', JSON.stringify(history));
-                                      } catch (e) {}
-                                      setSelectedGarment(item);
-                                   });
-                                 }}
-                                 className={`flex flex-col gap-5 group relative p-1 transition-all duration-150 cursor-pointer ${offsetItem}`}
-                               >
-                                
-                                 {/* Image First */}
-                                <div className="w-full relative overflow-hidden bg-[#0d0d0d]">
-                                  <ImageWithFade 
-                                    src={item.imageUrl || getGarmentImage(item.title)} 
-                                    alt={item.title} 
-                                  />
-                                  {hasArchiveQualities(item) && (
-                                    <div className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-md px-1.5 py-0.5 border border-white/5 select-none z-10">
-                                      <span className="text-[8px] font-mono uppercase tracking-[0.15em] text-white/50 block font-light">
-                                        Kept.
-                                      </span>
-                                    </div>
-                                  )}
-                                </div>
-
-                                 {/* Title and Footnote */}
-                                <div className="space-y-4 pt-1">
-                                  <h3 className="font-serif font-light text-[21px] text-white/95 tracking-[-0.02em] leading-tight">
-                                    {item.title}
-                                  </h3>
-                                  
-                                  <p className="text-xs font-serif italic text-white/40 tracking-wide leading-relaxed">
-                                    {getAtmosphereLine(item)}{item.careNote ? ` · ${item.careNote}` : ""}
-                                  </p>
-                                </div>
-
-                                 {/* Hover menu release action */}
-                                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 py-1">
-                                  <button
-                                    onClick={async (e) => {
-                                      e.stopPropagation(); // Avoid opening garment details page screen overlay!
-                                      if (confirmLetGoId === item.id) {
-                                        triggerQuietPause(async () => {
-                                          if (onDeleteGarment) {
-                                            await onDeleteGarment(item.id);
-                                          } else {
-                                            const updated = activeWardrobeList.filter((x) => x.id !== item.id);
-                                            UnifiedFashionOS.syncWardrobeItems(updated);
-                                          }
-                                        });
-                                        setConfirmLetGoId(null);
-                                      } else {
-                                        setConfirmLetGoId(item.id);
-                                        setTimeout(() => {
-                                          setConfirmLetGoId(prev => prev === item.id ? null : prev);
-                                        }, 4000);
-                                      }
-                                    }}
-                                    className={`text-[9px] font-mono uppercase tracking-[0.2em] transition-colors cursor-pointer font-semibold ${
-                                      confirmLetGoId === item.id 
-                                        ? 'text-red-400 hover:text-red-300' 
-                                        : 'text-white/20 hover:text-white/50'
-                                    }`}
-                                  >
-                                    {confirmLetGoId === item.id ? '[ Tap to confirm ]' : '[ Let go ]'}
-                                  </button>
-                                </div>
-
-                                 {/* Physical asymmetrical shelf element underneath each garment */}
-                                <div className={`mt-5 border-b border-white/[0.04] group-hover:border-white/[0.09] transition-all duration-300 ${
-                                  index % 4 === 0 ? 'w-[75%] mr-auto' :
-                                  index % 4 === 1 ? 'w-[92%] mx-auto' :
-                                  index % 4 === 2 ? 'w-[80%] ml-auto' :
-                                  'w-[86%] mx-auto'
-                                }`} />
-
-                              </div>
-                             );
-                           })}
-                         </div>
-                       </div>
-                    )}
-                  </div>
-
-                </div>
-              )}
-
-              {/* Seen again faint rows (Requirement 5) */}
-              {activeSubTab === 'WARDROBE' && placedElsewhereItems.length > 0 && (
-                <div className="pt-24 border-t border-white/[0.04] space-y-8 select-none max-w-sm mx-auto">
-                  <div className="text-center">
-                    <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-white/30 block font-light">
-                      Seen again.
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-8 pb-8">
-                    {placedElsewhereItems.map((item) => (
-                      <div 
-                        key={item.id} 
-                        onClick={() => {
-                          triggerQuietPause(() => {
-                            setSelectedGarment(item);
-                          });
-                        }}
-                        className="space-y-3 cursor-pointer group opacity-60 hover:opacity-100 transition-opacity duration-150 animate-fade-in"
-                        id={`seen-again-item-${item.id}`}
-                      >
-                        <div className="w-full aspect-[4/5] overflow-hidden bg-white/[0.02] border border-white/5 group-hover:border-white/10 transition-colors">
-                          <img 
-                            src={item.imageUrl || getGarmentImage(item.title)} 
-                            alt={item.title}
-                            className="w-full h-full object-cover grayscale opacity-80 group-hover:opacity-100 transition-opacity"
-                            referrerPolicy="no-referrer"
-                          />
-                        </div>
-                        <div className="text-center min-w-0">
-                          <h4 className="font-serif font-light text-sm text-white/50 group-hover:text-white/95 truncate px-1 transition-colors">
-                            {item.title}
-                          </h4>
-                          <span className="text-[8px] font-mono uppercase tracking-[0.1em] text-white/30 block mt-0.5 group-hover:text-white/50 transition-colors">
-                            [ put away ]
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Real Closet Awareness: These have not been seen lately. (Requirement 4) */}
-              {activeSubTab === 'WARDROBE' && activeWardrobeList.length >= 5 && (
-                <div className="pt-24 border-t border-white/[0.04] space-y-8 select-none max-w-sm mx-auto">
-                  <div className="text-center">
-                    <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-white/30 block font-light">
-                      These have not been seen lately.
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-6 pb-8">
-                    {[...activeWardrobeList]
-                      .sort((a, b) => (a.wearCount || 0) - (b.wearCount || 0))
-                      .slice(0, 3)
-                      .map((item) => (
-                        <div 
-                          key={item.id} 
-                          className="space-y-2 cursor-pointer group/seen"
-                          onClick={() => {
-                            triggerQuietPause(() => {
-                              setSelectedGarment(item);
-                            });
-                          }}
-                        >
-                          <div className="w-full aspect-[4/5] overflow-hidden bg-white/5 relative bg-[#0d0d0d]">
-                            <ImageWithFade 
-                              src={item.imageUrl || getGarmentImage(item.title)} 
-                              alt={item.title} 
-                            />
-                          </div>
-                          <div className="text-center">
-                            <h4 className="font-serif font-light text-[10.5px] text-white/50 group-hover/seen:text-white/80 truncate px-1 transition-colors">
-                              {item.title}
-                            </h4>
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-              )}
-
-              {/* ROOM 3: AI DESIGN STUDIO */}
-              {(activeSubTab === 'PRODUCT_AI_CREATIONS' || activeSubTab === 'ECOSYSTEM_CREATE' || activeSubTab === 'AI_STUDIO') && (
-                <AIEngineStudio 
-                  wardrobe={activeWardrobeList} 
-                  onAddGarment={onAddGarment} 
-                  onNavigateToTab={(tab) => handleNavigate(tab as any)} 
-                />
-              )}
-
-              {/* ROOM 3.5: LOOK VISION MAIN DASHBOARD */}
-              {(activeSubTab === 'LOOK_VISION_DASHBOARD' || activeSubTab === 'MAIN_DASHBOARD') && (
-                <LookVisionMainDashboard
-                  wardrobe={activeWardrobeList}
-                  onAddGarment={onAddGarment}
-                  onDeleteGarment={onDeleteGarment}
-                  user={user}
-                  onLogout={onLogout}
-                  onReset={onReset}
-                  onLoadSamples={onLoadSamples}
-                  setActiveSubTab={(tab) => handleNavigate(tab as any)}
-                />
-              )}
-
-              {/* ROOM 4: AI MEMORY & PUBLIC COMPONENT MEMORY VAULT */}
-              {activeSubTab === 'DASHBOARD' && (
-                <AIMemoryHub user={user} onNavigateTab={(tab) => handleNavigate(tab as any)} />
-              )}
-
-              {/* ROOM 5: COGNITIVE PASSPORT & STYLE DNA */}
-              {activeSubTab === 'PROFILE' && (
-                <CognitivePassport 
-                  user={user} 
-                  onLogout={onLogout} 
-                  currentTheme={currentTheme}
-                  setCurrentTheme={setCurrentTheme}
-                />
-              )}
-
-              {/* ROOM 6: SYSTEM AUDIT & SETTINGS */}
-              {activeSubTab === 'SYSTEM_ROOM' && (
-                <SystemSettingsAudit
-                  currentTheme={currentTheme}
-                  setCurrentTheme={setCurrentTheme}
-                  weatherWeight={weatherWeight}
-                  saveWeatherWeight={saveWeatherWeight}
-                  isResetting={isResetting}
-                  onReset={onReset}
-                  onLoadSamples={onLoadSamples}
-                  state={state}
-                  triggerQuietPause={triggerQuietPause}
-                />
-              )}
-
-              {activeSubTab === 'PLANNER' && (
-                <OutfitPlanner wardrobe={activeWardrobeList} themeObj={themeObj} />
-              )}
-
-              {/* ROOM: ARCHITECTURE ROADMAP */}
-            {(activeSubTab as any) === 'ROADMAP' && (
-              <ArchitectureMap 
-                user={user} 
-                onNavigateToTab={(tab) => {
-                  setActiveSubTab(tab as any);
-                  localStorage.setItem('last_active_place_subtab', tab);
-                }} 
-              />
-            )}
-
-            {/* ROOM: OUTFIT GENERATOR (Fully connected and interactive) */}
-            {(activeSubTab === 'ECOSYSTEM_GENERATE' || activeSubTab === 'OUTFIT_GEN') && (
-              <div className="max-w-6xl mx-auto py-2 px-4 animate-fade-in">
-                <AIFashionMVPSuite wardrobe={activeWardrobeList} onAddGarment={onAddGarment} />
-              </div>
-            )}
-
-            {/* ROOM: VIRTUAL TRY-ON (Fully connected and interactive) */}
-            {activeSubTab === 'VIRTUAL_TRY' && (
-              <div className="max-w-6xl mx-auto py-2 px-4 animate-fade-in">
-                <VirtualStudioTryOn wardrobe={activeWardrobeList} onAddGarment={onAddGarment} />
-              </div>
-            )}
-
-            {/* ROOM: COLLECTIONS (Fully connected and interactive) */}
-            {activeSubTab === 'COLLECTIONS' && (
-              <div className="max-w-6xl mx-auto py-2 px-4 animate-fade-in">
-                <StyleCollections wardrobe={activeWardrobeList} />
-              </div>
-            )}
-
-            {/* ROOM: HISTORY (Fully connected and interactive) */}
-            {activeSubTab === 'HISTORY' && (
-              <div className="max-w-6xl mx-auto py-2 px-4 animate-fade-in">
-                <StyleHistoryArchive wardrobe={activeWardrobeList} />
-              </div>
-            )}
-
-            {/* ROOM: MESSAGES (Fully connected and interactive) */}
-            {activeSubTab === 'MESSAGES' && (
-              <div className="max-w-6xl mx-auto py-2 px-4 animate-fade-in">
-                <StyleMessageCenter wardrobe={activeWardrobeList} />
-              </div>
-            )}
-
-            {/* ROOM: FAVORITES (Fully connected and interactive) */}
-            {activeSubTab === 'FAVORITES' && (
-              <div className="max-w-6xl mx-auto py-2 px-4 animate-fade-in">
-                <StyleFavorites wardrobe={activeWardrobeList} />
-              </div>
-            )}
-
-            {/* ROOM: DISCOVER SCREEN (Aesthetic style & editor's selection) */}
-            {activeSubTab === 'DISCOVER' && (
-              <DiscoverScreen 
-                userWardrobe={activeWardrobeList} 
-                onNavigateToTab={(tab) => handleNavigate(tab as any)} 
-                onAddGarment={onAddGarment} 
-              />
-            )}
-
-            {/* ROOM: COMMUNITY SCREEN (Social styles & style challenge feed) */}
-            {(activeSubTab === 'PRODUCT_COMMUNITY' || activeSubTab === 'COMMUNITY_ROOM') && (
-              <CommunityScreen 
-                user={user} 
-                userWardrobe={activeWardrobeList} 
-                onNavigateToTab={(tab) => handleNavigate(tab as any)} 
-                onAddGarment={onAddGarment} 
-              />
-            )}
-
-            {/* ROOM: MARKETPLACE SCREEN (Premium boutique showroom catalog) */}
-            {(activeSubTab === 'PRODUCT_MARKETPLACE' || activeSubTab === 'MARKETPLACE_ROOM') && (
-              <MarketplaceScreen 
-                user={user}
-                userWardrobe={activeWardrobeList} 
-                onNavigateToTab={(tab) => handleNavigate(tab as any)} 
-                onAddGarment={onAddGarment} 
-                onSelectProduct={(prod) => {
-                  setSelectedProduct(prod);
-                  handleNavigate('PRODUCT_DETAIL');
-                }}
-                onOpenSellerDashboard={() => setIsSellerDashboardOpen(true)}
-              />
-            )}
-
-            {/* ROOM: PRODUCT DETAIL SCREEN (AI compat score, sizing & try-on) */}
-            {activeSubTab === 'PRODUCT_DETAIL' && selectedProduct && (
-              <ProductDetailScreen 
-                user={user}
-                product={selectedProduct} 
-                userWardrobe={activeWardrobeList} 
-                onBack={() => handleNavigate('MARKETPLACE_ROOM')} 
-                onNavigateToTab={(tab) => handleNavigate(tab as any)} 
-                onAddGarment={onAddGarment} 
-              />
-            )}
-
-            {/* ROOM: CREATOR WORKSPACE SCREEN (Brand analytics, style demand prediction) */}
-            {activeSubTab === 'CREATOR_WORKSPACE' && (
-              <CreatorWorkspaceScreen 
-                user={user} 
-                userWardrobe={activeWardrobeList} 
-                onNavigateToTab={(tab) => handleNavigate(tab as any)} 
-                onAddGarment={onAddGarment} 
-              />
-            )}
-
-            {/* ROOM: AI ASSISTANT FULL-PAGE STUDIO */}
-            {activeSubTab === 'AI_ASSISTANT' && (
-              <AIAssistantStudio 
-                wardrobe={activeWardrobeList} 
-                onNavigateToTab={(tab) => handleNavigate(tab as any)} 
-              />
-            )}
-
-            {/* ROOM: MATURE FASHION STUDIO */}
-            {activeSubTab === 'MATURE_FASHION_STUDIO' && (
-              <div className="max-w-7xl mx-auto py-2 px-2 sm:px-4 animate-fade-in">
-                <MatureFashionStudio
-                  userId={user?.uid || 'anon_creator'}
-                  onSendToTryOn={(assetUrl, title) => {
-                    handleNavigate('VIRTUAL_TRY');
-                    window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: `👕 Sent "${title}" to Virtual 3D Try-On Studio` }));
-                  }}
-                  onSaveToWardrobe={(asset) => {
-                    onAddGarment?.(asset.title, asset.prompt, asset.category || 'Couture', { imageUrl: asset.generatedAsset });
-                    window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: `✨ Saved "${asset.title}" to Digital Wardrobe!` }));
-                  }}
-                  onPublishToCommunity={(asset) => {
-                    handleNavigate('PRODUCT_COMMUNITY');
-                    window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: `🌐 Published "${asset.title}" to Public Community Feed` }));
-                  }}
-                />
-              </div>
-            )}
-
-            {/* ROOM: SOCIAL FASHION ECOSYSTEM */}
-            {activeSubTab === 'SOCIAL_HUB' && (
-              <div className="max-w-7xl mx-auto py-2 px-2 sm:px-4 animate-fade-in">
-                <SocialHubView wardrobe={activeWardrobeList} />
-              </div>
-            )}
-
-            {/* ROOM: MONETIZATION & SUBSCRIPTION HUB */}
-            {activeSubTab === 'SUBSCRIPTION_HUB' && (
-              <div className="max-w-7xl mx-auto py-2 px-2 sm:px-4 animate-fade-in">
-                <SubscriptionHubView />
-              </div>
-            )}
-
-            {/* ROOM: ENTERPRISE ADMIN COMMAND CENTER */}
-            {activeSubTab === 'ADMIN_COMMAND' && (
-              <div className="max-w-7xl mx-auto py-2 px-2 sm:px-4 animate-fade-in">
-                <AdminShell onExitAdmin={() => handleNavigate('PRODUCT_HOME')} />
-              </div>
-            )}
-
-            </motion.div>
-          </AnimatePresence>
-        </div>
-      </main>
-
-      {/* C. RIGHT SIDEBAR PERSISTENT PANEL */}
-      <aside className={`w-80 shrink-0 p-4 flex flex-col gap-5 overflow-y-auto no-scrollbar hidden xl:flex text-left ${
-        currentTheme === 'solar-day' 
-          ? 'bg-[#f5f4f0] border-l border-stone-200 text-stone-900' 
-          : 'bg-[#07070c] border-l border-white/5 text-white'
-      }`}>
+      </div>
+    );
+  };
+
+  const appContent = (
+    <div className="h-screen w-screen overflow-hidden bg-[#05050a] text-zinc-100 flex select-text">
+      
+      {/* Fixed Left Navigation Sidebar */}
+      <aside className="w-64 h-full bg-[#07070c] border-r border-white/5 flex flex-col justify-between z-30 shrink-0 select-none">
         
-        {/* 1. Style Contributors Leaderboard */}
-        <div className="bg-black/20 border border-white/5 rounded-2xl p-4 space-y-3">
-          <div className="flex justify-between items-center border-b border-white/5 pb-2">
-            <span className="text-[9px] font-mono uppercase tracking-[0.15em] text-white/40 block font-bold">Contributors</span>
-            <span className="text-[9px] font-mono text-violet-400 font-bold">This Week</span>
-          </div>
-          <div className="space-y-2.5 pt-1">
-            {[
-              { rank: 1, name: 'Sarah Khan', score: '12.5K', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&auto=format&fit=crop' },
-              { rank: 2, name: 'Urban King', score: '8.7K', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=150&auto=format&fit=crop' },
-              { rank: 3, name: 'Trend Hunter', score: '6.3K', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=150&auto=format&fit=crop' },
-              { rank: 4, name: 'Style Icon', score: '4.9K', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=150&auto=format&fit=crop' },
-              { rank: 5, name: 'John Creator', score: '2.1K', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&auto=format&fit=crop', isYou: true }
-            ].map((cont) => (
-              <div key={cont.rank} className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <span className="text-[10px] font-mono font-bold text-white/30 w-3">{cont.rank}</span>
-                  <img src={cont.avatar || null} className="w-6 h-6 rounded-full object-cover border border-white/10" alt="" />
-                  <span className={`text-[11px] ${cont.isYou ? 'text-violet-300 font-bold' : 'text-white/85'}`}>{cont.name}</span>
-                </div>
-                <span className="text-[10px] text-white/50 font-mono">{cont.score}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* 2. Trending Tags */}
-        <div className="bg-black/20 border border-white/5 rounded-2xl p-4 space-y-2.5">
-          <span className="text-[9px] font-mono uppercase tracking-[0.15em] text-white/40 block font-bold">Trending Tags</span>
-          <div className="flex flex-wrap gap-1.5">
-            {['#StreetStyle', '#Minimal', '#Techwear', '#Y2K', '#Luxury', '#CyberCore'].map((tag) => (
-              <span 
-                key={tag} 
-                onClick={() => {
-                  window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: `Active style filter locked to: ${tag}` }));
-                }}
-                className="px-2 py-0.5 bg-white/5 hover:bg-violet-600/20 text-[9.5px] text-white/60 hover:text-white border border-white/5 rounded-md cursor-pointer transition-colors font-mono"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        {/* 3. Quick Actions */}
-        <div className="space-y-3">
-          <span className="text-[9px] font-mono uppercase tracking-[0.15em] text-white/40 block">Quick Actions</span>
-          <div className="grid grid-cols-2 gap-2.5">
-            <button 
-              onClick={() => setActiveSubTab('AI_STUDIO')}
-              className="p-3 bg-white/[0.01] hover:bg-white/5 border border-white/5 rounded-xl flex flex-col items-center justify-center text-center space-y-1.5 transition-all group cursor-pointer"
-            >
-              <div className="p-1.5 rounded-lg bg-violet-500/10 text-violet-400 group-hover:bg-violet-500 group-hover:text-white transition-all">
-                <Sparkles className="w-4 h-4" />
-              </div>
-              <span className="text-[10px] font-mono text-white/80 uppercase font-medium">AI Studio</span>
-            </button>
-
-            <button 
-              onClick={() => setActiveSubTab('AI_STUDIO')}
-              className="p-3 bg-white/[0.01] hover:bg-white/5 border border-white/5 rounded-xl flex flex-col items-center justify-center text-center space-y-1.5 transition-all group cursor-pointer relative"
-            >
-              <div className="p-1.5 rounded-lg bg-cyan-500/10 text-cyan-400 group-hover:bg-cyan-500 group-hover:text-white transition-all">
-                <Shirt className="w-4 h-4" />
-              </div>
-              <span className="text-[10px] font-mono text-white/80 uppercase font-medium">Try-On</span>
-              <span className="absolute -top-1 right-1 px-1 bg-violet-600 text-white text-[7px] font-bold uppercase rounded font-mono scale-90">NEW</span>
-            </button>
-
-            <button 
-              onClick={() => {
-                setActiveSubTab('AI_STUDIO');
-                window.dispatchEvent(new CustomEvent('lookvision_show_toast', { detail: 'AI Stylist chat initiated.' }));
-              }}
-              className="p-3 bg-white/[0.01] hover:bg-white/5 border border-white/5 rounded-xl flex flex-col items-center justify-center text-center space-y-1.5 transition-all group cursor-pointer"
-            >
-              <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 group-hover:bg-emerald-500 group-hover:text-white transition-all">
-                <MessageSquare className="w-4 h-4" />
-              </div>
-              <span className="text-[10px] font-mono text-white/80 uppercase font-medium">AI Stylist</span>
-            </button>
-
-            <button 
-              onClick={() => setActiveSubTab('WARDROBE')}
-              className="p-3 bg-white/[0.01] hover:bg-white/5 border border-white/5 rounded-xl flex flex-col items-center justify-center text-center space-y-1.5 transition-all group cursor-pointer"
-            >
-              <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-400 group-hover:bg-amber-500 group-hover:text-white transition-all">
-                <Award className="w-4 h-4" />
-              </div>
-              <span className="text-[10px] font-mono text-white/80 uppercase font-medium">Palette</span>
-            </button>
-          </div>
-        </div>
-
-        {/* 4. Dynamic Compiled Look Widget */}
-        <div className="p-4 rounded-xl bg-zinc-950/45 border border-white/5 space-y-3 text-left relative overflow-hidden">
-          <div className="flex items-center justify-between select-none">
-            <div className="flex items-center gap-2">
-              <Eye className="w-4 h-4 text-purple-400" />
-              <h3 className="text-[10px] font-mono uppercase tracking-wider text-white font-bold">Active Design</h3>
+        {/* Brand & Logo */}
+        <div className="p-5 border-b border-white/5 flex items-center justify-between">
+          <div 
+            onClick={() => handleNavigate('PRODUCT_HOME')}
+            className="flex items-center gap-3 cursor-pointer group"
+          >
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-[0_0_15px_rgba(99,102,241,0.4)] group-hover:scale-105 transition-transform">
+              <Sparkles className="w-4 h-4" />
             </div>
-            {state.activeSuggestion && (
-              <span className="px-1.5 py-0.5 rounded text-[8px] font-mono uppercase bg-emerald-500/10 text-emerald-300 border border-emerald-500/15">
-                Match {state.activeSuggestion.suitabilityScore}%
+            <div>
+              <h1 className="text-xs font-bold font-mono tracking-widest uppercase text-white">LOOK VISION</h1>
+              <span className="text-[9px] font-mono text-zinc-500">AI Fashion OS</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          </div>
+        </div>
+
+        {/* Navigation Categories */}
+        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6 scrollbar-none">
+          
+          {/* Section: AI Operations (Indigo / Violet highlights) */}
+          <div className="space-y-1">
+            <span className="px-3 text-[9px] font-mono uppercase tracking-widest text-indigo-400/70 font-semibold block">
+              AI Intelligence
+            </span>
+
+            <button
+              onClick={() => handleNavigate('PRODUCT_HOME')}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                activeSubTab === 'PRODUCT_HOME'
+                  ? 'bg-gradient-to-r from-indigo-500/20 to-purple-600/20 text-white border border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.15)]'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/[0.03]'
+              }`}
+            >
+              <Shirt className={`w-4 h-4 ${activeSubTab === 'PRODUCT_HOME' ? 'text-indigo-400' : 'text-zinc-500'}`} />
+              <span>Home Hub & Bento</span>
+            </button>
+
+            <button
+              onClick={() => handleNavigate('PRODUCT_AI_CREATIONS')}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                activeSubTab === 'PRODUCT_AI_CREATIONS'
+                  ? 'bg-gradient-to-r from-indigo-500/20 to-purple-600/20 text-white border border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.15)]'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/[0.03]'
+              }`}
+            >
+              <Sparkles className={`w-4 h-4 ${activeSubTab === 'PRODUCT_AI_CREATIONS' ? 'text-indigo-400' : 'text-zinc-500'}`} />
+              <span>AI Creations Studio</span>
+            </button>
+
+            <button
+              onClick={() => handleNavigate('STYLE_STREAM')}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                activeSubTab === 'STYLE_STREAM'
+                  ? 'bg-gradient-to-r from-indigo-500/20 to-purple-600/20 text-white border border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.15)]'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/[0.03]'
+              }`}
+            >
+              <Zap className={`w-4 h-4 ${activeSubTab === 'STYLE_STREAM' ? 'text-indigo-400' : 'text-zinc-500'}`} />
+              <span className="flex items-center gap-1.5">
+                <span>AI Style Stream</span>
+                <span className="px-1 py-0.2 rounded bg-indigo-500/20 text-[8px] font-mono text-indigo-300 font-bold border border-indigo-500/30">60FPS</span>
               </span>
+            </button>
+
+            <button
+              onClick={() => handleNavigate('VIRTUAL_TRY')}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                activeSubTab === 'VIRTUAL_TRY'
+                  ? 'bg-gradient-to-r from-indigo-500/20 to-purple-600/20 text-white border border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.15)]'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/[0.03]'
+              }`}
+            >
+              <Eye className={`w-4 h-4 ${activeSubTab === 'VIRTUAL_TRY' ? 'text-indigo-400' : 'text-zinc-500'}`} />
+              <span>Virtual Studio Try-On</span>
+            </button>
+
+            <button
+              onClick={() => handleNavigate('AI_ASSISTANT')}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                activeSubTab === 'AI_ASSISTANT'
+                  ? 'bg-gradient-to-r from-indigo-500/20 to-purple-600/20 text-white border border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.15)]'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/[0.03]'
+              }`}
+            >
+              <Cpu className={`w-4 h-4 ${activeSubTab === 'AI_ASSISTANT' ? 'text-indigo-400' : 'text-zinc-500'}`} />
+              <span>ARIA Stylist Brain</span>
+            </button>
+
+            <button
+              onClick={() => handleNavigate('FASHION_INSTRUCTOR')}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                activeSubTab === 'FASHION_INSTRUCTOR'
+                  ? 'bg-gradient-to-r from-indigo-500/20 to-purple-600/20 text-white border border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.15)]'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/[0.03]'
+              }`}
+            >
+              <Award className={`w-4 h-4 ${activeSubTab === 'FASHION_INSTRUCTOR' ? 'text-indigo-400' : 'text-zinc-500'}`} />
+              <span>Fashion Academy</span>
+            </button>
+          </div>
+
+          {/* Section: Closet & Community */}
+          <div className="space-y-1">
+            <span className="px-3 text-[9px] font-mono uppercase tracking-widest text-zinc-500 font-semibold block">
+              Wardrobe & Social
+            </span>
+
+            <button
+              onClick={() => handleNavigate('WARDROBE')}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                activeSubTab === 'WARDROBE'
+                  ? 'bg-white/10 text-white border border-white/10'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/[0.03]'
+              }`}
+            >
+              <Layers className={`w-4 h-4 ${activeSubTab === 'WARDROBE' ? 'text-white' : 'text-zinc-500'}`} />
+              <span>Digital Closet Vault</span>
+            </button>
+
+            <button
+              onClick={() => handleNavigate('PRODUCT_COMMUNITY')}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                activeSubTab === 'PRODUCT_COMMUNITY'
+                  ? 'bg-white/10 text-white border border-white/10'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/[0.03]'
+              }`}
+            >
+              <Users className={`w-4 h-4 ${activeSubTab === 'PRODUCT_COMMUNITY' ? 'text-white' : 'text-zinc-500'}`} />
+              <span>Community Lookbooks</span>
+            </button>
+
+            <button
+              onClick={() => handleNavigate('DISCOVER')}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                activeSubTab === 'DISCOVER'
+                  ? 'bg-white/10 text-white border border-white/10'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/[0.03]'
+              }`}
+            >
+              <Compass className={`w-4 h-4 ${activeSubTab === 'DISCOVER' ? 'text-white' : 'text-zinc-500'}`} />
+              <span>Discover Trends</span>
+            </button>
+
+            <button
+              onClick={() => handleNavigate('CREATOR_WORKSPACE')}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                activeSubTab === 'CREATOR_WORKSPACE'
+                  ? 'bg-white/10 text-white border border-white/10'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/[0.03]'
+              }`}
+            >
+              <Palette className={`w-4 h-4 ${activeSubTab === 'CREATOR_WORKSPACE' ? 'text-white' : 'text-zinc-500'}`} />
+              <span>Creator Workspace</span>
+            </button>
+          </div>
+
+          {/* Section: Commerce & Marketplace (Emerald Green highlights) */}
+          <div className="space-y-1">
+            <span className="px-3 text-[9px] font-mono uppercase tracking-widest text-emerald-400/80 font-semibold block">
+              Commerce & Boutique
+            </span>
+
+            <button
+              onClick={() => handleNavigate('PRODUCT_MARKETPLACE')}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                activeSubTab === 'PRODUCT_MARKETPLACE'
+                  ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 shadow-[0_0_15px_rgba(34,197,94,0.15)]'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/[0.03]'
+              }`}
+            >
+              <ShoppingBag className={`w-4 h-4 ${activeSubTab === 'PRODUCT_MARKETPLACE' ? 'text-emerald-400' : 'text-zinc-500'}`} />
+              <span>Marketplace Boutique</span>
+            </button>
+
+            <button
+              onClick={() => setIsSellerDashboardOpen(true)}
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-zinc-400 hover:text-emerald-300 hover:bg-emerald-500/5 transition-all cursor-pointer"
+            >
+              <Store className="w-4 h-4 text-emerald-500/70" />
+              <span>Seller Studio</span>
+            </button>
+
+            <button
+              onClick={() => handleNavigate('VENDOR_ONBOARDING')}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                activeSubTab === 'VENDOR_ONBOARDING'
+                  ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 shadow-[0_0_15px_rgba(34,197,94,0.15)]'
+                  : 'text-zinc-400 hover:text-emerald-300 hover:bg-emerald-500/5'
+              }`}
+            >
+              <Building className={`w-4 h-4 ${activeSubTab === 'VENDOR_ONBOARDING' ? 'text-emerald-400' : 'text-emerald-500/70'}`} />
+              <span className="flex items-center gap-1.5">
+                <span>Vendor Onboarding</span>
+                <span className="px-1 py-0.2 rounded bg-emerald-500/20 text-[8px] font-mono text-emerald-300 font-bold border border-emerald-500/30">90%</span>
+              </span>
+            </button>
+          </div>
+
+          {/* Section: System & Settings */}
+          <div className="space-y-1">
+            <span className="px-3 text-[9px] font-mono uppercase tracking-widest text-zinc-500 font-semibold block">
+              System Settings
+            </span>
+
+            <button
+              onClick={() => handleNavigate('SYSTEM_ROOM')}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                activeSubTab === 'SYSTEM_ROOM'
+                  ? 'bg-white/10 text-white border border-white/10'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/[0.03]'
+              }`}
+            >
+              <Settings className="w-4 h-4 text-zinc-500" />
+              <span>Diagnostics & Audits</span>
+            </button>
+
+            <button
+              onClick={() => handleNavigate('ADMIN_COMMAND')}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                activeSubTab === 'ADMIN_COMMAND'
+                  ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/[0.03]'
+              }`}
+            >
+              <ShieldCheck className="w-4 h-4 text-purple-400" />
+              <span>Admin Gateway</span>
+            </button>
+          </div>
+
+        </div>
+
+        {/* User Profile & Logout Bottom Bar */}
+        <div className="p-4 border-t border-white/5 bg-[#05050a]/40 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-300 shrink-0">
+                <User className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <span className="text-xs font-semibold text-white truncate block">{user?.email || 'Guest User'}</span>
+                <span className="text-[10px] font-mono text-zinc-500 truncate block">Pro Subscription</span>
+              </div>
+            </div>
+
+            {onLogout && (
+              <button
+                onClick={onLogout}
+                title="Logout"
+                className="p-1.5 rounded-lg text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
             )}
           </div>
-
-          {state.activeSuggestion ? (
-            <div className="space-y-3">
-              <div className="space-y-1">
-                <h4 className="text-xs font-semibold text-white truncate">{state.activeSuggestion.name}</h4>
-                <p className="text-[10px] text-white/50 leading-relaxed font-sans">{state.activeSuggestion.occasion}</p>
-              </div>
-
-              {/* Micro preview of compiled items */}
-              <div className="space-y-1.5">
-                <span className="text-[8px] font-mono uppercase text-white/30 tracking-widest block font-bold">Compiled Pieces:</span>
-                <div className="space-y-1.5 max-h-[140px] overflow-y-auto no-scrollbar">
-                  {state.activeSuggestion.items?.slice(0, 3).map((item, idx) => (
-                    <div key={idx} className="flex items-center gap-2 bg-white/[0.01] border border-white/5 p-1 rounded-lg">
-                      <div className="w-7 h-9 overflow-hidden bg-white/5 rounded shrink-0">
-                        <img 
-                          src={item.imageUrl || getGarmentImage(item.title)} 
-                          alt={item.title} 
-                          referrerPolicy="no-referrer"
-                          className="w-full h-full object-cover" 
-                        />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[9.5px] font-mono text-white/70 truncate">{item.title}</p>
-                        <p className="text-[7.5px] font-mono text-white/20 truncate uppercase">{item.category}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <button
-                onClick={() => {
-                  triggerQuietPause(() => {
-                    const prevTomorrow = tomorrowOutfit;
-                    saveTomorrowOutfit({
-                      items: state.activeSuggestion!.items,
-                      note: "Committed instantly from active visual compilation loop.",
-                      timeAtmosphere: "Quiet light"
-                    });
-                    registerUndo(() => {
-                      saveTomorrowOutfit(prevTomorrow);
-                    }, "Look successfully scheduled on tomorrow's calendar.");
-                  });
-                }}
-                className={`w-full py-2 text-center text-[9px] font-mono uppercase tracking-widest rounded-lg font-bold border cursor-pointer transition-all ${themeObj.accentBg}`}
-              >
-                Schedule Look
-              </button>
-            </div>
-          ) : (
-            <div className="py-4 text-center space-y-2 select-none">
-              <span className="text-white/25 text-lg block">◇</span>
-              <p className="text-[9px] font-mono text-white/30 leading-normal max-w-[180px] mx-auto uppercase">
-                Ready to assemble coordinates.
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* 5. Editor's Picks Curated Cards */}
-        <div className="bg-black/20 border border-white/5 rounded-2xl p-4 space-y-3">
-          <div className="flex justify-between items-center pb-1">
-            <span className="text-[9px] font-mono uppercase tracking-[0.15em] text-white/40 block font-bold">Editor's Picks</span>
-            <span className="text-[9px] font-mono text-violet-400 cursor-pointer font-bold">View all</span>
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            {[
-              { title: 'Summer Resort Edit', displayTitle: 'Summer Edit', items: '32 Items', img: 'https://images.unsplash.com/photo-1509319117193-57bab727e09d?q=80&w=200&auto=format&fit=crop' },
-              { title: 'Monochrome Tailoring', displayTitle: 'Monochrome Luxe', items: '18 Items', img: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=200&auto=format&fit=crop' },
-              { title: 'Cyberpunk Techwear', displayTitle: 'Cyber Core', items: '24 Items', img: 'https://images.unsplash.com/photo-1544441893-675973e31985?q=80&w=200&auto=format&fit=crop' }
-            ].map((pick, pIdx) => (
-              <div 
-                key={pIdx} 
-                onClick={() => {
-                  setActiveSubTab('HOME');
-                  setTimeout(() => {
-                    window.dispatchEvent(new CustomEvent('lookvision_open_editor_sandbox', {
-                      detail: { title: pick.title }
-                    }));
-                  }, 50);
-                }}
-                className="rounded-xl overflow-hidden bg-[#0d0d18] border border-white/5 cursor-pointer relative aspect-[3/4] group"
-              >
-                <img src={pick.img || null} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt="" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent flex flex-col justify-end p-2 text-left" />
-                <div className="absolute bottom-1.5 left-1.5 right-1.5 text-left">
-                  <span className="block text-[8.5px] font-bold text-white leading-tight truncate">{pick.displayTitle}</span>
-                  <span className="block text-[7px] text-white/50">{pick.items}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Style DNA Vector */}
-        <div className="bg-black/20 border border-white/5 rounded-2xl p-4 space-y-3">
-          <span className="text-[9px] font-mono uppercase tracking-[0.15em] text-white/40 block font-bold">Style DNA Profile</span>
-          <div className="space-y-2.5">
-            {[
-              { label: 'Nordic Minimal', val: 95 },
-              { label: 'Avant-Garde', val: 82 },
-              { label: 'Cyberpunk Tech', val: 68 }
-            ].map((style, idx) => (
-              <div key={idx} className="space-y-1">
-                <div className="flex items-center justify-between text-[9px] font-mono">
-                  <span className="text-white/60">{style.label}</span>
-                  <span className="text-white/80 font-bold">{style.val}%</span>
-                </div>
-                <div className="h-[2px] bg-white/5 rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-violet-500 to-indigo-500" style={{ width: `${style.val}%` }} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* AI Coherence Status */}
-        <div className="bg-gradient-to-r from-violet-950/15 to-indigo-950/20 border border-violet-500/10 rounded-2xl p-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-violet-500"></span>
-            </span>
-            <span className="text-[10px] font-mono text-white/80">AI Status: Coherent</span>
-          </div>
-          <span className="text-[9px] font-mono text-violet-400 font-bold uppercase">v2.4-telemetry</span>
         </div>
 
       </aside>
 
-    </div>
-    </div>
-    <FloatingAIChat wardrobe={activeWardrobeList} />
-    <FocusSearchPalette 
-      isOpen={isFocusSearchOpen} 
-      onClose={() => setIsFocusSearchOpen(false)} 
-      onNavigate={(route) => {
-        handleNavigate(route as any);
-      }}
-      currentTheme={currentTheme}
-      setCurrentTheme={setCurrentTheme}
-    />
+      {/* Main Canvas Workspace Container */}
+      <main className="flex-1 h-full overflow-y-auto bg-[#05050a] p-4 md:p-8 relative">
+        <div className="max-w-7xl mx-auto">
+          {renderCurrentView()}
+        </div>
+      </main>
 
-    {/* --- DESIGN REFERENCE MOCK OVERLAY ENGINE --- */}
-    {isMockOverlayActive && (
-      <div 
-        className="absolute inset-0 pointer-events-none z-50 overflow-hidden mix-blend-normal select-none flex items-center justify-center"
-        style={{ opacity: mockOverlayOpacity }}
-      >
-        {/* Render actual custom uploaded mock image if present */}
-        {mockImageUrl ? (
-          <img src={mockImageUrl || null} 
-            alt="Reference Mockup" 
-            className={`absolute inset-0 w-full h-full pointer-events-none ${
-              mockImageFit === 'contain' ? 'object-contain' : mockImageFit === 'fill' ? 'object-fill' : 'object-cover'
-            }`}
-            style={{ 
-              mixBlendMode: mockBlendMode as any
-            }} 
-          />
-        ) : (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-violet-950/5 border-4 border-dashed border-violet-500/10">
-            <p className="text-violet-400/60 font-mono text-[9px] uppercase tracking-[0.2em] animate-pulse">Waiting for layout reference image...</p>
-            <p className="text-white/20 font-mono text-[7px] uppercase mt-1">Upload or paste URL in the Design Sandbox below</p>
-          </div>
-        )}
-
-        {/* Figma Grid Overlay & Ruler Guidelines */}
-        {showGridLines && (
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(236,72,153,0.06)_1px,transparent_1px),linear-gradient(to_bottom,rgba(236,72,153,0.06)_1px,transparent_1px)] bg-[size:20px_20px]" />
-        )}
-
-        {/* Blueprint Layout Outline Map */}
-        {showGridLines && (
-          <div className="absolute inset-0 border-[3px] border-pink-500/20 flex flex-row">
-            {/* Sidebar Area Indicator */}
-            <div className="w-64 border-r-2 border-pink-500/30 bg-pink-500/[0.01] relative">
-              <span className="absolute top-2 left-2 px-1.5 py-0.5 bg-pink-500/80 text-white text-[7px] font-mono rounded uppercase">Sidebar (256px)</span>
-              {showPaddingBadges && (
-                <div className="absolute bottom-4 right-4 bg-fuchsia-600/80 text-white text-[8px] font-mono px-1 rounded">p-4 (16px)</div>
-              )}
-            </div>
-
-            {/* Main Space Container */}
-            <div className="flex-1 flex flex-col relative">
-              {/* Header Area Indicator */}
-              <div className="h-[72px] border-b-2 border-pink-500/30 bg-pink-500/[0.005] relative flex items-center px-4">
-                <span className="absolute top-2 left-2 px-1.5 py-0.5 bg-pink-500/80 text-white text-[7px] font-mono rounded uppercase">Header (72px)</span>
-                {showPaddingBadges && (
-                  <div className="absolute right-4 top-4 bg-fuchsia-600/80 text-white text-[8px] font-mono px-1 rounded font-bold">h-18 (72px)</div>
-                )}
-              </div>
-
-              {/* Bottom Content Split Space */}
-              <div className="flex-1 flex flex-row relative">
-                
-                {/* Left Column Section: Bento Dashboard Columns */}
-                <div className="flex-1 border-r border-dashed border-pink-500/15 p-4 relative bg-pink-500/[0.002]">
-                  <span className="absolute top-2 left-2 px-1.5 py-0.5 bg-pink-500/80 text-white text-[7px] font-mono rounded uppercase">Bento Center Workspace</span>
-                  {showPaddingBadges && (
-                    <div className="absolute top-4 right-4 bg-fuchsia-600/80 text-white text-[8px] font-mono px-1 rounded">p-8 (32px)</div>
-                  )}
-
-                  {/* Simulated Columns for You / Following / Sale */}
-                  <div className="absolute inset-x-4 top-14 bottom-4 grid grid-cols-3 gap-6 pointer-events-none opacity-30">
-                    <div className="border border-pink-500/15 rounded-2xl bg-pink-500/[0.005] flex items-center justify-center text-[10px] text-pink-400 font-mono">Column 1: AI Creations</div>
-                    <div className="border border-pink-500/15 rounded-2xl bg-pink-500/[0.005] flex items-center justify-center text-[10px] text-pink-400 font-mono">Column 2: Community</div>
-                    <div className="border border-pink-500/15 rounded-2xl bg-pink-500/[0.005] flex items-center justify-center text-[10px] text-pink-400 font-mono">Column 3: Marketplace</div>
-                  </div>
-                </div>
-
-                {/* Right Sidebar Widget Section */}
-                <div className="w-80 bg-pink-500/[0.002] relative">
-                  <span className="absolute top-2 left-2 px-1.5 py-0.5 bg-pink-500/80 text-white text-[7px] font-mono rounded uppercase">Right Sidebar (320px)</span>
-                  {showPaddingBadges && (
-                    <div className="absolute bottom-4 left-4 bg-fuchsia-600/80 text-white text-[8px] font-mono px-1 rounded">w-80 (320px)</div>
-                  )}
-                </div>
-
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    )}
-
-    {/* ARIA v2.5 Floating Status Widget & Interactive Assistant Panel */}
-    <div className="fixed bottom-6 left-6 z-[9990] flex items-center gap-2">
-      <ARIAStatusWidget compact onOpenPanel={() => setIsARIAPanelOpen(true)} />
-    </div>
-    <ARIAAssistantPanel isOpen={isARIAPanelOpen} onClose={() => setIsARIAPanelOpen(false)} />
-
-    {/* Custom Premium Toast Notifications Overlay */}
-    <div className="fixed bottom-6 right-6 z-[9999] flex flex-col gap-2 max-w-sm pointer-events-none select-none">
+      {/* Floating ARIA Assistant Panel Drawer */}
       <AnimatePresence>
-        {toasts.map(toast => (
-          <motion.div
-            key={toast.id}
-            initial={{ opacity: 0, y: 20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -10, scale: 0.95 }}
-            transition={{ duration: 0.25, ease: 'easeOut' }}
-            className="pointer-events-auto flex items-center gap-2.5 px-4 py-3 bg-[#0c0c14]/95 border border-white/10 rounded-2xl shadow-xl backdrop-blur-md"
-          >
-            <div className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse shrink-0" />
-            <p className="text-[11px] font-sans font-medium text-zinc-100 leading-normal">
-              {toast.message}
-            </p>
-          </motion.div>
-        ))}
+        {isARIAPanelOpen && (
+          <div className="fixed inset-y-0 right-0 z-50 w-96 shadow-2xl">
+            <ARIAAssistantPanel 
+              isOpen={isARIAPanelOpen}
+              onClose={() => setIsARIAPanelOpen(false)} 
+            />
+          </div>
+        )}
       </AnimatePresence>
-    </div>
 
-    {/* Real-time Seller Onboarding and Dashboard System */}
-    <AnimatePresence>
-      {isSellerDashboardOpen && (
-        <SellerDashboard 
-          user={user} 
-          onClose={() => setIsSellerDashboardOpen(false)} 
-        />
-      )}
-    </AnimatePresence>
+      {/* Focus Search Palette Modal */}
+      <FocusSearchPalette 
+        isOpen={isFocusSearchOpen} 
+        onClose={() => setIsFocusSearchOpen(false)}
+        onNavigate={(tab) => {
+          handleNavigate(tab as any);
+          setIsFocusSearchOpen(false);
+        }}
+        currentTheme={currentTheme}
+        setCurrentTheme={setCurrentTheme}
+      />
 
-    {/* Notifications Drawer Slide-over */}
-    <AnimatePresence>
-      {isNotificationsOpen && (
-        <>
-          <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs animate-fade-in" onClick={() => setIsNotificationsOpen(false)} />
-          <motion.div 
-            initial={{ x: '100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '100%' }}
-            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed top-0 right-0 h-full w-80 bg-[#0c0c12] border-l border-white/5 shadow-2xl p-6 z-50 text-left space-y-6 select-none flex flex-col justify-between"
-          >
-            <div className="space-y-6">
-              <div className="flex justify-between items-center border-b border-white/5 pb-3">
-                <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-white/30 block">Live Feed Updates</span>
-                <button 
-                  onClick={() => setIsNotificationsOpen(false)}
-                  className="text-white/40 hover:text-white cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
+      {/* Seller Dashboard Modal */}
+      <AnimatePresence>
+        {isSellerDashboardOpen && (
+          <SellerDashboard 
+            user={user} 
+            onClose={() => setIsSellerDashboardOpen(false)} 
+          />
+        )}
+      </AnimatePresence>
 
-              <div className="space-y-4">
-                {[
-                  { title: '🔥 Vibe Check', desc: 'Your last post received 14 likes from style creators!', time: '2m ago' },
-                  { title: '⚡ Style Drop', desc: 'Classic Noir silk shirts added to boutiques!', time: '1h ago' },
-                  { title: '🧬 DNA Alignment', desc: 'Coherence reaches 98% with Nordic Minimalist aesthetics.', time: '3h ago' },
-                  { title: '🌦️ Weather Alert', desc: 'Lighter layers advised for warm morning strolls.', time: '5h ago' }
-                ].map((not, i) => (
-                  <div key={i} className="p-3 bg-white/[0.02] border border-white/5 rounded-xl space-y-1">
-                    <div className="flex justify-between items-center">
-                      <strong className="text-[10px] font-mono uppercase text-white tracking-wider">{not.title}</strong>
-                      <span className="text-[8px] font-mono text-white/30">{not.time}</span>
-                    </div>
-                    <p className="text-[10px] font-serif italic text-white/50 leading-relaxed">
-                      "{not.desc}"
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <button
-              onClick={() => setIsNotificationsOpen(false)}
-              className="w-full bg-white text-black py-3 rounded-xl text-[10px] font-mono uppercase tracking-widest font-semibold text-center cursor-pointer hover:bg-neutral-200 transition-colors"
+      {/* Toast Notifications */}
+      <div className="fixed bottom-6 right-6 z-50 space-y-2 pointer-events-none">
+        <AnimatePresence>
+          {toasts.map(toast => (
+            <motion.div
+              key={toast.id}
+              initial={{ opacity: 0, y: 20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 10, scale: 0.95 }}
+              className={`pointer-events-auto px-4 py-2.5 rounded-xl border text-xs font-medium shadow-2xl flex items-center gap-2.5 backdrop-blur-xl ${
+                toast.type === 'warning'
+                  ? 'bg-amber-950/80 border-amber-500/30 text-amber-200'
+                  : toast.type === 'info'
+                  ? 'bg-indigo-950/80 border-indigo-500/30 text-indigo-200'
+                  : 'bg-emerald-950/80 border-emerald-500/30 text-emerald-200'
+              }`}
             >
-              Clear All Notifications
-            </button>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
-  </div>
-  );
-};
+              <Sparkles className="w-3.5 h-3.5 shrink-0" />
+              <span>{toast.message}</span>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
 
-  const appContent = renderAppStructure(false);
+    </div>
+  );
 
   if (coatDNA) {
     return (

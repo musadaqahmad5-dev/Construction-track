@@ -31,4 +31,8 @@ export { useStyleProfile } from '../hooks/useStyleProfile';
 export * from '../types';
 export type { FeedItem } from '../features/feed/feedTypes';
 export { LOCAL_SHOP_ITEMS } from '../features/feed/AIEngine';
+export { AIStyleFeed } from '../components/AIStyleFeed';
+export type { StyleFeedAsset, BundledProductItem, AIStyleFeedProps } from '../components/AIStyleFeed';
+export { VendorOnboarding } from '../components/VendorOnboarding';
+export type { VendorProfileState, FashionNiche, PayoutMethod, VendorOnboardingProps } from '../components/VendorOnboarding';
 

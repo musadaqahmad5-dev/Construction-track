@@ -278,7 +278,28 @@ export const ThemeIntelligenceProvider: React.FC<ThemeIntelligenceProviderProps>
 export function useThemeIntelligence(): ThemeIntelligenceContextValue {
   const ctx = useContext(ThemeIntelligenceContext);
   if (!ctx) {
-    throw new Error('useThemeIntelligence must be used within a ThemeIntelligenceProvider');
+    const fallbackDNA = PRESET_THEME_OUTPUTS['cyber ai'];
+    const fallbackTokens = globalThemeDNAVisualTokenGenerator.generateTokens(fallbackDNA);
+    const fallbackCoat = globalAdaptiveCoatLayerEngine.generateCoatDNA(fallbackDNA);
+    const fallbackFoundation = globalFoundationVisualResponseEngine.generateResponseParams(fallbackDNA, 'click');
+    const fallbackShell = createUIShellConfig({ mode: 'dynamic' });
+    return {
+      activeThemeName: 'cyber ai',
+      sequenceId: 'CYBER-001',
+      themeDNA: fallbackDNA,
+      visualTokens: fallbackTokens,
+      coatDNA: fallbackCoat,
+      foundationParams: fallbackFoundation,
+      shellConfig: fallbackShell,
+      userProfile: null,
+      isLoading: false,
+      error: null,
+      switchTheme: async () => {},
+      regenerateSequence: async () => {},
+      updateCoatSettings: async () => {},
+      updateFoundationSettings: async () => {},
+      applyCSSVariablesToRoot: false
+    };
   }
   return ctx;
 }

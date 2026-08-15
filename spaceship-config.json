@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json.schemastore.org/spaces-config.json",
+  "version": "1.0.0",
+  "projectName": "ai-fashion-market",
+  "domain": "aifashionmarket.com",
+  "aliases": [
+    "www.aifashionmarket.com",
+    "app.aifashionmarket.com"
+  ],
+  "routing": {
+    "entryPoint": "server.ts",
+    "port": 3000,
+    "host": "0.0.0.0",
+    "protocol": "http",
+    "healthCheck": {
+      "path": "/api/health",
+      "intervalSeconds": 15,
+      "timeoutSeconds": 5,
+      "healthyThreshold": 2,
+      "unhealthyThreshold": 3
+    }
+  },
+  "ssl": {
+    "enabled": true,
+    "enforceHttps": true,
+    "hsts": {
+      "enabled": true,
+      "maxAge": 31536000,
+      "includeSubDomains": true,
+      "preload": true
+    },
+    "certificateProvider": "letsencrypt-auto",
+    "tlsVersion": "TLSv1.3"
+  },
+  "securityHeaders": {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "SAMEORIGIN",
+    "X-XSS-Protection": "1; mode=block",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Content-Security-Policy": "default-src 'self' https: data: blob: 'unsafe-inline' 'unsafe-eval';"
+  },
+  "staticOptimization": {
+    "distDirectory": "dist",
+    "cacheControl": {
+      "assets": "public, max-age=31536000, immutable",
+      "html": "public, max-age=0, must-revalidate"
+    },
+    "brotli": true,
+    "gzip": true
+  },
+  "cors": {
+    "allowedOrigins": [
+      "https://aifashionmarket.com",
+      "https://www.aifashionmarket.com",
+      "https://app.aifashionmarket.com"
+    ],
+    "allowedMethods": ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    "allowedHeaders": ["Content-Type", "Authorization", "X-Requested-With", "X-Client-Version"],
+    "allowCredentials": true
+  }
+}

@@ -590,7 +590,22 @@ export const UIShellProvider: React.FC<UIShellProviderProps> = ({
 export function useUIShellSpectrum(): UIShellContextType {
   const context = useContext(UIShellContext);
   if (!context) {
-    throw new Error('useUIShellSpectrum must be used within a UIShellProvider');
+    const fallbackDNA = PRESET_THEME_OUTPUTS['cyber ai'];
+    const fallbackTokens = globalThemeDNAVisualTokenGenerator.generateTokens(fallbackDNA);
+    const fallbackConfig = createUIShellConfig({ mode: 'dynamic' });
+    const fallbackRenderer = new UIShellSpectrumRenderer(fallbackDNA, fallbackConfig);
+    return {
+      themeDNA: fallbackDNA,
+      visualTokens: fallbackTokens,
+      config: fallbackConfig,
+      setThemeByName: () => {},
+      setCustomDNA: () => {},
+      setMode: () => {},
+      updateConfig: () => {},
+      getComponentStyle: (c) => fallbackRenderer.getComponentStyle(c),
+      triggerClickPulse: () => {},
+      clickPulseState: { active: false, x: 0, y: 0 }
+    };
   }
   return context;
 }

@@ -219,8 +219,8 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   const errInfo = {
     error: rawMsg,
     authInfo: {
-      userId: auth.currentUser?.uid,
-      hasEmail: !!auth.currentUser?.email,
+      userId: auth?.currentUser?.uid,
+      hasEmail: !!auth?.currentUser?.email,
     },
     operationType,
     path
