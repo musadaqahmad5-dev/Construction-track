@@ -272,6 +272,38 @@ const STYLE_DNA_MODEL_KEY = 'aistylehub_v17_style_dna_model';
 const AICREATION_FOLDERS_KEY = 'aistylehub_v17_aicreation_folders';
 const SOCIAL_ENTITIES_KEY = 'aistylehub_v17_social_entities';
 
+/**
+ * Safe local storage setter to guard against DOMException QuotaExceededError
+ */
+const safeLocalStorageSetItem = (key: string, value: string): void => {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    localStorage.setItem(key, value);
+  } catch (err: any) {
+    if (err?.name === 'QuotaExceededError' || err?.code === 22 || err?.code === 1014) {
+      try {
+        // Clear transient keys first to free up space
+        localStorage.removeItem(AI_CREATION_SESSION_KEY);
+        localStorage.removeItem(OUTFIT_SESSION_KEY);
+        localStorage.removeItem(DRAFTS_STORAGE_KEY);
+        localStorage.setItem(key, value);
+      } catch {
+        // Fallback: silently ignore if browser storage is strictly capped
+        console.warn(`[AIStyleHubStorage] Storage quota exceeded when writing to '${key}'. Value cached in memory.`);
+      }
+    }
+  }
+};
+
+const safeLocalStorageRemoveItem = (key: string): void => {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    // Ignore removal errors
+  }
+};
+
 export class AIStyleHubV17Architecture {
 
   // ==========================================
@@ -290,8 +322,7 @@ export class AIStyleHubV17Architecture {
   }
 
   public static saveUnifiedMemory(memory: UnifiedHomeHubMemory): void {
-    if (typeof localStorage === 'undefined') return;
-    localStorage.setItem(MEMORY_STORAGE_KEY, JSON.stringify(memory));
+    safeLocalStorageSetItem(MEMORY_STORAGE_KEY, JSON.stringify(memory));
   }
 
   private static getDefaultUnifiedMemory(): UnifiedHomeHubMemory {
@@ -1052,17 +1083,35 @@ export class AIStyleHubV17Architecture {
   }
 
   public static saveAICreationActiveSession(session: Omit<AICreationActiveSession, 'lastUpdatedTimestamp'>): void {
-    if (typeof localStorage === 'undefined') return;
-    const fullSession: AICreationActiveSession = {
-      ...session,
-      lastUpdatedTimestamp: new Date().toISOString()
-    };
-    localStorage.setItem(AI_CREATION_SESSION_KEY, JSON.stringify(fullSession));
+    try {
+      // Sanitize pendingResult if it contains large data URLs to avoid blowing local storage quota
+      let sanitizedResult = session.pendingResult;
+      if (sanitizedResult && typeof sanitizedResult === 'object') {
+        sanitizedResult = {
+          id: sanitizedResult.id,
+          title: sanitizedResult.title,
+          category: sanitizedResult.category,
+          style: sanitizedResult.style,
+          // Only keep image URL if it is not an enormous base64 data string
+          imageUrl: (typeof sanitizedResult.imageUrl === 'string' && sanitizedResult.imageUrl.length > 5000)
+            ? '' 
+            : sanitizedResult.imageUrl
+        };
+      }
+
+      const fullSession: AICreationActiveSession = {
+        ...session,
+        pendingResult: sanitizedResult,
+        lastUpdatedTimestamp: new Date().toISOString()
+      };
+      safeLocalStorageSetItem(AI_CREATION_SESSION_KEY, JSON.stringify(fullSession));
+    } catch (e) {
+      console.warn('[AIStyleHubStorage] Failed to serialize AI creation session safely:', e);
+    }
   }
 
   public static clearAICreationActiveSession(): void {
-    if (typeof localStorage === 'undefined') return;
-    localStorage.removeItem(AI_CREATION_SESSION_KEY);
+    safeLocalStorageRemoveItem(AI_CREATION_SESSION_KEY);
   }
 
   /**
@@ -1119,17 +1168,29 @@ export class AIStyleHubV17Architecture {
   }
 
   public static saveOutfitActiveSession(session: Omit<OutfitActiveSession, 'lastUpdatedTimestamp'>): void {
-    if (typeof localStorage === 'undefined') return;
-    const fullSession: OutfitActiveSession = {
-      ...session,
-      lastUpdatedTimestamp: new Date().toISOString()
-    };
-    localStorage.setItem(OUTFIT_SESSION_KEY, JSON.stringify(fullSession));
+    try {
+      let sanitizedAssets = session.pendingOutfitAssets;
+      if (Array.isArray(sanitizedAssets)) {
+        sanitizedAssets = sanitizedAssets.slice(0, 4).map(a => ({
+          id: a?.id,
+          title: a?.title,
+          imageUrl: (typeof a?.imageUrl === 'string' && a.imageUrl.length > 5000) ? '' : a?.imageUrl
+        }));
+      }
+
+      const fullSession: OutfitActiveSession = {
+        ...session,
+        pendingOutfitAssets: sanitizedAssets,
+        lastUpdatedTimestamp: new Date().toISOString()
+      };
+      safeLocalStorageSetItem(OUTFIT_SESSION_KEY, JSON.stringify(fullSession));
+    } catch (e) {
+      console.warn('[AIStyleHubStorage] Failed to serialize outfit session safely:', e);
+    }
   }
 
   public static clearOutfitActiveSession(): void {
-    if (typeof localStorage === 'undefined') return;
-    localStorage.removeItem(OUTFIT_SESSION_KEY);
+    safeLocalStorageRemoveItem(OUTFIT_SESSION_KEY);
   }
 
   /**

@@ -50,7 +50,7 @@ export const PersonaSwitcherWidget: React.FC = () => {
   };
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 font-sans select-none animate-fade-in" id="persona-switcher-widget">
+    <div className="fixed bottom-4 left-4 z-40 font-sans select-none animate-fade-in" id="persona-switcher-widget">
       {/* Floating Minimized Bar / Trigger */}
       <div className="flex items-center gap-2 bg-[#06060c]/90 backdrop-blur-md border border-white/10 p-1.5 rounded-full shadow-2xl hover:border-white/20 transition-all duration-300">
         <button
@@ -63,7 +63,7 @@ export const PersonaSwitcherWidget: React.FC = () => {
             <span className={`relative inline-flex rounded-full h-2 w-2 ${operatingMode === 'PRODUCTION_USER' ? 'bg-emerald-500' : 'bg-indigo-500'}`}></span>
           </span>
           <span className="text-[10px] font-mono tracking-wider uppercase text-white/50">
-            {operatingMode === 'PRODUCTION_USER' ? 'Prod Mode:' : 'Dev Sim:'}
+            {operatingMode === 'PRODUCTION_USER' ? 'Prod:' : 'Sim:'}
           </span>
           <span className="flex items-center gap-1.5 text-white font-medium text-xs">
             {operatingMode === 'PRODUCTION_USER' ? <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> : getPersonaIcon(activePersonaId)}
@@ -74,7 +74,7 @@ export const PersonaSwitcherWidget: React.FC = () => {
 
         {/* Quick Mode Toggle Pills */}
         {!isOpen && (
-          <div className="hidden md:flex items-center gap-1 pr-1">
+          <div className="hidden sm:flex items-center gap-1 pr-1">
             <button
               onClick={() => setOperatingMode(operatingMode === 'PRODUCTION_USER' ? 'DEVELOPER_SIMULATION' : 'PRODUCTION_USER')}
               className={`px-2.5 py-1 rounded-full text-[10px] font-mono uppercase tracking-tight transition-all duration-200 cursor-pointer flex items-center gap-1 border ${
@@ -84,7 +84,7 @@ export const PersonaSwitcherWidget: React.FC = () => {
               }`}
             >
               {operatingMode === 'PRODUCTION_USER' ? <ShieldCheck className="w-3 h-3 text-emerald-400" /> : <Cpu className="w-3 h-3 text-indigo-400" />}
-              <span>{operatingMode === 'PRODUCTION_USER' ? 'User Mode' : 'Dev Sim Mode'}</span>
+              <span>{operatingMode === 'PRODUCTION_USER' ? 'User' : 'Sim'}</span>
             </button>
           </div>
         )}
@@ -92,7 +92,7 @@ export const PersonaSwitcherWidget: React.FC = () => {
 
       {/* Expanded Multi-User Simulation Panel */}
       {isOpen && (
-        <div className="absolute bottom-12 right-0 w-80 md:w-96 bg-[#07070d] border border-white/10 rounded-2xl p-4 shadow-2xl backdrop-blur-xl text-white space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-200">
+        <div className="absolute bottom-12 left-0 w-80 md:w-96 bg-[#07070d] border border-white/10 rounded-2xl p-4 shadow-2xl backdrop-blur-xl text-white space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-200">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-white/10 pb-3">
             <div className="flex items-center gap-2">

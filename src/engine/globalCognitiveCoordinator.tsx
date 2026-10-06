@@ -189,17 +189,11 @@ export interface CognitiveCoordinatorProviderProps {
   items?: WardrobeItem[];
 }
 
-export const CognitiveCoordinatorProvider: React.FC<CognitiveCoordinatorProviderProps> = ({
+const CognitiveCoordinatorProviderInner: React.FC<CognitiveCoordinatorProviderProps> = ({
   children,
   userId = 'user-1',
   items = []
 }) => {
-  const existingContext = useContext(CognitiveCoordinatorContext);
-
-  if (existingContext) {
-    return <>{children}</>;
-  }
-
   const [snapshot, setSnapshot] = useState<CognitiveSnapshot>(() => {
     globalCognitiveCoordinator.initialize(userId, items);
     return globalCognitiveCoordinator.getCognitiveSnapshot(userId, items);
@@ -244,6 +238,14 @@ export const CognitiveCoordinatorProvider: React.FC<CognitiveCoordinatorProvider
       {children}
     </CognitiveCoordinatorContext.Provider>
   );
+};
+
+export const CognitiveCoordinatorProvider: React.FC<CognitiveCoordinatorProviderProps> = (props) => {
+  const existingContext = useContext(CognitiveCoordinatorContext);
+  if (existingContext) {
+    return <>{props.children}</>;
+  }
+  return <CognitiveCoordinatorProviderInner {...props} />;
 };
 
 export function useCognitiveCoordinator(): CognitiveCoordinatorContextValue {

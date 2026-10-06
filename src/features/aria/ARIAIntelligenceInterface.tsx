@@ -61,9 +61,9 @@ export const ARIAIntelligenceInterface: React.FC<ARIAIntelligenceInterfaceProps>
   };
 
   return (
-    <div className="w-full h-full min-h-screen bg-[#05050a] text-zinc-100 p-3 sm:p-6 font-sans relative overflow-x-hidden">
+    <div className="w-full h-full min-h-full flex-1 flex flex-col bg-[#05050a] text-zinc-100 p-3 sm:p-6 font-sans relative overflow-x-hidden">
       {/* Background ambient lighting */}
-      <div className="fixed inset-0 bg-gradient-to-b from-[#05050a] via-[#07070f] to-[#05050a] pointer-events-none -z-10" />
+      <div className="absolute inset-0 bg-gradient-to-b from-[#05050a] via-[#07070f] to-[#05050a] pointer-events-none" />
 
       {/* ARIA System Header */}
       <ARIASystemHeader

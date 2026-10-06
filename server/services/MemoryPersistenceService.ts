@@ -17,7 +17,12 @@ export class MemoryPersistenceService {
   }
 
   private getDb() {
-    if (!process.env.FIREBASE_SERVICE_ACCOUNT && !process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+    const sa = process.env.FIREBASE_SERVICE_ACCOUNT;
+    const hasValidKey = Boolean(
+      (sa && typeof sa === 'string' && (sa.includes('private_key') || sa.trim().startsWith('{'))) ||
+      process.env.GOOGLE_APPLICATION_CREDENTIALS
+    );
+    if (!hasValidKey) {
       return null;
     }
     try {

@@ -155,7 +155,8 @@ try {
 
   try {
     dbInstance = initializeFirestore(app, {
-      localCache: memoryLocalCache()
+      localCache: memoryLocalCache(),
+      experimentalForceLongPolling: true
     });
   } catch (dbErr) {
     console.warn('[Firestore] Firestore initialization fallback active:', dbErr);

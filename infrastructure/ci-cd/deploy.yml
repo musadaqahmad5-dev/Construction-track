@@ -1,0 +1,209 @@
+name: EAOS Look Vision CI/CD & DevSecOps Release Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+  REGISTRY_HOST: 'ghcr.io'
+  IMAGE_NAME: 'ghcr.io/${{ github.repository }}/eaos-lookvision-engine'
+  KUBE_NAMESPACE: 'eaos-production'
+
+jobs:
+  # ============================================================================
+  # STAGE 1: BUILD & VERIFY
+  # ============================================================================
+  build-and-verify:
+    name: Stage 1 - Build & Verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js Environment (${{ env.NODE_VERSION }})
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Monorepo Dependencies
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Execute Strict Type Checking & Linting (ESLint / TSC)
+        run: npm run lint
+
+      - name: Run Automated Vitest Integration & Unit Test Suites
+        run: npm run test
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+
+      - name: Compile Production Artifacts
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-build-dist
+          path: dist/
+          retention-days: 7
+
+  # ============================================================================
+  # STAGE 2: SECURITY & SAST AUDIT
+  # ============================================================================
+  security-and-sast-audit:
+    name: Stage 2 - Security & SAST Audit
+    needs: [build-and-verify]
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: TruffleHog Secret Scanning (Leak Prevention)
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --only-verified
+
+      - name: Run Trivy Vulnerability Scanner (Filesystem & Dependencies)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          ignore-unfixed: true
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload Security SARIF to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      - name: Static Application Security Testing (Node Security Audit)
+        run: npm audit --audit-level=high
+
+  # ============================================================================
+  # STAGE 3: CONTAINERIZE & DEPLOY (CANARY ROLLOUT)
+  # ============================================================================
+  containerize-and-deploy:
+    name: Stage 3 - Containerize & Deploy
+    needs: [build-and-verify, security-and-sast-audit]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: production
+      url: https://lookvision.eaos.io
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Download Compiled Production Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: production-build-dist
+          path: dist/
+
+      - name: Set Up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Authenticate to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY_HOST }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.REGISTRY_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Generate Dynamic Image Metadata & Tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest
+            type=sha,format=long,prefix=sha-
+            type=ref,event=branch
+
+      - name: Build & Push Production Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: infrastructure/docker/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Set Up Kubernetes CLI (kubectl)
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: Authenticate Kubernetes Cluster Context
+        uses: azure/k8s-set-context@v3
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBECONFIG_DATA }}
+
+      - name: Apply Kubernetes Secret Configurations (Encrypted Injection)
+        run: |
+          kubectl create secret generic eaos-core-secrets \
+            --namespace=${{ env.KUBE_NAMESPACE }} \
+            --from-literal=GEMINI_API_KEY='${{ secrets.GEMINI_API_KEY }}' \
+            --from-literal=STRIPE_SECRET_KEY='${{ secrets.STRIPE_SECRET_KEY }}' \
+            --from-literal=STRIPE_WEBHOOK_SECRET='${{ secrets.STRIPE_WEBHOOK_SECRET }}' \
+            --from-literal=DATABASE_URL='${{ secrets.DATABASE_URL }}' \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy Kubernetes Manifests & Trigger Rolling Canary Release
+        run: |
+          # Dynamically interpolate target container image with current commit SHA
+          TAGGED_IMAGE="${{ env.IMAGE_NAME }}:sha-${{ github.sha }}"
+
+          sed -i "s|IMAGE_PLACEHOLDER|${TAGGED_IMAGE}|g" infrastructure/kubernetes/eaos-core-deployment.yaml
+
+          kubectl apply -f infrastructure/kubernetes/eaos-core-deployment.yaml --namespace=${{ env.KUBE_NAMESPACE }}
+
+          echo "Initiating rollout monitoring on deployment/eaos-core-engine..."
+          kubectl rollout status deployment/eaos-core-engine --namespace=${{ env.KUBE_NAMESPACE }} --timeout=300s
+
+      - name: Post-Deployment Canary Health Check
+        run: |
+          CANARY_URL="https://lookvision.eaos.io/api/health"
+          echo "Verifying health status at ${CANARY_URL}..."
+          
+          for i in {1..12}; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" ${CANARY_URL} || true)
+            if [ "$STATUS" -eq 200 ]; then
+              echo "Canary deployment passed health validation (HTTP 200 OK)."
+              exit 0
+            fi
+            echo "Waiting for service convergence... (attempt $i, status: $STATUS)"
+            sleep 5
+          done
+
+          echo "Health check failed after timeout. Triggering automatic rollback."
+          kubectl rollout undo deployment/eaos-core-engine --namespace=${{ env.KUBE_NAMESPACE }}
+          exit 1

@@ -43,3 +43,4 @@ export * from './ARIARecommendationCard';
 export * from './ARIAVisualInsightPanel';
 export * from './ARIAStylePassportView';
 export * from './ARIAOutfitStudio';
+export * from './ARIAOnboardingExperience';

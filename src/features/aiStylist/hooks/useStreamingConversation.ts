@@ -24,7 +24,7 @@ export interface UseStreamingConversationOptions {
 export function useStreamingConversation(options: UseStreamingConversationOptions = {}) {
   const {
     userId = 'guest-sartorialist-user-100',
-    sessionId = `session_${userId}_${Date.now().toString(36)}`,
+    sessionId = 'guest_session',
     onResponseComplete,
     onError
   } = options;
@@ -35,6 +35,11 @@ export function useStreamingConversation(options: UseStreamingConversationOption
   const [streamedText, setStreamedText] = useState<string>('');
   const [recommendations, setRecommendations] = useState<StylistRecommendation[]>([]);
 
+  const callbacksRef = useRef({ onResponseComplete, onError });
+  useEffect(() => {
+    callbacksRef.current = { onResponseComplete, onError };
+  });
+
   const engineRef = useRef<StreamingConversationEngine | null>(null);
 
   useEffect(() => {
@@ -43,10 +48,10 @@ export function useStreamingConversation(options: UseStreamingConversationOption
       onTokenChunk: (chunk, fullText) => setStreamedText(fullText),
       onRecommendationStream: (rec, allRecs) => setRecommendations([...allRecs]),
       onComplete: resp => {
-        if (onResponseComplete) onResponseComplete(resp);
+        callbacksRef.current.onResponseComplete?.(resp);
       },
       onError: err => {
-        if (onError) onError(err);
+        callbacksRef.current.onError?.(err);
       }
     });
 
@@ -57,7 +62,7 @@ export function useStreamingConversation(options: UseStreamingConversationOption
         engineRef.current.cancel();
       }
     };
-  }, [onResponseComplete, onError]);
+  }, []);
 
   const streamRequest = useCallback(
     async (

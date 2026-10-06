@@ -7,169 +7,63 @@
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 }
 
+:root {
+  --color-canvas-bg: #05050a;
+  --color-surface-card: #07070c;
+  --color-surface-subtle: #0d0d16;
+  --color-border-subtle: rgba(255, 255, 255, 0.05);
+  --color-text-primary: #f4f4f5;
+  --color-text-secondary: #a1a1aa;
+  --color-text-muted: #71717a;
+  --color-accent-emerald: #10b981;
+  --color-accent-indigo: #6366f1;
+}
+
+@theme inline {
+  --color-canvas-bg: var(--color-canvas-bg);
+  --color-surface-card: var(--color-surface-card);
+  --color-text-primary: var(--color-text-primary);
+}
+
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+  background-color: #05050a !important;
+  background: #05050a !important;
+  color: #f4f4f5;
+  overflow: hidden;
+  box-sizing: border-box;
+  color-scheme: dark;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
 body {
-  background-color: #030206;
-  color: #FFFFFF;
-  transition: background-color 0.4s ease, color 0.4s ease;
+  background-color: #05050a;
+  color: #f4f4f5;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Light Theme overrides for Day Mode visibility */
-.light-theme {
-  background-color: #fcfbf9 !important;
-  color: #1c1b1a !important;
-}
+.bg-theme-canvas { background-color: #05050a !important; }
+.bg-theme-surface { background-color: #07070c !important; }
+.bg-theme-subtle { background-color: #0d0d16 !important; }
+.border-theme-subtle { border-color: rgba(255, 255, 255, 0.05) !important; }
+.text-theme-primary { color: #f4f4f5 !important; }
+.text-theme-secondary { color: #a1a1aa !important; }
+.text-theme-muted { color: #71717a !important; }
 
-.light-theme body {
-  background-color: #fcfbf9 !important;
-  color: #1c1b1a !important;
-}
-
-/* Force light backgrounds for containers that were dark */
-.light-theme .bg-\[\#05050a\],
-.light-theme .bg-\[\#050505\],
-.light-theme .bg-\[\#030206\],
-.light-theme .bg-\[\#09090b\],
-.light-theme .bg-black,
-.light-theme .bg-neutral-900\/60,
-.light-theme .bg-zinc-950,
-.light-theme .bg-zinc-900,
-.light-theme .bg-neutral-950,
-.light-theme .bg-neutral-900,
-.light-theme .bg-stone-900 {
-  background-color: #fcfbf9 !important;
-}
-
-.light-theme .bg-\[\#07070c\],
-.light-theme .bg-\[\#0f0f0f\],
-.light-theme .bg-\[\#1a1a1a\],
-.light-theme .bg-stone-950 {
-  background-color: #f5f4f0 !important;
-}
-
-/* Cards and grid items in light theme */
-.light-theme .bg-\[\#0e0e1a\]\/40,
-.light-theme .bg-white\/\[0\.02\],
-.light-theme .bg-white\/\[0\.03\],
-.light-theme .bg-white\/\[0\.04\],
-.light-theme .bg-white\/5,
-.light-theme .bg-white\/10,
-.light-theme .bg-zinc-900\/50,
-.light-theme .bg-neutral-900\/40,
-.light-theme .bg-neutral-800\/40 {
-  background-color: #ffffff !important;
-}
-
-/* Hover effects in light theme */
-.light-theme .hover\:bg-white\/5:hover,
-.light-theme .hover\:bg-white\/10:hover,
-.light-theme .hover\:bg-white\/20:hover {
-  background-color: rgba(28, 27, 26, 0.05) !important;
-}
-
-/* Borders in light theme */
-.light-theme .border-white\/5,
-.light-theme .border-white\/10,
-.light-theme .border-white\/20,
-.light-theme .border-zinc-800,
-.light-theme .border-neutral-800 {
-  border-color: rgba(28, 27, 26, 0.08) !important;
-}
-
-/* Core typography overrides for pristine readability */
-.light-theme .text-white,
-.light-theme .text-white\/90,
-.light-theme .text-neutral-100,
-.light-theme .text-zinc-100,
-.light-theme .text-neutral-200,
-.light-theme .text-stone-100 {
-  color: #1c1b1a !important;
-}
-
-.light-theme .text-white\/80,
-.light-theme .text-white\/70,
-.light-theme .text-white\/60,
-.light-theme .text-neutral-300,
-.light-theme .text-zinc-300,
-.light-theme .text-zinc-400,
-.light-theme .text-stone-300 {
-  color: #4a4947 !important;
-}
-
-.light-theme .text-white\/45,
-.light-theme .text-white\/40,
-.light-theme .text-white\/30,
-.light-theme .text-neutral-400,
-.light-theme .text-zinc-500,
-.light-theme .text-stone-400 {
-  color: #72706c !important;
-}
-
-.light-theme .text-white\/20,
-.light-theme .text-white\/15,
-.light-theme .text-white\/10,
-.light-theme .text-zinc-600,
-.light-theme .text-zinc-700,
-.light-theme .text-stone-500 {
-  color: #9c9a96 !important;
-}
-
-/* Specific button text color overrides */
-.light-theme .bg-white .text-black,
-.light-theme button.bg-white {
-  color: #ffffff !important;
-  background-color: #1c1b1a !important;
-}
-.light-theme button.bg-white:hover {
-  background-color: #383734 !important;
-}
-
-/* Inputs and interactive elements */
-.light-theme input,
-.light-theme textarea,
-.light-theme select {
-  color: #1c1b1a !important;
-  border-color: rgba(28, 27, 26, 0.15) !important;
-}
-
-.light-theme input::placeholder,
-.light-theme textarea::placeholder {
-  color: #a3a19d !important;
-}
-
-.light-theme input:focus,
-.light-theme textarea:focus {
-  border-color: #1c1b1a !important;
-}
-
-/* Custom visual adjustments for clean light theme badges */
-.light-theme .bg-emerald-500\/10,
-.light-theme .bg-emerald-400\/10 {
-  background-color: rgba(16, 185, 129, 0.1) !important;
-  color: #047857 !important;
-  border-color: rgba(16, 185, 129, 0.2) !important;
-}
-
-.light-theme .bg-indigo-500\/10,
-.light-theme .bg-indigo-950\/40,
-.light-theme .bg-indigo-400\/10 {
-  background-color: rgba(99, 102, 241, 0.1) !important;
-  color: #4338ca !important;
-  border-color: rgba(99, 102, 241, 0.2) !important;
-}
-
-.light-theme .bg-amber-500\/5,
-.light-theme .bg-amber-500\/10,
-.light-theme .bg-amber-400\/10 {
-  background-color: rgba(245, 158, 11, 0.08) !important;
-  color: #b45309 !important;
-  border-color: rgba(245, 158, 11, 0.2) !important;
-}
-
-/* Hide scrollbars but keep functionality */
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

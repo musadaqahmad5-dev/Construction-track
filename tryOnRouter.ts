@@ -318,48 +318,56 @@ router.post("/process-mesh", async (req: Request<{}, {}, ProcessMeshRequestBody>
           : "matte";
 
         let profileSaved = false;
-        try {
-          const db = getFirestore();
-          const docRef = db.collection("users").doc(userId).collection("style_profiles").doc("current");
-          const docSnap = await docRef.get();
-          const existingData = docSnap.exists ? (docSnap.data() || {}) : {};
+        const sa = process.env.FIREBASE_SERVICE_ACCOUNT;
+        const hasValidKey = Boolean(
+          (sa && typeof sa === 'string' && (sa.includes('private_key') || sa.trim().startsWith('{'))) ||
+          process.env.GOOGLE_APPLICATION_CREDENTIALS
+        );
 
-          const existingColors: string[] = Array.isArray(existingData.colorPreferences)
-            ? existingData.colorPreferences
-            : (Array.isArray(existingData.colorHistory) ? existingData.colorHistory : []);
+        if (hasValidKey) {
+          try {
+            const db = getFirestore();
+            const docRef = db.collection("users").doc(userId).collection("style_profiles").doc("current");
+            const docSnap = await docRef.get();
+            const existingData = docSnap.exists ? (docSnap.data() || {}) : {};
 
-          const colorPreferences = existingColors.includes(primaryColorHex)
-            ? existingColors
-            : [...existingColors, primaryColorHex];
+            const existingColors: string[] = Array.isArray(existingData.colorPreferences)
+              ? existingData.colorPreferences
+              : (Array.isArray(existingData.colorHistory) ? existingData.colorHistory : []);
 
-          const existingWearAnalytics = existingData.wearAnalytics || {};
-          const currentTryOns = typeof existingWearAnalytics.successfulTryOns === "number"
-            ? existingWearAnalytics.successfulTryOns
-            : 0;
+            const colorPreferences = existingColors.includes(primaryColorHex)
+              ? existingColors
+              : [...existingColors, primaryColorHex];
 
-          const wearAnalytics = {
-            ...existingWearAnalytics,
-            successfulTryOns: currentTryOns + 1
-          };
+            const existingWearAnalytics = existingData.wearAnalytics || {};
+            const currentTryOns = typeof existingWearAnalytics.successfulTryOns === "number"
+              ? existingWearAnalytics.successfulTryOns
+              : 0;
 
-          const nowIso = new Date().toISOString();
+            const wearAnalytics = {
+              ...existingWearAnalytics,
+              successfulTryOns: currentTryOns + 1
+            };
 
-          const profilePayload = {
-            ...existingData,
-            primaryColorHex,
-            recommendedScale,
-            materialTextureType,
-            colorPreferences,
-            wearAnalytics,
-            lastTryOnAt: nowIso,
-            updatedAt: nowIso
-          };
+            const nowIso = new Date().toISOString();
 
-          await docRef.set(profilePayload, { merge: true });
-          profileSaved = true;
-        } catch (firestoreError: any) {
-          console.error("[Firestore Sync Error] Failed to update style profile:", firestoreError?.message || firestoreError);
-          profileSaved = false;
+            const profilePayload = {
+              ...existingData,
+              primaryColorHex,
+              recommendedScale,
+              materialTextureType,
+              colorPreferences,
+              wearAnalytics,
+              lastTryOnAt: nowIso,
+              updatedAt: nowIso
+            };
+
+            await docRef.set(profilePayload, { merge: true });
+            profileSaved = true;
+          } catch (firestoreError: any) {
+            console.warn("[Firestore Sync] Style profile update bypassed:", firestoreError?.message || firestoreError);
+            profileSaved = false;
+          }
         }
 
         return {

@@ -397,9 +397,17 @@ export const ARIAProvider: React.FC<ARIAProviderProps> = ({
 
       // 2. Safely sync to Firestore user memory documents
       const { doc, setDoc } = await import('firebase/firestore');
-      const { db } = await import('../../firebase');
+      const { db, auth, isFirestoreOfflineFallbackActive } = await import('../../firebase');
 
-      if (db && profile) {
+      if (
+        db &&
+        !isFirestoreOfflineFallbackActive &&
+        profile &&
+        !activeUid.startsWith('guest-') &&
+        auth?.currentUser &&
+        !auth.currentUser.isAnonymous &&
+        auth.currentUser.uid === activeUid
+      ) {
         const now = new Date().toISOString();
         const styleDocRef = doc(db, 'users', activeUid, 'styleDNA', 'profile');
         await setDoc(styleDocRef, {
@@ -418,8 +426,10 @@ export const ARIAProvider: React.FC<ARIAProviderProps> = ({
           accuracyEstimate: Math.round((profile.overallConfidence || 0.85) * 100)
         }, { merge: true });
       }
-    } catch (err) {
-      console.warn('[ARIAContext] Style DNA Firestore sync skipped or offline:', err);
+    } catch (err: any) {
+      if (err?.code !== 'permission-denied' && !err?.message?.includes('Missing or insufficient permissions')) {
+        console.warn('[ARIAContext] Style DNA Firestore sync skipped or offline:', err);
+      }
     }
   }, [userId]);
 

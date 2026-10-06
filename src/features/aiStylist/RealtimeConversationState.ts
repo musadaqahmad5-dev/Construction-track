@@ -52,7 +52,7 @@ export const INITIAL_CONVERSATION_STATE: ConversationStateMetadata = {
 };
 
 const VALID_TRANSITIONS: Record<ConversationStatus, ConversationStatus[]> = {
-  Idle: ['Thinking', 'Streaming', 'Generating', 'Waiting', 'Failed'],
+  Idle: ['Thinking', 'Streaming', 'Generating', 'Waiting', 'Cancelled', 'Failed'],
   Thinking: ['Streaming', 'Generating', 'Waiting', 'Cancelled', 'Failed'],
   Streaming: ['Generating', 'Thinking', 'Waiting', 'Cancelled', 'Completed', 'Failed'],
   Generating: ['Streaming', 'Thinking', 'Waiting', 'Cancelled', 'Completed', 'Failed'],

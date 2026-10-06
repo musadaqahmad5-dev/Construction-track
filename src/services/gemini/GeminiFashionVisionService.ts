@@ -145,7 +145,7 @@ export class GeminiFashionVisionService {
           imageProcessingTimeMs: processingTimeMs,
           confidenceScore: data.overallConfidence || 0.95,
           timestamp: new Date().toISOString(),
-          modelUsed: 'gemini-3.6-flash',
+          modelUsed: 'gemini-2.5-flash',
           status: 'AVAILABLE'
         };
 
@@ -247,7 +247,7 @@ export class GeminiFashionVisionService {
       imageProcessingTimeMs: processingTimeMs,
       confidenceScore: 0.91,
       timestamp: new Date().toISOString(),
-      modelUsed: 'gemini-3.6-flash-offline-fallback',
+      modelUsed: 'gemini-2.5-flash-offline-fallback',
       status: 'OFFLINE_FALLBACK',
       errorMessage: this.lastErrorMessage
     };

@@ -24,40 +24,18 @@ import { AdminShell } from './admin';
 import { PreviewBootstrap } from './aria/preview/PreviewBootstrap';
 import { PreviewEnvironment } from './aria/preview/PreviewEnvironment';
 
-// Temporal light rules mapper
+// Temporal light rules mapper (Locked to deep dark slate #05050a / #06060c per workspace invariants)
 export function getTemporalTheme() {
-  const hr = new Date().getHours();
-  if (hr >= 4 && hr < 12) {
-    // Morning: soft lifted paper light (slightly more open)
-    return {
-      bg: 'bg-[#161614]',
-      text: 'text-neutral-200',
-      tracking: 'tracking-[0.05em]',
-      leading: 'leading-relaxed',
-      densityClass: 'tracking-wide leading-relaxed opacity-85',
-      timeLabel: 'Morning light'
-    };
-  } else if (hr >= 12 && hr < 18) {
-    // Afternoon: neutral grounded stillness
-    return {
-      bg: 'bg-[#0c0c0d]',
-      text: 'text-neutral-300',
-      tracking: 'tracking-normal',
-      leading: 'leading-normal',
-      densityClass: 'tracking-normal leading-normal opacity-90',
-      timeLabel: 'Quiet stillness'
-    };
-  } else {
-    // Evening: dense quiet shadow (slightly denser)
-    return {
-      bg: 'bg-[#020202]',
-      text: 'text-white/80',
-      tracking: 'tracking-tight',
-      leading: 'leading-tight',
-      densityClass: 'tracking-tight leading-normal opacity-100',
-      timeLabel: 'Evening shadow'
-    };
-  }
+  return {
+    bg: 'bg-[#05050a]',
+    text: 'text-zinc-100',
+    surface: 'bg-[#07070c]',
+    border: 'border-white/5',
+    tracking: 'tracking-normal',
+    leading: 'leading-normal',
+    densityClass: 'tracking-normal leading-normal',
+    timeLabel: 'Cyber Studio Ambiance'
+  };
 }
 
 const initialUser = (() => {
@@ -80,7 +58,6 @@ const initialUser = (() => {
 
 export default function App() {
   const [user, setUser] = useState<User | null>(initialUser);
-  const [constructions, setConstructions] = useState<WardrobeItem[]>([]);
   const [wardrobe, setWardrobe] = useState<WardrobeItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [loaderStage, setLoaderStage] = useState(0);
@@ -392,91 +369,14 @@ export default function App() {
     return () => unsubscribe();
   }, [user]);
 
-  // Backward Compatibility: Listen to legacy constructions and map to wardrobe items dynamically
-  useEffect(() => {
-    if (!user) {
-      setConstructions([]);
-      return;
-    }
-
-    // Skip constructions lookup in guest modes or if db unavailable
-    if (!db || user.isAnonymous || user.uid.startsWith('guest-')) {
-      setConstructions([]);
-      return;
-    }
-
-    const q = query(
-      collection(db, 'constructions'),
-      where('userId', '==', user.uid)
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const docs = snapshot.docs.map(doc => {
-        const raw = doc.data();
-        
-        // Map legacy states to equivalent fashion model states
-        const statusMap: Record<string, WardrobeItem['status']> = {
-          'Planning': 'In Closet',
-          'In Progress': 'Planned',
-          'Completed': 'Worn/Wash'
-        };
-        const categoryMap: Record<string, ClothingCategory> = {
-          'Residential': 'Casual',
-          'Commercial': 'Formal',
-          'Infrastructure': 'Sportswear',
-          'Renovation': 'Outerwear',
-          'Other': 'Accessories'
-        };
-
-        const mappedCategory = (categoryMap[raw.category || ''] || raw.category || 'Casual') as ClothingCategory;
-        const mappedStatus = (statusMap[raw.status || ''] || raw.status || 'In Closet') as WardrobeItem['status'];
-
-        return {
-          id: doc.id,
-          title: raw.title || 'Untitled Apparel',
-          description: raw.description || '',
-          status: mappedStatus,
-          category: mappedCategory,
-          userId: raw.userId,
-          createdAt: raw.createdAt,
-          strategy: raw.strategy,
-          collectionSource: 'constructions' // Metadata to track original collection
-        } as WardrobeItem & { collectionSource: 'constructions' | 'wardrobe' };
-      });
-      
-      docs.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-      setConstructions(docs);
-
-      // Save offline backup for legacy constructions stream
-      try {
-        localStorage.setItem(`cached_constructions_${user.uid}`, JSON.stringify(docs));
-      } catch (e) {
-        console.warn("Storage limit reached for local constructions cache:", e);
-      }
-    }, (error) => {
-      console.warn("Firestore constructions connection degraded:", error.message || error);
-      try {
-        const stored = localStorage.getItem(`cached_constructions_${user.uid}`);
-        if (stored) {
-          const parsed = JSON.parse(stored) as any[];
-          setConstructions(parsed);
-        }
-      } catch (fallbackErr) {
-        console.error("Local constructions backup retrieval stalled:", fallbackErr);
-      }
-    });
-
-    return () => unsubscribe();
-  }, [user]);
-
-  // Combined wardrobe streams safely for active displays
+  // Wardrobe items sorted by creation time
   const allItems = useMemo(() => {
-    return [...wardrobe, ...constructions].sort((a, b) => {
+    return [...wardrobe].sort((a, b) => {
       const timeA = a.createdAt?.seconds ? a.createdAt.seconds * 1000 + (a.createdAt.nanoseconds || 0) / 1000000 : 0;
       const timeB = b.createdAt?.seconds ? b.createdAt.seconds * 1000 + (b.createdAt.nanoseconds || 0) / 1000000 : 0;
       return timeB - timeA;
     });
-  }, [wardrobe, constructions]);
+  }, [wardrobe]);
 
   const handleAddGarment = async (
     title: string, 
@@ -579,7 +479,6 @@ export default function App() {
     }
     try {
       await deleteDoc(doc(db, 'wardrobe', id));
-      await deleteDoc(doc(db, 'constructions', id));
     } catch (err) {
       console.error("Failed to delete garment:", err);
     }
@@ -672,17 +571,11 @@ export default function App() {
         localStorage.removeItem('local_wardrobe_items');
         UnifiedFashionOS.syncWardrobeItems([]);
       } else {
-        // 1. Clear wardrobe entries
+        // Clear wardrobe entries
         const qWardrobe = query(collection(db, 'wardrobe'), where('userId', '==', user.uid));
         const snapsWardrobe = await getDocs(qWardrobe);
-        const pr1 = snapsWardrobe.docs.map(d => deleteDoc(doc(db, 'wardrobe', d.id)));
-
-        // 2. Clear legacy construction entries
-        const qConst = query(collection(db, 'constructions'), where('userId', '==', user.uid));
-        const snapsConst = await getDocs(qConst);
-        const pr2 = snapsConst.docs.map(d => deleteDoc(doc(db, 'constructions', d.id)));
-
-        await Promise.all([...pr1, ...pr2]);
+        const deletes = snapsWardrobe.docs.map(d => deleteDoc(doc(db, 'wardrobe', d.id)));
+        await Promise.all(deletes);
       }
     } catch (error) {
       console.error("Failed to reset wardrobe workspace:", error);
@@ -717,8 +610,7 @@ export default function App() {
 
   return (
     <ThemeIntelligenceAppBridge userId={user?.uid || 'guest-sartorialist-user-100'} initialThemeName="cyber ai">
-      <UIShellProvider initialTheme="cyber ai" initialMode="dynamic">
-        {loading ? (
+      {loading ? (
           <div id="opening-moment" className={`min-h-screen ${theme.bg} ${theme.text} flex flex-col justify-center items-center py-10 px-4 select-none`}>
             <div className="text-center space-y-10 max-w-md mx-auto">
               {/* Greeting: Step 1 */}
@@ -845,7 +737,7 @@ export default function App() {
               </ARIAProvider>
             ) : (
               /* LOOK VISION: Premium fashion OS persistent shell workspace */
-              <div className={`h-screen w-screen overflow-hidden ${theme.bg} ${theme.text} selection:bg-white/20 selection:text-white antialiased font-sans`}>
+              <div className="h-full min-h-full w-full flex-1 overflow-hidden bg-[#05050a] text-zinc-100 selection:bg-indigo-500/20 selection:text-white antialiased font-sans flex flex-col">
                 <React.Suspense fallback={
                   <div className="flex flex-col items-center justify-center min-h-screen text-center space-y-4 bg-black">
                     <div className="w-10 h-10 border-2 border-white/10 border-t-white rounded-full animate-spin" />
@@ -875,7 +767,6 @@ export default function App() {
             )}
           </ErrorBoundary>
         )}
-      </UIShellProvider>
     </ThemeIntelligenceAppBridge>
   );
 }

@@ -170,10 +170,10 @@ export const CommunityGenerator: React.FC<CommunityGeneratorProps> = ({
   ];
 
   const instructorWorkers = [
-    { id: 'pattern_maker', name: 'Artisan Pattern Maker', role: 'Pattern & Fit Solver', cageId: 'Cage Alpha (Structure)', needs: 'CLO3D CAD integration, Kinetic drape physics weights' },
-    { id: 'trend_scout', name: 'Trend Ingestion Scout', role: 'Telemetry & Sourcing Analytics', cageId: 'Cage Beta (Intelligence)', needs: 'Pinterest RSS data endpoints, Vogue crawl engine' },
-    { id: 'prompt_alchemist', name: 'Prompt Styling Alchemist', role: 'High Fidelity Image Generation', cageId: 'Cage Gamma (Visuals)', needs: 'Imagen 4.0 API access, Aesthetic Quality Estimator' },
-    { id: 'decision_oracle', name: 'Sartorial Decision Oracle', role: 'Personalized Matching Logic', cageId: 'Cage Delta (Judgment)', needs: 'Local SQLite database state, Preference Learner DB' }
+    { id: 'pattern_maker', name: 'Artisan Pattern Maker', role: 'Pattern & Fit Solver', podId: 'Atelier Pod Alpha (Structure)', needs: 'CLO3D CAD integration, Kinetic drape physics weights' },
+    { id: 'trend_scout', name: 'Trend Ingestion Scout', role: 'Telemetry & Sourcing Analytics', podId: 'Atelier Pod Beta (Intelligence)', needs: 'Pinterest RSS data endpoints, Vogue crawl engine' },
+    { id: 'prompt_alchemist', name: 'Prompt Styling Alchemist', role: 'High Fidelity Image Generation', podId: 'Atelier Pod Gamma (Visuals)', needs: 'Imagen 4.0 API access, Aesthetic Quality Estimator' },
+    { id: 'decision_oracle', name: 'Sartorial Decision Oracle', role: 'Personalized Matching Logic', podId: 'Atelier Pod Delta (Judgment)', needs: 'Local SQLite database state, Preference Learner DB' }
   ];
 
   // Processing state
@@ -1872,7 +1872,7 @@ export const CommunityGenerator: React.FC<CommunityGeneratorProps> = ({
                       >
                         {instructorWorkers.map(i => (
                           <option key={i.id} value={i.id}>
-                            {i.name} ({i.cageId.split(' ')[1]})
+                            {i.name} ({i.podId.split(' ')[2] || i.podId})
                           </option>
                         ))}
                       </select>

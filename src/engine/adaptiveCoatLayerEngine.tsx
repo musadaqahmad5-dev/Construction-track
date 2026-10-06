@@ -274,7 +274,7 @@ export const ThemeCoatRenderer: React.FC<ThemeCoatRendererProps> = ({
       <motion.div
         onHoverStart={() => enableInteractiveHover && setIsHovered(true)}
         onHoverEnd={() => enableInteractiveHover && setIsHovered(false)}
-        className={`relative overflow-hidden transition-all duration-500 ${className}`}
+        className={`relative w-full h-full min-h-full flex-1 flex flex-col bg-[#05050a] overflow-hidden transition-all duration-500 ${className}`}
         style={{
           ...cssVariables,
           ...(activeSequenceId ? { '--look-coat-sequence-id': `"${activeSequenceId}"` } : {}),
@@ -313,7 +313,7 @@ export const ThemeCoatRenderer: React.FC<ThemeCoatRendererProps> = ({
         />
 
         {/* Main Content Area */}
-        <div className="relative z-10 w-full h-full">{children}</div>
+        <div className="relative z-10 w-full h-full min-h-full flex-1 flex flex-col overflow-hidden">{children}</div>
       </motion.div>
     </CoatLayerContext.Provider>
   );

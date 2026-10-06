@@ -51,7 +51,7 @@ interface WorkerAgent {
   isChosen: boolean;
   workingStatus: 'idle' | 'operational' | 'training';
   efficiency: number;
-  cageId: string;
+  podId: string;
   toolsNeeded: string[];
 }
 
@@ -203,7 +203,7 @@ export const AIEngineStudio: React.FC<AIEngineStudioProps> = ({
         isChosen: true,
         workingStatus: 'operational',
         efficiency: 94,
-        cageId: 'Cage Alpha (Structure)',
+        podId: 'Atelier Pod Alpha (Structure)',
         toolsNeeded: ['3D Mesh Renderer', 'Seam Friction Solver']
       },
       {
@@ -214,7 +214,7 @@ export const AIEngineStudio: React.FC<AIEngineStudioProps> = ({
         isChosen: true,
         workingStatus: 'operational',
         efficiency: 89,
-        cageId: 'Cage Beta (Intelligence)',
+        podId: 'Atelier Pod Beta (Intelligence)',
         toolsNeeded: ['Vogue Crawl Engine', 'Social Ingestion Pipeline']
       },
       {
@@ -225,7 +225,7 @@ export const AIEngineStudio: React.FC<AIEngineStudioProps> = ({
         isChosen: false,
         workingStatus: 'idle',
         efficiency: 76,
-        cageId: 'Cage Gamma (Visuals)',
+        podId: 'Atelier Pod Gamma (Visuals)',
         toolsNeeded: ['Imagen 3.0 Solver', 'Aesthetic Quality Estimator']
       },
       {
@@ -236,7 +236,7 @@ export const AIEngineStudio: React.FC<AIEngineStudioProps> = ({
         isChosen: false,
         workingStatus: 'idle',
         efficiency: 81,
-        cageId: 'Cage Delta (Judgment)',
+        podId: 'Atelier Pod Delta (Judgment)',
         toolsNeeded: ['Preference Learner DB', 'Decoupled Event Bus']
       }
     ];
@@ -360,10 +360,10 @@ export const AIEngineStudio: React.FC<AIEngineStudioProps> = ({
   ], []);
 
   const instructorWorkers = useMemo(() => [
-    { id: 'pattern_maker', name: 'Artisan Pattern Maker', role: 'Pattern & Fit Solver', cageId: 'Cage Alpha (Structure)', needs: 'CLO3D CAD integration, Kinetic drape physics weights' },
-    { id: 'trend_scout', name: 'Trend Ingestion Scout', role: 'Telemetry & Sourcing Analytics', cageId: 'Cage Beta (Intelligence)', needs: 'Pinterest RSS data endpoints, Vogue crawl engine' },
-    { id: 'prompt_alchemist', name: 'Prompt Styling Alchemist', role: 'High Fidelity Image Generation', cageId: 'Cage Gamma (Visuals)', needs: 'Imagen 4.0 API access, Aesthetic Quality Estimator' },
-    { id: 'decision_oracle', name: 'Sartorial Decision Oracle', role: 'Personalized Matching Logic', cageId: 'Cage Delta (Judgment)', needs: 'Local SQLite database state, Preference Learner DB' }
+    { id: 'pattern_maker', name: 'Artisan Pattern Maker', role: 'Pattern & Fit Solver', podId: 'Atelier Pod Alpha (Structure)', needs: 'CLO3D CAD integration, Kinetic drape physics weights' },
+    { id: 'trend_scout', name: 'Trend Ingestion Scout', role: 'Telemetry & Sourcing Analytics', podId: 'Atelier Pod Beta (Intelligence)', needs: 'Pinterest RSS data endpoints, Vogue crawl engine' },
+    { id: 'prompt_alchemist', name: 'Prompt Styling Alchemist', role: 'High Fidelity Image Generation', podId: 'Atelier Pod Gamma (Visuals)', needs: 'Imagen 4.0 API access, Aesthetic Quality Estimator' },
+    { id: 'decision_oracle', name: 'Sartorial Decision Oracle', role: 'Personalized Matching Logic', podId: 'Atelier Pod Delta (Judgment)', needs: 'Local SQLite database state, Preference Learner DB' }
   ], []);
 
   // Synchronize Firestore and map to the new premium object schema
@@ -1109,7 +1109,7 @@ export const AIEngineStudio: React.FC<AIEngineStudioProps> = ({
 
     const targetWorker = workers.find(w => w.id === id);
     if (targetWorker) {
-      addDispatchLog(`Governor status update: ${targetWorker.name} has been ${!targetWorker.isChosen ? 'commissioned and placed in ' + targetWorker.cageId : 'recalled back to barracks'}.`);
+      addDispatchLog(`Governor status update: ${targetWorker.name} has been ${!targetWorker.isChosen ? 'commissioned and placed in ' + targetWorker.podId : 'recalled back to barracks'}.`);
     }
   };
 
@@ -1180,7 +1180,7 @@ export const AIEngineStudio: React.FC<AIEngineStudioProps> = ({
     setTimeout(() => {
       activeWorkers.forEach((worker, idx) => {
         setTimeout(() => {
-          addDispatchLog(`⚡ ${worker.name} operating inside [${worker.cageId}]: Processing working needs [${worker.needs[0]}] with ${worker.efficiency}% efficiency.`);
+          addDispatchLog(`⚡ ${worker.name} operating inside [${worker.podId}]: Processing working needs [${worker.needs[0]}] with ${worker.efficiency}% efficiency.`);
         }, (idx + 1) * 400);
       });
     }, 400);

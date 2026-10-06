@@ -71,7 +71,7 @@ export class GeminiFashionReasoningService {
           tokensUsed: data.metadata?.tokensUsed || 420,
           confidenceScore: data.confidence?.overallScore || 0.94,
           timestamp: new Date().toISOString(),
-          modelUsed: data.metadata?.model || 'gemini-3.6-flash',
+          modelUsed: data.metadata?.model || 'gemini-2.5-flash',
           status: 'AVAILABLE'
         };
 
@@ -125,7 +125,7 @@ export class GeminiFashionReasoningService {
       tokensUsed: 220,
       confidenceScore: 0.92,
       timestamp: new Date().toISOString(),
-      modelUsed: 'gemini-3.6-flash-offline-fallback',
+      modelUsed: 'gemini-2.5-flash-offline-fallback',
       status: 'OFFLINE_FALLBACK'
     };
 

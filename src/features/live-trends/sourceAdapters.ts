@@ -107,7 +107,7 @@ export class GeminiGroundingAdapter implements TrendSourceAdapter {
 
           // Query Gemini with Search Grounding enabled to extract live search terms
           const response = await ai.models.generateContent({
-            model: 'gemini-3.5-flash',
+            model: 'gemini-2.5-flash',
             contents: promptText,
             config: {
               tools: [{ googleSearch: {} }], // Enable Search Grounding!

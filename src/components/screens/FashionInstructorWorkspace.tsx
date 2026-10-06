@@ -32,7 +32,7 @@ interface WorkerAgent {
   isChosen: boolean;
   workingStatus: 'idle' | 'operational' | 'training';
   efficiency: number;
-  cageId: string;
+  podId: string;
   toolsNeeded: string[];
 }
 
@@ -195,7 +195,7 @@ export const FashionInstructorWorkspace: React.FC = () => {
         isChosen: true,
         workingStatus: 'operational',
         efficiency: 94,
-        cageId: 'Cage Alpha (Structure)',
+        podId: 'Atelier Pod Alpha (Structure)',
         toolsNeeded: ['3D Mesh Renderer', 'Seam Friction Solver']
       },
       {
@@ -206,7 +206,7 @@ export const FashionInstructorWorkspace: React.FC = () => {
         isChosen: true,
         workingStatus: 'operational',
         efficiency: 89,
-        cageId: 'Cage Beta (Intelligence)',
+        podId: 'Atelier Pod Beta (Intelligence)',
         toolsNeeded: ['Vogue Crawl Engine', 'Social Ingestion Pipeline']
       },
       {
@@ -217,7 +217,7 @@ export const FashionInstructorWorkspace: React.FC = () => {
         isChosen: false,
         workingStatus: 'idle',
         efficiency: 76,
-        cageId: 'Cage Gamma (Visuals)',
+        podId: 'Atelier Pod Gamma (Visuals)',
         toolsNeeded: ['Imagen 3.0 Solver', 'Aesthetic Quality Estimator']
       },
       {
@@ -228,7 +228,7 @@ export const FashionInstructorWorkspace: React.FC = () => {
         isChosen: false,
         workingStatus: 'idle',
         efficiency: 81,
-        cageId: 'Cage Delta (Judgment)',
+        podId: 'Atelier Pod Delta (Judgment)',
         toolsNeeded: ['Preference Learner DB', 'Decoupled Event Bus']
       }
     ];
@@ -324,7 +324,7 @@ export const FashionInstructorWorkspace: React.FC = () => {
             "📊 Scanning viewport boundaries: Fluid container verified.",
             "⚙️ Checking 3D asset pipeline: Unreal 5 engine binding operational.",
             "⚡ WebGL hardware-acceleration detected. Frame rendering at stable 60 FPS.",
-            "✅ All advanced configuration panels (Cages, Physics, Demography) correctly scaled.",
+            "✅ All advanced configuration panels (Atelier Pods, Physics, Demography) correctly scaled.",
             "🎉 Audit completed successfully! Desktop configuration verified at maximum quality."
           ]
         },
@@ -600,10 +600,10 @@ export const FashionInstructorWorkspace: React.FC = () => {
   ], []);
 
   const instructorWorkers = useMemo(() => [
-    { id: 'pattern_maker', name: 'Artisan Pattern Maker', role: 'Pattern & Fit Solver', cageId: 'Cage Alpha (Structure)', needs: 'CLO3D CAD integration, Kinetic drape physics weights' },
-    { id: 'trend_scout', name: 'Trend Ingestion Scout', role: 'Telemetry & Sourcing Analytics', cageId: 'Cage Beta (Intelligence)', needs: 'Pinterest RSS data endpoints, Vogue crawl engine' },
-    { id: 'prompt_alchemist', name: 'Prompt Styling Alchemist', role: 'High Fidelity Image Generation', cageId: 'Cage Gamma (Visuals)', needs: 'Imagen 4.0 API access, Aesthetic Quality Estimator' },
-    { id: 'decision_oracle', name: 'Sartorial Decision Oracle', role: 'Personalized Matching Logic', cageId: 'Cage Delta (Judgment)', needs: 'Local SQLite database state, Preference Learner DB' }
+    { id: 'pattern_maker', name: 'Artisan Pattern Maker', role: 'Pattern & Fit Solver', podId: 'Atelier Pod Alpha (Structure)', needs: 'CLO3D CAD integration, Kinetic drape physics weights' },
+    { id: 'trend_scout', name: 'Trend Ingestion Scout', role: 'Telemetry & Sourcing Analytics', podId: 'Atelier Pod Beta (Intelligence)', needs: 'Pinterest RSS data endpoints, Vogue crawl engine' },
+    { id: 'prompt_alchemist', name: 'Prompt Styling Alchemist', role: 'High Fidelity Image Generation', podId: 'Atelier Pod Gamma (Visuals)', needs: 'Imagen 4.0 API access, Aesthetic Quality Estimator' },
+    { id: 'decision_oracle', name: 'Sartorial Decision Oracle', role: 'Personalized Matching Logic', podId: 'Atelier Pod Delta (Judgment)', needs: 'Local SQLite database state, Preference Learner DB' }
   ], []);
 
   useEffect(() => {
@@ -809,7 +809,7 @@ export const FashionInstructorWorkspace: React.FC = () => {
 
     const targetWorker = workers.find(w => w.id === id);
     if (targetWorker) {
-      addDispatchLog(`Governor status update: ${targetWorker.name} has been ${!targetWorker.isChosen ? 'commissioned and placed in ' + targetWorker.cageId : 'recalled back to barracks'}.`);
+      addDispatchLog(`Governor status update: ${targetWorker.name} has been ${!targetWorker.isChosen ? 'commissioned and placed in ' + targetWorker.podId : 'recalled back to barracks'}.`);
     }
   };
 
@@ -869,7 +869,7 @@ export const FashionInstructorWorkspace: React.FC = () => {
   const handleDispatchWorkers = () => {
     const activeWorkers = workers.filter(w => w.isChosen);
     if (activeWorkers.length === 0) {
-      addDispatchLog("❌ Dispatch aborted: No commissioned workers are assigned to cages!");
+      addDispatchLog("❌ Dispatch aborted: No commissioned workers are assigned to atelier pods!");
       return;
     }
 
@@ -880,7 +880,7 @@ export const FashionInstructorWorkspace: React.FC = () => {
     setTimeout(() => {
       activeWorkers.forEach((worker, idx) => {
         setTimeout(() => {
-          addDispatchLog(`⚡ ${worker.name} operating inside [${worker.cageId}]: Processing working needs [${worker.needs[0]}] with ${worker.efficiency}% efficiency.`);
+          addDispatchLog(`⚡ ${worker.name} operating inside [${worker.podId}]: Processing working needs [${worker.needs[0]}] with ${worker.efficiency}% efficiency.`);
         }, (idx + 1) * 400);
       });
     }, 400);
@@ -1493,7 +1493,7 @@ export const FashionInstructorWorkspace: React.FC = () => {
                 {[
                   { id: 'SIMULATE', label: 'Semester Simulator', icon: Stars },
                   { id: 'STUDENTS', label: 'Pupil Divisions', icon: Users },
-                  { id: 'WORKERS', label: 'Worker Cages', icon: Cpu },
+                  { id: 'WORKERS', label: 'Atelier Pods', icon: Cpu },
                   { id: 'DISPATCH', label: 'Regional Dispatch', icon: MapPin }
                 ].map((sub) => {
                   const Icon = sub.icon;
@@ -1571,7 +1571,7 @@ export const FashionInstructorWorkspace: React.FC = () => {
                       >
                         {instructorWorkers.map(i => (
                           <option key={i.id} value={i.id}>
-                            {i.name} ({i.cageId.split(' ')[1]})
+                            {i.name} ({i.podId.split(' ')[2] || i.podId})
                           </option>
                         ))}
                       </select>
@@ -1787,11 +1787,11 @@ export const FashionInstructorWorkspace: React.FC = () => {
                 </div>
               )}
 
-              {/* Sub-tab: Worker Cages */}
+              {/* Sub-tab: Atelier Pods */}
               {simulatorSubTab === 'WORKERS' && (
                 <div className="space-y-4 text-left">
                   <p className="text-[11px] text-zinc-400 font-sans leading-relaxed">
-                    Commission elite Fashion OS agents to specialized workspace "Cages". Certified worker agents boost generation parameters, audit scorecard outcomes, and state-wide dispatch outputs.
+                    Commission elite Fashion OS agents to specialized workspace "Atelier Pods". Certified worker agents boost generation parameters, audit scorecard outcomes, and state-wide dispatch outputs.
                   </p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {workers.map((worker) => (
@@ -1799,7 +1799,7 @@ export const FashionInstructorWorkspace: React.FC = () => {
                         <div className="space-y-1.5">
                           <div className="flex items-center justify-between gap-2">
                             <span className="text-[9px] font-mono text-zinc-500 uppercase truncate">
-                              {worker.cageId}
+                              {worker.podId}
                             </span>
                             <FoundationInteractionWrapper themeDNA={themeDNA}>
                               <button

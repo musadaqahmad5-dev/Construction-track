@@ -278,7 +278,7 @@ export const FoundationInteractionWrapper: React.FC<FoundationInteractionWrapper
       onBlur={() => !disabled && setIsFocused(false)}
       onClick={handleClick}
       tabIndex={disabled ? -1 : 0}
-      className={`relative overflow-hidden outline-none cursor-pointer transition-shadow duration-300 ${className}`}
+      className={`relative overflow-hidden outline-none cursor-pointer transition-shadow duration-300 flex flex-col w-full h-full min-h-full flex-1 ${className}`}
       style={{
         boxShadow: isFocused ? motionPreset.focus.boxShadow : style.boxShadow,
         ...style
@@ -307,7 +307,7 @@ export const FoundationInteractionWrapper: React.FC<FoundationInteractionWrapper
       </AnimatePresence>
 
       {/* Internal Content */}
-      <div className="relative z-10">{children}</div>
+      <div className="relative z-10 w-full h-full min-h-full flex-1 flex flex-col">{children}</div>
     </motion.div>
   );
 };

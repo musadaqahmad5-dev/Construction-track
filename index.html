@@ -1,22 +1,44 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark h-full w-full bg-[#05050a]" style="background-color: #05050a; min-height: 100%; height: 100%; width: 100%; color-scheme: dark;">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AI Fashion Market | Powered by LOOK VISION AI OS</title>
-    <meta name="application-name" content="AI Fashion Market" />
-    <meta name="apple-mobile-web-app-title" content="AI Fashion Market" />
-    <meta name="description" content="AI Fashion Market — Powered by LOOK VISION AI Fashion Operating System and ARIA Autonomous Fashion Intelligence." />
-    <link rel="canonical" href="https://www.aifashionmarket.com" />
-    <meta property="og:title" content="AI Fashion Market | Powered by LOOK VISION AI OS" />
-    <meta property="og:description" content="AI Fashion Market — Powered by LOOK VISION AI Fashion Operating System and ARIA Autonomous Fashion Intelligence." />
-    <meta property="og:url" content="https://www.aifashionmarket.com" />
-    <meta property="og:type" content="website" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="AI Fashion Market | Powered by LOOK VISION AI OS" />
-    <meta name="twitter:description" content="AI Fashion Market — Powered by LOOK VISION AI Fashion Operating System and ARIA Autonomous Fashion Intelligence." />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#05050a" />
+    <title>Fashion | Powered by LOOK VISION AI OS</title>
+    <meta name="application-name" content="Fashion" />
+    <meta name="apple-mobile-web-app-title" content="Fashion" />
+    <meta name="description" content="Fashion — Powered by LOOK VISION AI Fashion Operating System and ARIA Autonomous Fashion Intelligence." />
+    <meta property="og:title" content="Fashion | Powered by LOOK VISION AI OS" />
+    <meta property="og:description" content="Fashion — Powered by LOOK VISION AI Fashion Operating System and ARIA Autonomous Fashion Intelligence." />
+    <link rel="canonical" href="https://aifashionmarket.com" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <style>
+      :root {
+        color-scheme: dark !important;
+        background-color: #05050a !important;
+      }
+      html, body, #root {
+        background-color: #05050a !important;
+        background: #05050a !important;
+        min-height: 100% !important;
+        height: 100% !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+        color: #f4f4f5 !important;
+        color-scheme: dark !important;
+      }
+      #root {
+        display: flex !important;
+        flex-direction: column !important;
+        flex: 1 1 auto !important;
+      }
+    </style>
     <script>
-      // 1. Storage Polyfill to prevent SecurityError DOMExceptions when running in iframes
+      // 1. Storage Polyfill to prevent SecurityError DOMExceptions when running in sandboxed iframes
       (function() {
         function createMockStorage() {
           var store = {};
@@ -74,132 +96,47 @@
             });
           } catch (err) {}
         }
+
+        // 2. Intercept and swallow benign internal Firestore stream assertions (ID: ca9 / ve:-1 / WebChannel aborts)
+        function isFirestoreAssert(err) {
+          if (!err) return false;
+          var str = '';
+          try {
+            if (typeof err === 'string') str = err;
+            else str = (err.message || '') + ' ' + (err.stack || '') + ' ' + (err.reason || '') + ' ' + JSON.stringify(err);
+          } catch (_) {
+            str = String(err);
+          }
+          var upper = str.toUpperCase();
+          return upper.includes('CA9') ||
+                 upper.includes('INTERNAL ASSERTION FAILED') ||
+                 upper.includes('VE:-1') ||
+                 upper.includes('UNEXPECTED STATE') ||
+                 upper.includes('WATCHCHANGEAGGREGATOR') ||
+                 upper.includes('PERSISTENTLISTENSTREAM');
+        }
+
+        window.addEventListener('error', function(event) {
+          if (isFirestoreAssert(event.error) || isFirestoreAssert(event.message)) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            console.warn('[Firestore stream assertion handled safely]:', event.message || event.error);
+            return true;
+          }
+        }, true);
+
+        window.addEventListener('unhandledrejection', function(event) {
+          if (isFirestoreAssert(event.reason) || isFirestoreAssert(event)) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            console.warn('[Firestore stream rejection handled safely]:', event.reason);
+          }
+        }, true);
       })();
-
-      // 2. Global error handlers with intelligent filtering and noise suppression
-      function isFirestoreSDKError(e) {
-        if (!e) return false;
-        var str = '';
-        if (typeof e === 'string') {
-          str = e;
-        } else {
-          var msg = e.message || (e.error && e.error.message) || (e.reason && e.reason.message) || '';
-          var stack = e.stack || (e.error && e.error.stack) || (e.reason && e.reason.stack) || '';
-          str = msg + ' ' + stack + ' ' + String(e);
-        }
-        var upper = str.toUpperCase();
-        return (
-          upper.indexOf('FIRESTORE') > -1 ||
-          upper.indexOf('INTERNAL ASSERTION') > -1 ||
-          upper.indexOf('UNEXPECTED STATE') > -1 ||
-          upper.indexOf('CA9') > -1 ||
-          upper.indexOf('VE:-1') > -1 ||
-          upper.indexOf('B815') > -1 ||
-          upper.indexOf('HC:') > -1 ||
-          upper.indexOf('PERMISSION_DENIED') > -1 ||
-          upper.indexOf('GRPCCONNECTION') > -1 ||
-          upper.indexOf('WATCHCHANGEAGGREGATOR') > -1 ||
-          upper.indexOf('PERSISTENTLISTENSTREAM') > -1 ||
-          upper.indexOf('TARGETSTATE') > -1
-        );
-      }
-
-      window.addEventListener('error', function (event) {
-        if (isFirestoreSDKError(event) || isFirestoreSDKError(event.error) || isFirestoreSDKError(event.message)) {
-          event.stopImmediatePropagation();
-          event.preventDefault();
-          return;
-        }
-
-        var msgStr = String(event.message || "");
-        var source = event.filename || "";
-        var isScriptError = msgStr.indexOf("Script error") > -1 || msgStr === "Script error.";
-        
-        // An error is internal if its source is relative, starts with our origin, or contains '/src/' or 'main.tsx'
-        var isInternal = !!(source && (
-          source.indexOf(window.location.origin) === 0 || 
-          source.indexOf('/') === 0 || 
-          source.indexOf('./') === 0 || 
-          source.indexOf('/src/') > -1 || 
-          source.indexOf('main.tsx') > -1
-        ));
-        var isExternal = !isInternal;
-        
-        // Suppress "Script error." and third-party script errors from bubbling up or logging
-        if (isScriptError || isExternal) {
-          event.stopImmediatePropagation();
-          event.preventDefault();
-          return;
-        }
-        
-        var errorData = {
-          type: "onerror",
-          message: event.message,
-          source: source,
-          lineno: event.lineno,
-          colno: event.colno,
-          stack: event.error ? event.error.stack : null,
-          url: window.location.href,
-          isScriptError: isScriptError,
-          isExternal: isExternal
-        };
-        
-        fetch("/api/log-client-error", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(errorData)
-        }).catch(function() {});
-      }, true);
-
-      window.addEventListener('unhandledrejection', function (event) {
-        if (isFirestoreSDKError(event) || isFirestoreSDKError(event.reason)) {
-          event.stopImmediatePropagation();
-          event.preventDefault();
-          return;
-        }
-
-        var reason = event.reason;
-        var message = reason ? (reason.message || String(reason)) : "Promise rejection";
-        var stack = reason ? reason.stack : null;
-        
-        // An unhandled rejection is internal ONLY if we have a stack trace indicating it came from our own code
-        var isInternal = !!(stack && (
-          stack.indexOf(window.location.origin) > -1 ||
-          stack.indexOf('/src/') > -1 ||
-          stack.indexOf('main.tsx') > -1 ||
-          stack.indexOf('/assets/') > -1
-        ));
-        var isExternal = !isInternal;
-        
-        // Suppress external promise rejections
-        if (isExternal) {
-          event.stopImmediatePropagation();
-          event.preventDefault();
-          return;
-        }
-
-        var errorData = {
-          type: "onunhandledrejection",
-          message: message,
-          stack: stack,
-          url: window.location.href,
-          isScriptError: false,
-          isExternal: isExternal
-        };
-        fetch("/api/log-client-error", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(errorData)
-        }).catch(function() {});
-        
-        // Suppress unhandled promise rejections from bubbling up to the test runner
-        event.stopImmediatePropagation();
-        event.preventDefault();
-      }, true);
     </script>
   </head>
-  <body class="bg-[#030303] overflow-hidden">
-    <div id="root"></div>
+  <body class="h-full w-full bg-[#05050a] text-zinc-100 antialiased overflow-hidden selection:bg-indigo-500/20 selection:text-white m-0 p-0">
+    <div id="root" class="w-full h-full min-h-full flex flex-col bg-[#05050a] overflow-hidden"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

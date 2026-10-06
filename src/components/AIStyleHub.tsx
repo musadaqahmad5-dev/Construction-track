@@ -6,7 +6,7 @@ import {
   Camera, SlidersHorizontal, ArrowRight, ShieldCheck, Cpu, 
   Activity, CloudSun, Bell, X, Search, Heart, Store,
   Zap, Award, CheckCircle, Smartphone, Monitor, Globe, Plus,
-  Bookmark, Sliders, MessageSquare, Palette, Lock, Users, Building
+  Bookmark, Sliders, MessageSquare, Palette, Lock, Users, Building, CreditCard
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { WardrobeItem, ProfileService, type StyleProfile } from '../platform';
@@ -37,6 +37,7 @@ import { AIAssistantStudio } from './AIAssistantStudio';
 import { MatureFashionStudio } from './MatureFashionStudio';
 import { SocialHubView } from './social/SocialHubView';
 import { SubscriptionHubView } from './payment/SubscriptionHubView';
+import { SaaSPricingUpsell } from './SaaSPricingUpsell';
 import { AdminShell } from '../admin';
 import { ARIAStatusWidget, ARIAAssistantPanel } from './aria';
 import { FocusSearchPalette } from './FocusSearchPalette';
@@ -168,6 +169,7 @@ export type MainSubTab =
   | 'MATURE_FASHION_STUDIO'
   | 'SOCIAL_HUB'
   | 'SUBSCRIPTION_HUB'
+  | 'PRICING_PLANS'
   | 'VENDOR_ONBOARDING'
   | 'SYSTEM_ROOM'
   | 'ADMIN_COMMAND';
@@ -221,6 +223,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
     if (path === '/aria' || path === '/assistant') return 'AI_ASSISTANT';
     if (path === '/social') return 'SOCIAL_HUB';
     if (path === '/subscription' || path === '/billing') return 'SUBSCRIPTION_HUB';
+    if (path === '/pricing' || path === '/upgrade' || path === '/plans') return 'PRICING_PLANS';
     if (path === '/vendor-onboarding' || path === '/become-seller' || path === '/merchant-register') return 'VENDOR_ONBOARDING';
     if (path === '/settings') return 'SYSTEM_ROOM';
     if (path === '/admin') return 'ADMIN_COMMAND';
@@ -324,6 +327,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
       else if (path === '/aria' || path === '/assistant') setActiveSubTab('AI_ASSISTANT');
       else if (path === '/social') setActiveSubTab('SOCIAL_HUB');
       else if (path === '/subscription' || path === '/billing') setActiveSubTab('SUBSCRIPTION_HUB');
+      else if (path === '/pricing' || path === '/upgrade' || path === '/plans') setActiveSubTab('PRICING_PLANS');
       else if (path === '/settings') setActiveSubTab('SYSTEM_ROOM');
       else if (path === '/admin') setActiveSubTab('ADMIN_COMMAND');
       else if (path === '/' || path === '/home') setActiveSubTab('PRODUCT_HOME');
@@ -385,6 +389,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
     else if (tab === 'AI_ASSISTANT') targetPath = '/aria';
     else if (tab === 'SOCIAL_HUB') targetPath = '/social';
     else if (tab === 'SUBSCRIPTION_HUB') targetPath = '/subscription';
+    else if (tab === 'PRICING_PLANS') targetPath = '/pricing';
     else if (tab === 'VENDOR_ONBOARDING') targetPath = '/vendor-onboarding';
     else if (tab === 'SYSTEM_ROOM') targetPath = '/settings';
     else if (tab === 'ADMIN_COMMAND') targetPath = '/admin';
@@ -594,6 +599,13 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
         return <SocialHubView />;
       case 'SUBSCRIPTION_HUB':
         return <SubscriptionHubView />;
+      case 'PRICING_PLANS':
+        return (
+          <SaaSPricingUpsell 
+            userId={user?.uid || 'guest-sartorialist-user-100'} 
+            userEmail={user?.email || 'guest@aifashionmarket.com'} 
+          />
+        );
       case 'VENDOR_ONBOARDING':
         return (
           <VendorOnboarding 
@@ -1171,10 +1183,10 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
   };
 
   const appContent = (
-    <div className="h-screen w-screen overflow-hidden bg-[#05050a] text-zinc-100 flex select-text">
+    <div className="h-full w-full min-h-full flex-1 overflow-hidden bg-[#05050a] text-zinc-100 flex select-text">
       
       {/* Fixed Left Navigation Sidebar */}
-      <aside className="w-64 h-full bg-[#07070c] border-r border-white/5 flex flex-col justify-between z-30 shrink-0 select-none">
+      <aside className="w-64 h-full min-h-0 bg-[#07070c] border-r border-white/5 flex flex-col justify-between z-30 shrink-0 select-none">
         
         {/* Brand & Logo */}
         <div className="p-5 border-b border-white/5 flex items-center justify-between">
@@ -1385,6 +1397,18 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
             </span>
 
             <button
+              onClick={() => handleNavigate('PRICING_PLANS')}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                activeSubTab === 'PRICING_PLANS'
+                  ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/[0.03]'
+              }`}
+            >
+              <CreditCard className={`w-4 h-4 ${activeSubTab === 'PRICING_PLANS' ? 'text-indigo-400' : 'text-zinc-500'}`} />
+              <span>SaaS Pricing & Plans</span>
+            </button>
+
+            <button
               onClick={() => handleNavigate('SYSTEM_ROOM')}
               className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
                 activeSubTab === 'SYSTEM_ROOM'
@@ -1439,8 +1463,8 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
       </aside>
 
       {/* Main Canvas Workspace Container */}
-      <main className="flex-1 h-full overflow-y-auto bg-[#05050a] p-4 md:p-8 relative">
-        <div className="max-w-7xl mx-auto">
+      <main className="flex-1 w-full h-full min-h-0 overflow-y-auto bg-[#05050a] p-4 md:p-6 lg:p-8 relative flex flex-col">
+        <div className="w-full max-w-full 2xl:max-w-[1800px] mx-auto flex-1 flex flex-col min-h-full">
           {renderCurrentView()}
         </div>
       </main>
@@ -1505,14 +1529,6 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
 
     </div>
   );
-
-  if (coatDNA) {
-    return (
-      <ThemeCoatRenderer coatDNA={coatDNA} className="w-full h-full min-h-screen">
-        {appContent}
-      </ThemeCoatRenderer>
-    );
-  }
 
   return appContent;
 };

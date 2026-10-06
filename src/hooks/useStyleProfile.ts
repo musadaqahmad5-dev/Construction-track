@@ -41,7 +41,7 @@ export function useStyleProfile() {
   const [showWelcomeBack, setShowWelcomeBack] = useState(false);
   const [simulatedNewStylesCount, setSimulatedNewStylesCount] = useState(0);
 
-  // Initialize and update last visit tracking for retention messages
+  // Initialize and update last visit tracking for retention messages (run once on mount)
   useEffect(() => {
     const now = new Date();
     const ts = now.toISOString();
@@ -51,14 +51,12 @@ export function useStyleProfile() {
       const diffMs = now.getTime() - new Date(lastVisit).getTime();
       const diffHours = diffMs / (1000 * 60 * 60);
       
-      if (diffHours > 0.1) { // Show welcome back banner if more than 6 minutes have passed (for testing convenience too!)
-        // Generate a random-looking number of new styles (e.g. 8 to 14 drops)
+      if (diffHours > 0.1) { // Show welcome back banner if more than 6 minutes have passed
         const counts = Math.floor(Math.random() * 7) + 8;
         setSimulatedNewStylesCount(counts);
         setShowWelcomeBack(true);
       }
     } else {
-      // First visit ever: set defaults but don't show return banner
       setSimulatedNewStylesCount(0);
       setShowWelcomeBack(false);
     }
@@ -68,7 +66,7 @@ export function useStyleProfile() {
     } catch (e) {
       console.warn("Storage limits restricted save of last visit timestamp:", e);
     }
-  }, [lastVisit]);
+  }, []);
 
   // Save state helpers
   useEffect(() => {

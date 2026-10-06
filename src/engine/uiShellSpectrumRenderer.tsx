@@ -369,20 +369,13 @@ export interface UIShellProviderProps {
   configOverrides?: Partial<UIShellSpectrumConfig>;
 }
 
-export const UIShellProvider: React.FC<UIShellProviderProps> = ({
+const UIShellProviderInner: React.FC<UIShellProviderProps> = ({
   children,
   initialTheme = 'cyber ai',
   initialMode = 'dynamic',
   configOverrides
 }) => {
-  const existingContext = useContext(UIShellContext);
   const themeIntel = useContext(ThemeIntelligenceContext);
-
-  // OBJECTIVE 6 & 1: Single global initialization guard.
-  // Prevents duplicate render layers, duplicate timers, and duplicate DOM nodes.
-  if (existingContext) {
-    return <>{children}</>;
-  }
 
   // OBJECTIVE 2: Automatically bind to global ThemeIntelligenceContext if present
   const activeDNAFromIntel = themeIntel?.themeDNA;
@@ -392,10 +385,10 @@ export const UIShellProvider: React.FC<UIShellProviderProps> = ({
   });
 
   useEffect(() => {
-    if (activeDNAFromIntel && activeDNAFromIntel !== themeDNA) {
+    if (activeDNAFromIntel && activeDNAFromIntel.themeName !== themeDNA.themeName) {
       setThemeDNAState(activeDNAFromIntel);
     }
-  }, [activeDNAFromIntel]);
+  }, [activeDNAFromIntel?.themeName]);
 
   const [mode, setModeState] = useState<UIShellMode>(initialMode);
   const [config, setConfigState] = useState<UIShellSpectrumConfig>(() => ({
@@ -505,19 +498,19 @@ export const UIShellProvider: React.FC<UIShellProviderProps> = ({
   return (
     <UIShellContext.Provider value={contextValue}>
       <div
-        className="ui-shell-spectrum-root relative w-full h-full min-h-screen text-zinc-100 transition-colors duration-500 overflow-hidden"
+        className="ui-shell-spectrum-root relative w-full h-full min-h-full flex-1 bg-[#05050a] text-zinc-100 transition-colors duration-500 overflow-hidden"
         style={{
-          backgroundColor: visualTokens.themeTokens.appBackground,
+          backgroundColor: visualTokens.themeTokens.appBackground || '#05050a',
           backgroundImage: visualTokens.themeTokens.appBackgroundGradient,
           ...spectrumCssVars
         } as React.CSSProperties}
       >
         {/* OBJECTIVE 3: Environmental Effect Layer 1 - Background Spectrum Transition Orb */}
         <motion.div
-          className="pointer-events-none absolute -top-1/3 -left-1/3 w-[166%] h-[166%] rounded-full opacity-25 blur-3xl z-0"
+          className="pointer-events-none absolute -top-1/3 -left-1/3 w-[166%] h-[166%] rounded-full opacity-20 blur-3xl z-0"
           animate={{
             rotate: [0, 180, 360],
-            scale: [1, 1.06, 1]
+            scale: [1, 1.04, 1]
           }}
           transition={{
             duration: Math.max(10, config.animationVelocitySec * 6),
@@ -525,7 +518,7 @@ export const UIShellProvider: React.FC<UIShellProviderProps> = ({
             ease: 'linear'
           }}
           style={{
-            background: `radial-gradient(circle at 50% 50%, var(--look-shell-primary-accent, rgba(168,85,247,0.3)) 0%, var(--look-shell-glow-color, rgba(124,58,237,0.15)) 40%, transparent 70%)`
+            background: `radial-gradient(circle at 50% 50%, var(--look-shell-primary-accent, rgba(168,85,247,0.2)) 0%, var(--look-shell-glow-color, rgba(124,58,237,0.1)) 40%, transparent 70%)`
           }}
         />
 
@@ -533,32 +526,32 @@ export const UIShellProvider: React.FC<UIShellProviderProps> = ({
         <div
           className="pointer-events-none absolute inset-0 transition-all duration-1000 z-0"
           style={{
-            background: `radial-gradient(ellipse at 50% 0%, var(--look-shell-glow-color, rgba(168,85,247,0.2)) 0%, transparent 60%), radial-gradient(ellipse at 50% 100%, var(--look-shell-secondary-accent, rgba(99,102,241,0.15)) 0%, transparent 50%)`,
-            boxShadow: `inset 0 0 ${Math.round(config.glowIntensity * 50)}px var(--look-shell-glow-color, rgba(168,85,247,0.15))`
+            background: `radial-gradient(ellipse at 50% 0%, var(--look-shell-glow-color, rgba(168,85,247,0.15)) 0%, transparent 60%)`,
+            boxShadow: `inset 0 0 ${Math.round(config.glowIntensity * 40)}px rgba(0,0,0,0.5)`
           }}
         />
 
         {/* OBJECTIVE 3: Environmental Effect Layer 3 - Depth Illumination & Top Spectrum Rim */}
         <div
-          className="pointer-events-none absolute top-0 left-0 right-0 h-[2px] z-20 transition-all duration-500 opacity-90"
+          className="pointer-events-none absolute top-0 left-0 right-0 h-[1.5px] z-20 transition-all duration-500 opacity-80"
           style={{
             background: `var(--look-shell-spectrum-linear, linear-gradient(90deg, #8b5cf6, #3b82f6))`,
-            boxShadow: `0 0 16px var(--look-shell-glow-color, #8b5cf6)`
+            boxShadow: `0 0 12px var(--look-shell-glow-color, #8b5cf6)`
           }}
         />
 
         {/* OBJECTIVE 3: Environmental Effect Layer 4 - Glass Refractions & Luxury Atmosphere */}
         <div
-          className="pointer-events-none absolute inset-0 z-0 backdrop-blur-[var(--look-shell-backdrop-blur,16px)] opacity-30 transition-all duration-700"
+          className="pointer-events-none absolute inset-0 z-0 backdrop-blur-[var(--look-shell-backdrop-blur,16px)] opacity-20 transition-all duration-700"
           style={{
-            background: `linear-gradient(180deg, rgba(255,255,255,0.02) 0%, transparent 40%, rgba(0,0,0,0.2) 100%)`
+            background: `linear-gradient(180deg, rgba(255,255,255,0.02) 0%, transparent 40%, rgba(0,0,0,0.3) 100%)`
           }}
         />
 
         {/* Texture Micro-Grain Veil */}
         <div
-          className="absolute inset-0 pointer-events-none opacity-20 bg-cover bg-center z-0"
-          style={{ opacity: themeDNA.themeCoat.noiseGrainFactor * 4 }}
+          className="absolute inset-0 pointer-events-none opacity-15 bg-cover bg-center z-0"
+          style={{ opacity: themeDNA.themeCoat.noiseGrainFactor * 2 }}
         />
 
         {/* Click Shockwave Pulse Effect */}
@@ -579,12 +572,20 @@ export const UIShellProvider: React.FC<UIShellProviderProps> = ({
           />
         )}
 
-        <div className="relative z-10 w-full h-full min-h-screen">
+        <div className="relative z-10 w-full h-full min-h-0 flex flex-col overflow-hidden">
           {children}
         </div>
       </div>
     </UIShellContext.Provider>
   );
+};
+
+export const UIShellProvider: React.FC<UIShellProviderProps> = (props) => {
+  const existingContext = useContext(UIShellContext);
+  if (existingContext) {
+    return <>{props.children}</>;
+  }
+  return <UIShellProviderInner {...props} />;
 };
 
 export function useUIShellSpectrum(): UIShellContextType {

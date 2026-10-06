@@ -4,7 +4,7 @@
  */
 
 import { StyleDNAProfile, StyleDNASnapshot, StyleDNAStatus } from './StyleDNATypes';
-import { db, isFirestoreOfflineFallbackActive } from '../../firebase';
+import { db, auth, isFirestoreOfflineFallbackActive } from '../../firebase';
 import { doc, getDoc, setDoc, collection, getDocs, serverTimestamp } from 'firebase/firestore';
 
 const LOCAL_STORAGE_PROFILE_KEY = 'lookvision_aria_style_dna_profile_v2.5';
@@ -84,7 +84,17 @@ export class StyleDNAStorage {
     this.setLocalProfile(profile);
 
     // 2. Persist to Firestore: users/{userId}/aria/styleDNA/profile/current
-    if (isFirestoreOfflineFallbackActive || !db || !userId) return;
+    if (
+      isFirestoreOfflineFallbackActive ||
+      !db ||
+      !userId ||
+      userId.startsWith('guest-') ||
+      !auth?.currentUser ||
+      auth.currentUser.isAnonymous ||
+      auth.currentUser.uid !== userId
+    ) {
+      return;
+    }
 
     try {
       const profileRef = doc(db, 'users', userId, 'aria', 'styleDNA', 'profile', 'current');
@@ -107,8 +117,10 @@ export class StyleDNAStorage {
         version: profile.version,
         updatedAt: serverTimestamp()
       }, { merge: true });
-    } catch (err) {
-      console.warn('[StyleDNAStorage] Firestore save profile skipped/deferred:', err);
+    } catch (err: any) {
+      if (err?.code !== 'permission-denied' && !err?.message?.includes('Missing or insufficient permissions')) {
+        console.warn('[StyleDNAStorage] Firestore save profile skipped/deferred:', err);
+      }
     }
   }
 
@@ -118,7 +130,15 @@ export class StyleDNAStorage {
   public async fetchProfile(userId: string): Promise<StyleDNAProfile | null> {
     const local = this.getLocalProfile();
 
-    if (isFirestoreOfflineFallbackActive || !db || !userId) {
+    if (
+      isFirestoreOfflineFallbackActive ||
+      !db ||
+      !userId ||
+      userId.startsWith('guest-') ||
+      !auth?.currentUser ||
+      auth.currentUser.isAnonymous ||
+      auth.currentUser.uid !== userId
+    ) {
       return local;
     }
 
@@ -130,8 +150,10 @@ export class StyleDNAStorage {
         this.setLocalProfile(remoteProfile);
         return remoteProfile;
       }
-    } catch (err) {
-      console.warn('[StyleDNAStorage] Firestore fetch fallback to local:', err);
+    } catch (err: any) {
+      if (err?.code !== 'permission-denied' && !err?.message?.includes('Missing or insufficient permissions')) {
+        console.warn('[StyleDNAStorage] Firestore fetch fallback to local:', err);
+      }
     }
 
     return local;
@@ -143,7 +165,17 @@ export class StyleDNAStorage {
   public async saveSnapshot(userId: string, snapshot: StyleDNASnapshot): Promise<void> {
     this.saveLocalSnapshot(snapshot);
 
-    if (isFirestoreOfflineFallbackActive || !db || !userId) return;
+    if (
+      isFirestoreOfflineFallbackActive ||
+      !db ||
+      !userId ||
+      userId.startsWith('guest-') ||
+      !auth?.currentUser ||
+      auth.currentUser.isAnonymous ||
+      auth.currentUser.uid !== userId
+    ) {
+      return;
+    }
 
     try {
       const snapRef = doc(db, 'users', userId, 'aria', 'styleDNA', 'snapshots', snapshot.snapshotId);
@@ -151,8 +183,10 @@ export class StyleDNAStorage {
         ...snapshot,
         capturedAt: serverTimestamp()
       });
-    } catch (err) {
-      console.warn('[StyleDNAStorage] Firestore snapshot save error:', err);
+    } catch (err: any) {
+      if (err?.code !== 'permission-denied' && !err?.message?.includes('Missing or insufficient permissions')) {
+        console.warn('[StyleDNAStorage] Firestore snapshot save error:', err);
+      }
     }
   }
 
@@ -162,7 +196,15 @@ export class StyleDNAStorage {
   public async fetchSnapshots(userId: string): Promise<StyleDNASnapshot[]> {
     const local = this.getLocalSnapshots();
 
-    if (isFirestoreOfflineFallbackActive || !db || !userId) {
+    if (
+      isFirestoreOfflineFallbackActive ||
+      !db ||
+      !userId ||
+      userId.startsWith('guest-') ||
+      !auth?.currentUser ||
+      auth.currentUser.isAnonymous ||
+      auth.currentUser.uid !== userId
+    ) {
       return local;
     }
 
@@ -177,8 +219,10 @@ export class StyleDNAStorage {
         fetched.sort((a, b) => new Date(b.capturedAt).getTime() - new Date(a.capturedAt).getTime());
         return fetched;
       }
-    } catch (err) {
-      console.warn('[StyleDNAStorage] Fetch snapshots error:', err);
+    } catch (err: any) {
+      if (err?.code !== 'permission-denied' && !err?.message?.includes('Missing or insufficient permissions')) {
+        console.warn('[StyleDNAStorage] Fetch snapshots error:', err);
+      }
     }
 
     return local;

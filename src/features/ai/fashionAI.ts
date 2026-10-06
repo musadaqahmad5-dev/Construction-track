@@ -194,7 +194,7 @@ export class FashionAI {
         },
         async () => {
           const response = await ai.models.generateContent({
-            model: 'gemini-3.5-flash',
+            model: 'gemini-2.5-flash',
             contents: prompt,
             config: {
               systemInstruction,
@@ -264,7 +264,7 @@ export class FashionAI {
         },
         async () => {
           const response = await ai.models.generateContent({
-            model: 'gemini-3.5-flash',
+            model: 'gemini-2.5-flash',
             contents: prompt,
             config: { systemInstruction, maxOutputTokens: 4096 }
           });
@@ -283,7 +283,7 @@ export class FashionAI {
 
   /**
    * Task 3 & Phase 4B: Vision image understanding interface.
-   * Utilizes Gemini 3.5 Flash in multi-modal mode to parse uploaded clothing.
+   * Utilizes Gemini in multi-modal mode to parse uploaded clothing.
    */
   static async analyzeOutfitVisual(base64ImagePure: string): Promise<GarmentVisionResult> {
     console.log("[AI VISION] Processing base64 image for design and tag extraction of length: ", base64ImagePure?.length || 0);
@@ -317,7 +317,7 @@ export class FashionAI {
       };
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3.5-flash',
+        model: 'gemini-2.5-flash',
         contents: { parts: [imagePart, textPart] },
         config: {
           responseMimeType: "application/json",

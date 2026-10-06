@@ -1,20 +1,5 @@
 {
   "entities": {
-    "Construction": {
-      "title": "Construction",
-      "description": "A construction project or item in the boutique workflow.",
-      "type": "object",
-      "properties": {
-        "title": { "type": "string" },
-        "description": { "type": "string" },
-        "category": { "type": "string" },
-        "status": { "type": "string", "enum": ["Planning", "In Progress", "Completed"] },
-        "userId": { "type": "string" },
-        "strategy": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["title", "userId", "createdAt", "status"]
-    },
     "WardrobeItem": {
       "title": "WardrobeItem",
       "description": "A garment or accessory item stored in the personal closet.",
@@ -225,10 +210,6 @@
     }
   },
   "firestore": {
-    "constructions": {
-      "schema": "Construction",
-      "description": "Collection of bespoke construction projects."
-    },
     "wardrobe": {
       "schema": "WardrobeItem",
       "description": "Collection of wardrobe items."

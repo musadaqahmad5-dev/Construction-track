@@ -4,7 +4,6 @@ import { WardrobeItem, ClothingCategory } from '../../types';
 
 /**
  * Wardrobe Storage Service - Interface layer connecting Firestore collections with closets.
- * Handles dual-collection mapping (constructions / wardrobe) to ensure zero data loss.
  */
 export class WardrobeService {
   /**
@@ -51,8 +50,7 @@ export class WardrobeService {
    */
   static async cycleGarmentStatus(
     itemId: string,
-    currentStatus: WardrobeItem['status'],
-    collectionName: 'wardrobe' | 'constructions' = 'wardrobe'
+    currentStatus: WardrobeItem['status']
   ): Promise<void> {
     const nextStatusMap: Record<WardrobeItem['status'], WardrobeItem['status']> = {
       'In Closet': 'Planned',
@@ -62,11 +60,11 @@ export class WardrobeService {
 
     try {
       const nextStatus = nextStatusMap[currentStatus];
-      await updateDoc(doc(db, collectionName, itemId), {
+      await updateDoc(doc(db, 'wardrobe', itemId), {
         status: nextStatus
       });
     } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `${collectionName}/${itemId}`);
+      handleFirestoreError(error, OperationType.UPDATE, `wardrobe/${itemId}`);
     }
   }
 
@@ -74,13 +72,12 @@ export class WardrobeService {
    * Permanently delete an item from the user's closet.
    */
   static async removeGarment(
-    itemId: string,
-    collectionName: 'wardrobe' | 'constructions' = 'wardrobe'
+    itemId: string
   ): Promise<void> {
     try {
-      await deleteDoc(doc(db, collectionName, itemId));
+      await deleteDoc(doc(db, 'wardrobe', itemId));
     } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `${collectionName}/${itemId}`);
+      handleFirestoreError(error, OperationType.DELETE, `wardrobe/${itemId}`);
     }
   }
 }

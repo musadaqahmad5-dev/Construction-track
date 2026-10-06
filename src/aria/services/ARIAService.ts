@@ -61,29 +61,53 @@ export class ARIAService {
    * Firestore Structure Helper: users/{userId}/aria/context
    */
   public async getFirestoreContext(userId: string): Promise<Partial<ARIAContextState> | null> {
-    if (isFirestoreOfflineFallbackActive || !db) return null;
+    if (
+      isFirestoreOfflineFallbackActive ||
+      !db ||
+      !userId ||
+      userId.startsWith('guest-') ||
+      !auth?.currentUser ||
+      auth.currentUser.isAnonymous ||
+      auth.currentUser.uid !== userId
+    ) {
+      return null;
+    }
     try {
       const ref = doc(db, 'users', userId, 'aria', 'context');
       const snap = await getDoc(ref);
       if (snap.exists()) {
         return snap.data() as Partial<ARIAContextState>;
       }
-    } catch (err) {
-      console.warn('[ARIAService] Firestore context fetch skipped:', err);
+    } catch (err: any) {
+      if (err?.code !== 'permission-denied' && !err?.message?.includes('Missing or insufficient permissions')) {
+        console.warn('[ARIAService] Firestore context fetch skipped:', err);
+      }
     }
     return null;
   }
 
   public async saveFirestoreContext(userId: string, context: ARIAContextState): Promise<void> {
-    if (isFirestoreOfflineFallbackActive || !db) return;
+    if (
+      isFirestoreOfflineFallbackActive ||
+      !db ||
+      !userId ||
+      userId.startsWith('guest-') ||
+      !auth?.currentUser ||
+      auth.currentUser.isAnonymous ||
+      auth.currentUser.uid !== userId
+    ) {
+      return;
+    }
     try {
       const ref = doc(db, 'users', userId, 'aria', 'context');
       await setDoc(ref, {
         ...context,
         updatedAt: serverTimestamp()
       }, { merge: true });
-    } catch (err) {
-      console.warn('[ARIAService] Firestore context save skipped:', err);
+    } catch (err: any) {
+      if (err?.code !== 'permission-denied' && !err?.message?.includes('Missing or insufficient permissions')) {
+        console.warn('[ARIAService] Firestore context save skipped:', err);
+      }
     }
   }
 
@@ -91,29 +115,53 @@ export class ARIAService {
    * Firestore Structure Helper: users/{userId}/aria/config
    */
   public async getFirestoreConfig(userId: string): Promise<Partial<ARIAConfig> | null> {
-    if (isFirestoreOfflineFallbackActive || !db) return null;
+    if (
+      isFirestoreOfflineFallbackActive ||
+      !db ||
+      !userId ||
+      userId.startsWith('guest-') ||
+      !auth?.currentUser ||
+      auth.currentUser.isAnonymous ||
+      auth.currentUser.uid !== userId
+    ) {
+      return null;
+    }
     try {
       const ref = doc(db, 'users', userId, 'aria', 'config');
       const snap = await getDoc(ref);
       if (snap.exists()) {
         return snap.data() as Partial<ARIAConfig>;
       }
-    } catch (err) {
-      console.warn('[ARIAService] Firestore config fetch skipped:', err);
+    } catch (err: any) {
+      if (err?.code !== 'permission-denied' && !err?.message?.includes('Missing or insufficient permissions')) {
+        console.warn('[ARIAService] Firestore config fetch skipped:', err);
+      }
     }
     return null;
   }
 
   public async saveFirestoreConfig(userId: string, config: ARIAConfig): Promise<void> {
-    if (isFirestoreOfflineFallbackActive || !db) return;
+    if (
+      isFirestoreOfflineFallbackActive ||
+      !db ||
+      !userId ||
+      userId.startsWith('guest-') ||
+      !auth?.currentUser ||
+      auth.currentUser.isAnonymous ||
+      auth.currentUser.uid !== userId
+    ) {
+      return;
+    }
     try {
       const ref = doc(db, 'users', userId, 'aria', 'config');
       await setDoc(ref, {
         ...config,
         updatedAt: serverTimestamp()
       }, { merge: true });
-    } catch (err) {
-      console.warn('[ARIAService] Firestore config save skipped:', err);
+    } catch (err: any) {
+      if (err?.code !== 'permission-denied' && !err?.message?.includes('Missing or insufficient permissions')) {
+        console.warn('[ARIAService] Firestore config save skipped:', err);
+      }
     }
   }
 
@@ -121,29 +169,53 @@ export class ARIAService {
    * Firestore Structure Helper: users/{userId}/aria/status
    */
   public async getFirestoreStatus(userId: string): Promise<Partial<ARIASystemStatus> | null> {
-    if (isFirestoreOfflineFallbackActive || !db) return null;
+    if (
+      isFirestoreOfflineFallbackActive ||
+      !db ||
+      !userId ||
+      userId.startsWith('guest-') ||
+      !auth?.currentUser ||
+      auth.currentUser.isAnonymous ||
+      auth.currentUser.uid !== userId
+    ) {
+      return null;
+    }
     try {
       const ref = doc(db, 'users', userId, 'aria', 'status');
       const snap = await getDoc(ref);
       if (snap.exists()) {
         return snap.data() as Partial<ARIASystemStatus>;
       }
-    } catch (err) {
-      console.warn('[ARIAService] Firestore status fetch skipped:', err);
+    } catch (err: any) {
+      if (err?.code !== 'permission-denied' && !err?.message?.includes('Missing or insufficient permissions')) {
+        console.warn('[ARIAService] Firestore status fetch skipped:', err);
+      }
     }
     return null;
   }
 
   public async updateFirestoreStatus(userId: string, status: ARIASystemStatus): Promise<void> {
-    if (isFirestoreOfflineFallbackActive || !db) return;
+    if (
+      isFirestoreOfflineFallbackActive ||
+      !db ||
+      !userId ||
+      userId.startsWith('guest-') ||
+      !auth?.currentUser ||
+      auth.currentUser.isAnonymous ||
+      auth.currentUser.uid !== userId
+    ) {
+      return;
+    }
     try {
       const ref = doc(db, 'users', userId, 'aria', 'status');
       await setDoc(ref, {
         ...status,
         updatedAt: serverTimestamp()
       }, { merge: true });
-    } catch (err) {
-      console.warn('[ARIAService] Firestore status update skipped:', err);
+    } catch (err: any) {
+      if (err?.code !== 'permission-denied' && !err?.message?.includes('Missing or insufficient permissions')) {
+        console.warn('[ARIAService] Firestore status update skipped:', err);
+      }
     }
   }
 }

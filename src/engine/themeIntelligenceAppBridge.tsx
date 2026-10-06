@@ -22,7 +22,7 @@ export interface ThemeFeatureFlags {
 export const DEFAULT_THEME_FEATURE_FLAGS: ThemeFeatureFlags = {
   enableThemeIntelligence: true,
   enableCoatLayers: true,
-  enableFoundationResponses: true,
+  enableFoundationResponses: false,
   enableSequenceMemory: true,
   enableFirestoreSync: true,
   enableVisualTokenInjection: true
@@ -66,14 +66,14 @@ export const ThemeIntelligenceBridgeContent: React.FC<{
   const { coatDNA, themeDNA, sequenceId } = useThemeIntelligence();
 
   if (!flags.enableThemeIntelligence) {
-    return <div className={`w-full min-h-screen ${className}`} style={style}>{children}</div>;
+    return <div className={`w-full h-full min-h-full flex-1 flex flex-col overflow-hidden bg-[#05050a] ${className}`} style={style}>{children}</div>;
   }
 
   let content = <>{children}</>;
 
   if (flags.enableFoundationResponses) {
     content = (
-      <FoundationInteractionWrapper themeDNA={themeDNA} className="w-full h-full">
+      <FoundationInteractionWrapper themeDNA={themeDNA} className="w-full h-full min-h-full flex-1 flex flex-col">
         {content}
       </FoundationInteractionWrapper>
     );
@@ -85,14 +85,14 @@ export const ThemeIntelligenceBridgeContent: React.FC<{
         coatDNA={coatDNA}
         themeDNA={themeDNA}
         sequenceId={sequenceId}
-        className={`min-h-screen w-full ${className}`}
+        className={`w-full h-full min-h-full flex-1 flex flex-col overflow-hidden bg-[#05050a] ${className}`}
         style={style}
       >
         {content}
       </ThemeCoatRenderer>
     );
   } else {
-    content = <div className={`w-full min-h-screen ${className}`} style={style}>{content}</div>;
+    content = <div className={`w-full h-full min-h-full flex-1 flex flex-col overflow-hidden bg-[#05050a] ${className}`} style={style}>{content}</div>;
   }
 
   return (

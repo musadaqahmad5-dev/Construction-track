@@ -95,15 +95,19 @@ export const AICreationsUniverseStudio: React.FC<AICreationsUniverseStudioProps>
 
   // Save active session continuously for Continue Activity in HomeHub
   useEffect(() => {
-    AIStyleHubV17Architecture.saveAICreationActiveSession({
-      prompt,
-      category,
-      selectedStyle: customStyle,
-      selectedView,
-      isGenerating,
-      generationStep,
-      pendingResult: generatedResult
-    });
+    try {
+      AIStyleHubV17Architecture.saveAICreationActiveSession({
+        prompt,
+        category,
+        selectedStyle: customStyle,
+        selectedView,
+        isGenerating,
+        generationStep,
+        pendingResult: generatedResult
+      });
+    } catch (e) {
+      // Ignore transient storage errors gracefully
+    }
   }, [prompt, category, customStyle, selectedView, isGenerating, generationStep, generatedResult]);
 
   // Re-analyze concept whenever prompt or category changes

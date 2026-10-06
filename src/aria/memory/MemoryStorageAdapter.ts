@@ -72,7 +72,17 @@ export class MemoryStorageAdapter {
     this.setLocalMemories(local);
 
     // 2. Persist to Firestore: users/{userId}/aria/memory/preferences/{itemId}
-    if (isFirestoreOfflineFallbackActive || !db || !userId) return;
+    if (
+      isFirestoreOfflineFallbackActive ||
+      !db ||
+      !userId ||
+      userId.startsWith('guest-') ||
+      !auth?.currentUser ||
+      auth.currentUser.isAnonymous ||
+      auth.currentUser.uid !== userId
+    ) {
+      return;
+    }
 
     try {
       const subcollection = item.category === 'wardrobe_behavior' 
@@ -94,8 +104,10 @@ export class MemoryStorageAdapter {
         totalItems: local.length,
         updatedAt: serverTimestamp()
       }, { merge: true });
-    } catch (err) {
-      console.warn('[MemoryStorageAdapter] Firestore save skipped/deferred:', err);
+    } catch (err: any) {
+      if (err?.code !== 'permission-denied' && !err?.message?.includes('Missing or insufficient permissions')) {
+        console.warn('[MemoryStorageAdapter] Firestore save skipped/deferred:', err);
+      }
     }
   }
 
@@ -112,7 +124,17 @@ export class MemoryStorageAdapter {
     if (!itemToDelete) return false;
 
     // 2. Remove from Firestore
-    if (isFirestoreOfflineFallbackActive || !db || !userId) return true;
+    if (
+      isFirestoreOfflineFallbackActive ||
+      !db ||
+      !userId ||
+      userId.startsWith('guest-') ||
+      !auth?.currentUser ||
+      auth.currentUser.isAnonymous ||
+      auth.currentUser.uid !== userId
+    ) {
+      return true;
+    }
 
     try {
       const subcollection = itemToDelete.category === 'wardrobe_behavior' 
@@ -124,8 +146,10 @@ export class MemoryStorageAdapter {
       const ref = doc(db, 'users', userId, 'aria', 'memory', subcollection, itemId);
       await deleteDoc(ref);
       return true;
-    } catch (err) {
-      console.warn('[MemoryStorageAdapter] Firestore delete error:', err);
+    } catch (err: any) {
+      if (err?.code !== 'permission-denied' && !err?.message?.includes('Missing or insufficient permissions')) {
+        console.warn('[MemoryStorageAdapter] Firestore delete error:', err);
+      }
       return true; // Still removed from local store
     }
   }
@@ -136,7 +160,15 @@ export class MemoryStorageAdapter {
   public async fetchAllMemories(userId: string): Promise<FashionMemoryItem[]> {
     const local = this.getLocalMemories();
 
-    if (isFirestoreOfflineFallbackActive || !db || !userId) {
+    if (
+      isFirestoreOfflineFallbackActive ||
+      !db ||
+      !userId ||
+      userId.startsWith('guest-') ||
+      !auth?.currentUser ||
+      auth.currentUser.isAnonymous ||
+      auth.currentUser.uid !== userId
+    ) {
       return local;
     }
 
@@ -157,8 +189,10 @@ export class MemoryStorageAdapter {
         this.setLocalMemories(fetchedItems);
         return fetchedItems;
       }
-    } catch (err) {
-      console.warn('[MemoryStorageAdapter] Firestore fetch fallback to local:', err);
+    } catch (err: any) {
+      if (err?.code !== 'permission-denied' && !err?.message?.includes('Missing or insufficient permissions')) {
+        console.warn('[MemoryStorageAdapter] Firestore fetch fallback to local:', err);
+      }
     }
 
     return local;

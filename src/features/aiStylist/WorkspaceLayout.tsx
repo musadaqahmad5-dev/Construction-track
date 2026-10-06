@@ -44,7 +44,7 @@ export const WorkspaceLayout: React.FC<WorkspaceLayoutProps> = ({
   const [mobileTab, setMobileTab] = useState<'conversation' | 'context'>('conversation');
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] max-w-[1700px] mx-auto p-3 sm:p-4 gap-4 bg-[#05050a] text-zinc-100 font-sans select-none">
+    <div className="flex flex-col w-full h-full min-h-[750px] flex-1 max-w-[1700px] mx-auto p-3 sm:p-4 gap-4 bg-[#05050a] text-zinc-100 font-sans select-none">
       {/* Mobile view toggle tabs */}
       <div className="lg:hidden flex items-center justify-between p-1.5 rounded-xl border border-white/10 bg-[#080814]">
         <button

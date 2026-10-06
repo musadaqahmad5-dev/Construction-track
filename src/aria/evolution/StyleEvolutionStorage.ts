@@ -9,7 +9,7 @@ import {
   UserFeedbackEvent,
   IntelligenceSummary
 } from './StyleEvolutionTypes';
-import { db, isFirestoreOfflineFallbackActive } from '../../firebase';
+import { db, auth, isFirestoreOfflineFallbackActive } from '../../firebase';
 import {
   doc,
   getDoc,
@@ -68,7 +68,17 @@ export class StyleEvolutionStorage {
     history.unshift(snapshot);
     this.saveLocalEvolutionHistory(userId, history);
 
-    if (isFirestoreOfflineFallbackActive || !db || !userId || userId.startsWith('guest-')) return;
+    if (
+      isFirestoreOfflineFallbackActive ||
+      !db ||
+      !userId ||
+      userId.startsWith('guest-') ||
+      !auth?.currentUser ||
+      auth.currentUser.isAnonymous ||
+      auth.currentUser.uid !== userId
+    ) {
+      return;
+    }
 
     try {
       // Document path: users/{uid}/evolution/{snapshotId}
@@ -77,14 +87,24 @@ export class StyleEvolutionStorage {
         ...snapshot,
         createdAt: serverTimestamp()
       }, { merge: true });
-    } catch (err) {
-      console.warn('[StyleEvolutionStorage] Firestore evolution save error, local retained:', err);
+    } catch (err: any) {
+      if (err?.code !== 'permission-denied' && !err?.message?.includes('Missing or insufficient permissions')) {
+        console.warn('[StyleEvolutionStorage] Firestore evolution save error, local retained:', err);
+      }
     }
   }
 
   public async fetchEvolutionHistory(userId: string): Promise<StyleEvolutionSnapshot[]> {
     const local = this.getLocalEvolutionHistory(userId);
-    if (isFirestoreOfflineFallbackActive || !db || !userId || userId.startsWith('guest-')) {
+    if (
+      isFirestoreOfflineFallbackActive ||
+      !db ||
+      !userId ||
+      userId.startsWith('guest-') ||
+      !auth?.currentUser ||
+      auth.currentUser.isAnonymous ||
+      auth.currentUser.uid !== userId
+    ) {
       return local;
     }
 
@@ -101,8 +121,10 @@ export class StyleEvolutionStorage {
         this.saveLocalEvolutionHistory(userId, fetched);
         return fetched;
       }
-    } catch (err) {
-      console.warn('[StyleEvolutionStorage] Firestore evolution fetch error, using local:', err);
+    } catch (err: any) {
+      if (err?.code !== 'permission-denied' && !err?.message?.includes('Missing or insufficient permissions')) {
+        console.warn('[StyleEvolutionStorage] Firestore evolution fetch error, using local:', err);
+      }
     }
 
     return local;
@@ -138,7 +160,17 @@ export class StyleEvolutionStorage {
   public async saveFeedbackEvent(userId: string, event: UserFeedbackEvent): Promise<void> {
     this.saveLocalFeedbackEvent(userId, event);
 
-    if (isFirestoreOfflineFallbackActive || !db || !userId || userId.startsWith('guest-')) return;
+    if (
+      isFirestoreOfflineFallbackActive ||
+      !db ||
+      !userId ||
+      userId.startsWith('guest-') ||
+      !auth?.currentUser ||
+      auth.currentUser.isAnonymous ||
+      auth.currentUser.uid !== userId
+    ) {
+      return;
+    }
 
     try {
       // Document path: users/{uid}/feedback/{feedbackId}
@@ -147,14 +179,24 @@ export class StyleEvolutionStorage {
         ...event,
         createdAt: serverTimestamp()
       }, { merge: true });
-    } catch (err) {
-      console.warn('[StyleEvolutionStorage] Firestore feedback save error, local retained:', err);
+    } catch (err: any) {
+      if (err?.code !== 'permission-denied' && !err?.message?.includes('Missing or insufficient permissions')) {
+        console.warn('[StyleEvolutionStorage] Firestore feedback save error, local retained:', err);
+      }
     }
   }
 
   public async fetchFeedbackHistory(userId: string): Promise<UserFeedbackEvent[]> {
     const local = this.getLocalFeedbackHistory(userId);
-    if (isFirestoreOfflineFallbackActive || !db || !userId || userId.startsWith('guest-')) {
+    if (
+      isFirestoreOfflineFallbackActive ||
+      !db ||
+      !userId ||
+      userId.startsWith('guest-') ||
+      !auth?.currentUser ||
+      auth.currentUser.isAnonymous ||
+      auth.currentUser.uid !== userId
+    ) {
       return local;
     }
 
@@ -170,8 +212,10 @@ export class StyleEvolutionStorage {
         fetched.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
         return fetched;
       }
-    } catch (err) {
-      console.warn('[StyleEvolutionStorage] Firestore feedback fetch error, using local:', err);
+    } catch (err: any) {
+      if (err?.code !== 'permission-denied' && !err?.message?.includes('Missing or insufficient permissions')) {
+        console.warn('[StyleEvolutionStorage] Firestore feedback fetch error, using local:', err);
+      }
     }
 
     return local;
@@ -198,7 +242,17 @@ export class StyleEvolutionStorage {
       console.warn('[StyleEvolutionStorage] Error saving local intelligence summary:', e);
     }
 
-    if (isFirestoreOfflineFallbackActive || !db || !userId || userId.startsWith('guest-')) return;
+    if (
+      isFirestoreOfflineFallbackActive ||
+      !db ||
+      !userId ||
+      userId.startsWith('guest-') ||
+      !auth?.currentUser ||
+      auth.currentUser.isAnonymous ||
+      auth.currentUser.uid !== userId
+    ) {
+      return;
+    }
 
     try {
       // Document path: users/{uid}/intelligence/summary
@@ -207,14 +261,24 @@ export class StyleEvolutionStorage {
         ...summary,
         updatedAt: serverTimestamp()
       }, { merge: true });
-    } catch (err) {
-      console.warn('[StyleEvolutionStorage] Firestore summary save error, local retained:', err);
+    } catch (err: any) {
+      if (err?.code !== 'permission-denied' && !err?.message?.includes('Missing or insufficient permissions')) {
+        console.warn('[StyleEvolutionStorage] Firestore summary save error, local retained:', err);
+      }
     }
   }
 
   public async fetchIntelligenceSummary(userId: string): Promise<IntelligenceSummary | null> {
     const local = this.getLocalIntelligenceSummary(userId);
-    if (isFirestoreOfflineFallbackActive || !db || !userId || userId.startsWith('guest-')) {
+    if (
+      isFirestoreOfflineFallbackActive ||
+      !db ||
+      !userId ||
+      userId.startsWith('guest-') ||
+      !auth?.currentUser ||
+      auth.currentUser.isAnonymous ||
+      auth.currentUser.uid !== userId
+    ) {
       return local;
     }
 
@@ -226,8 +290,10 @@ export class StyleEvolutionStorage {
         localStorage.setItem(`${LOCAL_INTELLIGENCE_PREFIX}${userId}`, JSON.stringify(remote));
         return remote;
       }
-    } catch (err) {
-      console.warn('[StyleEvolutionStorage] Firestore summary fetch error, using local:', err);
+    } catch (err: any) {
+      if (err?.code !== 'permission-denied' && !err?.message?.includes('Missing or insufficient permissions')) {
+        console.warn('[StyleEvolutionStorage] Firestore summary fetch error, using local:', err);
+      }
     }
 
     return local;

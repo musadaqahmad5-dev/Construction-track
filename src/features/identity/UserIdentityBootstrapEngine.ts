@@ -59,7 +59,6 @@ export class UserIdentityBootstrapEngine {
           localStorage.removeItem(`aria_onboarding_completed_${userId}`);
           localStorage.removeItem(`user_profile_${userId}`);
           localStorage.removeItem(`cached_wardrobe_${userId}`);
-          localStorage.removeItem(`cached_constructions_${userId}`);
         } else {
           // Clear all user-specific cached keys if no explicit userId provided
           for (let i = localStorage.length - 1; i >= 0; i--) {
@@ -67,7 +66,6 @@ export class UserIdentityBootstrapEngine {
             if (key && (
               key.startsWith('fashion_memory_') ||
               key.startsWith('cached_wardrobe_') ||
-              key.startsWith('cached_constructions_') ||
               key.startsWith('user_profile_') ||
               key.startsWith('aria_onboarding_completed_')
             )) {
@@ -184,9 +182,15 @@ export class UserIdentityBootstrapEngine {
     // 2. Attempt Firestore read / write if available
     try {
       const { doc, getDoc, setDoc } = await import('firebase/firestore');
-      const { db } = await import('../../firebase');
+      const { db, auth } = await import('../../firebase');
 
-      if (db && !uid.startsWith('guest-')) {
+      if (
+        db &&
+        !uid.startsWith('guest-') &&
+        auth?.currentUser &&
+        !auth.currentUser.isAnonymous &&
+        auth.currentUser.uid === uid
+      ) {
         mode = 'firestore';
         // Check identity doc: users/{uid}/identity
         const identityDocRef = doc(db, 'users', uid, 'identity', 'profile');
@@ -231,7 +235,9 @@ export class UserIdentityBootstrapEngine {
         }
       }
     } catch (err: any) {
-      console.warn('[UserIdentityBootstrapEngine] Firestore sync notice (falling back to local memory):', err?.message || err);
+      if (err?.code !== 'permission-denied' && !err?.message?.includes('Missing or insufficient permissions')) {
+        console.warn('[UserIdentityBootstrapEngine] Firestore sync notice (falling back to local memory):', err?.message || err);
+      }
     }
 
     // 3. Sync to local PersonalFashionMemoryEngine
@@ -349,9 +355,15 @@ export class UserIdentityBootstrapEngine {
     // Store in Firestore
     try {
       const { doc, setDoc } = await import('firebase/firestore');
-      const { db } = await import('../../firebase');
+      const { db, auth } = await import('../../firebase');
 
-      if (db && !userId.startsWith('guest-')) {
+      if (
+        db &&
+        !userId.startsWith('guest-') &&
+        auth?.currentUser &&
+        !auth.currentUser.isAnonymous &&
+        auth.currentUser.uid === userId
+      ) {
         mode = 'firestore';
         const onbRef = doc(db, 'users', userId, 'onboarding', 'profile');
         await setDoc(onbRef, onboardingProfile, { merge: true });
@@ -369,7 +381,9 @@ export class UserIdentityBootstrapEngine {
         await setDoc(identRef, { isOnboardingCompleted: true, updatedAt: now }, { merge: true });
       }
     } catch (e: any) {
-      console.warn('[UserIdentityBootstrapEngine] Onboarding Firestore sync note:', e?.message || e);
+      if (e?.code !== 'permission-denied' && !e?.message?.includes('Missing or insufficient permissions')) {
+        console.warn('[UserIdentityBootstrapEngine] Onboarding Firestore sync note:', e?.message || e);
+      }
     }
 
     // Update local memory

@@ -1,6 +1,6 @@
 {
-  "name": "AI Fashion Market",
-  "description": "AI Fashion Market — Powered by LOOK VISION AI Fashion Operating System and ARIA Autonomous Fashion Intelligence.",
+  "name": "Fashion",
+  "description": "Fashion — Powered by LOOK VISION AI Fashion Operating System and ARIA Autonomous Fashion Intelligence.",
   "requestFramePermissions": ["camera"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

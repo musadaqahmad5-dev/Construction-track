@@ -10,8 +10,12 @@ import { TrendDetector } from "../../../packages/ai-engine/src/TrendDetector";
 import { FashionVisionPipeline } from "../../../packages/ai-engine/src/FashionVisionPipeline";
 import { AIStylistSystem } from "../../../packages/ai-engine/src/AIStylistSystem";
 import { FashionRecommendationEngine } from "../../../packages/ai-engine/src/FashionRecommendationEngine";
+import { paymentRouter } from "./paymentRouter";
 
 export const router = Router();
+
+// Mount Lemon Squeezy payment & monetization gateway routes
+router.use(paymentRouter);
 
 const geminiService = new GeminiService();
 const memoryStore = new VectorMemoryStore();

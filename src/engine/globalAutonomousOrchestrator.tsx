@@ -228,17 +228,11 @@ export interface AutonomousOrchestratorProviderProps {
   items?: WardrobeItem[];
 }
 
-export const AutonomousOrchestratorProvider: React.FC<AutonomousOrchestratorProviderProps> = ({
+const AutonomousOrchestratorProviderInner: React.FC<AutonomousOrchestratorProviderProps> = ({
   children,
   userId = 'user-1',
   items = []
 }) => {
-  const existingContext = useContext(AutonomousOrchestratorContext);
-
-  if (existingContext) {
-    return <>{children}</>;
-  }
-
   const [snapshot, setSnapshot] = useState<AutonomousOrchestratorSnapshot>(() => {
     globalAutonomousOrchestrator.initialize(userId, items);
     return globalAutonomousOrchestrator.getSnapshot(userId, items);
@@ -296,6 +290,14 @@ export const AutonomousOrchestratorProvider: React.FC<AutonomousOrchestratorProv
       {children}
     </AutonomousOrchestratorContext.Provider>
   );
+};
+
+export const AutonomousOrchestratorProvider: React.FC<AutonomousOrchestratorProviderProps> = (props) => {
+  const existingContext = useContext(AutonomousOrchestratorContext);
+  if (existingContext) {
+    return <>{props.children}</>;
+  }
+  return <AutonomousOrchestratorProviderInner {...props} />;
 };
 
 export function useAutonomousOrchestrator(): AutonomousOrchestratorContextValue {

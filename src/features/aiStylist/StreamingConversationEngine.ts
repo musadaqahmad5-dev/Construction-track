@@ -310,7 +310,10 @@ export class StreamingConversationEngine {
 
   public cancel(): void {
     this.cancelInternal();
-    this.stateMachine.transitionTo('Cancelled', 'User invoked cancellation');
+    const currentStatus = this.getState().status;
+    if (['Thinking', 'Streaming', 'Generating', 'Waiting'].includes(currentStatus)) {
+      this.stateMachine.transitionTo('Cancelled', 'User invoked cancellation');
+    }
   }
 
   private cancelInternal(): void {

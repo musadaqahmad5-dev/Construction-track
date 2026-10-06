@@ -17,7 +17,7 @@ export class CapabilityRegistry {
       name: 'Dynamic Look Styling Advice',
       group: 'AI',
       status: 'PARTIAL',
-      executionPath: 'server.ts -> FashionAI.generateStylingStrategy -> gemini-3.5-flash',
+      executionPath: 'server.ts -> FashionAI.generateStylingStrategy -> gemini-2.5-flash',
       evidenceNotes: 'Pulls dynamic, customized styled advice when Gemini API key is available; elegant static styling template on fallback.'
     },
     {
@@ -25,7 +25,7 @@ export class CapabilityRegistry {
       name: 'Weather-Adapted Recommendations',
       group: 'AI',
       status: 'PARTIAL',
-      executionPath: 'server.ts -> FashionAI.recommendOutfit -> gemini-3.5-flash',
+      executionPath: 'server.ts -> FashionAI.recommendOutfit -> gemini-2.5-flash',
       evidenceNotes: 'Calls Live Gemini JSON API on server route, cascades gracefully to OutfitReasoner scoring matrix offline.'
     },
     {

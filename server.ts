@@ -141,15 +141,19 @@ import {
   CommunityVisualIntelligence,
   DeviceReactionEngine
 } from "./src/engine";
-import { handler as recommendMvpHandler } from "./netlify/functions/recommend-mvp";
 import tryOnRouter from "./tryOnRouter";
 import stripePaymentGatewayRouter from "./stripePaymentGatewayRouter";
 import matureFashionStudioRouter from "./src/matureFashionStudioRouter";
 import socialNetworkRouter from "./src/socialNetworkRouter";
 import paymentRouter from "./src/paymentRouter";
 import creditsRouter from "./src/creditsRouter";
+import monetizationWebhookRouter, { monetizationWebhookController } from "./src/features/monetization/monetizationWebhookController";
+import ariaDynamicThemeRouter from "./src/features/aria/ariaDynamicThemeController";
+import ariaThemeRouter from "./server/routes/ariaThemeRoute";
+import lemonSqueezyRouter from "./server/controllers/lemonSqueezyController";
 import aiStylistRouter from "./server/routes/aiStylistRouter";
 import ariaRouter from "./server/aria/aria.routes";
+import { paymentRouter as apiGatewayPaymentRouter } from "./apps/api-gateway/src/paymentRouter";
 
 // --- Production Request Validation Suite ---
 function validateType(value: any, expectedType: "string" | "number" | "boolean" | "array" | "object"): boolean {
@@ -256,92 +260,134 @@ async function startServer() {
         } catch (_) {}
       }
 
-      logStructured({
-        level,
-        requestId,
-        tenantId,
-        timestamp: new Date().toISOString(),
-        method: req.method,
-        path: req.originalUrl || req.url,
-        status,
-        durationMs,
-        tokens_consumed: tokensConsumed,
-        cost_estimate_usd: costEstimateUsd,
-        ...(userId ? { userId } : {}),
-        ...(clientIp ? { clientIp } : {}),
-        ...(userAgent ? { userAgent } : {}),
-        ...bodyInfo
-      });
+      const requestPath = req.originalUrl || req.url;
+      const isStaticAsset = requestPath.startsWith('/src/') || 
+                            requestPath.startsWith('/@') || 
+                            requestPath.startsWith('/node_modules/') || 
+                            requestPath.includes('.tsx') || 
+                            requestPath.includes('.ts') || 
+                            requestPath.includes('.css') || 
+                            requestPath.includes('.ico');
+
+      // Only log structured access entries for API endpoints or actual server errors/warnings
+      if (!isStaticAsset || level !== 'INFO') {
+        logStructured({
+          level,
+          requestId,
+          tenantId,
+          timestamp: new Date().toISOString(),
+          method: req.method,
+          path: requestPath,
+          status,
+          durationMs,
+          tokens_consumed: tokensConsumed,
+          cost_estimate_usd: costEstimateUsd,
+          ...(userId ? { userId } : {}),
+          ...(clientIp ? { clientIp } : {}),
+          ...(userAgent ? { userAgent } : {}),
+          ...bodyInfo
+        });
+      }
     });
 
     next();
   });
 
   // Initialize Firebase Admin SDK
-  const projectId = process.env.VITE_FIREBASE_PROJECT_ID || "fashion-ai-56bd2";
+  let projectId = "fashion-ai-56bd2";
+  try {
+    const configPath = path.join(process.cwd(), "firebase-applet-config.json");
+    if (fs.existsSync(configPath)) {
+      const appletConfig = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+      if (appletConfig?.projectId && typeof appletConfig.projectId === "string" && appletConfig.projectId.trim()) {
+        projectId = appletConfig.projectId.trim();
+      }
+    }
+  } catch (_) {}
+
+  if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_PROJECT_ID !== "muazimatbassum") {
+    projectId = process.env.FIREBASE_PROJECT_ID;
+  }
+
   const serviceAccountVar = process.env.FIREBASE_SERVICE_ACCOUNT;
+  let serviceAccount: any = null;
 
-  if (getApps().length === 0) {
-    let serviceAccount: any = null;
+  if (serviceAccountVar) {
+    const trimmed = serviceAccountVar.trim();
 
-    if (serviceAccountVar) {
-      const trimmed = serviceAccountVar.trim();
-
-      // Case 1: Check if it's a file path to a JSON file
-      if (fs.existsSync(trimmed)) {
-        try {
-          const fileContent = fs.readFileSync(trimmed, "utf-8").trim();
-          if (fileContent.startsWith("{")) {
-            serviceAccount = JSON.parse(fileContent);
-            console.log("[Firebase Admin] Loaded service account from file path.");
-          }
-        } catch (err: any) {
-          console.error("[Firebase Admin] Error reading service account file path:", err.message);
+    // Case 1: Check if it's a file path to a JSON file
+    if (fs.existsSync(trimmed)) {
+      try {
+        const fileContent = fs.readFileSync(trimmed, "utf-8").trim();
+        if (fileContent.startsWith("{")) {
+          serviceAccount = JSON.parse(fileContent);
+          console.log("[Firebase Admin] Loaded service account from file path.");
         }
-      }
-
-      // Case 2: Direct raw JSON string
-      if (!serviceAccount && trimmed.startsWith("{")) {
-        try {
-          serviceAccount = JSON.parse(trimmed);
-          console.log("[Firebase Admin] Loaded service account directly from raw JSON string.");
-        } catch (err: any) {
-          console.error("[Firebase Admin] Error parsing raw JSON string starting with {:", err.message);
-        }
-      }
-
-      // Case 3: Wrapped in quotes (e.g. from environment variable quotes)
-      if (!serviceAccount && (trimmed.startsWith('"') || trimmed.startsWith("'"))) {
-        try {
-          const unwrapped = JSON.parse(trimmed);
-          if (typeof unwrapped === "string") {
-            const innerTrimmed = unwrapped.trim();
-            if (innerTrimmed.startsWith("{")) {
-              serviceAccount = JSON.parse(innerTrimmed);
-              console.log("[Firebase Admin] Loaded service account from double-quoted JSON string.");
-            }
-          }
-        } catch (err: any) {
-          console.error("[Firebase Admin] Error parsing double-quoted JSON string:", err.message);
-        }
-      }
-
-      // Case 4: Base64-encoded JSON string
-      if (!serviceAccount) {
-        try {
-          const decoded = Buffer.from(trimmed, "base64").toString("utf-8").trim();
-          if (decoded.startsWith("{")) {
-            serviceAccount = JSON.parse(decoded);
-            console.log("[Firebase Admin] Loaded service account from base64-encoded string.");
-          }
-        } catch (err: any) {
-          // Silent or verbose depending on context, we print fallback warning anyway if still null
-        }
+      } catch (err: any) {
+        console.error("[Firebase Admin] Error reading service account file path:", err.message);
       }
     }
 
+    // Case 2: Direct raw JSON string
+    if (!serviceAccount && trimmed.startsWith("{")) {
+      try {
+        serviceAccount = JSON.parse(trimmed);
+        console.log("[Firebase Admin] Loaded service account directly from raw JSON string.");
+      } catch (err: any) {
+        console.error("[Firebase Admin] Error parsing raw JSON string starting with {:", err.message);
+      }
+    }
+
+    // Case 3: Wrapped in quotes (e.g. from environment variable quotes)
+    if (!serviceAccount && (trimmed.startsWith('"') || trimmed.startsWith("'"))) {
+      try {
+        const unwrapped = JSON.parse(trimmed);
+        if (typeof unwrapped === "string") {
+          const innerTrimmed = unwrapped.trim();
+          if (innerTrimmed.startsWith("{")) {
+            serviceAccount = JSON.parse(innerTrimmed);
+            console.log("[Firebase Admin] Loaded service account from double-quoted JSON string.");
+          }
+        }
+      } catch (err: any) {
+        console.error("[Firebase Admin] Error parsing double-quoted JSON string:", err.message);
+      }
+    }
+
+    // Case 4: Base64-encoded JSON string
+    if (!serviceAccount) {
+      try {
+        const decoded = Buffer.from(trimmed, "base64").toString("utf-8").trim();
+        if (decoded.startsWith("{")) {
+          serviceAccount = JSON.parse(decoded);
+          console.log("[Firebase Admin] Loaded service account from base64-encoded string.");
+        }
+      } catch (err: any) {
+        // Silent fallback
+      }
+    }
+  }
+
+  // Validate whether serviceAccount is a genuine service account credential object
+  const isValidServiceAccount = Boolean(
+    serviceAccount &&
+    typeof serviceAccount === "object" &&
+    typeof serviceAccount.client_email === "string" &&
+    typeof serviceAccount.private_key === "string" &&
+    serviceAccount.client_email.includes("@") &&
+    serviceAccount.private_key.includes("BEGIN PRIVATE KEY")
+  );
+
+  const hasGacFile = Boolean(
+    process.env.GOOGLE_APPLICATION_CREDENTIALS &&
+    fs.existsSync(process.env.GOOGLE_APPLICATION_CREDENTIALS)
+  );
+
+  const hasAdminCredentials = isValidServiceAccount || hasGacFile;
+
+  if (getApps().length === 0) {
     try {
-      if (serviceAccount) {
+      if (isValidServiceAccount) {
         initializeApp({
           credential: cert(serviceAccount),
           projectId,
@@ -349,14 +395,14 @@ async function startServer() {
         console.log("[Firebase Admin] Initialized with Service Account.");
       } else {
         initializeApp({ projectId });
-        console.log(`[Firebase Admin] Initialized automatically with default credentials / Project ID: ${projectId}`);
+        console.log(`[Firebase Admin] Initialized with Project ID: ${projectId}`);
       }
     } catch (err: any) {
-      console.error("[Firebase Admin Error] Initialization failed, trying default initialization:", err);
+      console.warn("[Firebase Admin] Initialization note:", err?.message || err);
       try {
         initializeApp({ projectId });
       } catch (innerErr: any) {
-        console.error("[Firebase Admin Error] Default initialization fallback also failed:", innerErr);
+        console.warn("[Firebase Admin] Fallback initialization note:", innerErr?.message || innerErr);
       }
     }
   }
@@ -502,23 +548,19 @@ async function startServer() {
   let isFirestoreDisabled = false;
   const memoryQuotas = new Map<string, { images: number; recommendations: number }>();
 
-  // Check if service account credentials exist before attempting Firestore boot-test
-  const hasServiceAccount = Boolean(
-    serviceAccountVar || process.env.GOOGLE_APPLICATION_CREDENTIALS
-  );
-
-  if (!hasServiceAccount) {
+  // Check if valid service account credentials exist before attempting Firestore boot-test
+  if (!hasAdminCredentials) {
     isFirestoreDisabled = true;
-    console.info("[Quota System] Service account credentials not provided. Activating in-memory quota tracking and offline fallback mode immediately.");
+    console.log("[Quota System] In-memory quota tracking and offline fallback mode active.");
   } else {
-    // Preemptive Firestore boot-test to verify credentials access
+    // Preemptive Firestore boot-test to verify credentials access only when credentials are provided
     try {
       const db = getFirestore();
       await db.collection("system_verification_status").limit(1).get();
       console.log("[Quota System] Firestore connection verified successfully on boot.");
     } catch (err: any) {
       const errMsg = err?.message || String(err);
-      console.info(`[Quota System] Preemptive Firestore boot-test failed (${errMsg.substring(0, 120)}). Activating robust in-memory quota fallback tracking immediately.`);
+      console.warn(`[Quota System] Firestore verification bypassed: ${errMsg.substring(0, 100)}. Falling back to in-memory quota tracking.`);
       isFirestoreDisabled = true;
     }
   }
@@ -936,6 +978,14 @@ async function startServer() {
     }
   );
 
+  // --- LEMON SQUEEZY MONETIZATION WEBHOOK ---
+  // Ingress endpoint reading raw body for HMAC-SHA256 timing-safe verification
+  app.post(
+    "/api/monetization/webhook",
+    express.raw({ type: "*/*" }),
+    monetizationWebhookController
+  );
+
   // Middleware
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ extended: true, limit: "50mb" }));
@@ -959,6 +1009,11 @@ async function startServer() {
   });
 
   // API Routes (Registered FIRST)
+  app.use("/api/v1", apiGatewayPaymentRouter);
+  app.use(monetizationWebhookRouter);
+  app.use(lemonSqueezyRouter);
+  app.use(ariaDynamicThemeRouter);
+  app.use(ariaThemeRouter);
   app.use("/api/tryon", tryOnRouter);
   app.use(stripePaymentGatewayRouter);
   app.use(matureFashionStudioRouter);
@@ -969,6 +1024,7 @@ async function startServer() {
   app.use("/api/usage", creditsRouter);
   app.use("/api/stylist", aiStylistRouter);
   app.use("/api/aria", ariaRouter);
+  app.use("/api/v1/aria", ariaRouter);
 
   // Admin API Sub-Router (Protected by verifyAdminToken)
   const adminRouter = express.Router();
@@ -1454,7 +1510,7 @@ Return ONLY raw JSON with properties: totalDurationSec, aspectRatio, styleTheme,
   });
 
   // --- CORE SYSTEM (Phase 1 & 2 FINAL MVP) ---
-  app.post(["/api/ai/recommend-mvp", "/.netlify/functions/recommend-mvp"], verifyAuthToken, async (req, res) => {
+  app.post("/api/ai/recommend-mvp", verifyAuthToken, async (req, res) => {
     try {
       if (!req.body || typeof req.body !== "object") {
         return sendValidationError(res, ["Request body must be a valid JSON object"], 400);
@@ -1469,31 +1525,50 @@ Return ONLY raw JSON with properties: totalDurationSec, aspectRatio, styleTheme,
       }
 
       const result = await executeCachedAiRequest("ai:recommend-mvp", body, async () => {
-        const event = {
-          httpMethod: "POST",
-          body: JSON.stringify(body),
-          headers: req.headers,
-        };
-        return await recommendMvpHandler(event, {});
-      });
-      
-      // Propagate secure CORS and API response headers
-      if (result.headers) {
-        Object.entries(result.headers).forEach(([key, value]) => {
-          res.setHeader(key, value as string);
+        const apiKey = process.env.GEMINI_API_KEY;
+        if (!apiKey) {
+          return {
+            recommendations: [
+              {
+                title: "Architectural Minimalist Look",
+                items: ["Structured Wool Blazer", "Tailored Pleated Trousers", "Box-Calf Derby Shoes"],
+                reasoning: "Classic silhouette with clean proportions and timeless elegance.",
+                confidence: 0.94
+              }
+            ],
+            user_profile: { style: "Minimalist Modern", confidence: 0.92 }
+          };
+        }
+
+        const ai = new GoogleGenAI({
+          apiKey,
+          httpOptions: {
+            headers: {
+              'User-Agent': 'aistudio-build'
+            }
+          }
         });
-      }
-      
-      res.status(result.statusCode || 200);
-      try {
-        const parsedBody = JSON.parse(result.body);
-        res.json(parsedBody);
-      } catch {
-        res.send(result.body);
-      }
+
+        const prompt = `Recommend 3 curated styling options based on the following wardrobe context: ${JSON.stringify(body)}`;
+        const response = await ai.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents: prompt,
+          config: {
+            responseMimeType: 'application/json'
+          }
+        });
+
+        try {
+          return JSON.parse(response.text || '{}');
+        } catch {
+          return { response: response.text };
+        }
+      });
+
+      res.status(200).json(result);
     } catch (err: any) {
-      console.error("[Express Gateway Bridge Error] Failed bridging to Netlify function:", err);
-      res.status(500).json({ error: "SRE Gateway Bridge failure: " + err.message });
+      console.error("[Express Recommendation Endpoint Error]:", err);
+      res.status(500).json({ error: "Recommendation failure: " + err.message });
     }
   });
 
@@ -1957,7 +2032,7 @@ Extract:
           httpOptions: { headers: { "User-Agent": "aistudio-build" } }
         });
 
-        console.log(`[Community Generator] Calling Gemini API (gemini-3.5-flash) with qualityMode=${qualityMode}, selectedDemographic=${selectedDemographic}, selectedInstructor=${selectedInstructor}...`);
+        console.log(`[Community Generator] Calling Gemini API (gemini-2.5-flash) with qualityMode=${qualityMode}, selectedDemographic=${selectedDemographic}, selectedInstructor=${selectedInstructor}...`);
 
         const imagePart = {
           inlineData: {
@@ -2000,7 +2075,7 @@ You MUST respond strictly with a valid JSON object. No Markdown code fences (do 
         };
 
         const response = await ai.models.generateContent({
-          model: "gemini-3.5-flash",
+          model: "gemini-2.5-flash",
           contents: { parts: [imagePart, promptPart] }
         });
 
@@ -2725,8 +2800,10 @@ You MUST respond strictly with a valid JSON object. No Markdown code fences (do 
     });
   }
 
-  const server = app.listen(PORT, "0.0.0.0", () => {
-    console.log(`[Fashion Server Hub] Running on http://0.0.0.0:${PORT} (PID: ${process.pid}, ENV: ${process.env.NODE_ENV || 'development'})`);
+  const HOST = '0.0.0.0';
+
+  const server = app.listen(PORT, HOST, () => {
+    console.log(`[LOOK VISION Fashion OS] Running on http://${HOST}:${PORT} (PID: ${process.pid}, ENV: ${process.env.NODE_ENV || 'production'})`);
   });
 
   let isShuttingDown = false;
@@ -2804,3 +2881,26 @@ process.on("unhandledRejection", (reason: unknown) => {
 });
 
 startServer();
+
+export function logApoolTelemetry(data: {
+  level: 'INFO' | 'WARN' | 'ERROR';
+  requestId: string;
+  tenantId: string;
+  eventName: string;
+  latencyMs: number;
+  userId?: string;
+  status: 'SUCCESS' | 'FAILED' | 'FALLBACK';
+}) {
+  const metric = {
+    tag: '[APOOL_LOG_STANDARD]',
+    level: data.level,
+    request_id: data.requestId,
+    tenant_id: data.tenantId || 'default_tenant',
+    event_name: data.eventName,
+    latency_ms: data.latencyMs,
+    user_id: data.userId || 'anonymous',
+    status: data.status,
+    timestamp: new Date().toISOString()
+  };
+  console.log(`[APOOL_LOG_STANDARD] ${JSON.stringify(metric)}`);
+}

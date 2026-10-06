@@ -15,8 +15,15 @@ import digitalTwinRouter from './digitalTwin/digitalTwin.routes';
 import simulationRouter from './simulation/simulation.routes';
 import civilizationRouter from './civilization/civilization.routes';
 import prototypeRouter from './prototype.routes';
+import onboardingRouter from './onboarding/onboarding.routes';
 
 const ariaRouter = Router();
+
+/**
+ * POST /api/aria/theme/generate & /api/v1/aria/theme/generate
+ * Dynamic light theme generation with WCAG compliance & provenance validation
+ */
+ariaRouter.post('/theme/generate', ARIAController.handleThemeGenerate);
 
 /**
  * POST /api/aria/query
@@ -79,5 +86,10 @@ ariaRouter.use('/civilization', civilizationRouter);
  * /api/aria/prototype route
  */
 ariaRouter.use('/prototype', prototypeRouter);
+
+/**
+ * /api/aria/onboarding & /api/v1/aria/onboarding routes
+ */
+ariaRouter.use('/onboarding', onboardingRouter);
 
 export default ariaRouter;

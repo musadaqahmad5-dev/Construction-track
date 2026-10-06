@@ -8,7 +8,7 @@
  */
 
 import { FashionRecommendation, RecommendationMetrics, DecisionFeedbackAction } from './DecisionTypes';
-import { db, isFirestoreOfflineFallbackActive } from '../../firebase';
+import { db, auth, isFirestoreOfflineFallbackActive } from '../../firebase';
 import { doc, setDoc, getDoc, getDocs, collection, deleteDoc, serverTimestamp } from 'firebase/firestore';
 
 const LOCAL_DECISIONS_KEY = 'lookvision_aria_decisions_v2.5';
@@ -93,7 +93,18 @@ export class DecisionStorage {
     }
     this.setLocalHistory(history);
 
-    if (isFirestoreOfflineFallbackActive || !db || !userId || userId === 'guest_user') return;
+    if (
+      isFirestoreOfflineFallbackActive ||
+      !db ||
+      !userId ||
+      userId.startsWith('guest-') ||
+      userId === 'guest_user' ||
+      !auth?.currentUser ||
+      auth.currentUser.isAnonymous ||
+      auth.currentUser.uid !== userId
+    ) {
+      return;
+    }
 
     try {
       // Primary specified path: users/{uid}/aria/decisions/{decisionId}
@@ -109,8 +120,10 @@ export class DecisionStorage {
         ...recommendation,
         savedAt: serverTimestamp()
       }, { merge: true });
-    } catch (err) {
-      console.warn('[DecisionStorage] Firestore decision save deferred:', err);
+    } catch (err: any) {
+      if (err?.code !== 'permission-denied' && !err?.message?.includes('Missing or insufficient permissions')) {
+        console.warn('[DecisionStorage] Firestore decision save deferred:', err);
+      }
     }
   }
 
@@ -120,7 +133,16 @@ export class DecisionStorage {
   public async fetchHistory(userId: string): Promise<FashionRecommendation[]> {
     const local = this.getLocalHistory();
 
-    if (isFirestoreOfflineFallbackActive || !db || !userId || userId === 'guest_user') {
+    if (
+      isFirestoreOfflineFallbackActive ||
+      !db ||
+      !userId ||
+      userId.startsWith('guest-') ||
+      userId === 'guest_user' ||
+      !auth?.currentUser ||
+      auth.currentUser.isAnonymous ||
+      auth.currentUser.uid !== userId
+    ) {
       return local;
     }
 
@@ -141,8 +163,10 @@ export class DecisionStorage {
         this.setLocalHistory(fetched);
         return fetched;
       }
-    } catch (err) {
-      console.warn('[DecisionStorage] Firestore fetch decisions fallback to local:', err);
+    } catch (err: any) {
+      if (err?.code !== 'permission-denied' && !err?.message?.includes('Missing or insufficient permissions')) {
+        console.warn('[DecisionStorage] Firestore fetch decisions fallback to local:', err);
+      }
     }
 
     return local;
@@ -155,7 +179,18 @@ export class DecisionStorage {
     const history = this.getLocalHistory().filter(r => r.recommendationId !== recommendationId);
     this.setLocalHistory(history);
 
-    if (isFirestoreOfflineFallbackActive || !db || !userId || userId === 'guest_user') return true;
+    if (
+      isFirestoreOfflineFallbackActive ||
+      !db ||
+      !userId ||
+      userId.startsWith('guest-') ||
+      userId === 'guest_user' ||
+      !auth?.currentUser ||
+      auth.currentUser.isAnonymous ||
+      auth.currentUser.uid !== userId
+    ) {
+      return true;
+    }
 
     try {
       const primaryRef = doc(db, 'users', userId, 'aria', 'decisions', recommendationId);
@@ -164,8 +199,10 @@ export class DecisionStorage {
       const historyRef = doc(db, 'users', userId, 'aria', 'decisions', 'history', recommendationId);
       await deleteDoc(historyRef);
       return true;
-    } catch (err) {
-      console.warn('[DecisionStorage] Firestore delete recommendation error:', err);
+    } catch (err: any) {
+      if (err?.code !== 'permission-denied' && !err?.message?.includes('Missing or insufficient permissions')) {
+        console.warn('[DecisionStorage] Firestore delete recommendation error:', err);
+      }
       return false;
     }
   }
@@ -176,7 +213,18 @@ export class DecisionStorage {
   public async saveRecommendationMetrics(userId: string, metrics: RecommendationMetrics): Promise<void> {
     this.setLocalMetrics(userId, metrics);
 
-    if (isFirestoreOfflineFallbackActive || !db || !userId || userId === 'guest_user') return;
+    if (
+      isFirestoreOfflineFallbackActive ||
+      !db ||
+      !userId ||
+      userId.startsWith('guest-') ||
+      userId === 'guest_user' ||
+      !auth?.currentUser ||
+      auth.currentUser.isAnonymous ||
+      auth.currentUser.uid !== userId
+    ) {
+      return;
+    }
 
     try {
       const metricsRef = doc(db, 'users', userId, 'intelligence', 'recommendationMetrics');
@@ -184,8 +232,10 @@ export class DecisionStorage {
         ...metrics,
         lastUpdatedServer: serverTimestamp()
       }, { merge: true });
-    } catch (err) {
-      console.warn('[DecisionStorage] Firestore save metrics deferred:', err);
+    } catch (err: any) {
+      if (err?.code !== 'permission-denied' && !err?.message?.includes('Missing or insufficient permissions')) {
+        console.warn('[DecisionStorage] Firestore save metrics deferred:', err);
+      }
     }
   }
 
@@ -195,7 +245,16 @@ export class DecisionStorage {
   public async fetchRecommendationMetrics(userId: string): Promise<RecommendationMetrics> {
     const local = this.getLocalMetrics(userId);
 
-    if (isFirestoreOfflineFallbackActive || !db || !userId || userId === 'guest_user') {
+    if (
+      isFirestoreOfflineFallbackActive ||
+      !db ||
+      !userId ||
+      userId.startsWith('guest-') ||
+      userId === 'guest_user' ||
+      !auth?.currentUser ||
+      auth.currentUser.isAnonymous ||
+      auth.currentUser.uid !== userId
+    ) {
       return local;
     }
 
@@ -207,8 +266,10 @@ export class DecisionStorage {
         this.setLocalMetrics(userId, data);
         return data;
       }
-    } catch (err) {
-      console.warn('[DecisionStorage] Firestore fetch metrics fallback to local:', err);
+    } catch (err: any) {
+      if (err?.code !== 'permission-denied' && !err?.message?.includes('Missing or insufficient permissions')) {
+        console.warn('[DecisionStorage] Firestore fetch metrics fallback to local:', err);
+      }
     }
 
     return local;
