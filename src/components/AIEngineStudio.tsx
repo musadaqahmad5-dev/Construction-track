@@ -26,6 +26,7 @@ import { PromptIntelligenceEngine } from '../features/image-generation/PromptInt
 import { GenerationIntelligenceEngine } from '../features/image-generation/GenerationIntelligenceEngine';
 import { ImageGenerationRegistry } from '../features/image-generation/imageGenerationProvider';
 import { AIStyleHubV17Architecture } from '../features/global/AIStyleHubV17Architecture';
+import { FashionEngine } from '../features/fashion/fashionEngine';
 import { AIStudioWorkspace } from '../features/creations';
 import { ariaService } from '../services/ariaService';
 import { ARIAInvestorDashboard } from './dashboard/ARIAInvestorDashboard';
@@ -692,7 +693,18 @@ export const AIEngineStudio: React.FC<AIEngineStudioProps> = ({
     }, 1100);
 
     try {
-      const strictStylePrompt = `${finalQuery}, ${activeStyleDirection} style aesthetic, luxurious high-fashion lookbook, high fidelity photorealistic, neutral studio backdrop, exquisite fabrics drape and stitches details, ${uploadedImage ? 'fitted on uploaded reference model' : 'mannequin model portrait'}, aesthetic high contrast studio lighting, studio background`;
+      const archetypeMap: Record<string, string> = {
+        'Avant-Garde': 'AVANT_GARDE',
+        'Minimalist': 'MINIMALIST_LUXURY',
+        'Cyberpunk': 'STREETWEAR_TECHNICAL',
+        'Desert': 'MINIMALIST_LUXURY',
+        'Future-Punk': 'CYBER_HERITAGE'
+      };
+      const userArchetype = archetypeMap[activeStyleDirection] || 'AVANT_GARDE';
+      const compiledDirective = await FashionEngine.compileCreationPrompt(queryText || finalQuery, userArchetype);
+      const strictStylePrompt = compiledDirective.refinedPromptText !== '[REDACTED_COGNITIVE_DIRECTIVE]'
+        ? compiledDirective.refinedPromptText
+        : `${finalQuery}, ${activeStyleDirection} style aesthetic, luxurious high-fashion lookbook, high fidelity photorealistic, neutral studio backdrop`;
 
       let token = '';
       if (auth.currentUser) {
@@ -750,8 +762,8 @@ export const AIEngineStudio: React.FC<AIEngineStudioProps> = ({
         setAiGeneratedResult({
           imageUrl: result.imageUrl,
           vibe: overridePrompt ? overridePrompt : (queryText ? queryText : 'Bespoke Atelier Silhouette'),
-          prompt: finalQuery,
-          description: `An exquisite generative fashion masterpiece. Custom stitched with high fidelity materials, featuring perfect drapes and balanced shadows. Optimized on custom physical mannequin dimensions.`,
+          prompt: strictStylePrompt,
+          description: strictStylePrompt,
           category: finalCat
         });
 

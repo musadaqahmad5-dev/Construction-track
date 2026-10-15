@@ -479,19 +479,34 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({
           </p>
         </div>
         <FoundationInteractionWrapper themeDNA={themeDNA}>
-          <button
-            onClick={() => {
-              if (onOpenSellerDashboard) {
-                onOpenSellerDashboard();
-              } else {
-                window.dispatchEvent(new CustomEvent('lookvision_open_seller_dashboard'));
-              }
-            }}
-            className="px-5 py-3 bg-white/5 hover:bg-white/10 text-white border border-white/10 hover:border-emerald-500/30 rounded-xl text-xs font-mono uppercase tracking-widest transition-all cursor-pointer flex items-center gap-2 shrink-0 shadow-md group"
-          >
-            <span>[ Connect Storefront ]</span>
-            <ArrowUpRight className="w-3.5 h-3.5 text-zinc-400 group-hover:text-emerald-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
-          </button>
+          <div className="flex items-center gap-3 flex-wrap">
+            <button
+              onClick={() => {
+                if (onNavigateToTab) {
+                  onNavigateToTab('BOUTIQUE_ONBOARDING');
+                } else {
+                  window.location.pathname = '/boutique-onboarding';
+                }
+              }}
+              className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-mono uppercase tracking-widest transition-all cursor-pointer flex items-center gap-2 shadow-md"
+            >
+              <Store className="w-3.5 h-3.5" />
+              <span>Register Boutique</span>
+            </button>
+            <button
+              onClick={() => {
+                if (onOpenSellerDashboard) {
+                  onOpenSellerDashboard();
+                } else {
+                  window.dispatchEvent(new CustomEvent('lookvision_open_seller_dashboard'));
+                }
+              }}
+              className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-white border border-white/10 hover:border-emerald-500/30 rounded-xl text-xs font-mono uppercase tracking-widest transition-all cursor-pointer flex items-center gap-2 shadow-md group"
+            >
+              <span>[ Seller Portal ]</span>
+              <ArrowUpRight className="w-3.5 h-3.5 text-zinc-400 group-hover:text-emerald-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+            </button>
+          </div>
         </FoundationInteractionWrapper>
       </div>
 

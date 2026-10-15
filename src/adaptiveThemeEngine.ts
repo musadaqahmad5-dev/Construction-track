@@ -1,5 +1,54 @@
 import { useState, useEffect, useCallback } from 'react';
 
+export interface VisualThemeSkin {
+  id: string;
+  className: string;
+  primaryAccent: string;
+  secondaryAccent: string;
+  cardStyles: string;
+  textMaturityHighlight: string;
+  ambientGlow: string;
+}
+
+export const ALLOWED_THEME_SKINS: Record<string, VisualThemeSkin> = {
+  CYBER_HERITAGE: {
+    id: 'CYBER_HERITAGE',
+    className: 'theme-cyber',
+    primaryAccent: '#00f2fe',
+    secondaryAccent: '#4facfe',
+    cardStyles: 'border-teal-500/10 hover:border-teal-400/30 bg-[#070c0e]/90 duration-300 font-mono tracking-tight',
+    textMaturityHighlight: 'text-teal-400 drop-shadow-[0_0_8px_rgba(0,242,254,0.4)]',
+    ambientGlow: 'shadow-teal-500/5 hover:shadow-teal-400/15'
+  },
+  MINIMALIST_LUXURY: {
+    id: 'MINIMALIST_LUXURY',
+    className: 'theme-luxury',
+    primaryAccent: '#f5f5f0',
+    secondaryAccent: '#a1a1aa',
+    cardStyles: 'border-white/5 hover:border-zinc-400/20 bg-[#07070c] tracking-widest duration-300 uppercase',
+    textMaturityHighlight: 'text-zinc-200 tracking-widest font-light',
+    ambientGlow: 'shadow-none'
+  },
+  HAUTE_COUTURE: {
+    id: 'HAUTE_COUTURE',
+    className: 'theme-couture',
+    primaryAccent: '#4f46e5',
+    secondaryAccent: '#be123c',
+    cardStyles: 'border-purple-500/10 hover:border-pink-500/20 bg-gradient-to-b from-[#07070c] to-[#0d0714] font-serif duration-300',
+    textMaturityHighlight: 'text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500 font-serif italic',
+    ambientGlow: 'shadow-purple-500/5 hover:shadow-pink-500/10'
+  },
+  STREETWEAR_TECHNICAL: {
+    id: 'STREETWEAR_TECHNICAL',
+    className: 'theme-street',
+    primaryAccent: '#ea580c',
+    secondaryAccent: '#2e4a3f',
+    cardStyles: 'border-zinc-800 hover:border-orange-500/30 bg-[#0a0a0f] font-sans font-bold tracking-tighter duration-200',
+    textMaturityHighlight: 'text-orange-500 font-black tracking-tighter',
+    ambientGlow: 'shadow-orange-500/5'
+  }
+};
+
 export type AmbientThemeMode =
   | 'CLASSIC_NOIR'
   | 'MIDNIGHT_VIOLET'

@@ -294,6 +294,22 @@ export class AIRequestPipeline {
   }
 
   /**
+   * General-purpose pipeline executor with fallback support
+   */
+  public static async execute<T>(
+    _pipelineKey: string,
+    _params: any,
+    options: { priority?: string; cacheTTLSeconds?: number; ruleFallback?: () => T },
+    executor: () => Promise<T>
+  ): Promise<T> {
+    try {
+      return await executor();
+    } catch {
+      return options?.ruleFallback ? options.ruleFallback() : ({} as T);
+    }
+  }
+
+  /**
    * Orchestrates 9-level pipeline for standard text and metadata generation.
    */
   public static async executeTextPipeline<T>(

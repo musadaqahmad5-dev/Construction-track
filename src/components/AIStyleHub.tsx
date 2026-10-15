@@ -6,7 +6,7 @@ import {
   Camera, SlidersHorizontal, ArrowRight, ShieldCheck, Cpu, 
   Activity, CloudSun, Bell, X, Search, Heart, Store,
   Zap, Award, CheckCircle, Smartphone, Monitor, Globe, Plus,
-  Bookmark, Sliders, MessageSquare, Palette, Lock, Users, Building, CreditCard
+  Bookmark, Sliders, MessageSquare, Palette, Lock, Users, Building, CreditCard, Command
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { WardrobeItem, ProfileService, type StyleProfile } from '../platform';
@@ -43,6 +43,67 @@ import { ARIAStatusWidget, ARIAAssistantPanel } from './aria';
 import { FocusSearchPalette } from './FocusSearchPalette';
 import { AIStyleFeed } from './AIStyleFeed';
 import { VendorOnboarding } from './VendorOnboarding';
+import { OnboardingWizard } from './OnboardingWizard';
+import { BoutiqueOnboardingFlow } from './BoutiqueOnboardingFlow';
+import { ThemeSelectionDropdown } from './ThemeSelectionDropdown';
+import { VirtualWardrobeGrid } from './VirtualWardrobeGrid';
+import { ShoppableBundleDrawer } from './ShoppableBundleDrawer';
+import { 
+  MINIMAL_LIGHT_PALETTES, 
+  MinimalLightPalette, 
+  applyThemeToHtmlRoot, 
+  getStoredPaletteId,
+  syncThemeToFirestore 
+} from '../features/theme/minimalLightThemes';
+
+export interface VisualThemeSkin {
+  id: string;
+  className: string;
+  primaryAccent: string;
+  secondaryAccent: string;
+  cardStyles: string;
+  textMaturityHighlight: string;
+  ambientGlow: string;
+}
+
+export const ALLOWED_THEME_SKINS: Record<string, VisualThemeSkin> = {
+  CYBER_HERITAGE: {
+    id: 'CYBER_HERITAGE',
+    className: 'theme-cyber',
+    primaryAccent: '#00f2fe',
+    secondaryAccent: '#4facfe',
+    cardStyles: 'border-teal-500/10 hover:border-teal-400/30 bg-[#070c0e]/90 duration-300 font-mono tracking-tight',
+    textMaturityHighlight: 'text-teal-400 drop-shadow-[0_0_8px_rgba(0,242,254,0.4)]',
+    ambientGlow: 'shadow-teal-500/5 hover:shadow-teal-400/15'
+  },
+  MINIMALIST_LUXURY: {
+    id: 'MINIMALIST_LUXURY',
+    className: 'theme-luxury',
+    primaryAccent: '#f5f5f0',
+    secondaryAccent: '#a1a1aa',
+    cardStyles: 'border-white/5 hover:border-zinc-400/20 bg-[#07070c] tracking-widest duration-300 uppercase',
+    textMaturityHighlight: 'text-zinc-200 tracking-widest font-light',
+    ambientGlow: 'shadow-none'
+  },
+  HAUTE_COUTURE: {
+    id: 'HAUTE_COUTURE',
+    className: 'theme-couture',
+    primaryAccent: '#4f46e5',
+    secondaryAccent: '#be123c',
+    cardStyles: 'border-purple-500/10 hover:border-pink-500/20 bg-gradient-to-b from-[#07070c] to-[#0d0714] font-serif duration-300',
+    textMaturityHighlight: 'text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500 font-serif italic',
+    ambientGlow: 'shadow-purple-500/5 hover:shadow-pink-500/10'
+  },
+  STREETWEAR_TECHNICAL: {
+    id: 'STREETWEAR_TECHNICAL',
+    className: 'theme-street',
+    primaryAccent: '#ea580c',
+    secondaryAccent: '#2e4a3f',
+    cardStyles: 'border-zinc-800 hover:border-orange-500/30 bg-[#0a0a0f] font-sans font-bold tracking-tighter duration-200',
+    textMaturityHighlight: 'text-orange-500 font-black tracking-tighter',
+    ambientGlow: 'shadow-orange-500/5'
+  }
+};
 
 export interface LookVisionTheme {
   id: string;
@@ -171,8 +232,11 @@ export type MainSubTab =
   | 'SUBSCRIPTION_HUB'
   | 'PRICING_PLANS'
   | 'VENDOR_ONBOARDING'
+  | 'BOUTIQUE_ONBOARDING'
+  | 'ONBOARDING_WIZARD'
   | 'SYSTEM_ROOM'
-  | 'ADMIN_COMMAND';
+  | 'ADMIN_COMMAND'
+  | 'CLOSET_INGESTION';
 
 interface AIStyleHubProps {
   wardrobe: WardrobeItem[];
@@ -225,8 +289,11 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
     if (path === '/subscription' || path === '/billing') return 'SUBSCRIPTION_HUB';
     if (path === '/pricing' || path === '/upgrade' || path === '/plans') return 'PRICING_PLANS';
     if (path === '/vendor-onboarding' || path === '/become-seller' || path === '/merchant-register') return 'VENDOR_ONBOARDING';
+    if (path === '/boutique-onboarding' || path === '/merchant-portal' || path === '/artisan') return 'BOUTIQUE_ONBOARDING';
+    if (path === '/onboarding' || path === '/calibrate') return 'ONBOARDING_WIZARD';
     if (path === '/settings') return 'SYSTEM_ROOM';
     if (path === '/admin') return 'ADMIN_COMMAND';
+    if (path === '/ingest' || path === '/closet-matrix' || path === '/scan') return 'CLOSET_INGESTION';
     return 'PRODUCT_HOME';
   });
 
@@ -236,6 +303,164 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
   const [isSellerDashboardOpen, setIsSellerDashboardOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [toasts, setToasts] = useState<Array<{ id: string; message: string; type?: 'info' | 'success' | 'warning' }>>([]);
+  const [commandInput, setCommandInput] = useState('');
+  const [isAiProcessing, setIsAiProcessing] = useState(false);
+  const [systemAlertBanner, setSystemAlertBanner] = useState('Welcome back, Musadaq Ahmad. The Look Vision engine is grounded and active.');
+  const [activeThemeSkin, setActiveThemeSkin] = useState<string>('MINIMALIST_LUXURY');
+  const activeSkinConfig = ALLOWED_THEME_SKINS[activeThemeSkin] || ALLOWED_THEME_SKINS.MINIMALIST_LUXURY;
+
+  // Active Minimal Light Palette state (Off-White #FBFBFA, Sand #F5F4F0, Linen #F7F6F2)
+  const [activeLightPalette, setActiveLightPalette] = useState<MinimalLightPalette>(() => {
+    const id = getStoredPaletteId();
+    return MINIMAL_LIGHT_PALETTES[id] || MINIMAL_LIGHT_PALETTES.MINIMAL_OFFWHITE;
+  });
+
+  // Listen for global theme synchronization events
+  useEffect(() => {
+    const handleThemeEvent = (e: CustomEvent) => {
+      if (e.detail?.palette) {
+        setActiveLightPalette(e.detail.palette);
+      }
+    };
+    window.addEventListener('lookvision_theme_changed' as any, handleThemeEvent);
+    return () => window.removeEventListener('lookvision_theme_changed' as any, handleThemeEvent);
+  }, []);
+
+  useEffect(() => {
+    const uid = user?.uid || 'guest-sartorialist-user-100';
+    const email = user?.email || 'sarah.khan@lookvision.com';
+    fetch('/api/v1/user/onboard', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: uid,
+        email,
+        manualSkinChoice: activeThemeSkin
+      })
+    }).catch(() => {});
+  }, [user?.uid]);
+
+  const handleCommandRoute = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!commandInput.trim() || isAiProcessing) return;
+
+    const queryText = commandInput.trim();
+    setIsAiProcessing(true);
+    setSystemAlertBanner('Analyzing structural intent arrays...');
+
+    const routeActionToTab = (action: string) => {
+      if (action === 'CLOSET_VAULT' || action === 'WARDROBE_HEALTH') handleNavigate('WARDROBE');
+      else if (action === 'COMMERCE_MARKET') handleNavigate('PRODUCT_MARKETPLACE');
+      else if (action === 'FASHION_ACADEMY') handleNavigate('FASHION_INSTRUCTOR');
+      else if (action === 'VIRTUAL_TRYON') handleNavigate('VIRTUAL_TRY');
+      else if (action === 'AI_CREATION' || action === 'STYLE_MUTATOR') handleNavigate('PRODUCT_AI_CREATIONS');
+      else if (action === 'DYNAMIC_PLANNER') handleNavigate('PLANNER');
+      else handleNavigate('PRODUCT_HOME');
+    };
+
+    try {
+      const isThemeQuery = /\b(theme|skin|cyber|cyberpunk|neon|techwear|monospaced|minimal|minimalist|luxury|clean|poised|silent|haute|couture|editorial|runway|serif|street|streetwear|utility|gorpcore|industrial|high fashion)\b/i.test(queryText);
+      if (isThemeQuery) {
+        const themeRes = await fetch('/api/v1/intelligence/theme-swap', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: queryText })
+        });
+        const themeData = await themeRes.json();
+        if (themeData?.themeSwapPlan?.isSkinChangeRequested && themeData.themeSwapPlan.targetSkinName !== 'None') {
+          setActiveThemeSkin(themeData.themeSwapPlan.targetSkinName);
+          setSystemAlertBanner(themeData.themeSwapPlan.stylistThemeJustification);
+          setCommandInput('');
+          return;
+        }
+      }
+
+      const response = await fetch('/api/v1/intelligence/process-intent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rawCommandString: queryText })
+      });
+      const result = await response.json();
+
+      if (result?.intentRouting) {
+        const targetAction = result.intentRouting.parsedAction || result.action || 'HOME_FEED';
+        setSystemAlertBanner(result.intentRouting.stylistBannerNotification || result.stylistResponseBanner || 'Synchronized with Look Vision OS.');
+        if (result.intentRouting.contextualDirectives?.requestedSkin && result.intentRouting.contextualDirectives.requestedSkin !== 'None') {
+          setActiveThemeSkin(result.intentRouting.contextualDirectives.requestedSkin);
+        }
+        routeActionToTab(targetAction);
+        setCommandInput('');
+      } else {
+        const normalized = queryText.toLowerCase();
+        if (normalized.includes('sand') || normalized.includes('studio sand')) {
+          const pal = MINIMAL_LIGHT_PALETTES.WARM_STUDIO_SAND;
+          setActiveLightPalette(pal);
+          applyThemeToHtmlRoot(pal);
+          if (user?.uid) syncThemeToFirestore(user.uid, pal);
+          setSystemAlertBanner(`Applied ${pal.name} minimal light palette (${pal.canvasBg}).`);
+          setCommandInput('');
+          return;
+        } else if (normalized.includes('linen') || normalized.includes('soft linen')) {
+          const pal = MINIMAL_LIGHT_PALETTES.SOFT_LINEN;
+          setActiveLightPalette(pal);
+          applyThemeToHtmlRoot(pal);
+          if (user?.uid) syncThemeToFirestore(user.uid, pal);
+          setSystemAlertBanner(`Applied ${pal.name} minimal light palette (${pal.canvasBg}).`);
+          setCommandInput('');
+          return;
+        } else if (normalized.includes('offwhite') || normalized.includes('off-white') || normalized.includes('minimal light')) {
+          const pal = MINIMAL_LIGHT_PALETTES.MINIMAL_OFFWHITE;
+          setActiveLightPalette(pal);
+          applyThemeToHtmlRoot(pal);
+          if (user?.uid) syncThemeToFirestore(user.uid, pal);
+          setSystemAlertBanner(`Applied ${pal.name} minimal light palette (${pal.canvasBg}).`);
+          setCommandInput('');
+          return;
+        } else if (normalized.includes('cyber')) {
+          setActiveThemeSkin('CYBER_HERITAGE');
+          setSystemAlertBanner('Applied CYBER_HERITAGE visual theme skin across workspace matrices.');
+        } else if (normalized.includes('couture') || normalized.includes('haute')) {
+          setActiveThemeSkin('HAUTE_COUTURE');
+          setSystemAlertBanner('Applied HAUTE_COUTURE visual theme skin across workspace matrices.');
+        } else if (normalized.includes('street') || normalized.includes('technical')) {
+          setActiveThemeSkin('STREETWEAR_TECHNICAL');
+          setSystemAlertBanner('Applied STREETWEAR_TECHNICAL visual theme skin across workspace matrices.');
+        } else if (normalized.includes('luxury') || normalized.includes('minimalist')) {
+          setActiveThemeSkin('MINIMALIST_LUXURY');
+          setSystemAlertBanner('Applied MINIMALIST_LUXURY visual theme skin across workspace matrices.');
+        } else if (normalized.includes('ingest') || normalized.includes('scan') || normalized.includes('matrix') || normalized.includes('vision upload')) {
+          setSystemAlertBanner('Initializing Closet Ingestion Matrix multi-modal vision portal.');
+          handleNavigate('CLOSET_INGESTION');
+        } else if (normalized.includes('closet') || normalized.includes('vault') || normalized.includes('wardrobe')) {
+          setSystemAlertBanner('Opening your private hhhhgvault digital closet workspace.');
+          handleNavigate('WARDROBE');
+        } else if (normalized.includes('boutique onboarding') || normalized.includes('merchant onboarding') || normalized.includes('register boutique') || normalized.includes('artisan onboarding')) {
+          setSystemAlertBanner('Opening Merchant Boutique Onboarding Portal.');
+          handleNavigate('BOUTIQUE_ONBOARDING');
+        } else if (normalized.includes('marketplace') || normalized.includes('boutique') || normalized.includes('shop')) {
+          setSystemAlertBanner('Entering the global partner artisan showroom.');
+          handleNavigate('PRODUCT_MARKETPLACE');
+        } else if (normalized.includes('academy') || normalized.includes('lesson')) {
+          setSystemAlertBanner('Loading proportional verticality theory modules.');
+          handleNavigate('FASHION_INSTRUCTOR');
+        } else if (normalized.includes('try on') || normalized.includes('see on me')) {
+          setSystemAlertBanner('Initializing virtual try-on canvas coordinate stacking grids.');
+          handleNavigate('VIRTUAL_TRY');
+        } else if (normalized.includes('creation') || normalized.includes('generate')) {
+          setSystemAlertBanner('Spawning photorealistic lookbook synthesis tools.');
+          handleNavigate('PRODUCT_AI_CREATIONS');
+        } else {
+          setSystemAlertBanner(`Filtered feed dynamically for target matrix parameters: "${queryText}"`);
+          handleNavigate('PRODUCT_HOME');
+        }
+        setCommandInput('');
+      }
+    } catch (err) {
+      console.warn('[ROUTER FALLBACK] Processing localized intent resolution routing loops.');
+    } finally {
+      setIsAiProcessing(false);
+    }
+  };
 
   // Bento Grid Curation Board Tabs ('TODAY_CURATION' vs 'MARKETPLACE')
   const [curationBoardTab, setCurationBoardTab] = useState<'TODAY_CURATION' | 'MARKETPLACE'>('TODAY_CURATION');
@@ -277,8 +502,13 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
     name: string;
     category: string;
     primaryColor: string;
-    pattern: string;
+    secondaryColor: string;
     material: string;
+    silhouette: string;
+    detectedPattern: string;
+    pattern: string;
+    season: string;
+    suggestedCare: string;
     confidence: number;
     previewUrl?: string;
   } | null>(null);
@@ -302,6 +532,29 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
       }
     }
   }, [wardrobe]);
+
+  // Active outfit component mapping for the Complete-the-Look bundling engine
+  const activeBundleOutfit = useMemo(() => {
+    if (activeOutfitSuggestion.items && activeOutfitSuggestion.items.length > 0) {
+      return activeOutfitSuggestion.items.map(item => ({
+        id: item.id || `item_${Math.random().toString(36).substring(2, 7)}`,
+        category: item.category || 'Top',
+        color: (item as any).colorHex || item.primaryColor || (item as any).color || 'Obsidian'
+      }));
+    }
+    const combinatorList = Object.values(combinatorSlots).filter(Boolean) as WardrobeItem[];
+    if (combinatorList.length > 0) {
+      return combinatorList.map(item => ({
+        id: item.id || `item_${Math.random().toString(36).substring(2, 7)}`,
+        category: item.category || 'Top',
+        color: (item as any).colorHex || item.primaryColor || (item as any).color || 'Obsidian'
+      }));
+    }
+    return [
+      { id: 'staged_prime_top', category: 'Top', color: 'Basalt Obsidian' },
+      { id: 'staged_prime_bottom', category: 'Bottom', color: 'Dark Navy' }
+    ];
+  }, [activeOutfitSuggestion.items, combinatorSlots]);
 
   // Toast Helper
   const showToast = (message: string, type: 'info' | 'success' | 'warning' = 'success') => {
@@ -328,6 +581,8 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
       else if (path === '/social') setActiveSubTab('SOCIAL_HUB');
       else if (path === '/subscription' || path === '/billing') setActiveSubTab('SUBSCRIPTION_HUB');
       else if (path === '/pricing' || path === '/upgrade' || path === '/plans') setActiveSubTab('PRICING_PLANS');
+      else if (path === '/boutique-onboarding' || path === '/merchant-portal' || path === '/artisan') setActiveSubTab('BOUTIQUE_ONBOARDING');
+      else if (path === '/onboarding' || path === '/calibrate') setActiveSubTab('ONBOARDING_WIZARD');
       else if (path === '/settings') setActiveSubTab('SYSTEM_ROOM');
       else if (path === '/admin') setActiveSubTab('ADMIN_COMMAND');
       else if (path === '/' || path === '/home') setActiveSubTab('PRODUCT_HOME');
@@ -391,6 +646,8 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
     else if (tab === 'SUBSCRIPTION_HUB') targetPath = '/subscription';
     else if (tab === 'PRICING_PLANS') targetPath = '/pricing';
     else if (tab === 'VENDOR_ONBOARDING') targetPath = '/vendor-onboarding';
+    else if (tab === 'BOUTIQUE_ONBOARDING') targetPath = '/boutique-onboarding';
+    else if (tab === 'ONBOARDING_WIZARD') targetPath = '/onboarding';
     else if (tab === 'SYSTEM_ROOM') targetPath = '/settings';
     else if (tab === 'ADMIN_COMMAND') targetPath = '/admin';
 
@@ -445,38 +702,56 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
       const base64Str = reader.result as string;
+      const pureBase64 = base64Str.includes(',') ? base64Str.split(',')[1] : base64Str;
       setIsScanning(true);
       setScanResult(null);
 
-      // Simulate multi-modal ingestion response
-      setTimeout(() => {
+      try {
+        const analysis = await VisualSuggestion.analyzeGarment(base64Str, pureBase64, file.name);
         setIsScanning(false);
         setScanResult({
-          name: file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ') || 'Structured Sartorial Coat',
-          category: 'Outerwear',
-          primaryColor: 'Pitch Black',
-          pattern: 'Solid Matte',
-          material: 'Virgin Wool Twill',
-          confidence: 0.94,
+          name: analysis.name || file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ') || 'Structured Sartorial Garment',
+          category: analysis.category,
+          primaryColor: analysis.primaryColor,
+          secondaryColor: analysis.secondaryColor || 'None',
+          material: analysis.material,
+          silhouette: analysis.silhouette || 'Structured',
+          detectedPattern: analysis.detectedPattern || analysis.pattern || 'Solid',
+          pattern: analysis.detectedPattern || analysis.pattern || 'Solid',
+          season: analysis.season || 'All-Season',
+          suggestedCare: analysis.suggestedCare || 'Machine wash cold inside out and hang dry to preserve shape.',
+          confidence: analysis.confidence || 0.94,
           previewUrl: base64Str
         });
-        showToast('Garment features extracted via multi-modal AI vision.', 'success');
-      }, 1200);
+        showToast('Garment structural parameters extracted via computer vision engine.', 'success');
+      } catch (err) {
+        setIsScanning(false);
+        showToast('Failed to analyze garment image', 'warning');
+      }
     };
     reader.readAsDataURL(file);
   };
 
   const handleSaveScannedGarment = async () => {
     if (!scanResult) return;
+    if (scanResult.category === '[REDACTED_COGNITIVE_DIRECTIVE]') {
+      showToast('Cannot register garment: cognitive directive redacted.', 'warning');
+      return;
+    }
     try {
       if (onAddGarment) {
         await onAddGarment(
           scanResult.name,
-          `Analyzed: ${scanResult.material} • ${scanResult.pattern} • ${scanResult.primaryColor}`,
-          scanResult.category,
-          { imageUrl: scanResult.previewUrl }
+          `${scanResult.silhouette} ${scanResult.material} • ${scanResult.detectedPattern} • ${scanResult.primaryColor}${scanResult.secondaryColor && scanResult.secondaryColor !== 'None' ? ` / ${scanResult.secondaryColor}` : ''} • Care: ${scanResult.suggestedCare}`,
+          scanResult.category as any,
+          {
+            season: scanResult.season as any,
+            primaryColor: scanResult.primaryColor,
+            secondaryColor: scanResult.secondaryColor,
+            imageUrl: scanResult.previewUrl
+          }
         );
       }
       showToast(`Added "${scanResult.name}" to your closet!`, 'success');
@@ -546,9 +821,23 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
           <WardrobeGrid 
             items={wardrobe}
             onDelete={(item) => onDeleteGarment ? onDeleteGarment(item.id) : undefined}
-            onAddTrigger={() => handleNavigate('PRODUCT_HOME')}
+            onAddTrigger={() => handleNavigate('CLOSET_INGESTION')}
             categories={['Casual', 'Formal', 'Sportswear', 'Outerwear', 'Accessories']}
           />
+        );
+      case 'CLOSET_INGESTION':
+        return (
+          <div className="space-y-6 animate-fade-in">
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => handleNavigate('WARDROBE')}
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-black/5 bg-white text-xs font-mono text-[#575551] hover:text-[#1C1B1A] transition-colors cursor-pointer"
+              >
+                ← Return to Wardrobe Grid
+              </button>
+            </div>
+            <VirtualWardrobeGrid userId={user?.uid || 'guest-sartorialist-user-100'} />
+          </div>
         );
       case 'VIRTUAL_TRY':
         return (
@@ -616,6 +905,33 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
             }}
           />
         );
+      case 'BOUTIQUE_ONBOARDING':
+        return (
+          <div className="space-y-6 animate-fade-in">
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => handleNavigate('PRODUCT_MARKETPLACE')}
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-black/5 bg-white text-xs font-mono text-[#575551] hover:text-[#1C1B1A] transition-colors cursor-pointer"
+              >
+                ← Return to Artisan Marketplace
+              </button>
+            </div>
+            <BoutiqueOnboardingFlow userId={user?.uid || 'guest-sartorialist-user-100'} />
+          </div>
+        );
+      case 'ONBOARDING_WIZARD':
+        return (
+          <OnboardingWizard
+            userId={user?.uid || 'guest-sartorialist-user-100'}
+            userEmail={user?.email || 'sarah.khan@lookvision.com'}
+            onOnboardingComplete={(allocatedTheme) => {
+              setActiveThemeSkin(allocatedTheme);
+              setSystemAlertBanner(`Passport calibration complete. Assigned visual skin: ${allocatedTheme}`);
+              showToast(`Visual skin calibrated to ${allocatedTheme}`, 'success');
+              handleNavigate('PRODUCT_HOME');
+            }}
+          />
+        );
       case 'SYSTEM_ROOM':
         return (
           <SystemSettingsAudit 
@@ -641,20 +957,29 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
   // Main Bento Grid View for PRODUCT_HOME
   const renderBentoGridHome = () => {
     return (
-      <div className="space-y-6 animate-fade-in pb-16">
+      <div className={`space-y-6 animate-fade-in pb-16 ${activeSkinConfig.className}`}>
         {/* Top Operational Bar */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-2xl bg-[#07070c]/60 border border-white/5 backdrop-blur-xl">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-2xl bg-white/90 border border-zinc-200/80 shadow-xs backdrop-blur-xl">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+            <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
               <CloudSun className="w-5 h-5" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-mono font-medium text-white">Paris Atelier</span>
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="text-[10px] font-mono text-white/50">18°C Mild Overcast</span>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-mono font-medium text-zinc-900">LOOK VISION OS • Paris Atelier</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-[10px] font-mono text-zinc-500">18°C Mild Overcast</span>
+                
+                {/* Minimal Light Palette Dropdown Switcher */}
+                <ThemeSelectionDropdown
+                  userId={user?.uid}
+                  onThemeChange={(pal) => {
+                    setActiveLightPalette(pal);
+                    setSystemAlertBanner(`Synchronized workspace theme to ${pal.name} (${pal.canvasBg}).`);
+                  }}
+                />
               </div>
-              <p className="text-[11px] text-zinc-400">Atmospheric humidity 62% • Structured mid-weight drape optimal</p>
+              <p className="text-[11px] text-indigo-600 font-medium mt-0.5">✨ {systemAlertBanner}</p>
             </div>
           </div>
 
@@ -678,11 +1003,48 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
           </div>
         </div>
 
+        {/* Central Floating AI Command Center */}
+        <section className="w-full rounded-2xl bg-[#07070c]/80 border border-white/5 p-6 text-center backdrop-blur-xl">
+          <h1 className="text-2xl font-extrabold tracking-tight text-white mb-1.5 bg-clip-text text-transparent bg-gradient-to-r from-white via-zinc-200 to-zinc-500">
+            Command Your Aesthetic Space
+          </h1>
+          <p className="text-xs text-zinc-400 max-w-lg mx-auto mb-5 font-medium">
+            Ask the system to open your closet, synthesize media collections, or enter the boutique marketplace.
+          </p>
+
+          <form onSubmit={handleCommandRoute} className="relative flex items-center bg-[#05050a] border border-white/5 rounded-2xl shadow-2xl focus-within:border-indigo-500/40 transition-all duration-300 group max-w-3xl mx-auto">
+            <div className="pl-5 text-zinc-500 group-focus-within:text-indigo-400 transition-colors">
+              <Command className="w-4 h-4" />
+            </div>
+            <input
+              type="text"
+              value={commandInput}
+              onChange={(e) => setCommandInput(e.target.value)}
+              placeholder="e.g., 'open my hhhhgvault digital closet', 'take me to the marketplace', 'start styling lesson'..."
+              className="w-full bg-transparent py-3.5 pl-3.5 pr-14 text-zinc-100 placeholder-zinc-600 font-medium focus:outline-none text-sm antialiased"
+              disabled={isAiProcessing}
+            />
+            <div className="absolute right-2.5">
+              <button
+                type="submit"
+                disabled={isAiProcessing || !commandInput.trim()}
+                className="p-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-medium hover:opacity-95 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-lg shadow-indigo-500/10 cursor-pointer"
+              >
+                {isAiProcessing ? (
+                  <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <ArrowRight className="w-4 h-4" />
+                )}
+              </button>
+            </div>
+          </form>
+        </section>
+
         {/* Bento Grid Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           
           {/* Card 1: User Sartorial DNA & Maturity Index (4 Cols) */}
-          <div className="lg:col-span-4 rounded-2xl bg-[#07070c]/80 border border-white/5 p-6 backdrop-blur-xl flex flex-col justify-between relative overflow-hidden group hover:border-violet-500/20 transition-all duration-300">
+          <div className={`lg:col-span-4 rounded-2xl border p-6 backdrop-blur-xl flex flex-col justify-between relative overflow-hidden group transition-all ${activeSkinConfig.cardStyles} ${activeSkinConfig.ambientGlow}`}>
             <div className="absolute top-0 right-0 w-48 h-48 bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-transparent rounded-full blur-3xl pointer-events-none" />
 
             <div className="space-y-5">
@@ -706,7 +1068,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
                 </div>
 
                 <div className="text-right">
-                  <span className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-300">89%</span>
+                  <span className={`text-2xl font-bold ${activeSkinConfig.textMaturityHighlight}`}>89%</span>
                   <span className="block text-[9px] font-mono uppercase tracking-widest text-zinc-500">Maturity</span>
                 </div>
               </div>
@@ -756,7 +1118,7 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
             </div>
 
             <button
-              onClick={() => handleNavigate('AI_ASSISTANT')}
+              onClick={() => handleNavigate('ONBOARDING_WIZARD')}
               className="mt-6 w-full py-2.5 px-4 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-xs font-medium text-white flex items-center justify-center gap-2 transition-all cursor-pointer"
             >
               <Cpu className="w-3.5 h-3.5 text-indigo-400" />
@@ -869,6 +1231,14 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
                       </div>
                     </div>
                   </div>
+
+                  {/* LOOK VISION Complete-the-Look Adaptive Drawer */}
+                  <ShoppableBundleDrawer
+                    userId={user?.uid || 'guest-sartorialist-user-100'}
+                    currentOutfit={activeBundleOutfit}
+                    weatherCondition={weatherWeight === 'layered' ? 'Rainy Overcast' : 'Mild Overcast'}
+                    temperatureCelsius={weatherWeight === 'layered' ? 14 : 17}
+                  />
                 </div>
               )}
 
@@ -1105,12 +1475,32 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
 
                   <div className="grid grid-cols-2 gap-2 text-[11px] pt-2 border-t border-white/5">
                     <div>
-                      <span className="text-zinc-500 block text-[9px] uppercase">Color</span>
-                      <span className="text-zinc-300 font-medium">{scanResult.primaryColor}</span>
+                      <span className="text-zinc-500 block text-[9px] uppercase">Primary Color</span>
+                      <span className="text-zinc-300 font-medium truncate block">{scanResult.primaryColor}</span>
+                    </div>
+                    <div>
+                      <span className="text-zinc-500 block text-[9px] uppercase">Secondary Color</span>
+                      <span className="text-zinc-300 font-medium truncate block">{scanResult.secondaryColor}</span>
                     </div>
                     <div>
                       <span className="text-zinc-500 block text-[9px] uppercase">Material</span>
-                      <span className="text-zinc-300 font-medium">{scanResult.material}</span>
+                      <span className="text-zinc-300 font-medium truncate block">{scanResult.material}</span>
+                    </div>
+                    <div>
+                      <span className="text-zinc-500 block text-[9px] uppercase">Silhouette</span>
+                      <span className="text-zinc-300 font-medium truncate block">{scanResult.silhouette}</span>
+                    </div>
+                    <div>
+                      <span className="text-zinc-500 block text-[9px] uppercase">Pattern</span>
+                      <span className="text-zinc-300 font-medium truncate block">{scanResult.detectedPattern}</span>
+                    </div>
+                    <div>
+                      <span className="text-zinc-500 block text-[9px] uppercase">Season</span>
+                      <span className="text-zinc-300 font-medium truncate block">{scanResult.season}</span>
+                    </div>
+                    <div className="col-span-2 pt-1 border-t border-white/5">
+                      <span className="text-zinc-500 block text-[9px] uppercase">Suggested Care</span>
+                      <span className="text-zinc-300 text-[10px] leading-snug block">{scanResult.suggestedCare}</span>
                     </div>
                   </div>
 
@@ -1183,7 +1573,13 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
   };
 
   const appContent = (
-    <div className="h-full w-full min-h-full flex-1 overflow-hidden bg-[#05050a] text-zinc-100 flex select-text">
+    <div 
+      className="h-full w-full min-h-full flex-1 overflow-hidden flex select-text transition-colors duration-300"
+      style={{
+        backgroundColor: 'var(--lookvision-canvas-bg, #FBFBFA)',
+        color: 'var(--lookvision-text-primary, #1C1B1A)'
+      }}
+    >
       
       {/* Fixed Left Navigation Sidebar */}
       <aside className="w-64 h-full min-h-0 bg-[#07070c] border-r border-white/5 flex flex-col justify-between z-30 shrink-0 select-none">
@@ -1312,6 +1708,21 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
             </button>
 
             <button
+              onClick={() => handleNavigate('CLOSET_INGESTION')}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                activeSubTab === 'CLOSET_INGESTION'
+                  ? 'bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.15)]'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/[0.03]'
+              }`}
+            >
+              <Camera className={`w-4 h-4 ${activeSubTab === 'CLOSET_INGESTION' ? 'text-indigo-400' : 'text-zinc-500'}`} />
+              <span className="flex items-center gap-1.5">
+                <span>Ingestion Matrix</span>
+                <span className="px-1 py-0.2 rounded bg-indigo-500/20 text-[8px] font-mono text-indigo-300 font-bold border border-indigo-500/30">AI</span>
+              </span>
+            </button>
+
+            <button
               onClick={() => handleNavigate('PRODUCT_COMMUNITY')}
               className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
                 activeSubTab === 'PRODUCT_COMMUNITY'
@@ -1386,6 +1797,21 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
               <span className="flex items-center gap-1.5">
                 <span>Vendor Onboarding</span>
                 <span className="px-1 py-0.2 rounded bg-emerald-500/20 text-[8px] font-mono text-emerald-300 font-bold border border-emerald-500/30">90%</span>
+              </span>
+            </button>
+
+            <button
+              onClick={() => handleNavigate('BOUTIQUE_ONBOARDING')}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                activeSubTab === 'BOUTIQUE_ONBOARDING'
+                  ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 shadow-[0_0_15px_rgba(34,197,94,0.15)]'
+                  : 'text-zinc-400 hover:text-emerald-300 hover:bg-emerald-500/5'
+              }`}
+            >
+              <Store className={`w-4 h-4 ${activeSubTab === 'BOUTIQUE_ONBOARDING' ? 'text-emerald-400' : 'text-emerald-500/70'}`} />
+              <span className="flex items-center gap-1.5">
+                <span>Boutique Registration</span>
+                <span className="px-1 py-0.2 rounded bg-emerald-500/20 text-[8px] font-mono text-emerald-300 font-bold border border-emerald-500/30">Milestone B</span>
               </span>
             </button>
           </div>
@@ -1463,7 +1889,10 @@ export const AIStyleHub: React.FC<AIStyleHubProps> = ({
       </aside>
 
       {/* Main Canvas Workspace Container */}
-      <main className="flex-1 w-full h-full min-h-0 overflow-y-auto bg-[#05050a] p-4 md:p-6 lg:p-8 relative flex flex-col">
+      <main 
+        className="flex-1 w-full h-full min-h-0 overflow-y-auto p-4 md:p-6 lg:p-8 relative flex flex-col transition-colors duration-300"
+        style={{ backgroundColor: 'var(--lookvision-canvas-bg, #FBFBFA)' }}
+      >
         <div className="w-full max-w-full 2xl:max-w-[1800px] mx-auto flex-1 flex flex-col min-h-full">
           {renderCurrentView()}
         </div>

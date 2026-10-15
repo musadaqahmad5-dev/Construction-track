@@ -6,14 +6,17 @@ import {
   TrendingUp, Compass, Shield, ShieldCheck, RefreshCw, Star, Share2, 
   ChevronRight, ChevronLeft, CheckCircle2, Copy, FolderPlus, PlusCircle, 
   X, HelpCircle, Layers, Grid, SlidersHorizontal, ArrowUpRight, Maximize2,
-  Loader2, Upload, ThumbsDown, Slash, Download, Trash2, Video, Lock, Globe, Save
+  Loader2, Upload, ThumbsDown, Slash, Download, Trash2, Video, Lock, Globe, Save,
+  Store
 } from 'lucide-react';
 import { WardrobeItem } from '../../types';
 import { db, auth } from '../../firebase';
 import { CommunityGenerator } from '../CommunityGenerator';
+import { BoutiqueOnboardingFlow } from '../BoutiqueOnboardingFlow';
 import { FashionInstructorWorkspace } from './FashionInstructorWorkspace';
 import { ImageGenerationRegistry } from '../../features/image-generation/imageGenerationProvider';
 import { AIStyleHubV17Architecture } from '../../features/global/AIStyleHubV17Architecture';
+import { FashionEngine } from '../../features/fashion/fashionEngine';
 import { 
   collection, 
   addDoc, 
@@ -460,17 +463,46 @@ export const CommunityScreen: React.FC<CommunityScreenProps> = ({
   onNavigateToTab
 }) => {
   // Discovery Tabs: Unified Community Feed with AI Creations, User Posts, Challenges, Trending, Collections & Editors Picks
-  const [activeTab, setActiveTab] = useState<'EDITORIAL_FEED' | 'TRENDING' | 'AI_CREATIONS' | 'USER_POSTS' | 'CHALLENGES' | 'NEWEST' | 'COLLECTIONS' | 'EDITORS_PICKS' | 'WEEKLY_HIGHLIGHTS' | 'COMMUNITY_GENERATOR' | 'INTELLIGENT_FASHION_AI'>('EDITORIAL_FEED');
+  const [activeTab, setActiveTab] = useState<'EDITORIAL_FEED' | 'TRENDING' | 'AI_CREATIONS' | 'USER_POSTS' | 'CHALLENGES' | 'NEWEST' | 'COLLECTIONS' | 'EDITORS_PICKS' | 'WEEKLY_HIGHLIGHTS' | 'COMMUNITY_GENERATOR' | 'INTELLIGENT_FASHION_AI' | 'BOUTIQUE_ONBOARDING'>('EDITORIAL_FEED');
+  const [isBoutiqueModalOpen, setIsBoutiqueModalOpen] = useState(false);
 
-  // Helper handler to Remix an AI creation or community look in AI Studio
-  const handleRemixPost = (e: React.MouseEvent, post: CommunityPost) => {
+  // Closet Remix Decision Partner State
+  const [remixDecisionState, setRemixDecisionState] = useState<{
+    loading: boolean;
+    sourcePost: CommunityPost | null;
+    result: {
+      outfitTitle: string;
+      selectedComponentIds: string[];
+      cohesivenessRating: number;
+      stylistJustification: string;
+    } | null;
+  }>({ loading: false, sourcePost: null, result: null });
+
+  // Helper handler to Remix an AI creation or community look using the user's private closet inventory
+  const handleRemixPost = async (e: React.MouseEvent, post: CommunityPost) => {
     e.stopPropagation();
     const promptText = post.caption || post.vibeTags.join(', ') || 'Couture design look';
     setPromptInput(`Remix of ${post.author?.name || 'Community Look'}: ${promptText}`);
-    setIsGeneratorOpen(true);
-    window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
-      detail: `✨ Loaded "${post.caption?.slice(0, 25) || 'Look'}" into AI Generation Studio!`
-    }));
+
+    setRemixDecisionState({ loading: true, sourcePost: post, result: null });
+    try {
+      const targetLook = {
+        title: post.collectionName || post.author?.name || 'Community Look',
+        caption: post.caption,
+        colors: (post.garmentBlueprint as any)?.colors ? [(post.garmentBlueprint as any).colors] : (post.garmentBlueprint as any)?.palette || [],
+        categories: ['Outerwear', 'Formal', 'Casual'],
+        vibe: post.vibeTags?.[0] || 'Minimalist',
+        vibeTags: post.vibeTags || []
+      };
+      const remixResult = await FashionEngine.remixCommunityLook(targetLook, userWardrobe);
+      setRemixDecisionState({ loading: false, sourcePost: post, result: remixResult });
+      window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
+        detail: `✨ Closet Remix ready: "${remixResult.outfitTitle}"`
+      }));
+    } catch (err) {
+      setRemixDecisionState({ loading: false, sourcePost: null, result: null });
+      setIsGeneratorOpen(true);
+    }
   };
 
   // Architecture V17 Community Memory & Personal Component States
@@ -1724,7 +1756,8 @@ SCENE COORDS:
             { id: 'NEWEST', label: 'Newest Looks', icon: Star },
             { id: 'COLLECTIONS', label: 'Luxury Collections', icon: Layers },
             { id: 'EDITORS_PICKS', label: "Editor's Choice", icon: CheckCircle2 },
-            { id: 'COMMUNITY_GENERATOR', label: 'Body Style Mapping', icon: Tag }
+            { id: 'COMMUNITY_GENERATOR', label: 'Body Style Mapping', icon: Tag },
+            { id: 'BOUTIQUE_ONBOARDING', label: '🏪 Merchant Onboarding', icon: Store }
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -1745,8 +1778,17 @@ SCENE COORDS:
           })}
         </div>
 
-        {/* Search Input & Rotate Feed Controls */}
+        {/* Search Input, Register Boutique & Rotate Feed Controls */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto shrink-0">
+          <button
+            onClick={() => setIsBoutiqueModalOpen(true)}
+            className="px-3.5 py-2.5 bg-gradient-to-r from-indigo-600/20 to-purple-600/20 border border-indigo-500/30 hover:border-indigo-400 rounded-xl text-indigo-200 hover:text-white transition-all flex items-center justify-center gap-1.5 text-[10px] font-mono uppercase tracking-wider cursor-pointer font-bold shadow-xs"
+            title="Open Merchant Boutique Onboarding Modal"
+          >
+            <Store className="w-3.5 h-3.5 text-indigo-400" />
+            <span>Register Boutique</span>
+          </button>
+
           <button
             onClick={() => {
               setRotationSeed(Date.now().toString());
@@ -2115,6 +2157,10 @@ SCENE COORDS:
             onAddGarment={onAddGarment}
             onNavigateToTab={onNavigateToTab}
           />
+        ) : activeTab === 'BOUTIQUE_ONBOARDING' ? (
+          <div className="space-y-6 animate-fade-in pb-16">
+            <BoutiqueOnboardingFlow userId={user?.uid || 'guest-sartorialist-user-100'} />
+          </div>
         ) : filteredFeed.length === 0 ? (
           <div className="p-16 border border-dashed border-white/5 rounded-3xl text-center bg-[#07070c]/20 select-none max-w-lg mx-auto my-12">
             <Compass className="w-10 h-10 text-zinc-600 mx-auto mb-4 animate-pulse" />
@@ -3559,6 +3605,128 @@ SCENE COORDS:
                 )}
               </div>
             </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Closet Remix Decision Partner Modal */}
+      <AnimatePresence>
+        {(remixDecisionState.loading || remixDecisionState.result) && (
+          <div
+            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4"
+            onClick={() => setRemixDecisionState({ loading: false, sourcePost: null, result: null })}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 10 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-lg bg-[#07070c] border border-white/10 rounded-2xl p-6 space-y-5 shadow-2xl"
+            >
+              <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-indigo-400" />
+                  <h3 className="text-sm font-semibold text-white">Closet Remix Decision Partner</h3>
+                </div>
+                <button
+                  onClick={() => setRemixDecisionState({ loading: false, sourcePost: null, result: null })}
+                  className="text-zinc-500 hover:text-white cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {remixDecisionState.loading ? (
+                <div className="py-10 text-center space-y-3">
+                  <Loader2 className="w-7 h-7 text-indigo-400 animate-spin mx-auto" />
+                  <p className="text-xs text-zinc-300">Matching community inspiration with your private closet...</p>
+                </div>
+              ) : remixDecisionState.result && (
+                <div className="space-y-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <span className="text-[10px] font-mono text-indigo-400 uppercase tracking-wider block">Remixed From Your Closet</span>
+                      <h4 className="text-base font-semibold text-white mt-0.5">{remixDecisionState.result.outfitTitle}</h4>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <span className="text-[10px] font-mono text-zinc-500 block">Harmony Rating</span>
+                      <span className="text-sm font-mono font-semibold text-emerald-400 tabular-nums">
+                        {remixDecisionState.result.cohesivenessRating.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-zinc-300 leading-relaxed bg-white/[0.02] border border-white/5 rounded-xl p-3.5">
+                    {remixDecisionState.result.stylistJustification}
+                  </p>
+
+                  <div className="space-y-2">
+                    <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider block">
+                      Selected Closet Pieces ({remixDecisionState.result.selectedComponentIds.length})
+                    </span>
+                    <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
+                      {remixDecisionState.result.selectedComponentIds.map((compId) => {
+                        const matched = userWardrobe.find((w) => w.id === compId);
+                        return (
+                          <div
+                            key={compId}
+                            className="flex items-center justify-between px-3 py-2 rounded-xl bg-white/[0.02] border border-white/5 text-xs"
+                          >
+                            <div className="min-w-0">
+                              <span className="text-white font-medium block truncate">
+                                {matched ? matched.title : `Closet Item (${compId})`}
+                              </span>
+                              {matched && (
+                                <span className="text-[10px] text-zinc-400">
+                                  {matched.category} · {matched.primaryColor || 'Neutral'}
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-[10px] font-mono text-zinc-500 shrink-0 ml-2">{compId}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2.5 pt-2">
+                    <button
+                      onClick={() => {
+                        setRemixDecisionState({ loading: false, sourcePost: null, result: null });
+                        setIsGeneratorOpen(true);
+                      }}
+                      className="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:opacity-90 text-white text-xs font-medium transition-all cursor-pointer"
+                    >
+                      Open in Studio Generator
+                    </button>
+                    <button
+                      onClick={() => setRemixDecisionState({ loading: false, sourcePost: null, result: null })}
+                      className="py-2.5 px-4 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 text-zinc-200 text-xs font-medium transition-all cursor-pointer"
+                    >
+                      Done
+                    </button>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Interactive Boutique Onboarding Modal Sheet */}
+      <AnimatePresence>
+        {isBoutiqueModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fade-in overflow-y-auto">
+            <div className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-black/10 overflow-hidden my-8">
+              <button
+                onClick={() => setIsBoutiqueModalOpen(false)}
+                className="absolute top-4 right-4 z-20 p-2 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-600 hover:text-zinc-900 transition-colors cursor-pointer"
+                aria-label="Close Boutique Onboarding Sheet"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              <BoutiqueOnboardingFlow userId={user?.uid || 'guest-sartorialist-user-100'} />
+            </div>
           </div>
         )}
       </AnimatePresence>

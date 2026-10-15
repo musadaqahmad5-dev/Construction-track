@@ -23,18 +23,23 @@ import { AdminShell } from './admin';
 
 import { PreviewBootstrap } from './aria/preview/PreviewBootstrap';
 import { PreviewEnvironment } from './aria/preview/PreviewEnvironment';
+import { 
+  applyThemeToHtmlRoot, 
+  getStoredPaletteId, 
+  MINIMAL_LIGHT_PALETTES 
+} from './features/theme/minimalLightThemes';
 
-// Temporal light rules mapper (Locked to deep dark slate #05050a / #06060c per workspace invariants)
+// Temporal light rules mapper (Minimal Light Palette Invariants: #FBFBFA, #F5F4F0, #F7F6F2)
 export function getTemporalTheme() {
   return {
-    bg: 'bg-[#05050a]',
-    text: 'text-zinc-100',
-    surface: 'bg-[#07070c]',
-    border: 'border-white/5',
+    bg: 'bg-[#FBFBFA]',
+    text: 'text-zinc-900',
+    surface: 'bg-white',
+    border: 'border-zinc-200/80',
     tracking: 'tracking-normal',
     leading: 'leading-normal',
     densityClass: 'tracking-normal leading-normal',
-    timeLabel: 'Cyber Studio Ambiance'
+    timeLabel: 'Atelier Light Ambiance'
   };
 }
 
@@ -95,6 +100,11 @@ export default function App() {
     const checkRoute = () => {
       setIsAdminRoute(window.location.pathname === '/admin' || window.location.search.includes('view=admin'));
     };
+
+    // Initialize minimal light theme on document root
+    const initialPaletteId = getStoredPaletteId();
+    const initialPalette = MINIMAL_LIGHT_PALETTES[initialPaletteId] || MINIMAL_LIGHT_PALETTES.MINIMAL_OFFWHITE;
+    applyThemeToHtmlRoot(initialPalette);
 
     window.addEventListener('popstate', checkRoute);
     window.addEventListener('lookvision_route_change', checkRoute);
@@ -737,7 +747,13 @@ export default function App() {
               </ARIAProvider>
             ) : (
               /* LOOK VISION: Premium fashion OS persistent shell workspace */
-              <div className="h-full min-h-full w-full flex-1 overflow-hidden bg-[#05050a] text-zinc-100 selection:bg-indigo-500/20 selection:text-white antialiased font-sans flex flex-col">
+              <div 
+                className="h-full min-h-full w-full flex-1 overflow-hidden selection:bg-indigo-500/20 antialiased font-sans flex flex-col transition-colors duration-300"
+                style={{
+                  backgroundColor: 'var(--lookvision-canvas-bg, #FBFBFA)',
+                  color: 'var(--lookvision-text-primary, #1C1B1A)'
+                }}
+              >
                 <React.Suspense fallback={
                   <div className="flex flex-col items-center justify-center min-h-screen text-center space-y-4 bg-black">
                     <div className="w-10 h-10 border-2 border-white/10 border-t-white rounded-full animate-spin" />

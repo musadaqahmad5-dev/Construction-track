@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { LOOK_VISION_THEMES } from './AIStyleHub';
+import { FashionEngine } from '../features/fashion/fashionEngine';
 
 interface SearchItem {
   id: string;
@@ -35,9 +36,58 @@ export const FocusSearchPalette: React.FC<FocusSearchPaletteProps> = ({
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'navigation' | 'themes' | 'actions' | 'vibes'>('all');
   const [activeIndex, setActiveIndex] = useState(0);
+  const [isRoutingCommand, setIsRoutingCommand] = useState(false);
   
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const executeNaturalCommand = async (rawQuery: string) => {
+    const trimmed = rawQuery.trim();
+    if (!trimmed || isRoutingCommand) return;
+    setIsRoutingCommand(true);
+    try {
+      const routed = await FashionEngine.routeCommand(trimmed);
+      const actionMap: Record<string, string> = {
+        HOME_FEED: 'PRODUCT_HOME',
+        BENTO_SAVED: 'PRODUCT_HOME',
+        AI_CREATION: 'PRODUCT_AI_CREATIONS',
+        CLOSET_VAULT: 'WARDROBE',
+        COMMERCE_MARKET: 'PRODUCT_MARKETPLACE',
+        FASHION_ACADEMY: 'FASHION_INSTRUCTOR',
+        VIRTUAL_TRYON: 'VIRTUAL_TRY',
+        WARDROBE_HEALTH: 'WARDROBE',
+        DYNAMIC_PLANNER: 'PLANNER',
+        STYLE_MUTATOR: 'PRODUCT_AI_CREATIONS',
+        THEME_ENGINE: 'SYSTEM_ROOM'
+      };
+
+      if (routed.action === 'THEME_ENGINE' && routed.detectedParameters?.requestedSkin && routed.detectedParameters.requestedSkin !== 'None') {
+        const skinToTheme: Record<string, string> = {
+          AVANT_GARDE: 'classic-noir',
+          MINIMALIST_LUXURY: 'nordic-editorial',
+          STREETWEAR_TECHNICAL: 'cosmic-dream',
+          HAUTE_COUTURE: 'classic-noir',
+          CYBER_HERITAGE: 'cyber-couture'
+        };
+        const mappedTheme = skinToTheme[routed.detectedParameters.requestedSkin] || 'classic-noir';
+        setCurrentTheme(mappedTheme);
+        localStorage.setItem('look_vision_theme', mappedTheme);
+      } else {
+        const targetRoute = actionMap[routed.action] || 'PRODUCT_HOME';
+        onNavigate(targetRoute);
+      }
+
+      window.dispatchEvent(new CustomEvent('lookvision_show_toast', {
+        detail: {
+          message: routed.stylistResponseBanner || `Routed to ${routed.action}`,
+          type: 'info'
+        }
+      }));
+      onClose();
+    } finally {
+      setIsRoutingCommand(false);
+    }
+  };
 
   // Define searchable command palette items dynamically
   const getSearchItems = (): SearchItem[] => [
@@ -323,15 +373,21 @@ export const FocusSearchPalette: React.FC<FocusSearchPaletteProps> = ({
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setActiveIndex(prev => (prev + 1) % filteredItems.length);
+      if (filteredItems.length > 0) {
+        setActiveIndex(prev => (prev + 1) % filteredItems.length);
+      }
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      setActiveIndex(prev => (prev - 1 + filteredItems.length) % filteredItems.length);
+      if (filteredItems.length > 0) {
+        setActiveIndex(prev => (prev - 1 + filteredItems.length) % filteredItems.length);
+      }
     } else if (e.key === 'Enter') {
       e.preventDefault();
       if (filteredItems[activeIndex]) {
         filteredItems[activeIndex].action();
         onClose();
+      } else if (search.trim()) {
+        executeNaturalCommand(search);
       }
     }
   };
@@ -470,11 +526,22 @@ export const FocusSearchPalette: React.FC<FocusSearchPaletteProps> = ({
                   );
                 })
               ) : (
-                <div className="py-12 px-4 text-center space-y-1.5">
-                  <HelpCircle className="w-8 h-8 text-zinc-600 mx-auto stroke-[1.5]" />
-                  <p className="text-[11.5px] text-zinc-400 font-medium">No results found for "{search}"</p>
-                  <p className="text-[9.5px] text-zinc-600 leading-normal max-w-sm mx-auto">
-                    Try searching for pages, tags (e.g. "cyber", "cosmic"), or commands to switch themes instantly.
+                <div className="py-10 px-4 text-center space-y-3">
+                  <Sparkles className="w-8 h-8 text-violet-400 mx-auto stroke-[1.5]" />
+                  <p className="text-[11.5px] text-zinc-300 font-medium">
+                    Route "{search}" via Central Intelligence Engine
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => executeNaturalCommand(search)}
+                    disabled={isRoutingCommand}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-xs font-medium shadow-md hover:opacity-95 transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    <Cpu className="w-3.5 h-3.5" />
+                    <span>{isRoutingCommand ? 'Routing Command...' : 'Execute AI Command (↵)'}</span>
+                  </button>
+                  <p className="text-[9.5px] text-zinc-500 leading-normal max-w-sm mx-auto">
+                    Try commands like "open my wardrobe", "let's go to marketplace", or "change my theme to avant-garde".
                   </p>
                 </div>
               )}

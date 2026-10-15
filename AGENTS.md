@@ -1,13 +1,13 @@
 # AIStyleHub / AI-SEOS — Technical Workspace Guidelines
 
 ## 1. Visual & Aesthetic Invariants
-* **Background Colors**: All main layouts must utilize a deep, premium dark-slate background (`#05050a` / `#06060c`). Never introduce bright white or standard gray backgrounds unless explicitly locked to a user-selected high-contrast accessibility theme.
-* **Sidebar Styling**: The persistent left-sidebar must remain locked to `#07070c` with a high-fidelity border-right of `border-white/5` (or a subtle glassmorphic indigo overlay).
-* **Card Design**: Cards (Creations, Closet items, Marketplace listing cards) must have uniform dimensions, subtle aspect ratios matching portrait orientation, and a border style of `border-white/5` with hover transitions `hover:border-violet-500/20 hover:scale-[1.01] duration-300`.
-* **Color Accents**:
-  * **AI Operations**: Indigo / Violet shades (`from-indigo-500 to-purple-600` gradients or glowing text shadows).
+* **Background Palette Invariants**: All primary interfaces must adhere strictly to minimal light workspace palettes: High-contrast minimal off-white (`#FBFBFA`), warm studio sand (`#F5F4F0`), and soft linen (`#F7F6F2`). Never introduce dark slates as standard layout defaults.
+* **Sidebar & Header Styling**: Crisp architectural layout with high-fidelity division borders (`border-zinc-200/80` or `border-black/5`), pristine elevated light surfaces (`#FFFFFF` or subtle linen tones), and clear typographic hierarchy.
+* **Card & Container Architecture**: Elevated surfaces (`#FFFFFF` / `bg-white`) with subtle border containment (`border-zinc-200/80` or `border-black/5`), minimal drop-shadows (`shadow-sm`, `hover:shadow-md`), and smooth hover transitions (`hover:scale-[1.01] duration-300`).
+* **Color Accents & Typography**:
+  * **AI Operations**: Indigo / Violet shades (`#4F46E5` / `from-indigo-600 to-purple-600` gradients or soft ambient glow).
   * **Marketplace / Commerce Transactions**: High-contrast, clean Emerald greens (`#22c55e` / `#16a34a`).
-  * **General Typography**: Base-zinc text colors (`text-zinc-100` / `text-zinc-400` / `text-white/70`).
+  * **General Typography**: High-contrast dark charcoal and obsidian text colors (`#1C1B1A` / `#111827` / `text-zinc-900` / `text-zinc-600`) guaranteeing WCAG AA contrast compliance (>= 4.5:1).
 
 ## 2. Component Architecture & Contracts
 * **Modular Code Structure**: Avoid consolidating multiple massive dashboards into single-file components. Always modularize layout sections (e.g., `AIEngineStudio.tsx`, `MarketplaceModule.tsx`, `WardrobeGrid.tsx`) into separate high-integrity files.

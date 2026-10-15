@@ -8,12 +8,23 @@ export interface VisualGarmentAnalysis {
   category: ClothingCategory;
   primaryColor: string;
   secondaryColor: string;
-  pattern: string;
   material: string;
+  silhouette: string;
+  detectedPattern: string;
+  pattern: string;
   season: 'Spring' | 'Summer' | 'Autumn' | 'Winter' | 'All-Season';
+  suggestedCareNote: string;
+  suggestedCare: string;
   formality: 'Casual' | 'Semi-formal' | 'Formal';
   description: string;
   confidence: number;
+}
+
+const REDACTED_DIRECTIVE_VALUE = '[REDACTED_COGNITIVE_DIRECTIVE]';
+
+function hasMaliciousDirective(text: string): boolean {
+  if (!text) return false;
+  return /<script\b|javascript:|onerror\s*=|ignore\s+(all\s+)?(previous|prior|system)\s+(instructions|prompts)|override\s+(your\s+)?(system\s+)?prompt|\[REDACTED_COGNITIVE_DIRECTIVE\]/i.test(text);
 }
 
 export class VisualSuggestion {
@@ -27,14 +38,33 @@ export class VisualSuggestion {
     pureBase64: string, 
     fileName: string
   ): Promise<VisualGarmentAnalysis> {
+    if (hasMaliciousDirective(fileName) || hasMaliciousDirective(base64DataUrl)) {
+      return {
+        name: REDACTED_DIRECTIVE_VALUE,
+        category: REDACTED_DIRECTIVE_VALUE as any,
+        primaryColor: REDACTED_DIRECTIVE_VALUE,
+        secondaryColor: REDACTED_DIRECTIVE_VALUE,
+        material: REDACTED_DIRECTIVE_VALUE,
+        silhouette: REDACTED_DIRECTIVE_VALUE,
+        detectedPattern: REDACTED_DIRECTIVE_VALUE,
+        pattern: REDACTED_DIRECTIVE_VALUE,
+        season: REDACTED_DIRECTIVE_VALUE as any,
+        suggestedCareNote: REDACTED_DIRECTIVE_VALUE,
+        suggestedCare: REDACTED_DIRECTIVE_VALUE,
+        formality: REDACTED_DIRECTIVE_VALUE as any,
+        description: REDACTED_DIRECTIVE_VALUE,
+        confidence: 0
+      };
+    }
+
     try {
       console.log(`[VisualSuggestion] Dispatching image for vision analysis...`);
       
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (auth.currentUser) {
+      if (auth?.currentUser) {
         const token = await auth.currentUser.getIdToken();
         headers['Authorization'] = `Bearer ${token}`;
-      } else if (typeof localStorage !== 'undefined' && localStorage.getItem('auth_guest_active') === 'true') {
+      } else {
         headers['Authorization'] = 'Bearer guest-token';
       }
 
@@ -51,19 +81,44 @@ export class VisualSuggestion {
       const rawResult = await response.json();
       console.log(`[VisualSuggestion] Received server response:`, rawResult);
 
+      if (rawResult && rawResult.category === REDACTED_DIRECTIVE_VALUE) {
+        return {
+          name: REDACTED_DIRECTIVE_VALUE,
+          category: REDACTED_DIRECTIVE_VALUE as any,
+          primaryColor: REDACTED_DIRECTIVE_VALUE,
+          secondaryColor: REDACTED_DIRECTIVE_VALUE,
+          material: REDACTED_DIRECTIVE_VALUE,
+          silhouette: REDACTED_DIRECTIVE_VALUE,
+          detectedPattern: REDACTED_DIRECTIVE_VALUE,
+          pattern: REDACTED_DIRECTIVE_VALUE,
+          season: REDACTED_DIRECTIVE_VALUE as any,
+          suggestedCareNote: REDACTED_DIRECTIVE_VALUE,
+          suggestedCare: REDACTED_DIRECTIVE_VALUE,
+          formality: REDACTED_DIRECTIVE_VALUE as any,
+          description: REDACTED_DIRECTIVE_VALUE,
+          confidence: 0
+        };
+      }
+
       if (rawResult && rawResult.category && rawResult.primaryColor) {
-        // Return structured fields returned by our enhanced Gemini server handler
+        const detectedPattern = rawResult.detectedPattern || rawResult.pattern || 'Solid';
+        const silhouette = rawResult.silhouette || 'Structured';
+        const suggestedCareNote = rawResult.suggestedCareNote || rawResult.suggestedCare || 'Gentle cold wash or dry clean as needed; hang to dry.';
         return {
           name: rawResult.name || this.generateDefaultName(rawResult.primaryColor, rawResult.category),
           category: rawResult.category as ClothingCategory,
           primaryColor: rawResult.primaryColor,
-          secondaryColor: rawResult.secondaryColor || 'Minimalist White',
-          pattern: rawResult.pattern || 'Solid',
-          material: rawResult.material || 'Cotton Blend',
+          secondaryColor: rawResult.secondaryColor || 'None',
+          material: rawResult.material || 'Heavy Cotton',
+          silhouette,
+          detectedPattern,
+          pattern: detectedPattern,
           season: rawResult.season || 'All-Season',
+          suggestedCareNote,
+          suggestedCare: suggestedCareNote,
           formality: rawResult.formality || 'Casual',
-          description: rawResult.description || 'Verified via visual analysis.',
-          confidence: rawResult.confidence || 0.90
+          description: rawResult.description || `${silhouette} ${rawResult.material || 'Heavy Cotton'} (${detectedPattern}). Care: ${suggestedCareNote}`,
+          confidence: rawResult.confidence || 0.94
         };
       }
 
@@ -105,32 +160,46 @@ export class VisualSuggestion {
     const cleanWords = filenameNoExt.replace(/[-_]/g, ' ');
     const classification = GarmentClassifier.classifyByKeywords(cleanWords);
 
-    // 3. Estimate seasons
+    // 3. Estimate seasons & silhouette
     let season: 'Spring' | 'Summer' | 'Autumn' | 'Winter' | 'All-Season' = 'All-Season';
+    let silhouette = 'Relaxed';
+    let suggestedCare = 'Machine wash cold inside out and hang dry to preserve shape.';
     if (classification.category === 'Outerwear') {
       season = 'Winter';
+      silhouette = 'Structured';
+      suggestedCare = 'Spot clean with damp cloth or dry clean seasonally.';
     } else if (classification.category === 'Sportswear') {
       season = 'Spring';
+      silhouette = 'Relaxed';
+      suggestedCare = 'Machine wash cold on gentle cycle; do not use fabric softener.';
     } else if (classification.category === 'Formal') {
       season = 'Autumn';
-    } else if (classification.category === 'Casual') {
+      silhouette = 'Tailored';
+      suggestedCare = 'Dry clean only and store on a contoured wooden hanger.';
+    } else if (classification.category === 'Accessories') {
       season = 'All-Season';
+      silhouette = 'Structured';
+      suggestedCare = 'Wipe gently with a soft dry microfiber cloth after use.';
     }
 
     const titleWord = filenameNoExt
       ? filenameNoExt.charAt(0).toUpperCase() + filenameNoExt.slice(1).replace(/[-_]/g, ' ')
-      : `${colors.primary} Elegant ${classification.category}`;
+      : `${colors.primary} ${silhouette} ${classification.category}`;
 
     return {
       name: titleWord,
       category: classification.category,
       primaryColor: colors.primary,
-      secondaryColor: colors.secondary,
+      secondaryColor: colors.secondary || 'None',
+      material: classification.materialGuess || 'Heavy Cotton',
+      silhouette,
+      detectedPattern: 'Solid',
       pattern: 'Solid',
-      material: classification.materialGuess,
       season,
+      suggestedCareNote: suggestedCare,
+      suggestedCare,
       formality: classification.formality,
-      description: `Identified locally as a ${classification.materialGuess} ${classification.category.toLowerCase()} piece with a dominant vibe match of ${colors.primary}.`,
+      description: `${silhouette} ${classification.materialGuess} ${classification.category.toLowerCase()} piece in ${colors.primary}. Care: ${suggestedCare}`,
       confidence: Math.round(classification.confidence * 100) / 100
     };
   }

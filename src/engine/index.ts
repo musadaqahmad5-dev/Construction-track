@@ -604,6 +604,11 @@ export {
   type UnifiedFashionIntelligenceProviderProps
 } from './unifiedFashionIntelligenceCore';
 
+export {
+  ALLOWED_THEME_SKINS,
+  type VisualThemeSkin
+} from '../adaptiveThemeEngine';
+
 
 
 

@@ -1,26 +1,9 @@
-/**
- * EAOS Look Vision AI Fashion OS - Programmatic Wardrobe Deficit Analyzer & Bundling Engine
- * Path: packages/ai-engine/src/OutfitGapBundler.ts
- * Subsystem: Intelligent Gap Detection, Climate-Aware Layering & Multi-Item Conversion Engine
- */
-
 import crypto from 'crypto';
+import fs from 'fs';
+import { getApps } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
-// ============================================================================
-// STRICT DOMAIN CONTRACTS & TYPE DEFINITIONS
-// ============================================================================
-
-export type GarmentCategory =
-  | 'Top'
-  | 'Bottom'
-  | 'Outerwear'
-  | 'Footwear'
-  | 'Accessory'
-  | 'Knitwear'
-  | 'Dress'
-  | 'Tailoring';
-
+export type GarmentCategory = 'Top' | 'Bottom' | 'Outerwear' | 'Footwear' | 'Accessory' | 'Knitwear';
 export type GapSeverity = 'HIGH' | 'MEDIUM' | 'SUGGESTION';
 
 export interface OutfitComponentSpec {
@@ -58,389 +41,165 @@ export interface ShoppableBundle {
   generatedAt: string;
 }
 
-export interface OutfitGapBundlerOptions {
-  firestoreInstance?: any;
-  defaultCurrency?: string;
-}
-
-// Fallback curated staple catalog for offline/standalone execution
-const FALLBACK_MERCHANT_STAPLES: BundledMerchantProduct[] = [
-  {
-    id: 'prod_atelier_trench_noir_01',
+// Curated artisan fallback staples for offline/sandbox execution
+const ARTISAN_FALLBACK_STAPLES: Record<string, { title: string; price: number; imageUrl: string; sku: string; shopName: string }> = {
+  outerwear: {
     title: 'Bonded Basalt Trench Coat',
-    category: 'Outerwear',
-    price: 420.0,
-    currency: 'USD',
+    price: 420,
     imageUrl: 'https://images.unsplash.com/photo-1544441893-675973e31985?auto=format&fit=crop&w=800&q=80',
     sku: 'SKU-OUTER-BASALT-01',
-    merchantDomain: 'atelier-milan.eaos.io',
-    matchedHarmonyColor: 'Basalt Obsidian'
+    shopName: 'atelier-milan.eaos.io'
   },
-  {
-    id: 'prod_cashmere_knit_slate_02',
-    title: 'Brushed Cashmere Cocoon Knit',
-    category: 'Knitwear',
-    price: 280.0,
-    currency: 'USD',
-    imageUrl: 'https://images.unsplash.com/photo-1576566588028-4147f3842f27?auto=format&fit=crop&w=800&q=80',
-    sku: 'SKU-KNIT-SLATE-02',
-    merchantDomain: 'atelier-paris.eaos.io',
-    matchedHarmonyColor: 'Minimal Slate'
-  },
-  {
-    id: 'prod_chelsea_boot_leather_03',
+  footwear: {
     title: 'Vibram-Sole Leather Chelsea Boot',
-    category: 'Footwear',
-    price: 360.0,
-    currency: 'USD',
+    price: 360,
     imageUrl: 'https://images.unsplash.com/photo-1608256246200-53e635b5b65f?auto=format&fit=crop&w=800&q=80',
     sku: 'SKU-BOOT-LEATHER-03',
-    merchantDomain: 'nordic-craft.eaos.io',
-    matchedHarmonyColor: 'Basalt Obsidian'
+    shopName: 'nordic-craft.eaos.io'
   },
-  {
-    id: 'prod_silk_scarf_emerald_04',
+  accessory: {
     title: 'Mulberry Silk Architectural Scarf',
-    category: 'Accessory',
-    price: 140.0,
-    currency: 'USD',
+    price: 140,
     imageUrl: 'https://images.unsplash.com/photo-1601924994987-69e26d50dc26?auto=format&fit=crop&w=800&q=80',
     sku: 'SKU-ACC-SILK-04',
-    merchantDomain: 'atelier-kyoto.eaos.io',
-    matchedHarmonyColor: 'Neo Emerald'
+    shopName: 'atelier-kyoto.eaos.io'
+  },
+  knitwear: {
+    title: 'Brushed Cashmere Cocoon Knit',
+    price: 280,
+    imageUrl: 'https://images.unsplash.com/photo-1576566588028-4147f3842f27?auto=format&fit=crop&w=800&q=80',
+    sku: 'SKU-KNIT-SLATE-02',
+    shopName: 'atelier-paris.eaos.io'
   }
-];
-
-// ============================================================================
-// OUTFIT GAP BUNDLER ENGINE IMPLEMENTATION
-// ============================================================================
+};
 
 export class OutfitGapBundler {
-  private customFirestore: any;
-  private defaultCurrency: string;
-
-  constructor(options?: OutfitGapBundlerOptions) {
-    this.customFirestore = options?.firestoreInstance || null;
-    this.defaultCurrency = options?.defaultCurrency || 'USD';
+  private hasAdminCredentials(): boolean {
+    try {
+      const saEnv = process.env.FIREBASE_SERVICE_ACCOUNT;
+      if (saEnv && saEnv.trim().length > 0) {
+        try {
+          const parsed = JSON.parse(saEnv);
+          if (parsed.private_key && parsed.client_email) return true;
+        } catch (_) {}
+      }
+      const gacFile = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+      if (gacFile && fs.existsSync(gacFile)) return true;
+    } catch (_) {}
+    return false;
   }
 
-  /**
-   * Resolves harmonic counterpart color based on existing garment palettes
-   */
   private computeColorHarmonyRecommendation(existingColors: string[]): string {
     const colorString = existingColors.join(' ').toLowerCase();
-
-    if (colorString.includes('black') || colorString.includes('obsidian') || colorString.includes('dark')) {
-      return 'Minimal Slate';
-    }
-    if (colorString.includes('white') || colorString.includes('cream') || colorString.includes('beige')) {
-      return 'Basalt Obsidian';
-    }
-    if (colorString.includes('green') || colorString.includes('emerald') || colorString.includes('olive')) {
-      return 'Warm Alabaster';
-    }
-    if (colorString.includes('blue') || colorString.includes('indigo') || colorString.includes('navy')) {
-      return 'Neo Emerald';
-    }
-    return 'Basalt Obsidian';
+    if (colorString.includes('black') || colorString.includes('dark')) return 'Warm Alabaster';
+    if (colorString.includes('white') || colorString.includes('cream')) return 'Basalt Obsidian';
+    return 'Minimal Slate';
   }
 
-  /**
-   * Evaluates current outfit against environmental and category invariants
-   */
-  private inspectOutfitDeficits(
-    currentOutfit: OutfitComponentSpec[],
-    weatherCondition: string,
-    currentTempCelsius: number
-  ): DeficitScanReport[] {
+  private inspectOutfitDeficits(currentOutfit: OutfitComponentSpec[], weatherCondition: string, currentTempCelsius: number): DeficitScanReport[] {
     const reports: DeficitScanReport[] = [];
-    const normalizedCategories = new Set(
-      currentOutfit.map(item => (item.category || '').toLowerCase().trim())
-    );
+    const normalizedCategories = new Set(currentOutfit.map(item => (item.category || '').toLowerCase().trim()));
     const existingColors = currentOutfit.map(item => item.color || 'Neutral');
     const harmonyColor = this.computeColorHarmonyRecommendation(existingColors);
-
+    
     const isRainy = (weatherCondition || '').toLowerCase().includes('rain');
-    const isCold = currentTempCelsius < 15;
-    const isFreezing = currentTempCelsius < 8;
+    const isCold = currentTempCelsius < 18;
 
-    // Rule 1: Outerwear Gap Evaluation
-    if (!normalizedCategories.has('outerwear')) {
-      if (isRainy || isCold) {
-        reports.push({
-          gapSeverity: 'HIGH',
-          missingCategory: 'Outerwear',
-          colorHarmonyRecommendation: harmonyColor,
-          rationale: `Climate conditions (${weatherCondition}, ${currentTempCelsius}°C) necessitate a protective outer shell layer.`
-        });
-      } else {
-        reports.push({
-          gapSeverity: 'SUGGESTION',
-          missingCategory: 'Outerwear',
-          colorHarmonyRecommendation: harmonyColor,
-          rationale: 'Lightweight layering enhances silhouette structure and visual maturity.'
-        });
-      }
-    }
-
-    // Rule 2: Knitwear Mid-layer Gap
-    if (isFreezing && !normalizedCategories.has('knitwear')) {
+    if (!normalizedCategories.has('outerwear') && (isRainy || isCold)) {
       reports.push({
-        gapSeverity: 'MEDIUM',
-        missingCategory: 'Knitwear',
+        gapSeverity: 'HIGH',
+        missingCategory: 'Outerwear',
         colorHarmonyRecommendation: harmonyColor,
-        rationale: `Sub-optimal thermal retention detected at ${currentTempCelsius}°C. Mid-layer cashmere insulation recommended.`
+        rationale: `Climate conditions (${weatherCondition}, ${currentTempCelsius}°C) require a structured protective outer layer.`
       });
     }
 
-    // Rule 3: Footwear Gap
     if (!normalizedCategories.has('footwear')) {
       reports.push({
         gapSeverity: isRainy ? 'HIGH' : 'MEDIUM',
         missingCategory: 'Footwear',
         colorHarmonyRecommendation: harmonyColor,
-        rationale: isRainy
-          ? 'Water-resistant bonded footwear required for precipitation conditions.'
-          : 'Grounding footwear needed to complete stylistic balance.'
-      });
-    }
-
-    // Rule 4: Accessory Accent Gap
-    if (!normalizedCategories.has('accessory') && currentOutfit.length >= 2) {
-      reports.push({
-        gapSeverity: 'SUGGESTION',
-        missingCategory: 'Accessory',
-        colorHarmonyRecommendation: harmonyColor,
-        rationale: 'High-contrast accessory element recommended to elevate aesthetic index score.'
+        rationale: 'Complete your styling ensemble with coordinated weather-appropriate footwear.'
       });
     }
 
     return reports;
   }
 
-  /**
-   * Queries Firestore /merchantProducts collection for matching staple products
-   */
-  private async queryMatchingProductsForDeficits(
-    deficits: DeficitScanReport[],
-    traceId: string
-  ): Promise<BundledMerchantProduct[]> {
-    const matchedProducts: BundledMerchantProduct[] = [];
-    const targetCategories = new Set(deficits.map(d => d.missingCategory.toLowerCase()));
+  public async scanOutfitAndGenerateBundle(userId: string, currentOutfit: OutfitComponentSpec[], weatherCondition: string, currentTempCelsius: number): Promise<ShoppableBundle | null> {
+    const deficits = this.inspectOutfitDeficits(currentOutfit, weatherCondition, currentTempCelsius);
+    
+    if (deficits.length === 0) return null;
 
-    try {
-      const db = this.customFirestore || getFirestore();
-      const snapshot = await db.collection('merchantProducts').limit(30).get();
+    const recommendedProducts: BundledMerchantProduct[] = [];
 
-      if (!snapshot.empty) {
+    // Query live Firestore products only if valid admin service account credentials exist
+    if (this.hasAdminCredentials() && getApps().length > 0) {
+      try {
+        const db = getFirestore();
+        const snapshot = await db.collection('products').limit(10).get();
+
         snapshot.forEach((doc: any) => {
           const data = doc.data();
           const docCategory = (data.category || '').toLowerCase();
-
+          
           for (const deficit of deficits) {
-            if (docCategory.includes(deficit.missingCategory.toLowerCase())) {
-              matchedProducts.push({
+            if (docCategory.includes(deficit.missingCategory.toLowerCase()) && recommendedProducts.length < 3) {
+              recommendedProducts.push({
                 id: doc.id,
-                title: data.title || 'Atelier Garment',
+                title: data.title || 'Artisan Staple',
                 category: data.category || deficit.missingCategory,
-                price: typeof data.price === 'number' ? data.price : parseFloat(data.price) || 250.0,
-                currency: data.currency || this.defaultCurrency,
-                imageUrl: data.imageUrl || 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=800&q=80',
+                price: Number(data.price) || 150,
+                currency: data.currency || 'USD',
+                imageUrl: data.imageUrl || 'https://unsplash.com',
                 sku: data.sku || `SKU-${doc.id}`,
-                merchantDomain: data.merchantDomain || 'atelier.eaos.io',
+                merchantDomain: data.shopName || 'partner-boutique.eaos.io',
                 matchedHarmonyColor: deficit.colorHarmonyRecommendation
               });
               break;
             }
           }
         });
+      } catch (err: any) {
+        console.warn(`[OutfitGapBundler] Firestore product catalog query unavailable (${err?.message || 'insufficient credentials'}). Utilizing curated artisan staples fallback.`);
       }
-    } catch (firestoreErr: unknown) {
-      console.warn(
-        JSON.stringify({
-          level: 'WARN',
-          event: 'MERCHANT_PRODUCTS_QUERY_FALLBACK',
-          'x-trace-id': traceId,
-          message: firestoreErr instanceof Error ? firestoreErr.message : String(firestoreErr)
-        })
-      );
     }
 
-    // If database matches are insufficient, draw from verified fallback staples
-    if (matchedProducts.length === 0) {
+    // Gracefully populate from curated artisan staples if database collection has no matches or credentials are in fallback mode
+    if (recommendedProducts.length === 0) {
       for (const deficit of deficits) {
-        const fallback = FALLBACK_MERCHANT_STAPLES.find(
-          item => item.category.toLowerCase() === deficit.missingCategory.toLowerCase()
-        );
-        if (fallback && !matchedProducts.some(p => p.id === fallback.id)) {
-          matchedProducts.push({
-            ...fallback,
+        const catKey = deficit.missingCategory.toLowerCase();
+        const fallback = ARTISAN_FALLBACK_STAPLES[catKey];
+        if (fallback && recommendedProducts.length < 3) {
+          recommendedProducts.push({
+            id: `artisan_${catKey}_${deficit.missingCategory.toLowerCase()}`,
+            title: fallback.title,
+            category: deficit.missingCategory,
+            price: fallback.price,
+            currency: 'USD',
+            imageUrl: fallback.imageUrl,
+            sku: fallback.sku,
+            merchantDomain: fallback.shopName,
             matchedHarmonyColor: deficit.colorHarmonyRecommendation
           });
         }
       }
     }
 
-    // Deduplicate and cap bundle to top 3 relevant deficit items
-    const seenIds = new Set<string>();
-    return matchedProducts.filter(p => {
-      if (seenIds.has(p.id)) return false;
-      seenIds.add(p.id);
-      return true;
-    }).slice(0, 3);
-  }
+    if (recommendedProducts.length === 0) return null;
 
-  /**
-   * Calculates programmatically discounted bundle pricing according to strict formula:
-   * FinalPrice = Sum(RetailPrice) * (1.0 - DiscountRatePercent)
-   */
-  private calculateBundlePricing(products: BundledMerchantProduct[]): {
-    retailPriceSum: number;
-    appliedDiscountPercent: number;
-    finalBundlePrice: number;
-  } {
-    if (!products || products.length === 0) {
-      return { retailPriceSum: 0, appliedDiscountPercent: 0, finalBundlePrice: 0 };
-    }
-
-    const retailPriceSum = products.reduce((acc, p) => acc + (p.price || 0), 0);
-
-    // Dynamic tiered discount rule: 1 item = 10%, Multiple items = 20%
-    const appliedDiscountPercent = products.length === 1 ? 10 : 20;
-    const discountFactor = appliedDiscountPercent / 100;
-    const finalBundlePrice = retailPriceSum * (1.0 - discountFactor);
+    const retailPriceSum = recommendedProducts.reduce((acc, p) => acc + p.price, 0);
+    const appliedDiscountPercent = recommendedProducts.length === 1 ? 10 : 20;
+    const finalBundlePrice = retailPriceSum * (1.0 - (appliedDiscountPercent / 100));
 
     return {
+      recommendedProducts,
       retailPriceSum: Number(retailPriceSum.toFixed(2)),
       appliedDiscountPercent,
-      finalBundlePrice: Number(finalBundlePrice.toFixed(2))
+      finalBundlePrice: Number(finalBundlePrice.toFixed(2)),
+      currency: recommendedProducts[0].currency,
+      checkoutTraceId: `chk_${crypto.randomBytes(8).toString('hex')}`,
+      generatedAt: new Date().toISOString()
     };
-  }
-
-  /**
-   * Scans an outfit for climate and structural gaps, returning a discounted shoppable bundle
-   *
-   * @param userId Target user identity
-   * @param currentOutfit Active outfit components
-   * @param weatherCondition Real-time climate string (e.g., 'Rainy', 'Clear', 'Snow')
-   * @param currentTempCelsius Ambient temperature in Celsius
-   */
-  public async scanOutfitAndGenerateBundle(
-    userId: string,
-    currentOutfit: OutfitComponentSpec[],
-    weatherCondition: string,
-    currentTempCelsius: number
-  ): Promise<ShoppableBundle | null> {
-    const startTime = performance.now();
-    const traceId = `trc_bundle_${crypto.randomBytes(6).toString('hex')}`;
-    const generatedAt = new Date().toISOString();
-
-    if (!userId || typeof userId !== 'string' || !userId.trim()) {
-      throw new Error('[OUTFIT BUNDLER ERROR] Parameter validation failed: userId is required.');
-    }
-
-    if (!Array.isArray(currentOutfit)) {
-      throw new Error('[OUTFIT BUNDLER ERROR] Parameter validation failed: currentOutfit must be an array.');
-    }
-
-    console.info(
-      JSON.stringify({
-        level: 'INFO',
-        event: 'OUTFIT_DEFICIT_SCAN_STARTED',
-        'x-trace-id': traceId,
-        userId: userId.trim(),
-        componentCount: currentOutfit.length,
-        weather: weatherCondition,
-        tempC: currentTempCelsius,
-        timestamp: generatedAt
-      })
-    );
-
-    try {
-      // 1. Inspect wardrobe deficits
-      const deficits = this.inspectOutfitDeficits(currentOutfit, weatherCondition, currentTempCelsius);
-
-      if (deficits.length === 0) {
-        console.info(
-          JSON.stringify({
-            level: 'INFO',
-            event: 'OUTFIT_COMPLETE_NO_GAPS',
-            'x-trace-id': traceId,
-            userId: userId.trim(),
-            timestamp: generatedAt
-          })
-        );
-        return null;
-      }
-
-      console.info(
-        JSON.stringify({
-          level: 'INFO',
-          event: 'OUTFIT_DEFICITS_IDENTIFIED',
-          'x-trace-id': traceId,
-          deficitCount: deficits.length,
-          deficits,
-          timestamp: generatedAt
-        })
-      );
-
-      // 2. Query matching products
-      const recommendedProducts = await this.queryMatchingProductsForDeficits(deficits, traceId);
-
-      if (recommendedProducts.length === 0) {
-        return null;
-      }
-
-      // 3. Calculate bundle pricing
-      const { retailPriceSum, appliedDiscountPercent, finalBundlePrice } =
-        this.calculateBundlePricing(recommendedProducts);
-
-      const checkoutTraceId = `chk_${crypto.randomBytes(8).toString('hex')}`;
-
-      const bundle: ShoppableBundle = {
-        recommendedProducts,
-        retailPriceSum,
-        appliedDiscountPercent,
-        finalBundlePrice,
-        currency: recommendedProducts[0]?.currency || this.defaultCurrency,
-        checkoutTraceId,
-        generatedAt
-      };
-
-      const latencyMs = (performance.now() - startTime).toFixed(2);
-      console.info(
-        JSON.stringify({
-          level: 'INFO',
-          event: 'SHOPPABLE_BUNDLE_GENERATED',
-          'x-trace-id': traceId,
-          checkoutTraceId,
-          itemCount: recommendedProducts.length,
-          retailTotal: retailPriceSum,
-          discount: `${appliedDiscountPercent}%`,
-          finalPrice: finalBundlePrice,
-          latencyMs,
-          timestamp: generatedAt
-        })
-      );
-
-      return bundle;
-    } catch (bundleError: unknown) {
-      const latencyMs = (performance.now() - startTime).toFixed(2);
-      const errMsg = bundleError instanceof Error ? bundleError.message : String(bundleError);
-
-      console.error(
-        JSON.stringify({
-          level: 'ERROR',
-          event: 'OUTFIT_BUNDLE_GENERATION_FAILED',
-          'x-trace-id': traceId,
-          userId: userId.trim(),
-          error: errMsg,
-          latencyMs,
-          timestamp: generatedAt
-        })
-      );
-
-      throw bundleError;
-    }
   }
 }
