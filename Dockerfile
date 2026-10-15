@@ -7,10 +7,8 @@ WORKDIR /app
 # Install build-essential dependencies required for native modules compiling
 RUN apk add --no-cache libc6-compat python3 make g++
 
-COPY package*.json ./
-
-# Attempt strict clean install; fall back gracefully to standard install if lockfile drifts
-RUN npm ci || npm install
+COPY package.json package-lock.json ./
+RUN npm ci
 
 COPY . .
 RUN npm run build
@@ -25,10 +23,8 @@ ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOST=0.0.0.0
 
-COPY package*.json ./
-
-# Enforce safe production installation without breaking on lockfile validation discrepancies
-RUN npm ci --only=production || npm install --only=production
+COPY package.json package-lock.json ./
+RUN npm ci --only=production
 
 # Copy compiled static front-end assets and the bundled express server process
 COPY --from=builder /app/dist ./dist
