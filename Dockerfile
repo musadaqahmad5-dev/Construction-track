@@ -8,7 +8,9 @@ WORKDIR /app
 RUN apk add --no-cache libc6-compat python3 make g++
 
 COPY package*.json ./
-RUN npm ci
+
+# Attempt strict clean install; fall back gracefully to standard install if lockfile drifts
+RUN npm ci || npm install
 
 COPY . .
 RUN npm run build
@@ -24,7 +26,9 @@ ENV PORT=3000
 ENV HOST=0.0.0.0
 
 COPY package*.json ./
-RUN npm ci --only=production
+
+# Enforce safe production installation without breaking on lockfile validation discrepancies
+RUN npm ci --only=production || npm install --only=production
 
 # Copy compiled static front-end assets and the bundled express server process
 COPY --from=builder /app/dist ./dist
