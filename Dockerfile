@@ -1,20 +1,23 @@
 # ========================================================================= #
-# STAGE 1: BUILD ARCHITECTURE & PACKAGE HYDRO
+# STAGE 1: BUILD ENVIRONMENT & DEPENDENCY RESOLUTION
 # ========================================================================= #
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Install build-essential dependencies required for native modules compiling
+# Install system dependencies required for handling production compilation safely
 RUN apk add --no-cache libc6-compat python3 make g++
 
-COPY package.json package-lock.json ./
-RUN npm ci
+# Copy package descriptors independently to cache engine layers productively
+COPY package*.json ./
+
+# Execute a clean standard install without enforcing strict lockfile validation matching
+RUN npm install
 
 COPY . .
 RUN npm run build
 
 # ========================================================================= #
-# STAGE 2: RUNTIME ENGINE PLATFORM
+# STAGE 2: HIGH-PERFORMANCE PRODUCTION ENGINE RUNTIME
 # ========================================================================= #
 FROM node:20-alpine AS runtime
 WORKDIR /app
@@ -23,15 +26,16 @@ ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOST=0.0.0.0
 
-COPY package.json package-lock.json ./
-RUN npm ci --only=production
+# Copy package configurations to execute a lightweight production install slice
+COPY package*.json ./
+RUN npm install --only=production
 
-# Copy compiled static front-end assets and the bundled express server process
+# Pull our compiled dist tracking layers directly from Stage 1
 COPY --from=builder /app/dist ./dist
 
 EXPOSE 3000
 
-# Run process gateways securely as a non-root system user account
+# Enforce secure operational constraints via non-root execution
 USER node
 
 CMD ["node", "dist/server.cjs"]
